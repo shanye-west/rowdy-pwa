@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc } from "./types";
 
