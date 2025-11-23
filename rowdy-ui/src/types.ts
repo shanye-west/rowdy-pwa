@@ -27,7 +27,7 @@ export type MatchDoc = {
   pointsValue?: number;
   
   // Scoring Data
-  holes?: Record<string, { input: any }>; // Keeping 'any' for input flexibility or define strict shape if desired
+  holes?: Record<string, { input: any }>;
   
   // Calculated Results
   result?: { 
@@ -38,11 +38,11 @@ export type MatchDoc = {
   
   // Live Status
   status?: {
-    leader: "teamA" | "teamB" | null;
-    margin: number;
-    thru: number;
-    dormie: boolean;
-    closed: boolean;
+    leader?: "teamA" | "teamB" | null;
+    margin?: number;
+    thru?: number;
+    dormie?: boolean;
+    closed?: boolean;
   };
 
   // Roster & Strokes
