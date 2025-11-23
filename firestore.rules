@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Read-all for now (adjust later)
+    match /{document=**} {
+      allow read: if true;
+    }
+
+    match /matches/{matchId} {
+      // Only authenticated users may write, and only to holes.*.input.*
+      allow update: if request.auth != null
+        && isOnlyHoleInputChange();
+
+      allow create, delete: if false;
+    }
+  }
+}
+
+function isOnlyHoleInputChange() {
+  // Prevent writes to protected top-level fields
+  if (request.resource.data.diff(resource.data).changedKeys()
+        .hasAny(['status','result','teamAPlayers','teamBPlayers','pointsValue','roundId','tournamentId'])) {
+    return false;
+  }
+
+  // Only allow writes to holes.<n>.input.*
+  return request.resource.data.keys().hasOnly(['holes']) &&
+         isHoleInputDelta(request.resource.data.holes, resource.data.holes);
+}
+
+function isHoleInputDelta(newHoles, oldHoles) {
+  // All changed paths must be under input maps
+  return newHoles.diff(oldHoles).affectedKeys().hasOnly([
+    // Permit any path that begins with "<hole>.input."
+    // (Rules language lacks regex; enumerate 1..18)
+    '1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18'
+  ]);
+}
