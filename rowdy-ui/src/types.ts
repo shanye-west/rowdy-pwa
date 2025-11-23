@@ -1,6 +1,11 @@
 export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
 
-export type PlayerDoc = { id: string; displayName?: string; username?: string };
+export type PlayerDoc = { 
+  id: string; 
+  displayName?: string; 
+  username?: string; 
+};
+
 export type TournamentDoc = {
   id: string;
   name: string;
@@ -18,6 +23,20 @@ export type RoundDoc = {
 export type MatchDoc = {
   id: string;
   roundId: string;
+  tournamentId?: string;
+  pointsValue?: number;
+  
+  // Scoring Data
+  holes?: Record<string, { input: any }>; // Keeping 'any' for input flexibility or define strict shape if desired
+  
+  // Calculated Results
+  result?: { 
+    winner?: "teamA" | "teamB" | "AS";
+    holesWonA?: number;
+    holesWonB?: number;
+  };
+  
+  // Live Status
   status?: {
     leader: "teamA" | "teamB" | null;
     margin: number;
@@ -25,4 +44,8 @@ export type MatchDoc = {
     dormie: boolean;
     closed: boolean;
   };
+
+  // Roster & Strokes
+  teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
+  teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
 };

@@ -2,25 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundDoc, TournamentDoc } from "../types";
+import type { RoundDoc, TournamentDoc, MatchDoc } from "../types";
 
-// Local definition or import from types if you unify them
-type MatchDoc = {
-  id: string;
-  roundId: string;
-  pointsValue?: number;
-  result?: { winner?: "teamA" | "teamB" | "AS" };
-  status?: { 
-    leader?: "teamA" | "teamB" | null; 
-    margin?: number; 
-    thru?: number; 
-    closed?: boolean; 
-  };
-  teamAPlayers?: { playerId: string }[];
-  teamBPlayers?: { playerId: string }[];
-};
-
-// Reused ScoreBlock for consistent style
 function ScoreBlock({ final, proj, color }: { final: number; proj: number; color?: string }) {
   return (
     <span>
@@ -46,13 +29,11 @@ export default function Round() {
     (async () => {
       setLoading(true);
       try {
-        // 1. Fetch Round
         const rSnap = await getDoc(doc(db, "rounds", roundId));
         if (!rSnap.exists()) { setLoading(false); return; }
         const rData = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
         setRound(rData);
 
-        // 2. Fetch Tournament (for team names/colors)
         if (rData.tournamentId) {
           const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
           if (tSnap.exists()) {
@@ -60,7 +41,6 @@ export default function Round() {
           }
         }
 
-        // 3. Fetch Matches for this Round
         const q = query(collection(db, "matches"), where("roundId", "==", roundId));
         const mSnap = await getDocs(q);
         const ms = mSnap.docs
@@ -73,10 +53,8 @@ export default function Round() {
     })();
   }, [roundId]);
 
-  // --- Round Stats Calculation ---
   const stats = useMemo(() => {
     let fA = 0, fB = 0, pA = 0, pB = 0;
-
     for (const m of matches) {
       const pv = m.pointsValue ?? 1;
       const w = m.result?.winner;
@@ -87,13 +65,8 @@ export default function Round() {
       const isClosed = m.status?.closed === true;
       const isStarted = (m.status?.thru ?? 0) > 0;
 
-      if (isClosed) {
-        fA += ptsA;
-        fB += ptsB;
-      } else if (isStarted) {
-        pA += ptsA;
-        pB += ptsB;
-      }
+      if (isClosed) { fA += ptsA; fB += ptsB; } 
+      else if (isStarted) { pA += ptsA; pB += ptsB; }
     }
     return { fA, fB, pA, pB };
   }, [matches]);
@@ -103,8 +76,6 @@ export default function Round() {
 
   return (
     <div style={{ padding: 16, display: "grid", gap: 24 }}>
-      
-      {/* --- HEADER & SCOREBOARD --- */}
       <section>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
           <h1 style={{ margin: 0, fontSize: "1.8rem" }}>
@@ -114,7 +85,6 @@ export default function Round() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {/* Team A */}
           <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, textAlign: "center", background: "#fafafa" }}>
             <div style={{ fontWeight: 700, color: tournament?.teamA?.color || "#333", marginBottom: 4 }}>
               {tournament?.teamA?.name || "Team A"}
@@ -123,8 +93,6 @@ export default function Round() {
               <ScoreBlock final={stats.fA} proj={stats.pA} color={tournament?.teamA?.color} />
             </div>
           </div>
-
-          {/* Team B */}
           <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, textAlign: "center", background: "#fafafa" }}>
             <div style={{ fontWeight: 700, color: tournament?.teamB?.color || "#333", marginBottom: 4 }}>
               {tournament?.teamB?.name || "Team B"}
@@ -136,20 +104,15 @@ export default function Round() {
         </div>
       </section>
 
-      {/* --- MATCHES LIST --- */}
       <section style={{ display: "grid", gap: 12 }}>
         <h3 style={{ margin: "0 0 8px 0", borderBottom: "1px solid #eee", paddingBottom: 8 }}>Matches</h3>
-        
         {matches.length === 0 ? (
           <div style={{ padding: "8px 0", fontStyle: "italic", opacity: 0.6 }}>No matches.</div>
         ) : (
           <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0, display: 'grid', gap: 12 }}>
             {matches.map((m) => (
               <li key={m.id}>
-                <Link 
-                  to={`/match/${m.id}`} 
-                  style={{ textDecoration: "none", color: "inherit", display: "block", border: "1px solid #eee", borderRadius: 8, padding: 12, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-                >
+                <Link to={`/match/${m.id}`} style={{ textDecoration: "none", color: "inherit", display: "block", border: "1px solid #eee", borderRadius: 8, padding: 12, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <span style={{ fontWeight: 600 }}>Match {m.id}</span>
                     <span style={{ fontSize: "0.9em", opacity: 0.8 }}>
@@ -162,10 +125,7 @@ export default function Round() {
                       </span>
                     </span>
                   </div>
-                  
-                  {/* Optional: Show player names below score */}
                   <div style={{ fontSize: "0.85em", color: "#666" }}>
-                    {/* Simplified player list for space */}
                     {(m.teamAPlayers || []).length > 0 && <span>vs</span>}
                   </div>
                 </Link>

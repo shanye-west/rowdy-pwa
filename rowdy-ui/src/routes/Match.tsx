@@ -10,38 +10,13 @@ import {
   where,
   query,
 } from "firebase/firestore";
-import type { TournamentDoc, PlayerDoc } from "../types";
 import { db } from "../firebase";
-
-type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
-
-type MatchDoc = {
-  id: string;
-  roundId: string;
-  tournamentId?: string;
-  holes?: Record<string, any>;
-  status?: {
-    leader: "teamA" | "teamB" | null;
-    margin: number;
-    thru: number;
-    dormie: boolean;
-    closed: boolean;
-  };
-  teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
-  teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
-  pointsValue?: number;
-};
-
-type RoundDoc = {
-  id: string;
-  tournamentId: string;
-  format: RoundFormat;
-};
+// 1. Import unified types from your central file
+import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat } from "../types";
 
 // Helper component for Handicap Dots
 function Dots({ count }: { count: number }) {
   if (!count || count <= 0) return null;
-  // Render a red dot for each stroke received
   return (
     <span style={{ 
       color: "#ef4444", 
@@ -165,10 +140,7 @@ export default function Match() {
     if (format === "twoManScramble") {
       const a = input?.teamAGross ?? null;
       const b = input?.teamBGross ?? null;
-      // Scrambles usually apply strokes to the team total, but if you have them on p0:
-      const sA = getStrokes("A", 0);
-      const sB = getStrokes("B", 0);
-
+      
       return (
         <div key={k} style={{ display: "grid", gridTemplateColumns: "40px 1fr 1fr", gap: 12, alignItems: "center", marginBottom: 8 }}>
           <div style={{ textAlign: "center", fontWeight: "bold", color: "#888" }}>{k}</div>
@@ -177,14 +149,12 @@ export default function Match() {
             <input type="number" inputMode="numeric" value={a ?? ""} disabled={isClosed} style={inputStyle}
               onChange={(e) => saveHole(k, { teamAGross: e.target.value === "" ? null : Number(e.target.value), teamBGross: b })}
             />
-            <Dots count={sA} />
           </div>
 
           <div style={{ position: "relative" }}>
             <input type="number" inputMode="numeric" value={b ?? ""} disabled={isClosed} style={inputStyle}
               onChange={(e) => saveHole(k, { teamAGross: a, teamBGross: e.target.value === "" ? null : Number(e.target.value) })}
             />
-            <Dots count={sB} />
           </div>
         </div>
       );
@@ -283,15 +253,16 @@ export default function Match() {
       {/* Status Card */}
       <div style={{ background: isClosed ? "#fff1f2" : "#f8fafc", border: "1px solid #e2e8f0", padding: 16, borderRadius: 8, textAlign: "center" }}>
         <div style={{ fontSize: "1.2em", fontWeight: "bold", marginBottom: 4 }}>
+          {/* 2. Added optional chaining to match.status calls here to fix red underlines */}
           {match.status?.leader
-            ? `${match.status.leader === "teamA" ? (tournament?.teamA.name || "Team A") : (tournament?.teamB.name || "Team B")} is ${match.status.margin} UP`
+            ? `${match.status?.leader === "teamA" ? (tournament?.teamA.name || "Team A") : (tournament?.teamB.name || "Team B")} is ${match.status?.margin} UP`
             : (match.status?.thru ?? 0) > 0 ? "All Square" : "Even"
           }
         </div>
         <div style={{ fontSize: "0.9em", opacity: 0.7 }}>
           {match.status?.closed 
             ? "Final Result" 
-            : (match.status?.thru ?? 0) > 0 ? `Thru ${match.status.thru}` : "Not started"}
+            : (match.status?.thru ?? 0) > 0 ? `Thru ${match.status?.thru}` : "Not started"}
         </div>
       </div>
 
