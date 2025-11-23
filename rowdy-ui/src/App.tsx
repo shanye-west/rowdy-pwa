@@ -28,15 +28,28 @@ export default function App() {
         rds = rds.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
         setRounds(rds);
 
-        // 3) For each round, load matches (simple where on roundId)
-        const bucket: Record<string, MatchDoc[]> = {};
-        for (const r of rds) {
-          const mSnap = await getDocs(query(collection(db, "matches"), where("roundId", "==", r.id)));
-          bucket[r.id] = mSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as MatchDoc))
-            // optional: sort by doc id for stable order
-            .sort((a, b) => a.id.localeCompare(b.id));
-        }
-        setMatchesByRound(bucket);
+       // 3) For each round, load matches (PARALLEL FETCH)
+const matchesPromises = rds.map(async (r) => {
+  const mSnap = await getDocs(query(collection(db, "matches"), where("roundId", "==", r.id)));
+  
+  // Map the docs to your MatchDoc type
+  const matches = mSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as any) } as MatchDoc))
+    .sort((a, b) => a.id.localeCompare(b.id)); // Optional sort
+
+  return { roundId: r.id, matches };
+});
+
+// Wait for all fetches to finish
+const results = await Promise.all(matchesPromises);
+
+// Reconstruct the bucket object for state
+const bucket: Record<string, MatchDoc[]> = {};
+results.forEach((res) => {
+  bucket[res.roundId] = res.matches;
+});
+
+setMatchesByRound(bucket);
       } catch (e) {
         console.error(e);
       } finally {
