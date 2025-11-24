@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 
 export default function PullToRefresh({ children }: { children: React.ReactNode }) {
   const [startY, setStartY] = useState(0);
