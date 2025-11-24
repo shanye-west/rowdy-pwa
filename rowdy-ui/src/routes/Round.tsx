@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, documentId } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundDoc, TournamentDoc, MatchDoc } from "../types";
-import { formatMatchStatus } from "../utils"; // <--- IMPORT THIS
+import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc } from "../types";
+import { formatMatchStatus } from "../utils";
+import Layout from "../components/Layout";
 
+// Helper for the Round Scoreboard
 function ScoreBlock({ final, proj, color }: { final: number; proj: number; color?: string }) {
   return (
     <span>
       <span style={{ color: color || "inherit" }}>{final}</span>
       {proj > 0 && (
-        <span style={{ fontSize: "0.6em", color: "#999", marginLeft: 6, verticalAlign: "middle" }}>
+        <span style={{ fontSize: "0.6em", color: "var(--text-secondary)", marginLeft: 6, verticalAlign: "middle" }}>
           (+{proj})
         </span>
       )}
@@ -24,17 +26,20 @@ export default function Round() {
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
+  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
 
   useEffect(() => {
     if (!roundId) return;
     (async () => {
       setLoading(true);
       try {
+        // 1. Get Round
         const rSnap = await getDoc(doc(db, "rounds", roundId));
         if (!rSnap.exists()) { setLoading(false); return; }
         const rData = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
         setRound(rData);
 
+        // 2. Get Tournament (for Theme & Colors)
         if (rData.tournamentId) {
           const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
           if (tSnap.exists()) {
@@ -42,12 +47,36 @@ export default function Round() {
           }
         }
 
+        // 3. Get Matches
         const q = query(collection(db, "matches"), where("roundId", "==", roundId));
         const mSnap = await getDocs(q);
         const ms = mSnap.docs
           .map((d) => ({ id: d.id, ...d.data() } as MatchDoc))
           .sort((a, b) => a.id.localeCompare(b.id));
         setMatches(ms);
+
+        // 4. Bulk Fetch Players (so we can show names on the cards)
+        const playerIds = new Set<string>();
+        ms.forEach(m => {
+          m.teamAPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
+          m.teamBPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
+        });
+
+        if (playerIds.size > 0) {
+          const pIds = Array.from(playerIds);
+          // Firestore 'in' limit is 10, so chunk if necessary (simple version here assumes <10 for now or does 1 batch)
+          // For production with many players, you'd chunk this.
+          const chunks = [];
+          for (let i=0; i<pIds.length; i+=10) chunks.push(pIds.slice(i, i+10));
+          
+          const playerMap: Record<string, PlayerDoc> = {};
+          for (const chunk of chunks) {
+            const pSnap = await getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)));
+            pSnap.forEach(doc => { playerMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerDoc; });
+          }
+          setPlayers(playerMap);
+        }
+
       } finally {
         setLoading(false);
       }
@@ -59,10 +88,8 @@ export default function Round() {
     for (const m of matches) {
       const pv = m.pointsValue ?? 1;
       const w = m.result?.winner;
-      
       const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
       const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
-
       const isClosed = m.status?.closed === true;
       const isStarted = (m.status?.thru ?? 0) > 0;
 
@@ -72,70 +99,131 @@ export default function Round() {
     return { fA, fB, pA, pB };
   }, [matches]);
 
-  if (loading) return <div style={{ padding: 16 }}>Loading...</div>;
-  if (!round) return <div style={{ padding: 16 }}>Round not found.</div>;
+  const getPlayerName = (pid: string) => {
+    const p = players[pid];
+    if (!p) return "Unknown";
+    // Try First Last -> First L. -> Username
+    if (p.displayName) {
+        const parts = p.displayName.split(" ");
+        if (parts.length > 1) return `${parts[0]} ${parts[parts.length-1][0]}.`;
+        return p.displayName;
+    }
+    return p.username || "Unknown";
+  };
+
+  if (loading) return <div style={{ padding: 20, textAlign: 'center' }}>Loading...</div>;
+  if (!round) return <div style={{ padding: 20 }}>Round not found.</div>;
+
+  const tName = tournament?.name || "Round Detail";
+  const tSeries = tournament?.series;
 
   return (
-    <div style={{ padding: 16, display: "grid", gap: 24 }}>
-      <section>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-          <h1 style={{ margin: 0, fontSize: "1.8rem" }}>
-            Round {round.day ?? ""} <span style={{fontSize:'0.6em', opacity: 0.6, fontWeight:400}}>{round.format}</span>
-          </h1>
-          <Link to="/" style={{ textDecoration: 'none', fontSize: '0.9rem' }}>Home</Link>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, textAlign: "center", background: "#fafafa" }}>
-            <div style={{ fontWeight: 700, color: tournament?.teamA?.color || "#333", marginBottom: 4 }}>
-              {tournament?.teamA?.name || "Team A"}
-            </div>
-            <div style={{ fontSize: 32, fontWeight: "bold", lineHeight: 1 }}>
-              <ScoreBlock final={stats.fA} proj={stats.pA} color={tournament?.teamA?.color} />
-            </div>
-          </div>
-          <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, textAlign: "center", background: "#fafafa" }}>
-            <div style={{ fontWeight: 700, color: tournament?.teamB?.color || "#333", marginBottom: 4 }}>
-              {tournament?.teamB?.name || "Team B"}
-            </div>
-            <div style={{ fontSize: 32, fontWeight: "bold", lineHeight: 1 }}>
-              <ScoreBlock final={stats.fB} proj={stats.pB} color={tournament?.teamB?.color} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ display: "grid", gap: 12 }}>
-        <h3 style={{ margin: "0 0 8px 0", borderBottom: "1px solid #eee", paddingBottom: 8 }}>Matches</h3>
+    <Layout title={tName} series={tSeries} showBack>
+      <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
-        {matches.length === 0 ? (
-          <div style={{ padding: "8px 0", fontStyle: "italic", opacity: 0.6 }}>No matches.</div>
-        ) : (
-          <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0, display: 'grid', gap: 12 }}>
-            {matches.map((m) => (
-              <li key={m.id}>
+        {/* ROUND HEADER / SCOREBOARD */}
+        <section className="card" style={{ padding: 20, textAlign: 'center' }}>
+          <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
+            Round {round.day ?? ""}
+          </h1>
+          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+            {round.format}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
+             {/* Team A */}
+             <div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }}>
+                  {tournament?.teamA?.name}
+                </div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1 }}>
+                  <ScoreBlock final={stats.fA} proj={stats.pA} color={tournament?.teamA?.color || "var(--team-a-default)"} />
+                </div>
+              </div>
+
+              <div style={{ height: "100%", background: "var(--divider)" }}></div>
+
+              {/* Team B */}
+              <div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }}>
+                  {tournament?.teamB?.name}
+                </div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1 }}>
+                  <ScoreBlock final={stats.fB} proj={stats.pB} color={tournament?.teamB?.color || "var(--team-b-default)"} />
+                </div>
+              </div>
+          </div>
+        </section>
+
+        {/* MATCH CARDS */}
+        <section style={{ display: "grid", gap: 12 }}>
+          {matches.length === 0 ? (
+            <div style={{ padding: 20, fontStyle: "italic", opacity: 0.6, textAlign: 'center' }}>No matches scheduled.</div>
+          ) : (
+            matches.map((m) => {
+              const statusText = formatMatchStatus(m.status, tournament?.teamA?.name, tournament?.teamB?.name);
+              
+              // Determine border color based on leader
+              let borderColor = "transparent";
+              let bgStyle = {};
+              const leader = m.status?.leader;
+              
+              if (leader === 'teamA') {
+                 borderColor = tournament?.teamA?.color || "var(--team-a-default)";
+                 bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
+              } else if (leader === 'teamB') {
+                 borderColor = tournament?.teamB?.color || "var(--team-b-default)";
+                 bgStyle = { background: `linear-gradient(-90deg, ${borderColor}11 0%, transparent 30%)` };
+              }
+
+              return (
                 <Link 
+                  key={m.id} 
                   to={`/match/${m.id}`} 
-                  style={{ textDecoration: "none", color: "inherit", display: "block", border: "1px solid #eee", borderRadius: 8, padding: 12, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+                  className="card"
+                  style={{ 
+                    textDecoration: "none", 
+                    color: "inherit", 
+                    display: "grid", 
+                    gridTemplateColumns: "1fr auto 1fr",
+                    gap: 12,
+                    alignItems: "center",
+                    borderLeft: leader === 'teamA' ? `4px solid ${borderColor}` : `4px solid transparent`,
+                    borderRight: leader === 'teamB' ? `4px solid ${borderColor}` : `4px solid transparent`,
+                    ...bgStyle
+                  }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontWeight: 600 }}>Match {m.id}</span>
-                    
-                    {/* --- NEW: Using the helper here --- */}
-                    <span style={{ fontSize: "0.9em", opacity: 0.8, fontWeight: 500 }}>
-                      {formatMatchStatus(m.status, tournament?.teamA?.name, tournament?.teamB?.name)}
-                    </span>
-                  
+                  {/* Left: Team A Players */}
+                  <div style={{ textAlign: "left", fontSize: "0.9rem", lineHeight: 1.3 }}>
+                    {(m.teamAPlayers || []).map((p, i) => (
+                        <div key={i} style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                            {getPlayerName(p.playerId)}
+                        </div>
+                    ))}
                   </div>
-                  <div style={{ fontSize: "0.85em", color: "#666" }}>
-                    {(m.teamAPlayers || []).length > 0 && <span>vs</span>}
+
+                  {/* Center: Status */}
+                  <div className="status-badge" style={{ whiteSpace: 'nowrap' }}>
+                    {statusText.includes("wins") 
+                        ? statusText.split(" wins ")[1] // "3 & 2" instead of "Team A wins 3 & 2"
+                        : statusText
+                    }
+                  </div>
+
+                  {/* Right: Team B Players */}
+                  <div style={{ textAlign: "right", fontSize: "0.9rem", lineHeight: 1.3 }}>
+                    {(m.teamBPlayers || []).map((p, i) => (
+                        <div key={i} style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                            {getPlayerName(p.playerId)}
+                        </div>
+                    ))}
                   </div>
                 </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+              );
+            })
+          )}
+        </section>
+      </div>
+    </Layout>
   );
 }
