@@ -100,26 +100,6 @@ export default function App() {
   if (loading) return <div style={{ padding: 16 }}>Loading…</div>;
   if (!tournament) return <div style={{ padding: 16 }}>No active tournament found.</div>;
 
-  // --- DEBUG: DUMP SCHEMA ---
-  const dumpSchema = async () => {
-    console.log("🔍 DUMPING DB SCHEMA SAMPLE...");
-    const collections = ["tournaments", "rounds", "matches", "players", "playerMatchFacts", "playerStats"];
-    
-    const schema: Record<string, any> = {};
-
-    for (const col of collections) {
-      const snap = await getDocs(query(collection(db, col), limit(1)));
-      if (!snap.empty) {
-        schema[col] = snap.docs[0].data();
-      } else {
-        schema[col] = "❌ EMPTY COLLECTION";
-      }
-    }
-    
-    console.log(JSON.stringify(schema, null, 2));
-    alert("Check your Browser Console (F12 or Right Click -> Inspect -> Console) for the JSON output!");
-  };
-
   return (
     <div style={{ padding: 16, display: "grid", gap: 24 }}>
       <section>
@@ -140,11 +120,6 @@ export default function App() {
             <div style={{ fontSize: 32, fontWeight: "bold", lineHeight: 1 }}>
               <ScoreBlock final={stats.fB} proj={stats.pB} color={tournament.teamB?.color} />
             </div>
-            <div style={{ marginTop: 20, textAlign: 'center' }}>
-  <button onClick={dumpSchema} style={{ background: '#333', color: '#fff' }}>
-    🔍 Debug: Dump DB Schema
-  </button>
-</div>
           </div>
         </div>
       </section>
