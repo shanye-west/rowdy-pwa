@@ -47,6 +47,8 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
+  /* Disable native pull-to-refresh so our custom one works */
+  overscroll-behavior-y: contain;
 }
 
 #root {
