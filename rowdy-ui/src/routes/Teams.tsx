@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
-import type { TournamentDoc, PlayerDoc, PlayerStatDoc, TierMap } from "../types";
+import type { TournamentDoc, PlayerDoc, PlayerMatchFact, TierMap } from "../types";
+
+// We define a local type for the aggregated tournament stats
+type TournamentStat = {
+  wins: number;
+  losses: number;
+  halves: number;
+};
 
 export default function Teams() {
   const [loading, setLoading] = useState(true);
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  const [stats, setStats] = useState<Record<string, PlayerStatDoc>>({});
+  const [stats, setStats] = useState<Record<string, TournamentStat>>({});
 
   useEffect(() => {
     (async () => {
@@ -38,10 +45,29 @@ export default function Teams() {
         }
         setPlayers(pMap);
 
-        // 4. Fetch Stats
-        const sSnap = await getDocs(collection(db, "playerStats"));
-        const sMap: Record<string, PlayerStatDoc> = {};
-        sSnap.forEach(doc => { sMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerStatDoc; });
+        // 4. Fetch Match Facts ONLY for this Tournament
+        // This allows us to calculate the record specific to this event.
+        const factsQuery = query(
+          collection(db, "playerMatchFacts"), 
+          where("tournamentId", "==", tData.id)
+        );
+        const fSnap = await getDocs(factsQuery);
+        
+        const sMap: Record<string, TournamentStat> = {};
+
+        fSnap.forEach((doc) => {
+          const f = doc.data() as PlayerMatchFact;
+          const pid = f.playerId;
+          
+          // Initialize if not exists
+          if (!sMap[pid]) sMap[pid] = { wins: 0, losses: 0, halves: 0 };
+
+          // Aggregate
+          if (f.outcome === "win") sMap[pid].wins++;
+          else if (f.outcome === "loss") sMap[pid].losses++;
+          else if (f.outcome === "halve") sMap[pid].halves++;
+        });
+
         setStats(sMap);
 
       } finally {
