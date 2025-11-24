@@ -8,47 +8,43 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
 
   // Threshold to trigger refresh (in pixels)
   const THRESHOLD = 80;
-  const MAX_PULL = 120;
+  const MAX_PULL = 140;
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Only enable pull if we are at the very top of the page
-    if (window.scrollY === 0) {
+    // Allow pull if we are at the top (or very close to it)
+    if (window.scrollY <= 5) {
       setStartY(e.touches[0].clientY);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // If we haven't started a valid pull, ignore
     if (startY === 0) return;
 
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY;
 
     // Only allow pulling down, and only if we are at the top
-    if (diff > 0 && window.scrollY === 0) {
-      // Add resistance (logarithmic feel) so you can't pull down forever
+    if (diff > 0 && window.scrollY <= 5) {
+      // Add resistance (logarithmic feel)
       const damped = Math.min(diff * 0.5, MAX_PULL); 
       setPullDistance(damped);
-      
-      // Prevent default browser scrolling while pulling to refresh
-      // (Note: e.preventDefault() inside passive listeners is restricted in some browsers,
-      // but CSS 'overscroll-behavior' handles most of this logic now)
     }
   };
 
   const handleTouchEnd = () => {
     if (pullDistance > THRESHOLD) {
-      // --- NEW: Haptic Feedback ---
-      // This gives a physical "thud" on supported devices so you know it worked
+      // Attempt haptic feedback (Android only)
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(50); 
       }
 
       setRefreshing(true);
+      
       // Trigger the refresh
       setTimeout(() => {
-        window.location.reload();
-      }, 500); // Small delay to let the user see the spinner
+        // Force a hard reload
+        window.location.href = window.location.href;
+      }, 500);
     } else {
       // Snap back if not pulled far enough
       setPullDistance(0);
@@ -62,38 +58,43 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
     transition: refreshing || pullDistance === 0 ? 'transform 0.3s ease-out' : 'none',
   };
 
+  // Helper to determine label
+  const isReadyToRefresh = pullDistance > THRESHOLD;
+
   return (
     <div 
       ref={contentRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      style={{ minHeight: '100vh' }} // Ensure it fills screen to catch touches
+      style={{ minHeight: '100vh' }} 
     >
-      {/* LOADING SPINNER INDICATOR */}
+      {/* REFRESH INDICATOR */}
       <div style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
+        top: 0, left: 0, right: 0,
         height: `${THRESHOLD}px`,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: 12,
         pointerEvents: 'none',
         zIndex: 0,
         opacity: pullDistance > 0 || refreshing ? 1 : 0,
         transform: `translateY(${pullDistance > 0 || refreshing ? 0 : -50}px)`,
         transition: 'opacity 0.2s, transform 0.2s'
       }}>
+        {/* Icon */}
         <svg 
           width="24" 
           height="24" 
           viewBox="0 0 24 24" 
           style={{ 
-            animation: 'spin 1s linear infinite',
-            color: 'var(--brand-primary)', // Uses your Theme color!
-            transform: `rotate(${pullDistance * 3}deg)` // Rotates as you pull
+            animation: refreshing ? 'spin 1s linear infinite' : 'none',
+            color: isReadyToRefresh ? 'var(--brand-primary)' : '#94a3b8',
+            transform: refreshing ? 'none' : `rotate(${pullDistance * 3}deg)`,
+            transition: 'color 0.2s'
           }}
         >
           <path fill="currentColor" d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8Z" />
@@ -101,6 +102,20 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
           <path fill="currentColor" opacity="0.3" d="M22 12h-2a8 8 0 0 1-8 8v2a10 10 0 0 0 10-10Z" />
           <path fill="currentColor" opacity="0.3" d="M12 2v2a8 8 0 0 1 8 8h2a10 10 0 0 0-10-10Z" />
         </svg>
+
+        {/* Text Feedback */}
+        {!refreshing && (
+          <span style={{ 
+            fontSize: '0.75rem', 
+            fontWeight: 600, 
+            marginTop: 4, 
+            color: isReadyToRefresh ? 'var(--brand-primary)' : '#94a3b8',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            {isReadyToRefresh ? "Release to refresh" : "Pull down"}
+          </span>
+        )}
       </div>
 
       {/* APP CONTENT */}
@@ -108,7 +123,6 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
         {children}
       </div>
 
-      {/* GLOBAL SPINNER KEYFRAMES */}
       <style>{`
         @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
