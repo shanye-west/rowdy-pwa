@@ -1,68 +1,182 @@
+/* rowdy-ui/src/index.css */
+
+/* Import a nice font (Inter) from Google Fonts so it looks professional */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
+  --brand-primary: #132448;   /* Navy Blue */
+  --brand-secondary: #bf203c; /* Crimson Red */
+  --brand-accent: #ffffff;    /* White */
+  
+  /* UI Colors */
+  --app-bg: #f1f5f9;          /* Slate 100 - crisp professional background */
+  --card-bg: #ffffff;
+  --text-primary: #0f172a;    /* Slate 900 - High contrast text */
+  --text-secondary: #64748b;  /* Slate 500 - Subtitles */
+  --divider: #e2e8f0;         /* Slate 200 */
+  
+  /* Team Defaults (Fallbacks) */
+  --team-a-default: #132448;  /* Matches Primary */
+  --team-b-default: #bf203c;  /* Matches Secondary */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Dimensions */
+  --header-height: 60px;
+  --max-width: 600px;         /* Keep it mobile-width on desktop */
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+}
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+/* --- CHRISTMAS CLASSIC OVERRIDE --- */
+body.theme-christmas {
+  --brand-primary: #ef211c;   /* Holiday Red */
+  --brand-secondary: #00863c; /* Holiday Green */
+  
+  --app-bg: #fdfdfd;          /* Snow White background */
+  --team-a-default: #00863c;  /* Green Team */
+  --team-b-default: #ef211c;  /* Red Team */
+}
+
+/* --- RESET & BASE --- */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--app-bg);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  text-decoration: none;
+  color: inherit;
 }
 
-body {
+ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
+}
+
+/* --- APP SHELL LAYOUT --- */
+.app-container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding-bottom: 40px;
+  flex: 1; /* Takes up remaining space */
+}
+
+/* Sticky Header */
+.app-header {
+  background-color: var(--brand-primary);
+  color: var(--brand-accent);
+  height: var(--header-height);
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Truncate long text */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%; 
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+/* --- CARD SYSTEM --- */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(0,0,0,0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- TYPOGRAPHY UTILITIES --- */
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+.text-muted { color: var(--text-secondary); }
+.font-bold { font-weight: 700; }
+.font-mono { font-family: 'Courier New', Courier, monospace; letter-spacing: -0.05em; }
+
+/* --- SCORE INPUTS --- */
+/* The large boxes for entering scores */
+.score-input {
+  width: 100%;
+  height: 50px;
+  font-size: 1.5rem;
+  text-align: center;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--text-primary);
+  appearance: none; /* Remove default browser styling */
+}
+
+.score-input:focus {
+  outline: 2px solid var(--brand-primary);
+  background: #fff;
+  border-color: transparent;
+}
+
+.score-input:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+/* --- MATCH STATUS BADGE --- */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #e2e8f0;
+  color: var(--text-secondary);
+}
+
+/* --- BUTTONS --- */
+.btn-back {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+  padding: 8px;
+  margin-left: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
