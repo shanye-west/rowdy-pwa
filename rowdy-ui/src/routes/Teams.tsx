@@ -77,7 +77,7 @@ export default function Teams() {
     })();
   }, []);
 
-  const renderRoster = (teamName: string, teamColor: string, roster?: TierMap) => {
+  const renderRoster = (teamName: string, teamColor: string, roster?: TierMap, handicaps?: Record<string, number>) => {
     if (!roster) return <div className="card" style={{ padding: 16, opacity: 0.6 }}>No roster defined.</div>;
 
     // Sort tiers alphabetically (A, B, C...)
@@ -118,6 +118,7 @@ export default function Teams() {
                   const p = players[pid];
                   const s = stats[pid];
                   const name = p?.displayName || p?.username || "Unknown";
+                  const hcp = handicaps?.[pid];
                   
                   return (
                     <div key={pid} style={{ 
@@ -127,7 +128,12 @@ export default function Teams() {
                       padding: "12px 16px",
                       borderBottom: "1px solid var(--divider)"
                     }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>{name}</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{name}</span>
+                        {hcp != null && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>({hcp})</span>
+                        )}
+                      </div>
                       <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>
                         {s ? `${s.wins}-${s.losses}-${s.halves}` : "0-0-0"}
                       </div>
@@ -151,14 +157,16 @@ export default function Teams() {
         {renderRoster(
           tournament?.teamA?.name || "Team A", 
           tournament?.teamA?.color || "var(--team-a-default)", 
-          tournament?.teamA?.rosterByTier
+          tournament?.teamA?.rosterByTier,
+          tournament?.teamA?.handicapByPlayer
         )}
 
         {/* Team B Card */}
         {renderRoster(
           tournament?.teamB?.name || "Team B", 
           tournament?.teamB?.color || "var(--team-b-default)", 
-          tournament?.teamB?.rosterByTier
+          tournament?.teamB?.rosterByTier,
+          tournament?.teamB?.handicapByPlayer
         )}
         <LastUpdated />
       </div>

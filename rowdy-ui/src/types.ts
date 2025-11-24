@@ -24,13 +24,15 @@ export type TournamentDoc = {
     id: string; 
     name: string; 
     color?: string; 
-    rosterByTier?: TierMap; // <--- Nested inside the team
+    rosterByTier?: TierMap;
+    handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 7.4)
   };
   teamB: { 
     id: string; 
     name: string; 
     color?: string; 
-    rosterByTier?: TierMap; // <--- Nested here too
+    rosterByTier?: TierMap;
+    handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 9.5)
   };
 };
 
@@ -91,6 +93,11 @@ export type PlayerMatchFact = {
   playerTier?: string;
   playerTeamId?: string;
   opponentTeamId?: string;
+
+  // Handicaps (tournament-specific)
+  playerHandicap?: number | null;
+  opponentHandicaps?: (number | null)[];  // Array for team formats (1 for singles, 2 for team)
+  partnerHandicaps?: (number | null)[];   // Array for team formats (0 for singles, 1 for team)
 
   // Opponents
   opponentIds?: string[];

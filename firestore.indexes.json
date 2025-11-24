@@ -1,4 +1,48 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "playerId", "order": "ASCENDING" },
+        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "playerId", "order": "ASCENDING" },
+        { "fieldPath": "outcome", "order": "ASCENDING" },
+        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournamentId", "order": "ASCENDING" },
+        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournamentId", "order": "ASCENDING" },
+        { "fieldPath": "outcome", "order": "ASCENDING" },
+        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "playerId", "order": "ASCENDING" },
+        { "fieldPath": "tournamentId", "order": "ASCENDING" },
+        { "fieldPath": "outcome", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

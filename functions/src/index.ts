@@ -261,6 +261,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   
   let format = "unknown";
   let playerTierLookup: Record<string, string> = {};
+  let playerHandicapLookup: Record<string, number> = {};
   let teamAId = "teamA";
   let teamBId = "teamB";
 
@@ -276,14 +277,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       teamAId = d.teamA?.id || "teamA";
       teamBId = d.teamB?.id || "teamB";
       
-      const flatten = (roster?: Record<string, string[]>) => {
+      const flattenTiers = (roster?: Record<string, string[]>) => {
         if (!roster) return;
         Object.entries(roster).forEach(([tier, pIds]) => {
           if (Array.isArray(pIds)) pIds.forEach(pid => playerTierLookup[pid] = tier);
         });
       };
-      flatten(d.teamA?.rosterByTier);
-      flatten(d.teamB?.rosterByTier);
+      flattenTiers(d.teamA?.rosterByTier);
+      flattenTiers(d.teamB?.rosterByTier);
+
+      // Flatten handicaps from both teams
+      const flattenHandicaps = (hcpMap?: Record<string, number>) => {
+        if (!hcpMap) return;
+        Object.entries(hcpMap).forEach(([pid, hcp]) => {
+          if (typeof hcp === "number") playerHandicapLookup[pid] = hcp;
+        });
+      };
+      flattenHandicaps(d.teamA?.handicapByPlayer);
+      flattenHandicaps(d.teamB?.handicapByPlayer);
     }
   }
 
@@ -302,15 +313,20 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const myTeamId = team === "teamA" ? teamAId : teamBId;
     const oppTeamId = team === "teamA" ? teamBId : teamAId;
 
+    // Player's own handicap
+    const playerHandicap = playerHandicapLookup[p.playerId] ?? null;
+
     // --- 1. OPPONENTS ---
     const opponentIds: string[] = [];
     const opponentTiers: string[] = [];
+    const opponentHandicaps: (number | null)[] = [];
 
     if (Array.isArray(opponentPlayers)) {
       opponentPlayers.forEach((op) => {
         if (op && op.playerId) {
           opponentIds.push(op.playerId);
           opponentTiers.push(playerTierLookup[op.playerId] || "Unknown");
+          opponentHandicaps.push(playerHandicapLookup[op.playerId] ?? null);
         }
       });
     }
@@ -318,6 +334,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     // --- 2. PARTNERS (New Logic) ---
     const partnerIds: string[] = [];
     const partnerTiers: string[] = [];
+    const partnerHandicaps: (number | null)[] = [];
 
     if (Array.isArray(myTeamPlayers)) {
       myTeamPlayers.forEach((tm) => {
@@ -325,6 +342,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if (tm && tm.playerId && tm.playerId !== p.playerId) {
           partnerIds.push(tm.playerId);
           partnerTiers.push(playerTierLookup[tm.playerId] || "Unknown");
+          partnerHandicaps.push(playerHandicapLookup[tm.playerId] ?? null);
         }
       });
     }
@@ -337,11 +355,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       playerTeamId: myTeamId,
       opponentTeamId: oppTeamId,
       
+      // Handicaps
+      playerHandicap,
+      opponentHandicaps,
+      partnerHandicaps,
+
       // Opponent Arrays (Source of Truth)
       opponentIds,
       opponentTiers,
 
-      // Partner Arrays (New)
+      // Partner Arrays
       partnerIds,
       partnerTiers,
 
