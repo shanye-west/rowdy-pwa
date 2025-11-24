@@ -48,17 +48,27 @@ export default function Match() {
         ...(mData.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
       ]));
       
-      if (ids.length) {
-        // Optimization: Only fetch if we don't have them yet
-        // (Simplified for brevity, fetching every time is "okay" for MVP but separate effect is better)
-         const qPlayers = query(collection(db, "players"), where("__name__", "in", ids));
-         getDocs(qPlayers).then(pSnap => {
-            const map: Record<string, PlayerDoc> = {};
-            pSnap.forEach((d) => { map[d.id] = { id: d.id, ...(d.data() as any) }; });
-            setPlayers(prev => ({ ...prev, ...map }));
-         });
-      }
-      setLoading(false);
+      const fetchPlayers = async () => {
+        if (!ids.length) return {} as Record<string, PlayerDoc>;
+
+        const batches: string[][] = [];
+        for (let i = 0; i < ids.length; i += 10) {
+          batches.push(ids.slice(i, i + 10));
+        }
+
+        const snapshots = await Promise.all(
+          batches.map((batch) => getDocs(query(collection(db, "players"), where("__name__", "in", batch))))
+        );
+
+        return snapshots.reduce((map, snap) => {
+          snap.forEach((d) => { map[d.id] = { id: d.id, ...(d.data() as any) }; });
+          return map;
+        }, {} as Record<string, PlayerDoc>);
+      };
+
+      fetchPlayers()
+        .then((map) => setPlayers((prev) => ({ ...prev, ...map })))
+        .finally(() => setLoading(false));
     });
 
     return () => unsub();
