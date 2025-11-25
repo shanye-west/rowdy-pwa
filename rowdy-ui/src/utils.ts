@@ -2,9 +2,9 @@ import type { MatchDoc } from "./types";
 
 export function formatRoundType(format: string): string {
   const formatMap: Record<string, string> = {
-    twoManBestBall: "2v2 Best Ball",
-    twoManShamble: "2v2 Shamble",
-    twoManScramble: "2v2 Scramble",
+    twoManBestBall: "2-Man Best Ball",
+    twoManShamble: "2-Man Shamble",
+    twoManScramble: "2-Man Scramble",
     singles: "Singles",
   };
   return formatMap[format] || format;
