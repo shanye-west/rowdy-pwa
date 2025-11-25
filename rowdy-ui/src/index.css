@@ -224,11 +224,14 @@
 
   /* Loading Spinner */
   .spinner {
-    @apply inline-block w-5 h-5 border-2 border-slate-200 border-t-slate-600 
-           rounded-full animate-spin;
+    @apply inline-block w-5 h-5 rounded-full animate-spin;
+    border: 2px solid #e2e8f0;
+    border-top-color: #475569;
   }
   .spinner-lg {
-    @apply w-8 h-8 border-3;
+    @apply inline-block w-8 h-8 rounded-full animate-spin;
+    border: 3px solid #e2e8f0;
+    border-top-color: #475569;
   }
 
   /* Divider */
