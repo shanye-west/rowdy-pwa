@@ -284,51 +284,61 @@ export default function Match() {
       // Get the team scores for this hole based on format
       let teamAScore: number | null = null;
       let teamBScore: number | null = null;
+      let holeComplete = false;
       
       if (format === "twoManScramble") {
-        teamAScore = input?.teamAGross ?? null;
-        teamBScore = input?.teamBGross ?? null;
+        const aGross = input?.teamAGross ?? null;
+        const bGross = input?.teamBGross ?? null;
+        // Scramble: hole complete when both team grosses are entered
+        holeComplete = aGross != null && bGross != null;
+        teamAScore = aGross;
+        teamBScore = bGross;
       } else if (format === "singles") {
-        teamAScore = input?.teamAPlayerGross ?? null;
-        teamBScore = input?.teamBPlayerGross ?? null;
+        const aGross = input?.teamAPlayerGross ?? null;
+        const bGross = input?.teamBPlayerGross ?? null;
+        // Singles: hole complete when both player grosses are entered
+        holeComplete = aGross != null && bGross != null;
+        
+        if (holeComplete) {
+          // Apply strokes for singles
+          const teamAStroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          const teamBStroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          teamAScore = aGross! - teamAStroke;
+          teamBScore = bGross! - teamBStroke;
+        }
       } else {
-        // Best Ball / Shamble - use the best (lowest) of each team's scores
+        // Best Ball / Shamble - calculate net for each player, then take best
         const aArr = input?.teamAPlayersGross;
         const bArr = input?.teamBPlayersGross;
-        if (Array.isArray(aArr)) {
-          const validA = aArr.filter((v: number | null) => v != null) as number[];
-          teamAScore = validA.length > 0 ? Math.min(...validA) : null;
-        }
-        if (Array.isArray(bArr)) {
-          const validB = bArr.filter((v: number | null) => v != null) as number[];
-          teamBScore = validB.length > 0 ? Math.min(...validB) : null;
+        
+        // Check if all 4 players have entered scores
+        const a0 = Array.isArray(aArr) ? aArr[0] : null;
+        const a1 = Array.isArray(aArr) ? aArr[1] : null;
+        const b0 = Array.isArray(bArr) ? bArr[0] : null;
+        const b1 = Array.isArray(bArr) ? bArr[1] : null;
+        
+        holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
+        
+        if (holeComplete) {
+          // Calculate net for each player individually
+          const a0Stroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          const a1Stroke = (match?.teamAPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          const b0Stroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          const b1Stroke = (match?.teamBPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+          
+          const a0Net = a0! - a0Stroke;
+          const a1Net = a1! - a1Stroke;
+          const b0Net = b0! - b0Stroke;
+          const b1Net = b1! - b1Stroke;
+          
+          // Best (lowest) net for each team
+          teamAScore = Math.min(a0Net, a1Net);
+          teamBScore = Math.min(b0Net, b1Net);
         }
       }
       
-      // Apply strokes if applicable (subtract stroke from net score)
-      // For best ball, check if either player gets a stroke on this hole
-      if (format !== "twoManScramble" && format !== "singles") {
-        // Check if Team A gets any strokes on this hole
-        const teamAStroke = (match?.teamAPlayers || []).some((_, pIdx) => 
-          (match?.teamAPlayers?.[pIdx]?.strokesReceived?.[i] ?? 0) > 0
-        );
-        const teamBStroke = (match?.teamBPlayers || []).some((_, pIdx) => 
-          (match?.teamBPlayers?.[pIdx]?.strokesReceived?.[i] ?? 0) > 0
-        );
-        
-        if (teamAScore != null && teamAStroke) teamAScore -= 1;
-        if (teamBScore != null && teamBStroke) teamBScore -= 1;
-      } else if (format === "singles") {
-        // Singles: check strokesReceived for the single player
-        const teamAStroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0;
-        const teamBStroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0;
-        
-        if (teamAScore != null && teamAStroke) teamAScore -= 1;
-        if (teamBScore != null && teamBStroke) teamBScore -= 1;
-      }
-      
-      // Compare scores (lower is better in golf)
-      if (teamAScore != null && teamBScore != null) {
+      // Compare scores only if hole is complete (lower is better in golf)
+      if (holeComplete && teamAScore != null && teamBScore != null) {
         if (teamAScore < teamBScore) {
           teamAUp += 1; // Team A won the hole
         } else if (teamBScore < teamAScore) {
@@ -341,8 +351,8 @@ export default function Match() {
       let status: string;
       let leader: "A" | "B" | null;
       
-      if (teamAScore == null || teamBScore == null) {
-        // Hole not complete - leave blank (don't carry forward)
+      if (!holeComplete) {
+        // Hole not complete - leave blank
         status = "";
         leader = null;
       } else if (teamAUp === 0) {
