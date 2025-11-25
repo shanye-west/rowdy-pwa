@@ -151,6 +151,34 @@ export const linkRoundToTournament = onDocumentWritten("rounds/{roundId}", async
   });
 });
 
+export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async (event) => {
+  const ref = event.data?.ref;
+  const data = event.data?.data();
+  if (!ref || !data) return;
+
+  const toMerge: any = {};
+  
+  // Create holes array with 18 holes if not present
+  if (!Array.isArray(data.holes)) {
+    toMerge.holes = Array.from({ length: 18 }, (_, i) => ({
+      number: i + 1,
+      hcpIndex: 0,
+      par: 4
+    }));
+  }
+  
+  // Set default name if not present
+  if (data.name === undefined) toMerge.name = "";
+  
+  // Set default tees if not present
+  if (data.tees === undefined) toMerge.tees = "";
+  
+  if (Object.keys(toMerge).length > 0) {
+    toMerge._seededAt = FieldValue.serverTimestamp();
+    await ref.set(toMerge, { merge: true });
+  }
+});
+
 // --- SCORING ---
 
 function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
