@@ -22,14 +22,16 @@ export type TournamentDoc = {
   roundIds?: string[];
   teamA: { 
     id: string; 
-    name: string; 
+    name: string;
+    logo?: string;
     color?: string; 
     rosterByTier?: TierMap;
     handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 7.4)
   };
   teamB: { 
     id: string; 
-    name: string; 
+    name: string;
+    logo?: string;
     color?: string; 
     rosterByTier?: TierMap;
     handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 9.5)
