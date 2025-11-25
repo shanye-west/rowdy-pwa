@@ -451,10 +451,17 @@ export default function Match() {
             >
               {/* HEADER ROW - Hole Numbers: 1-9 | OUT | 10-18 | IN | TOT */}
               <thead>
-                <tr className="bg-slate-800 text-white">
+                <tr style={{ 
+                  backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b",
+                  color: "white" 
+                }}>
                   <th 
-                    className="sticky left-0 z-10 bg-slate-800 font-bold text-left px-3 py-2"
-                    style={{ width: labelWidth, minWidth: labelWidth }}
+                    className="sticky left-0 z-10 font-bold text-left px-3 py-2"
+                    style={{ 
+                      width: labelWidth, 
+                      minWidth: labelWidth,
+                      backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b"
+                    }}
                   >
                     HOLE
                   </th>
@@ -468,19 +475,46 @@ export default function Match() {
                       {h.num}
                     </th>
                   ))}
-                  <th className="font-bold py-2 bg-slate-700 border-l-2 border-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>OUT</th>
+                  <th 
+                    className="font-bold py-2 border-l-2" 
+                    style={{ 
+                      width: totalColWidth, 
+                      minWidth: totalColWidth,
+                      backgroundColor: tSeries === "christmasClassic" ? "#996f00" : "#334155",
+                      borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
+                    }}
+                  >OUT</th>
                   {/* Back 9 */}
                   {holes.slice(9, 18).map(h => (
                     <th 
                       key={h.k} 
-                      className="font-bold py-2 border-l-2 border-slate-600 first:border-l-2"
-                      style={{ width: cellWidth, minWidth: cellWidth }}
+                      className="font-bold py-2 border-l-2"
+                      style={{ 
+                        width: cellWidth, 
+                        minWidth: cellWidth,
+                        borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
+                      }}
                     >
                       {h.num}
                     </th>
                   ))}
-                  <th className="font-bold py-2 bg-slate-700 border-l-2 border-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>IN</th>
-                  <th className="font-bold py-2 bg-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>TOT</th>
+                  <th 
+                    className="font-bold py-2 border-l-2" 
+                    style={{ 
+                      width: totalColWidth, 
+                      minWidth: totalColWidth,
+                      backgroundColor: tSeries === "christmasClassic" ? "#996f00" : "#334155",
+                      borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
+                    }}
+                  >IN</th>
+                  <th 
+                    className="font-bold py-2" 
+                    style={{ 
+                      width: totalColWidth, 
+                      minWidth: totalColWidth,
+                      backgroundColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
+                    }}
+                  >TOT</th>
                 </tr>
               </thead>
               <tbody>
