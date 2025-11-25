@@ -14,6 +14,7 @@ type TournamentStat = {
 
 export default function Teams() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
@@ -21,6 +22,7 @@ export default function Teams() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         // 1. Fetch Active Tournament
         const tSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
@@ -70,7 +72,9 @@ export default function Teams() {
         });
 
         setStats(sMap);
-
+      } catch (err) {
+        console.error("Failed to load teams", err);
+        setError("Something went wrong while loading teams. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -156,6 +160,7 @@ export default function Teams() {
   };
 
   if (loading) return <div style={{ padding: 20, textAlign: "center" }}>Loading...</div>;
+  if (error) return <div style={{ padding: 20, textAlign: "center" }}>{error}</div>;
 
   return (
     <Layout title="Team Rosters" series={tournament?.series} showBack>
