@@ -16,6 +16,7 @@ export type TierMap = {
 
 export type TournamentDoc = {
   id: string;
+  year: number;
   name: string;
   series: string;
   active: boolean;
