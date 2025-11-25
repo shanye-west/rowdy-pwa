@@ -145,16 +145,11 @@ export default function Match() {
     };
   }, [holes, format]);
 
-  function getInitials(pid?: string) {
-    if (!pid) return "P";
+  function getPlayerName(pid?: string) {
+    if (!pid) return "Player";
     const p = players[pid];
-    if (!p) return "?";
-    if (p.displayName) {
-      const parts = p.displayName.split(" ");
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      return p.displayName.slice(0, 2).toUpperCase();
-    }
-    return (p.username || "??").slice(0, 2).toUpperCase();
+    if (!p) return "...";
+    return p.displayName || p.username || "Unknown";
   }
 
   function hasStroke(team: "A" | "B", pIdx: number, holeIdx: number) {
@@ -395,10 +390,10 @@ export default function Match() {
   if (isFourPlayer) {
     // 4 players: A1, A2, B1, B2
     playerRows.push(
-      { team: "A", pIdx: 0, label: getInitials(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "A", pIdx: 1, label: getInitials(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "B", pIdx: 0, label: getInitials(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
-      { team: "B", pIdx: 1, label: getInitials(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
     );
   } else {
     // 2 rows: Team A, Team B
@@ -409,7 +404,7 @@ export default function Match() {
   }
 
   const cellWidth = 44;
-  const labelWidth = 72;
+  const labelWidth = 120;
   const totalColWidth = 48;
 
   return (
@@ -522,7 +517,7 @@ export default function Match() {
                         {pr.label}
                         {/* Show dot if player has any strokes */}
                         {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
-                          <span className="ml-1 text-red-500">•</span>
+                          <span className="ml-1 text-sky-400">•</span>
                         )}
                       </td>
                       {/* Front 9 holes */}
@@ -543,7 +538,7 @@ export default function Match() {
                                     ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
                                     : "bg-white border-slate-200 hover:border-slate-300"
                                   }
-                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                  ${stroke ? "" : ""}
                                 `}
                                 value={getCellValue(h, pr.team, pr.pIdx)}
                                 disabled={locked}
@@ -553,7 +548,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -581,7 +576,7 @@ export default function Match() {
                                     ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
                                     : "bg-white border-slate-200 hover:border-slate-300"
                                   }
-                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                  ${stroke ? "" : ""}
                                 `}
                                 value={getCellValue(h, pr.team, pr.pIdx)}
                                 disabled={locked}
@@ -591,7 +586,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -747,7 +742,7 @@ export default function Match() {
                         {pr.label}
                         {/* Show dot if player has any strokes */}
                         {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
-                          <span className="ml-1 text-red-500">•</span>
+                          <span className="ml-1 text-sky-400">•</span>
                         )}
                       </td>
                       {/* Front 9 holes */}
@@ -768,7 +763,7 @@ export default function Match() {
                                     ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
                                     : "bg-white border-slate-200 hover:border-slate-300"
                                   }
-                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                  ${stroke ? "" : ""}
                                 `}
                                 value={getCellValue(h, pr.team, pr.pIdx)}
                                 disabled={locked}
@@ -778,7 +773,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -806,7 +801,7 @@ export default function Match() {
                                     ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
                                     : "bg-white border-slate-200 hover:border-slate-300"
                                   }
-                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                  ${stroke ? "" : ""}
                                 `}
                                 value={getCellValue(h, pr.team, pr.pIdx)}
                                 disabled={locked}
@@ -816,7 +811,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
