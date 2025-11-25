@@ -212,6 +212,107 @@ export default function Match() {
     return roundLocked || (isMatchClosed && holeNum > matchThru);
   }
 
+  // Calculate running match status after each hole
+  // Returns array of { status: string, leader: "A" | "B" | null } for each hole
+  const runningMatchStatus = useMemo(() => {
+    const result: { status: string; leader: "A" | "B" | null }[] = [];
+    let teamAUp = 0; // Positive = Team A ahead, Negative = Team B ahead
+    
+    for (let i = 0; i < 18; i++) {
+      const hole = holes[i];
+      const input = hole.input;
+      
+      // Get the team scores for this hole based on format
+      let teamAScore: number | null = null;
+      let teamBScore: number | null = null;
+      
+      if (format === "twoManScramble") {
+        teamAScore = input?.teamAGross ?? null;
+        teamBScore = input?.teamBGross ?? null;
+      } else if (format === "singles") {
+        teamAScore = input?.teamAPlayerGross ?? null;
+        teamBScore = input?.teamBPlayerGross ?? null;
+      } else {
+        // Best Ball / Shamble - use the best (lowest) of each team's scores
+        const aArr = input?.teamAPlayersGross;
+        const bArr = input?.teamBPlayersGross;
+        if (Array.isArray(aArr)) {
+          const validA = aArr.filter((v: number | null) => v != null) as number[];
+          teamAScore = validA.length > 0 ? Math.min(...validA) : null;
+        }
+        if (Array.isArray(bArr)) {
+          const validB = bArr.filter((v: number | null) => v != null) as number[];
+          teamBScore = validB.length > 0 ? Math.min(...validB) : null;
+        }
+      }
+      
+      // Apply strokes if applicable (subtract stroke from net score)
+      // For best ball, check if either player gets a stroke on this hole
+      if (format !== "twoManScramble" && format !== "singles") {
+        // Check if Team A gets any strokes on this hole
+        const teamAStroke = (match?.teamAPlayers || []).some((_, pIdx) => 
+          (match?.teamAPlayers?.[pIdx]?.strokesReceived?.[i] ?? 0) > 0
+        );
+        const teamBStroke = (match?.teamBPlayers || []).some((_, pIdx) => 
+          (match?.teamBPlayers?.[pIdx]?.strokesReceived?.[i] ?? 0) > 0
+        );
+        
+        if (teamAScore != null && teamAStroke) teamAScore -= 1;
+        if (teamBScore != null && teamBStroke) teamBScore -= 1;
+      } else if (format === "singles") {
+        // Singles: check strokesReceived for the single player
+        const teamAStroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0;
+        const teamBStroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0;
+        
+        if (teamAScore != null && teamAStroke) teamAScore -= 1;
+        if (teamBScore != null && teamBStroke) teamBScore -= 1;
+      }
+      
+      // Compare scores (lower is better in golf)
+      if (teamAScore != null && teamBScore != null) {
+        if (teamAScore < teamBScore) {
+          teamAUp += 1; // Team A won the hole
+        } else if (teamBScore < teamAScore) {
+          teamAUp -= 1; // Team B won the hole
+        }
+        // If tied, no change
+      }
+      
+      // Format the status text
+      let status: string;
+      let leader: "A" | "B" | null;
+      
+      if (teamAScore == null || teamBScore == null) {
+        // Hole not complete - show previous status or empty
+        if (i === 0) {
+          status = "";
+          leader = null;
+        } else {
+          // Carry forward previous status display
+          status = result[i - 1]?.status || "";
+          leader = result[i - 1]?.leader || null;
+        }
+      } else if (teamAUp === 0) {
+        status = "AS";
+        leader = null;
+      } else if (teamAUp > 0) {
+        status = `${teamAUp}UP`;
+        leader = "A";
+      } else {
+        status = `${Math.abs(teamAUp)}UP`;
+        leader = "B";
+      }
+      
+      result.push({ status, leader });
+    }
+    
+    return result;
+  }, [holes, format, match]);
+
+  // Get team colors
+  const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
+  const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
+
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="spinner-lg"></div>
@@ -348,13 +449,179 @@ export default function Match() {
                   <td className="py-1 bg-slate-200"></td>
                 </tr>
 
-                {/* Player Rows */}
-                {playerRows.map((pr, rowIdx) => {
-                  const isLastOfTeam = (isFourPlayer && (rowIdx === 1 || rowIdx === 3)) || (!isFourPlayer && rowIdx === 0);
+                {/* Team A Player Rows */}
+                {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => {
+                  const isLastOfTeamA = rowIdx === teamRows.length - 1;
                   return (
                     <tr 
                       key={`row-${pr.team}-${pr.pIdx}`}
-                      className={`${isLastOfTeam ? "border-b-2 border-slate-300" : "border-b border-slate-100"}`}
+                      className={`${isLastOfTeamA ? "" : "border-b border-slate-100"}`}
+                    >
+                      <td 
+                        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
+                        style={{ color: pr.color }}
+                      >
+                        {pr.label}
+                        {/* Show dot if player has any strokes */}
+                        {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
+                          <span className="ml-1 text-red-500">•</span>
+                        )}
+                      </td>
+                      {/* Front 9 holes */}
+                      {holes.slice(0, 9).map(h => {
+                        const locked = isHoleLocked(h.num);
+                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        return (
+                          <td key={h.k} className="p-0.5">
+                            <div className="relative">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className={`
+                                  w-10 h-10 text-center text-base font-semibold rounded-md border
+                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                                  transition-colors duration-100
+                                  ${locked 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                  }
+                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                `}
+                                value={getCellValue(h, pr.team, pr.pIdx)}
+                                disabled={locked}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? null : Number(e.target.value);
+                                  updateCell(h, pr.team, pr.pIdx, val);
+                                }}
+                              />
+                              {stroke && (
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      {/* OUT total */}
+                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+                        {totals.getOut(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                      {/* Back 9 holes */}
+                      {holes.slice(9, 18).map((h, i) => {
+                        const locked = isHoleLocked(h.num);
+                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        return (
+                          <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className={`
+                                  w-10 h-10 text-center text-base font-semibold rounded-md border
+                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                                  transition-colors duration-100
+                                  ${locked 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                  }
+                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                `}
+                                value={getCellValue(h, pr.team, pr.pIdx)}
+                                disabled={locked}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? null : Number(e.target.value);
+                                  updateCell(h, pr.team, pr.pIdx, val);
+                                }}
+                              />
+                              {stroke && (
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      {/* IN total */}
+                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+                        {totals.getIn(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                      {/* TOTAL */}
+                      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
+                        {totals.getTotal(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* MATCH STATUS ROW - Between Team A and Team B */}
+                <tr className="bg-slate-800 border-y-2 border-slate-600">
+                  <td className="sticky left-0 z-10 bg-slate-800 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide">
+                    Status
+                  </td>
+                  {/* Front 9 match status */}
+                  {holes.slice(0, 9).map((h, i) => {
+                    const { status, leader } = runningMatchStatus[i];
+                    const color = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "#94a3b8";
+                    return (
+                      <td key={`status-${h.k}`} className="py-1 px-0.5">
+                        <div 
+                          className="text-xs font-bold rounded px-1 py-0.5"
+                          style={{ color, backgroundColor: "rgba(255,255,255,0.1)" }}
+                        >
+                          {status}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {/* OUT status (show status after hole 9) */}
+                  <td className="py-1 bg-slate-700 border-l-2 border-slate-600">
+                    <div 
+                      className="text-xs font-bold"
+                      style={{ color: runningMatchStatus[8]?.leader === "A" ? teamAColor : runningMatchStatus[8]?.leader === "B" ? teamBColor : "#94a3b8" }}
+                    >
+                      {runningMatchStatus[8]?.status || ""}
+                    </div>
+                  </td>
+                  {/* Back 9 match status */}
+                  {holes.slice(9, 18).map((h, i) => {
+                    const { status, leader } = runningMatchStatus[9 + i];
+                    const color = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "#94a3b8";
+                    return (
+                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-600" : ""}`}>
+                        <div 
+                          className="text-xs font-bold rounded px-1 py-0.5"
+                          style={{ color, backgroundColor: "rgba(255,255,255,0.1)" }}
+                        >
+                          {status}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {/* IN status (show status after hole 18) */}
+                  <td className="py-1 bg-slate-700 border-l-2 border-slate-600">
+                    <div 
+                      className="text-xs font-bold"
+                      style={{ color: runningMatchStatus[17]?.leader === "A" ? teamAColor : runningMatchStatus[17]?.leader === "B" ? teamBColor : "#94a3b8" }}
+                    >
+                      {runningMatchStatus[17]?.status || ""}
+                    </div>
+                  </td>
+                  {/* TOTAL status */}
+                  <td className="py-1 bg-slate-600">
+                    <div 
+                      className="text-sm font-extrabold"
+                      style={{ color: runningMatchStatus[17]?.leader === "A" ? teamAColor : runningMatchStatus[17]?.leader === "B" ? teamBColor : "#fff" }}
+                    >
+                      {runningMatchStatus[17]?.status || "AS"}
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Team B Player Rows */}
+                {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => {
+                  const isLastOfTeamB = rowIdx === teamRows.length - 1;
+                  return (
+                    <tr 
+                      key={`row-${pr.team}-${pr.pIdx}`}
+                      className={`${isLastOfTeamB ? "border-b-2 border-slate-300" : "border-b border-slate-100"}`}
                     >
                       <td 
                         className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
