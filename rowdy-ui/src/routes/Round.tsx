@@ -28,15 +28,27 @@ export default function Round() {
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!roundId) return;
-    (async () => {
+    if (!roundId) {
+      setLoading(false);
+      setError("Round ID is missing.");
+      return;
+    }
+
+    const fetchRound = async () => {
       setLoading(true);
+      setError(null);
+
       try {
         // 1. Get Round
         const rSnap = await getDoc(doc(db, "rounds", roundId));
-        if (!rSnap.exists()) { setLoading(false); return; }
+        if (!rSnap.exists()) {
+          setError("Round not found.");
+          setRound(null);
+          return;
+        }
         const rData = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
         setRound(rData);
 
@@ -69,7 +81,7 @@ export default function Round() {
           // For production with many players, you'd chunk this.
           const chunks = [];
           for (let i=0; i<pIds.length; i+=10) chunks.push(pIds.slice(i, i+10));
-          
+
           const playerMap: Record<string, PlayerDoc> = {};
           for (const chunk of chunks) {
             const pSnap = await getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)));
@@ -78,10 +90,15 @@ export default function Round() {
           setPlayers(playerMap);
         }
 
+      } catch (err) {
+        console.error("Error loading round data", err);
+        setError("Unable to load round data. Please try again.");
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    fetchRound();
   }, [roundId]);
 
   const stats = useMemo(() => {
@@ -113,6 +130,7 @@ export default function Round() {
   };
 
   if (loading) return <div style={{ padding: 20, textAlign: 'center' }}>Loading...</div>;
+  if (error) return <div style={{ padding: 20, color: "var(--error, #b00020)" }}>{error}</div>;
   if (!round) return <div style={{ padding: 20 }}>Round not found.</div>;
 
   const tName = tournament?.name || "Round Detail";
