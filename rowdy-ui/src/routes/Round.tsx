@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { collection, doc, getDoc, getDocs, query, where, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc } from "../types";
-import { formatMatchStatus } from "../utils";
+import { formatMatchStatus, formatRoundType } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
@@ -148,7 +148,7 @@ export default function Round() {
             Round {round.day ?? ""}
           </h1>
           <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 16 }}>
-            {round.format}
+            {formatRoundType(round.format)}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>

@@ -6,6 +6,7 @@ import type { TournamentDoc, RoundDoc, MatchDoc } from "./types";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
+import { formatRoundType } from "./utils";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -255,7 +256,7 @@ export default function App() {
                   {/* Round Info - Center */}
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 2 }}>Round {idx + 1}</div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{r.format}</div>
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{formatRoundType(r.format)}</div>
                   </div>
 
                   {/* Team B - Right */}
