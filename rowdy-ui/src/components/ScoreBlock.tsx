@@ -2,18 +2,19 @@ interface ScoreBlockProps {
   final: number;
   proj?: number;
   color?: string;
+  small?: boolean;
 }
 
-export default function ScoreBlock({ final, proj = 0, color }: ScoreBlockProps) {
+export default function ScoreBlock({ final, proj = 0, color, small = false }: ScoreBlockProps) {
   return (
     <span>
       <span style={{ color: color || "inherit" }}>{final}</span>
       {proj > 0 && (
         <span
           style={{
-            fontSize: "0.5em",
+            fontSize: small ? "0.35em" : "0.5em",
             color: "#aaa",
-            marginLeft: 4,
+            marginLeft: small ? 3 : 4,
             verticalAlign: "middle",
             fontWeight: 400
           }}
