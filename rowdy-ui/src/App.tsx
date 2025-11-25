@@ -153,7 +153,7 @@ export default function App() {
                       style={{
                         position: 'absolute',
                         left: '100%',
-                        bottom: 0,
+                        bottom: '15%',
                         fontSize: "0.35em",
                         color: "#aaa",
                         marginLeft: 3,
@@ -195,7 +195,7 @@ export default function App() {
                       style={{
                         position: 'absolute',
                         right: '100%',
-                        bottom: 0,
+                        bottom: '15%',
                         fontSize: "0.35em",
                         color: "#aaa",
                         marginRight: 3,
@@ -232,7 +232,7 @@ export default function App() {
                   key={r.id} 
                   to={`/round/${r.id}`} 
                   className="card card-hover"
-                  style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}
+                  style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'flex-end', gap: 12 }}
                 >
                   {/* Team A - Left */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
