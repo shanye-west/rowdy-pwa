@@ -87,13 +87,14 @@
     max-width: var(--max-width);
   }
 
-  /* Sticky Header */
+  /* Sticky Header - extends into safe area (notch area) on mobile */
   .app-header {
     @apply flex items-center justify-between px-4 sticky top-0 z-50;
     /* Default Rowdy Cup: diagonal split (navy bottom-left, red top-right) */
     background: linear-gradient(135deg, #132448 50%, #bf203c 50%);
     color: var(--brand-accent);
-    height: var(--header-height);
+    height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
