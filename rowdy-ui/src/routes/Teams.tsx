@@ -77,7 +77,7 @@ export default function Teams() {
     })();
   }, []);
 
-  const renderRoster = (teamName: string, teamColor: string, roster?: TierMap, handicaps?: Record<string, number>) => {
+  const renderRoster = (teamName: string, teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, logo?: string) => {
     if (!roster) return <div className="card" style={{ padding: 16, opacity: 0.6 }}>No roster defined.</div>;
 
     // Sort tiers alphabetically (A, B, C...)
@@ -86,7 +86,14 @@ export default function Teams() {
     return (
       <div className="card" style={{ padding: 0, overflow: "hidden", borderTop: `4px solid ${teamColor}` }}>
         {/* Team Header */}
-        <div style={{ background: "#f8fafc", padding: "12px 16px", borderBottom: "1px solid var(--divider)" }}>
+        <div style={{ background: "#f8fafc", padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 12 }}>
+          {logo && (
+            <img 
+              src={logo} 
+              alt={teamName}
+              style={{ width: 32, height: 32, objectFit: "contain" }}
+            />
+          )}
           <h2 style={{ fontSize: "1rem", color: teamColor, margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {teamName}
           </h2>
@@ -158,7 +165,8 @@ export default function Teams() {
           tournament?.teamA?.name || "Team A", 
           tournament?.teamA?.color || "var(--team-a-default)", 
           tournament?.teamA?.rosterByTier,
-          tournament?.teamA?.handicapByPlayer
+          tournament?.teamA?.handicapByPlayer,
+          tournament?.teamA?.logo
         )}
 
         {/* Team B Card */}
@@ -166,7 +174,8 @@ export default function Teams() {
           tournament?.teamB?.name || "Team B", 
           tournament?.teamB?.color || "var(--team-b-default)", 
           tournament?.teamB?.rosterByTier,
-          tournament?.teamB?.handicapByPlayer
+          tournament?.teamB?.handicapByPlayer,
+          tournament?.teamB?.logo
         )}
         <LastUpdated />
       </div>

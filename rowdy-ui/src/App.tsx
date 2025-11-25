@@ -136,6 +136,13 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
               {/* Team A */}
               <div>
+                {tournament.teamA?.logo && (
+                  <img 
+                    src={tournament.teamA.logo} 
+                    alt={tournament.teamA?.name || "Team A"}
+                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
+                  />
+                )}
                 <div style={{ 
                   fontWeight: 800, 
                   color: tournament.teamA?.color || "var(--team-a-default)", 
@@ -154,6 +161,13 @@ export default function App() {
 
               {/* Team B */}
               <div>
+                {tournament.teamB?.logo && (
+                  <img 
+                    src={tournament.teamB.logo} 
+                    alt={tournament.teamB?.name || "Team B"}
+                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
+                  />
+                )}
                 <div style={{ 
                   fontWeight: 800, 
                   color: tournament.teamB?.color || "var(--team-b-default)", 
