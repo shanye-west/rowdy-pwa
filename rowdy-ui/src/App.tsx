@@ -146,13 +146,24 @@ export default function App() {
                 }}>
                   {tournament.teamA?.name || "Team A"}
                 </div>
-                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
-                  <ScoreBlock
-                    final={stats.fA}
-                    proj={stats.pA}
-                    color={tournament.teamA?.color || "var(--team-a-default)"}
-                    small
-                  />
+                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+                  <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
+                  {stats.pA > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: '100%',
+                        bottom: 0,
+                        fontSize: "0.35em",
+                        color: "#aaa",
+                        marginLeft: 3,
+                        fontWeight: 400,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      (+{stats.pA})
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -178,13 +189,24 @@ export default function App() {
                 }}>
                   {tournament.teamB?.name || "Team B"}
                 </div>
-                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
-                  <ScoreBlock
-                    final={stats.fB}
-                    proj={stats.pB}
-                    color={tournament.teamB?.color || "var(--team-b-default)"}
-                    small
-                  />
+                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+                  {stats.pB > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '100%',
+                        bottom: 0,
+                        fontSize: "0.35em",
+                        color: "#aaa",
+                        marginRight: 3,
+                        fontWeight: 400,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      (+{stats.pB})
+                    </span>
+                  )}
+                  <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
                 </div>
               </div>
             </div>
@@ -237,12 +259,13 @@ export default function App() {
                   </div>
 
                   {/* Team B - Right */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>  
                     <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
                       <ScoreBlock
                         final={rs.fB}
                         proj={rs.pB}
                         color={tournament.teamB?.color}
+                        projLeft
                       />
                     </span>
                     {tournament.teamB?.logo && (
