@@ -151,6 +151,7 @@ export default function App() {
                     final={stats.fA}
                     proj={stats.pA}
                     color={tournament.teamA?.color || "var(--team-a-default)"}
+                    small
                   />
                 </div>
               </div>
@@ -182,6 +183,7 @@ export default function App() {
                     final={stats.fB}
                     proj={stats.pB}
                     color={tournament.teamB?.color || "var(--team-b-default)"}
+                    small
                   />
                 </div>
               </div>
@@ -207,24 +209,49 @@ export default function App() {
                 <Link 
                   key={r.id} 
                   to={`/round/${r.id}`} 
-                  className="card card-hover flex justify-between items-center"
+                  className="card card-hover"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}
                 >
-                  <div>
+                  {/* Team A - Left */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {tournament.teamA?.logo && (
+                      <img 
+                        src={tournament.teamA.logo} 
+                        alt={tournament.teamA?.name || "Team A"}
+                        style={{ width: 28, height: 28, objectFit: "contain" }}
+                      />
+                    )}
+                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+                      <ScoreBlock
+                        final={rs.fA}
+                        proj={rs.pA}
+                        color={tournament.teamA?.color}
+                      />
+                    </span>
+                  </div>
+
+                  {/* Round Info - Center */}
+                  <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 2 }}>Round {idx + 1}</div>
                     <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{r.format}</div>
                   </div>
-                  <div style={{ textAlign: "right", fontSize: "1.2rem", fontWeight: "bold" }}>
-                    <ScoreBlock
-                      final={rs.fA}
-                      proj={rs.pA}
-                      color={tournament.teamA?.color}
-                    />
-                    <span style={{ margin: "0 8px", opacity: 0.3, fontWeight: 400 }}>-</span>
-                    <ScoreBlock
-                      final={rs.fB}
-                      proj={rs.pB}
-                      color={tournament.teamB?.color}
-                    />
+
+                  {/* Team B - Right */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
+                      <ScoreBlock
+                        final={rs.fB}
+                        proj={rs.pB}
+                        color={tournament.teamB?.color}
+                      />
+                    </span>
+                    {tournament.teamB?.logo && (
+                      <img 
+                        src={tournament.teamB.logo} 
+                        alt={tournament.teamB?.name || "Team B"}
+                        style={{ width: 28, height: 28, objectFit: "contain" }}
+                      />
+                    )}
                   </div>
                 </Link>
               );
