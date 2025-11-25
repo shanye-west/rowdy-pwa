@@ -515,10 +515,6 @@ export default function Match() {
                         style={{ color: pr.color }}
                       >
                         {pr.label}
-                        {/* Show dot if player has any strokes */}
-                        {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
-                          <span className="ml-1 text-sky-400">•</span>
-                        )}
                       </td>
                       {/* Front 9 holes */}
                       {holes.slice(0, 9).map(h => {
@@ -548,7 +544,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -586,7 +582,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -740,10 +736,6 @@ export default function Match() {
                         style={{ color: pr.color }}
                       >
                         {pr.label}
-                        {/* Show dot if player has any strokes */}
-                        {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
-                          <span className="ml-1 text-sky-400">•</span>
-                        )}
                       </td>
                       {/* Front 9 holes */}
                       {holes.slice(0, 9).map(h => {
@@ -773,7 +765,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
@@ -811,7 +803,7 @@ export default function Match() {
                                 }}
                               />
                               {stroke && (
-                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-400 rounded-full"></div>
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
                             </div>
                           </td>
