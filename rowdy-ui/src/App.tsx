@@ -128,7 +128,7 @@ export default function App() {
             
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
               {/* Team A */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {tournament.teamA?.logo && (
                   <Link to="/teams?team=A">
                     <img 
@@ -151,7 +151,6 @@ export default function App() {
                     final={stats.fA}
                     proj={stats.pA}
                     color={tournament.teamA?.color || "var(--team-a-default)"}
-                    projectionColor="var(--text-secondary)"
                   />
                 </div>
               </div>
@@ -160,7 +159,7 @@ export default function App() {
               <div style={{ height: 40, width: 1, background: "var(--divider)" }}></div>
 
               {/* Team B */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {tournament.teamB?.logo && (
                   <Link to="/teams?team=B">
                     <img 
@@ -183,7 +182,6 @@ export default function App() {
                     final={stats.fB}
                     proj={stats.pB}
                     color={tournament.teamB?.color || "var(--team-b-default)"}
-                    projectionColor="var(--text-secondary)"
                   />
                 </div>
               </div>
@@ -220,14 +218,12 @@ export default function App() {
                       final={rs.fA}
                       proj={rs.pA}
                       color={tournament.teamA?.color}
-                      projectionColor="var(--text-secondary)"
                     />
                     <span style={{ margin: "0 8px", opacity: 0.3, fontWeight: 400 }}>-</span>
                     <ScoreBlock
                       final={rs.fB}
                       proj={rs.pB}
                       color={tournament.teamB?.color}
-                      projectionColor="var(--text-secondary)"
                     />
                   </div>
                 </Link>
