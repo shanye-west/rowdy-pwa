@@ -479,20 +479,6 @@ export default function Match() {
                 </tr>
               </thead>
               <tbody>
-                {/* Par Row */}
-                <tr className="bg-slate-100 text-slate-600 text-xs font-semibold">
-                  <td className="sticky left-0 z-10 bg-slate-100 text-left px-3 py-1.5">Par</td>
-                  {holes.slice(0, 9).map(h => (
-                    <td key={h.k} className="py-1.5">{h.par}</td>
-                  ))}
-                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
-                  {holes.slice(9, 18).map((h, i) => (
-                    <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
-                  ))}
-                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
-                  <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
-                </tr>
-                
                 {/* Handicap Row */}
                 <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
                   <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1">Hcp</td>
@@ -505,6 +491,20 @@ export default function Match() {
                   ))}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
                   <td className="py-1 bg-slate-200"></td>
+                </tr>
+
+                {/* Par Row */}
+                <tr className="bg-slate-100 text-slate-600 text-xs font-semibold">
+                  <td className="sticky left-0 z-10 bg-slate-100 text-left px-3 py-1.5">Par</td>
+                  {holes.slice(0, 9).map(h => (
+                    <td key={h.k} className="py-1.5">{h.par}</td>
+                  ))}
+                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
+                  {holes.slice(9, 18).map((h, i) => (
+                    <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
+                  ))}
+                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
+                  <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
                 </tr>
 
                 {/* Team A Player Rows */}
