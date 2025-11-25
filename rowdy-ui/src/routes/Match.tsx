@@ -637,19 +637,20 @@ export default function Match() {
                 )}
 
                 {/* MATCH STATUS ROW - Between Team A and Team B */}
-                <tr className="bg-slate-800 border-y-2 border-slate-600">
-                  <td className="sticky left-0 z-10 bg-slate-800 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide">
+                <tr className="bg-white border-y-2 border-slate-300">
+                  <td className="sticky left-0 z-10 bg-white text-left px-3 py-1.5 text-slate-600 text-xs font-bold uppercase tracking-wide">
                     Status
                   </td>
                   {/* Front 9 match status */}
                   {holes.slice(0, 9).map((h, i) => {
                     const { status, leader } = runningMatchStatus[i];
-                    const color = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "#94a3b8";
+                    const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
+                    const textColor = leader ? "#fff" : "#94a3b8";
                     return (
                       <td key={`status-${h.k}`} className="py-1 px-0.5">
                         <div 
-                          className="text-xs font-bold rounded px-1 py-0.5"
-                          style={{ color, backgroundColor: "rgba(255,255,255,0.1)" }}
+                          className="text-xs font-bold rounded px-1 py-0.5 text-center"
+                          style={{ color: textColor, backgroundColor: bgColor }}
                         >
                           {status}
                         </div>
@@ -657,16 +658,17 @@ export default function Match() {
                     );
                   })}
                   {/* OUT status - always blank */}
-                  <td className="py-1 bg-slate-700 border-l-2 border-slate-600"></td>
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
                   {/* Back 9 match status */}
                   {holes.slice(9, 18).map((h, i) => {
                     const { status, leader } = runningMatchStatus[9 + i];
-                    const color = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "#94a3b8";
+                    const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
+                    const textColor = leader ? "#fff" : "#94a3b8";
                     return (
-                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-600" : ""}`}>
+                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>
                         <div 
-                          className="text-xs font-bold rounded px-1 py-0.5"
-                          style={{ color, backgroundColor: "rgba(255,255,255,0.1)" }}
+                          className="text-xs font-bold rounded px-1 py-0.5 text-center"
+                          style={{ color: textColor, backgroundColor: bgColor }}
                         >
                           {status}
                         </div>
@@ -674,9 +676,9 @@ export default function Match() {
                     );
                   })}
                   {/* IN status - always blank */}
-                  <td className="py-1 bg-slate-700 border-l-2 border-slate-600"></td>
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
                   {/* TOTAL status - always blank */}
-                  <td className="py-1 bg-slate-600"></td>
+                  <td className="py-1 bg-slate-200"></td>
                 </tr>
 
                 {/* Team B Score Row (twoManBestBall only) - Low Net */}
