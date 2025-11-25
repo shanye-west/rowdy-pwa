@@ -45,20 +45,29 @@ export type HoleInfo = {
   hcpIndex: number; // Handicap Index (1-18)
 };
 
-// UPDATED: RoundDoc now includes full course data
+// UPDATED: RoundDoc now includes courseId reference
 export type RoundDoc = {
   id: string;
   tournamentId: string;
   day?: number;
   format: RoundFormat;
   locked?: boolean;
+  courseId?: string; // Reference to courses collection
   
-  // NEW: Course details
+  // Legacy: embedded course data (may not be present)
   course?: {
     name: string;
     tee?: string; // e.g., "Blue", "White"
     holes: HoleInfo[]; // Array of 18 objects
   };
+};
+
+// NEW: Course document type
+export type CourseDoc = {
+  id: string;
+  name: string;
+  tee?: string;
+  holes: HoleInfo[];
 };
 
 export type MatchDoc = {

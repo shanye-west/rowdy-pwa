@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, onSnapshot, getDoc, updateDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
-import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat } from "../types";
+import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc } from "../types";
 import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -11,6 +11,7 @@ export default function Match() {
   const { matchId } = useParams();
   const [match, setMatch] = useState<MatchDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
+  const [course, setCourse] = useState<CourseDoc | null>(null);
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   const [loading, setLoading] = useState(true);
@@ -56,18 +57,28 @@ export default function Match() {
     return () => unsub();
   }, [matchId]);
 
-  // 2. Listen to ROUND
+  // 2. Listen to ROUND and fetch Course
   useEffect(() => {
     if (!match?.roundId) return;
     const unsub = onSnapshot(doc(db, "rounds", match.roundId), async (rSnap) => {
       if (rSnap.exists()) {
         const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
         setRound(rData);
+        
+        // Fetch tournament
         if (rData.tournamentId) {
             const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
             if (tSnap.exists()) {
                 setTournament({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc);
             }
+        }
+        
+        // Fetch course if courseId exists
+        if (rData.courseId) {
+          const cSnap = await getDoc(doc(db, "courses", rData.courseId));
+          if (cSnap.exists()) {
+            setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
+          }
         }
       }
     });
@@ -81,17 +92,18 @@ export default function Match() {
   const isMatchClosed = !!match?.status?.closed;
   const matchThru = match?.status?.thru ?? 0;
 
-  // Build holes data
+  // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo(() => {
     const hMatch = match?.holes || {};
-    const hCourse = round?.course?.holes || [];
+    // Try course from separate fetch first, then fall back to embedded round.course
+    const hCourse = course?.holes || round?.course?.holes || [];
     return Array.from({ length: 18 }, (_, i) => {
       const num = i + 1;
       const k = String(num);
       const info = hCourse.find(h => h.number === num);
       return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex };
     });
-  }, [match, round]);
+  }, [match, round, course]);
 
   // Calculate totals
   const totals = useMemo(() => {
