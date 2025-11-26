@@ -7,7 +7,9 @@ import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
-// ===== MATCH FLOW GRAPH COMPONENT (Pure SVG) =====
+// ===== MATCH FLOW GRAPH COMPONENT (Recharts) =====
+
+import { LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, ReferenceArea } from 'recharts';
 
 type MatchFlowGraphProps = {
   marginHistory: number[];
@@ -20,26 +22,22 @@ type MatchFlowGraphProps = {
 function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, teamBName }: MatchFlowGraphProps) {
   if (!marginHistory || marginHistory.length === 0) return null;
 
-  const width = 320;
-  const height = 140;
-  const padding = { top: 20, right: 15, bottom: 25, left: 15 };
-  const graphWidth = width - padding.left - padding.right;
-  const graphHeight = height - padding.top - padding.bottom;
-
   // Calculate max margin for y-axis scale (minimum 3 for reasonable scale)
   const maxMargin = Math.max(3, Math.max(...marginHistory.map(Math.abs)));
-  
-  // X scale: evenly distribute holes across width
-  const xScale = (holeIndex: number) => padding.left + (holeIndex / (marginHistory.length - 1 || 1)) * graphWidth;
-  
-  // Y scale: center line is 0, positive (TeamA up) goes up, negative goes down
-  const yScale = (margin: number) => padding.top + graphHeight / 2 - (margin / maxMargin) * (graphHeight / 2);
 
-  // Build polyline points
-  const points = marginHistory.map((m, i) => `${xScale(i)},${yScale(m)}`).join(" ");
+  // Transform data for Recharts: add starting point at 0
+  const data = [
+    { hole: 0, margin: 0 },
+    ...marginHistory.map((margin, i) => ({ hole: i + 1, margin }))
+  ];
 
-  // Center line Y position
-  const centerY = padding.top + graphHeight / 2;
+  // Custom dot that colors based on margin
+  const renderDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (payload.hole === 0) return null; // Don't show dot for starting point
+    const color = payload.margin > 0 ? teamAColor : payload.margin < 0 ? teamBColor : "#64748b";
+    return <circle cx={cx} cy={cy} r={4} fill={color} stroke="white" strokeWidth={1.5} />;
+  };
 
   return (
     <div className="card p-4">
@@ -47,104 +45,56 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, team
         Match Flow
       </h3>
       
-      <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-        {/* Background fills for each team's side */}
-        <rect 
-          x={padding.left} 
-          y={padding.top} 
-          width={graphWidth} 
-          height={graphHeight / 2} 
-          fill={teamAColor} 
-          opacity={0.08}
-        />
-        <rect 
-          x={padding.left} 
-          y={centerY} 
-          width={graphWidth} 
-          height={graphHeight / 2} 
-          fill={teamBColor} 
-          opacity={0.08}
-        />
+      {/* Team labels */}
+      <div className="flex justify-between text-xs font-semibold mb-1 px-2">
+        <span style={{ color: teamAColor }}>{teamAName}</span>
+        <span style={{ color: teamBColor }}>{teamBName}</span>
+      </div>
 
-        {/* Grid lines */}
-        {[-maxMargin, -Math.floor(maxMargin/2), 0, Math.floor(maxMargin/2), maxMargin].filter((v, i, arr) => arr.indexOf(v) === i).map(m => (
-          <line
-            key={m}
-            x1={padding.left}
-            y1={yScale(m)}
-            x2={width - padding.right}
-            y2={yScale(m)}
-            stroke={m === 0 ? "#94a3b8" : "#e2e8f0"}
-            strokeWidth={m === 0 ? 1.5 : 1}
-            strokeDasharray={m === 0 ? "none" : "4,4"}
+      <ResponsiveContainer width="100%" height={140}>
+        <LineChart data={data} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+          {/* Background shading for each team's territory */}
+          <ReferenceArea y1={0} y2={maxMargin} fill={teamAColor} fillOpacity={0.08} />
+          <ReferenceArea y1={-maxMargin} y2={0} fill={teamBColor} fillOpacity={0.08} />
+          
+          {/* Center line (All Square) */}
+          <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
+          
+          {/* Front 9 / Back 9 separator */}
+          {marginHistory.length > 9 && (
+            <ReferenceLine x={9.5} stroke="#cbd5e1" strokeDasharray="3 3" />
+          )}
+
+          <XAxis 
+            dataKey="hole" 
+            type="number"
+            domain={[0, marginHistory.length]}
+            ticks={[1, 9, 10, marginHistory.length]}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
+            axisLine={{ stroke: '#e2e8f0' }}
+            tickLine={false}
           />
-        ))}
-
-        {/* Front 9 / Back 9 separator */}
-        {marginHistory.length > 9 && (
-          <line
-            x1={xScale(8.5)}
-            y1={padding.top}
-            x2={xScale(8.5)}
-            y2={height - padding.bottom}
-            stroke="#cbd5e1"
-            strokeWidth={1}
-            strokeDasharray="2,2"
+          
+          <YAxis 
+            domain={[-maxMargin, maxMargin]}
+            ticks={[-maxMargin, 0, maxMargin]}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v) => v === 0 ? 'AS' : v > 0 ? `+${v}` : `${v}`}
+            width={25}
           />
-        )}
 
-        {/* The flow line */}
-        <polyline
-          points={`${padding.left},${centerY} ${points}`}
-          fill="none"
-          stroke="#334155"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Data points */}
-        {marginHistory.map((m, i) => (
-          <circle
-            key={i}
-            cx={xScale(i)}
-            cy={yScale(m)}
-            r={3}
-            fill={m > 0 ? teamAColor : m < 0 ? teamBColor : "#64748b"}
+          <Line 
+            type="monotone"
+            dataKey="margin" 
+            stroke="#334155" 
+            strokeWidth={2.5}
+            dot={renderDot}
+            activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
           />
-        ))}
-
-        {/* Team labels */}
-        <text x={padding.left + 4} y={padding.top + 12} fontSize={9} fill={teamAColor} fontWeight={600}>
-          {teamAName}
-        </text>
-        <text x={padding.left + 4} y={height - padding.bottom - 4} fontSize={9} fill={teamBColor} fontWeight={600}>
-          {teamBName}
-        </text>
-
-        {/* Margin labels on right */}
-        <text x={width - padding.right + 4} y={yScale(maxMargin) + 3} fontSize={8} fill="#94a3b8">
-          +{maxMargin}
-        </text>
-        <text x={width - padding.right + 4} y={centerY + 3} fontSize={8} fill="#94a3b8">
-          AS
-        </text>
-        <text x={width - padding.right + 4} y={yScale(-maxMargin) + 3} fontSize={8} fill="#94a3b8">
-          -{maxMargin}
-        </text>
-
-        {/* Hole markers */}
-        <text x={padding.left} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">1</text>
-        {marginHistory.length >= 9 && (
-          <text x={xScale(8)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">9</text>
-        )}
-        {marginHistory.length >= 10 && (
-          <text x={xScale(9)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">10</text>
-        )}
-        <text x={xScale(marginHistory.length - 1)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">
-          {marginHistory.length}
-        </text>
-      </svg>
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
