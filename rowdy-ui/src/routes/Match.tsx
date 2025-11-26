@@ -48,7 +48,9 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, team
   };
 
   // Generate line segments with colors based on leader
+  // When returning to AS, keep the color of the team that was just leading
   const lineSegments = [];
+  let lastLeaderColor = teamAColor; // Default to Team A color for first segment
   for (let i = 0; i < data.length - 1; i++) {
     const x1 = getX(i);
     const y1 = getY(data[i]);
@@ -56,10 +58,18 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, team
     const y2 = getY(data[i + 1]);
     
     // Color based on who's leading at the END of the segment
+    // If AS, use the last leader's color (no gray lines)
     const endMargin = data[i + 1];
-    let color = "#94a3b8"; // Gray for AS
-    if (endMargin > 0) color = teamAColor;
-    else if (endMargin < 0) color = teamBColor;
+    let color: string;
+    if (endMargin > 0) {
+      color = teamAColor;
+      lastLeaderColor = teamAColor;
+    } else if (endMargin < 0) {
+      color = teamBColor;
+      lastLeaderColor = teamBColor;
+    } else {
+      color = lastLeaderColor; // Keep previous leader's color when returning to AS
+    }
     
     lineSegments.push(
       <line
@@ -75,7 +85,7 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, team
     );
   }
 
-  // Generate dots with status labels
+  // Generate dots with status labels (just the number, no "UP")
   const dotsAndLabels = data.slice(1).map((margin, i) => {
     const x = getX(i + 1);
     const y = getY(margin);
@@ -97,11 +107,11 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, team
             x={`${x}%`}
             y={y - 8}
             textAnchor="middle"
-            fontSize={7}
+            fontSize={8}
             fontWeight={600}
             fill={color}
           >
-            {absMargin}UP
+            {absMargin}
           </text>
         )}
       </g>
