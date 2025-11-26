@@ -18,11 +18,11 @@ A mobile-first PWA for a 12v12 Ryder Cup-style golf tournament. Players enter gr
 
 ### Key Collections (Firestore)
 - `tournaments` - One `active: true` at a time; contains `teamA/teamB` with `rosterByTier`, `handicapByPlayer`
-- `rounds` - Owns `format`, `pointsValue`, `courseId`, `trackDrives`
+- `rounds` - Owns `format`, `pointsValue`, `courseId`, `trackDrives`, `matchIds`; format can be null until selected
 - `matches` - `teamAPlayers/teamBPlayers` with `strokesReceived[18]`; `holes` with format-specific inputs
 - `courses` - Hole data with `holes[18]` array containing `par`, `hcpIndex`; also `name`, `tees`, `par` (total course par)
 - `playerMatchFacts` - Immutable per-match stats per player (see PlayerMatchFact fields below)
-- `playerStats` - Aggregated lifetime stats
+- `playerStats` - Aggregated lifetime stats with `lastUpdated` timestamp
 
 ## Match Formats & Scoring
 
@@ -44,15 +44,21 @@ Generated when a match closes (`status.closed = true`):
 - `playerId`, `matchId`, `roundId`, `tournamentId` - References
 - `team` - "teamA" or "teamB"
 - `format` - Match format
-- `result` - "win" | "loss" | "halve"
+- `outcome` - "win" | "loss" | "halve"
 - `pointsEarned` - Points from this match
-- `holesWon`, `holesLost`, `holesHalved` - Hole-by-hole results
+- `holesWon`, `holesLost`, `holesHalved` - Hole-by-hole results (halved = finalThru - won - lost)
+- `finalMargin`, `finalThru` - Match result details
 - `drivesUsed` - Count of drives used (shamble/scramble only)
 - `ballsUsed` - Count of times player's ball was used (compares gross scores)
 - `totalGross`, `totalNet` - 18-hole totals (individual formats only)
 - `strokesVsParGross`, `strokesVsParNet` - Strokes relative to par (individual formats)
 - `teamTotalGross`, `teamStrokesVsParGross` - Team totals (team formats only)
 - `coursePar` - Par for the course played
+- `comebackWin`, `blownLead` - Momentum stats (was down/up 3+ on back 9)
+- `leadChanges`, `wasNeverBehind`, `winningHole`, `strokesGiven` - Additional match stats
+- `playerTier`, `playerHandicap`, `partnerIds`, `partnerTiers`, `partnerHandicaps` - Player context
+- `opponentIds`, `opponentTiers`, `opponentHandicaps` - Opponent context
+- `courseId`, `day`, `tournamentYear`, `tournamentName`, `tournamentSeries` - Round/tournament context
 
 ## Development Commands
 
@@ -72,7 +78,7 @@ firebase deploy --only hosting
 ## Code Patterns
 
 ### Types (\`rowdy-ui/src/types.ts\`)
-All Firestore document types defined here. Use \`RoundFormat\` union type for format checks.
+All Firestore document types defined here. Use \`RoundFormat\` union type for format checks. Note: \`RoundDoc.format\` can be \`null\` until format is selected.
 
 ### Firebase Hooks Pattern (Frontend)
 \`\`\`typescript
@@ -86,7 +92,8 @@ useEffect(() => {
 ### Cloud Function Triggers (\`functions/src/index.ts\`)
 - \`seedMatchBoilerplate\` - onCreate: normalizes holes structure based on format
 - \`seedCourseDefaults\` - onCreate: sets default par (72) if missing
-- \`seedRoundDefaults\` - onCreate: sets default trackDrives based on format
+- \`seedRoundDefaults\` - onCreate: sets default trackDrives, format=null, matchIds=[]
+- \`linkRoundToTournament\` - onWrite: adds roundId to tournament.roundIds
 - \`computeMatchOnWrite\` - onWrite: calculates \`status\` and \`result\`
 - \`updateMatchFacts\` - onWrite: generates \`playerMatchFacts\` when \`status.closed\`
 - \`aggregatePlayerStats\` - onWrite: updates \`playerStats\` from facts
@@ -120,6 +127,7 @@ Public read; authenticated users can update \`matches\`. No admin UI—all setup
 - \`leader\`: teamA/teamB/null, \`margin\`: holes up, \`thru\`: holes completed
 - \`closed\`: true when lead > remaining holes
 - \`dormie\`: lead equals remaining holes
+- \`wasTeamADown3PlusBack9\`, \`wasTeamAUp3PlusBack9\`: momentum tracking
 - Editing earlier holes can reopen a closed match
 
 ### Player Tiers

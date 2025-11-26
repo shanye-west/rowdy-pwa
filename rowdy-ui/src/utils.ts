@@ -1,6 +1,7 @@
 import type { MatchDoc } from "./types";
 
-export function formatRoundType(format: string): string {
+export function formatRoundType(format: string | null | undefined): string {
+  if (!format) return "Format TBD";
   const formatMap: Record<string, string> = {
     twoManBestBall: "2-Man Best Ball",
     twoManShamble: "2-Man Shamble",

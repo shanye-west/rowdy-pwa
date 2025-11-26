@@ -615,9 +615,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (result.winner === "AS") { outcome = "halve"; pts = points / 2; }
     else if (result.winner === team) { outcome = "win"; pts = points; }
 
-    // Holes won/lost from this player's perspective
+    // Holes won/lost/halved from this player's perspective
     const holesWon = team === "teamA" ? (result.holesWonA || 0) : (result.holesWonB || 0);
     const holesLost = team === "teamA" ? (result.holesWonB || 0) : (result.holesWonA || 0);
+    const holesHalved = finalThru - holesWon - holesLost;
 
     // Comeback/BlownLead: Was down/up 3+ on back 9
     const wasDown3PlusBack9 = team === "teamA" ? status.wasTeamADown3PlusBack9 : status.wasTeamAUp3PlusBack9;
@@ -728,6 +729,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       // Match result details
       holesWon,
       holesLost,
+      holesHalved,
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
 

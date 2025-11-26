@@ -52,10 +52,11 @@ export type RoundDoc = {
   id: string;
   tournamentId: string;
   day?: number;
-  format: RoundFormat;
+  format?: RoundFormat | null; // null until format is selected
   locked?: boolean;
   courseId?: string; // Reference to courses collection
   pointsValue?: number; // Points value for all matches in this round
+  matchIds?: string[]; // Auto-populated when matches are linked
   
   // DRIVE_TRACKING: Feature toggle for scramble/shamble drive tracking
   trackDrives?: boolean;
@@ -72,7 +73,7 @@ export type RoundDoc = {
 export type CourseDoc = {
   id: string;
   name: string;
-  tee?: string;
+  tees?: string; // e.g., "Blue", "White"
   par?: number; // Total course par (e.g., 72)
   holes: HoleInfo[];
 };
@@ -129,6 +130,7 @@ export type PlayerMatchFact = {
   // Match result details
   holesWon?: number;
   holesLost?: number;
+  holesHalved?: number; // finalThru - holesWon - holesLost
   finalMargin?: number;
   finalThru?: number;
 
@@ -178,4 +180,5 @@ export type PlayerStatDoc = {
   halves: number;
   totalPoints: number;
   matchesPlayed: number;
+  lastUpdated?: any; // Firestore Timestamp
 };
