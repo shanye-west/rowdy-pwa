@@ -186,6 +186,9 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
     }));
   }
   
+  // Set default par (72) if not present
+  if (data.par === undefined) toMerge.par = 72;
+  
   // Set default name if not present
   if (data.name === undefined) toMerge.name = "";
   
@@ -336,6 +339,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let format: RoundFormat = "twoManBestBall";
   let points = 1;
   let courseId = "";
+  let coursePar = 72; // Default, will be updated from course doc
   let day = 0;
   let playerTierLookup: Record<string, string> = {};
   let playerHandicapLookup: Record<string, number> = {};
@@ -354,6 +358,25 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       points = rData?.pointsValue ?? 1;
       courseId = rData?.courseId || "";
       day = rData?.day ?? 0;
+      
+      // Try to get course par from embedded course data
+      if (rData?.course?.holes && Array.isArray(rData.course.holes)) {
+        coursePar = rData.course.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
+      }
+    }
+  }
+  
+  // Fetch course par from courseId if available (overrides embedded)
+  if (courseId) {
+    const cSnap = await db.collection("courses").doc(courseId).get();
+    if (cSnap.exists) {
+      const cData = cSnap.data();
+      // Use stored par if available, otherwise calculate from holes
+      if (typeof cData?.par === "number") {
+        coursePar = cData.par;
+      } else if (Array.isArray(cData?.holes)) {
+        coursePar = cData.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
+      }
     }
   }
   if (tId) {
@@ -403,6 +426,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   // DRIVE_TRACKING: Track drives used for scramble/shamble
   const teamADrivesUsed = [0, 0];
   const teamBDrivesUsed = [0, 0];
+  
+  // SCORING STATS: Track individual gross/net scores (for best ball & singles)
+  const teamAPlayerGross = [0, 0]; // Sum of gross scores per player
+  const teamBPlayerGross = [0, 0];
+  const teamAPlayerNet = [0, 0];   // Sum of net scores per player
+  const teamBPlayerNet = [0, 0];
+  
+  // SCORING STATS: Track team gross scores (for scramble & shamble)
+  let teamATotalGross = 0;
+  let teamBTotalGross = 0;
   
   const finalThru = status.thru || 18;
   
@@ -491,6 +524,85 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       if (bDrive === 0) teamBDrivesUsed[0]++;
       else if (bDrive === 1) teamBDrivesUsed[1]++;
     }
+    
+    // SCORING STATS: Calculate scores based on format
+    if (format === "twoManScramble") {
+      // Team format: one gross score per team
+      const aGross = h.teamAGross;
+      const bGross = h.teamBGross;
+      if (isNum(aGross)) teamATotalGross += aGross;
+      if (isNum(bGross)) teamBTotalGross += bGross;
+    } else if (format === "singles") {
+      // Individual format: one score per player
+      const aGross = h.teamAPlayerGross;
+      const bGross = h.teamBPlayerGross;
+      if (isNum(aGross)) {
+        teamAPlayerGross[0] += aGross;
+        const aStroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
+        teamAPlayerNet[0] += (aGross - aStroke);
+      }
+      if (isNum(bGross)) {
+        teamBPlayerGross[0] += bGross;
+        const bStroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
+        teamBPlayerNet[0] += (bGross - bStroke);
+      }
+    } else if (format === "twoManShamble") {
+      // Shamble: individual scores but team uses best gross
+      const aArr = h.teamAPlayersGross;
+      const bArr = h.teamBPlayersGross;
+      if (Array.isArray(aArr)) {
+        if (isNum(aArr[0])) teamAPlayerGross[0] += aArr[0];
+        if (isNum(aArr[1])) teamAPlayerGross[1] += aArr[1];
+        // Team total is best gross
+        if (isNum(aArr[0]) && isNum(aArr[1])) {
+          teamATotalGross += Math.min(aArr[0], aArr[1]);
+        } else if (isNum(aArr[0])) {
+          teamATotalGross += aArr[0];
+        } else if (isNum(aArr[1])) {
+          teamATotalGross += aArr[1];
+        }
+      }
+      if (Array.isArray(bArr)) {
+        if (isNum(bArr[0])) teamBPlayerGross[0] += bArr[0];
+        if (isNum(bArr[1])) teamBPlayerGross[1] += bArr[1];
+        // Team total is best gross
+        if (isNum(bArr[0]) && isNum(bArr[1])) {
+          teamBTotalGross += Math.min(bArr[0], bArr[1]);
+        } else if (isNum(bArr[0])) {
+          teamBTotalGross += bArr[0];
+        } else if (isNum(bArr[1])) {
+          teamBTotalGross += bArr[1];
+        }
+      }
+    } else {
+      // Best Ball: individual scores with net calculation
+      const aArr = h.teamAPlayersGross;
+      const bArr = h.teamBPlayersGross;
+      if (Array.isArray(aArr)) {
+        if (isNum(aArr[0])) {
+          teamAPlayerGross[0] += aArr[0];
+          const a0Stroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
+          teamAPlayerNet[0] += (aArr[0] - a0Stroke);
+        }
+        if (isNum(aArr[1])) {
+          teamAPlayerGross[1] += aArr[1];
+          const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
+          teamAPlayerNet[1] += (aArr[1] - a1Stroke);
+        }
+      }
+      if (Array.isArray(bArr)) {
+        if (isNum(bArr[0])) {
+          teamBPlayerGross[0] += bArr[0];
+          const b0Stroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
+          teamBPlayerNet[0] += (bArr[0] - b0Stroke);
+        }
+        if (isNum(bArr[1])) {
+          teamBPlayerGross[1] += bArr[1];
+          const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
+          teamBPlayerNet[1] += (bArr[1] - b1Stroke);
+        }
+      }
+    }
   }
 
   const batch = db.batch();
@@ -531,6 +643,28 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let drivesUsed: number | null = null;
     if (format === "twoManScramble" || format === "twoManShamble") {
       drivesUsed = team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx];
+    }
+    
+    // SCORING STATS: Calculate based on format
+    let totalGross: number | null = null;
+    let totalNet: number | null = null;
+    let strokesVsParGross: number | null = null;
+    let strokesVsParNet: number | null = null;
+    let teamTotalGross: number | null = null;
+    let teamStrokesVsParGross: number | null = null;
+    
+    if (format === "twoManBestBall" || format === "singles") {
+      // Individual scoring formats - track player's own gross and net
+      const playerGrossArr = team === "teamA" ? teamAPlayerGross : teamBPlayerGross;
+      const playerNetArr = team === "teamA" ? teamAPlayerNet : teamBPlayerNet;
+      totalGross = playerGrossArr[pIdx];
+      totalNet = playerNetArr[pIdx];
+      strokesVsParGross = totalGross - coursePar;
+      strokesVsParNet = totalNet - coursePar;
+    } else if (format === "twoManScramble" || format === "twoManShamble") {
+      // Team scoring formats - track team gross
+      teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
+      teamStrokesVsParGross = teamTotalGross - coursePar;
     }
 
     const myTier = playerTierLookup[p.playerId] || "Unknown";
@@ -622,6 +756,15 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     // Format-specific stats (only include if applicable)
     if (ballsUsed !== null) factData.ballsUsed = ballsUsed;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
+    
+    // Scoring stats
+    factData.coursePar = coursePar;
+    if (totalGross !== null) factData.totalGross = totalGross;
+    if (totalNet !== null) factData.totalNet = totalNet;
+    if (strokesVsParGross !== null) factData.strokesVsParGross = strokesVsParGross;
+    if (strokesVsParNet !== null) factData.strokesVsParNet = strokesVsParNet;
+    if (teamTotalGross !== null) factData.teamTotalGross = teamTotalGross;
+    if (teamStrokesVsParGross !== null) factData.teamStrokesVsParGross = teamStrokesVsParGross;
 
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), factData);
   };

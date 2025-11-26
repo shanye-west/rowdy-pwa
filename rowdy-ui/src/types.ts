@@ -73,6 +73,7 @@ export type CourseDoc = {
   id: string;
   name: string;
   tee?: string;
+  par?: number; // Total course par (e.g., 72)
   holes: HoleInfo[];
 };
 
@@ -142,8 +143,21 @@ export type PlayerMatchFact = {
   winningHole?: number | null; // Hole where match was won (null if went 18 or halved)
   
   // Format-specific stats
-  ballsUsed?: number;         // Best Ball: holes where player's net was team's best
+  ballsUsed?: number;         // Best Ball/Shamble: holes where player's score was team's best
   drivesUsed?: number;        // DRIVE_TRACKING: Scramble/Shamble: drives used by this player
+
+  // Individual scoring stats (twoManBestBall, singles only)
+  totalGross?: number;        // Sum of player's gross scores
+  totalNet?: number;          // Sum of player's net scores (gross - strokes received)
+  strokesVsParGross?: number; // totalGross - coursePar (e.g., +5, -2)
+  strokesVsParNet?: number;   // totalNet - coursePar
+
+  // Team scoring stats (twoManScramble, twoManShamble only)
+  teamTotalGross?: number;        // Team's combined gross score
+  teamStrokesVsParGross?: number; // teamTotalGross - coursePar
+
+  // Course context
+  coursePar?: number;         // Course par for reference
 
   // Round context
   courseId?: string;
