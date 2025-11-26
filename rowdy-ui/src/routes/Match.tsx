@@ -2,10 +2,347 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, onSnapshot, getDoc, updateDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
-import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc } from "../types";
+import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc, PlayerMatchFact } from "../types";
 import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+
+// ===== POST-MATCH STATS COMPONENT =====
+
+type PostMatchStatsProps = {
+  matchFacts: PlayerMatchFact[];
+  format: RoundFormat;
+  teamAPlayers: { playerId: string; strokesReceived: number[] }[];
+  teamBPlayers: { playerId: string; strokesReceived: number[] }[];
+  teamAName: string;
+  teamBName: string;
+  teamAColor: string;
+  teamBColor: string;
+  getPlayerName: (pid?: string) => string;
+};
+
+// Format +/- scores like golf standard: +5, -2, E (even)
+function formatStrokesVsPar(value: number | undefined | null): string {
+  if (value == null) return "–";
+  if (value === 0) return "E";
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function PostMatchStats({
+  matchFacts,
+  format,
+  teamAPlayers,
+  teamBPlayers,
+  teamAName,
+  teamBName,
+  teamAColor,
+  teamBColor,
+  getPlayerName,
+}: PostMatchStatsProps) {
+  // Get fact for a specific player
+  const getFactForPlayer = (playerId: string): PlayerMatchFact | undefined => {
+    return matchFacts.find(f => f.playerId === playerId);
+  };
+
+  // Determine which stat categories apply to this format
+  const showIndividualScoring = format === "singles" || format === "twoManBestBall";
+  const showTeamScoring = format === "twoManScramble" || format === "twoManShamble";
+  const showBallUsage = format === "twoManBestBall" || format === "twoManShamble";
+  const showDrives = format === "twoManScramble" || format === "twoManShamble";
+
+  // Build player lists
+  const teamAPlayerIds = teamAPlayers.map(p => p.playerId);
+  const teamBPlayerIds = teamBPlayers.map(p => p.playerId);
+
+  // Stat row component
+  const StatRow = ({ label, valueA, valueB, highlight = false }: { 
+    label: string; 
+    valueA: string | number | null | undefined; 
+    valueB: string | number | null | undefined;
+    highlight?: boolean;
+  }) => (
+    <div className={`flex items-center py-1.5 ${highlight ? "bg-slate-50 -mx-2 px-2 rounded" : ""}`}>
+      <div className="flex-1 text-right pr-3 font-semibold" style={{ color: teamAColor }}>
+        {valueA ?? "–"}
+      </div>
+      <div className="text-xs text-slate-500 font-medium text-center w-24 shrink-0">
+        {label}
+      </div>
+      <div className="flex-1 text-left pl-3 font-semibold" style={{ color: teamBColor }}>
+        {valueB ?? "–"}
+      </div>
+    </div>
+  );
+
+  // Stat row for per-player stats (2 players per team in team formats)
+  const PlayerStatRow = ({ label, teamA, teamB }: { 
+    label: string; 
+    teamA: (string | number | null | undefined)[];
+    teamB: (string | number | null | undefined)[];
+  }) => (
+    <div className="flex items-center py-1.5">
+      <div className="flex-1 text-right pr-3 font-semibold text-sm" style={{ color: teamAColor }}>
+        {teamA.map((v, i) => (
+          <span key={i}>
+            {v ?? "–"}
+            {i < teamA.length - 1 && <span className="text-slate-300 mx-1">/</span>}
+          </span>
+        ))}
+      </div>
+      <div className="text-xs text-slate-500 font-medium text-center w-24 shrink-0">
+        {label}
+      </div>
+      <div className="flex-1 text-left pl-3 font-semibold text-sm" style={{ color: teamBColor }}>
+        {teamB.map((v, i) => (
+          <span key={i}>
+            {v ?? "–"}
+            {i < teamB.length - 1 && <span className="text-slate-300 mx-1">/</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Get aggregated stats for display
+  const teamAFacts = teamAPlayerIds.map(id => getFactForPlayer(id)).filter(Boolean) as PlayerMatchFact[];
+  const teamBFacts = teamBPlayerIds.map(id => getFactForPlayer(id)).filter(Boolean) as PlayerMatchFact[];
+
+  if (teamAFacts.length === 0 && teamBFacts.length === 0) return null;
+
+  // Get first fact from either team for match-level stats (they should be consistent)
+  const sampleFact = teamAFacts[0] || teamBFacts[0];
+
+  return (
+    <div className="card p-4 space-y-4">
+      <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center">
+        Match Stats
+      </h3>
+
+      {/* Team Headers */}
+      <div className="flex items-center pb-2 border-b border-slate-200">
+        <div className="flex-1 text-right pr-3">
+          <span className="text-xs font-bold uppercase" style={{ color: teamAColor }}>{teamAName}</span>
+        </div>
+        <div className="w-24 shrink-0" />
+        <div className="flex-1 text-left pl-3">
+          <span className="text-xs font-bold uppercase" style={{ color: teamBColor }}>{teamBName}</span>
+        </div>
+      </div>
+
+      {/* MATCH RESULT */}
+      <div>
+        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+          Match Result
+        </div>
+        <StatRow 
+          label="Holes Won" 
+          valueA={teamAFacts[0]?.holesWon} 
+          valueB={teamBFacts[0]?.holesWon} 
+          highlight 
+        />
+        <StatRow 
+          label="Holes Lost" 
+          valueA={teamAFacts[0]?.holesLost} 
+          valueB={teamBFacts[0]?.holesLost} 
+        />
+        <StatRow 
+          label="Holes Halved" 
+          valueA={teamAFacts[0]?.holesHalved} 
+          valueB={teamBFacts[0]?.holesHalved} 
+        />
+        <StatRow 
+          label="Final Thru" 
+          valueA={sampleFact?.finalThru} 
+          valueB={sampleFact?.finalThru} 
+        />
+      </div>
+
+      {/* INDIVIDUAL SCORING (Singles & Best Ball) */}
+      {showIndividualScoring && (
+        <div className="border-t border-slate-200 pt-3">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+            Scoring
+          </div>
+          {format === "singles" ? (
+            // Singles: one player per team
+            <>
+              <StatRow 
+                label="Total Gross" 
+                valueA={teamAFacts[0]?.totalGross} 
+                valueB={teamBFacts[0]?.totalGross} 
+              />
+              <StatRow 
+                label="Total Net" 
+                valueA={teamAFacts[0]?.totalNet} 
+                valueB={teamBFacts[0]?.totalNet} 
+                highlight
+              />
+              <StatRow 
+                label="vs Par (Gross)" 
+                valueA={formatStrokesVsPar(teamAFacts[0]?.strokesVsParGross)} 
+                valueB={formatStrokesVsPar(teamBFacts[0]?.strokesVsParGross)} 
+              />
+              <StatRow 
+                label="vs Par (Net)" 
+                valueA={formatStrokesVsPar(teamAFacts[0]?.strokesVsParNet)} 
+                valueB={formatStrokesVsPar(teamBFacts[0]?.strokesVsParNet)} 
+              />
+              <StatRow 
+                label="Strokes Received" 
+                valueA={teamAFacts[0]?.strokesGiven} 
+                valueB={teamBFacts[0]?.strokesGiven} 
+              />
+            </>
+          ) : (
+            // Best Ball: two players per team
+            <>
+              <PlayerStatRow 
+                label="Total Gross" 
+                teamA={teamAFacts.map(f => f.totalGross)} 
+                teamB={teamBFacts.map(f => f.totalGross)} 
+              />
+              <PlayerStatRow 
+                label="Total Net" 
+                teamA={teamAFacts.map(f => f.totalNet)} 
+                teamB={teamBFacts.map(f => f.totalNet)} 
+              />
+              <PlayerStatRow 
+                label="vs Par (Gross)" 
+                teamA={teamAFacts.map(f => formatStrokesVsPar(f.strokesVsParGross))} 
+                teamB={teamBFacts.map(f => formatStrokesVsPar(f.strokesVsParGross))} 
+              />
+              <PlayerStatRow 
+                label="vs Par (Net)" 
+                teamA={teamAFacts.map(f => formatStrokesVsPar(f.strokesVsParNet))} 
+                teamB={teamBFacts.map(f => formatStrokesVsPar(f.strokesVsParNet))} 
+              />
+              <PlayerStatRow 
+                label="Strokes Recv'd" 
+                teamA={teamAFacts.map(f => f.strokesGiven)} 
+                teamB={teamBFacts.map(f => f.strokesGiven)} 
+              />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* TEAM SCORING (Scramble & Shamble) */}
+      {showTeamScoring && (
+        <div className="border-t border-slate-200 pt-3">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+            Team Scoring
+          </div>
+          <StatRow 
+            label="Team Gross" 
+            valueA={teamAFacts[0]?.teamTotalGross} 
+            valueB={teamBFacts[0]?.teamTotalGross} 
+            highlight
+          />
+          <StatRow 
+            label="vs Par" 
+            valueA={formatStrokesVsPar(teamAFacts[0]?.teamStrokesVsParGross)} 
+            valueB={formatStrokesVsPar(teamBFacts[0]?.teamStrokesVsParGross)} 
+          />
+        </div>
+      )}
+
+      {/* BALL USAGE (Best Ball & Shamble) */}
+      {showBallUsage && (
+        <div className="border-t border-slate-200 pt-3">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+            Ball Usage
+          </div>
+          <PlayerStatRow 
+            label="Balls Used" 
+            teamA={teamAFacts.map(f => f.ballsUsed)} 
+            teamB={teamBFacts.map(f => f.ballsUsed)} 
+          />
+          <PlayerStatRow 
+            label="Solo Balls" 
+            teamA={teamAFacts.map(f => f.ballsUsedSolo)} 
+            teamB={teamBFacts.map(f => f.ballsUsedSolo)} 
+          />
+          <PlayerStatRow 
+            label="Shared Balls" 
+            teamA={teamAFacts.map(f => f.ballsUsedShared)} 
+            teamB={teamBFacts.map(f => f.ballsUsedShared)} 
+          />
+          <PlayerStatRow 
+            label="Solo → Won" 
+            teamA={teamAFacts.map(f => f.ballsUsedSoloWonHole)} 
+            teamB={teamBFacts.map(f => f.ballsUsedSoloWonHole)} 
+          />
+          <PlayerStatRow 
+            label="Solo → Halved" 
+            teamA={teamAFacts.map(f => f.ballsUsedSoloPush)} 
+            teamB={teamBFacts.map(f => f.ballsUsedSoloPush)} 
+          />
+        </div>
+      )}
+
+      {/* DRIVE USAGE (Scramble & Shamble) */}
+      {showDrives && (
+        <div className="border-t border-slate-200 pt-3">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+            Drives
+          </div>
+          <PlayerStatRow 
+            label="Drives Used" 
+            teamA={teamAFacts.map(f => f.drivesUsed)} 
+            teamB={teamBFacts.map(f => f.drivesUsed)} 
+          />
+        </div>
+      )}
+
+      {/* MOMENTUM STATS (All formats) */}
+      <div className="border-t border-slate-200 pt-3">
+        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+          Momentum
+        </div>
+        <StatRow 
+          label="Lead Changes" 
+          valueA={sampleFact?.leadChanges} 
+          valueB={sampleFact?.leadChanges} 
+        />
+        <StatRow 
+          label="Never Behind" 
+          valueA={teamAFacts[0]?.wasNeverBehind ? "✓" : "–"} 
+          valueB={teamBFacts[0]?.wasNeverBehind ? "✓" : "–"} 
+        />
+        <StatRow 
+          label="Comeback Win" 
+          valueA={teamAFacts[0]?.comebackWin ? "✓" : "–"} 
+          valueB={teamBFacts[0]?.comebackWin ? "✓" : "–"} 
+        />
+        <StatRow 
+          label="Blown Lead" 
+          valueA={teamAFacts[0]?.blownLead ? "✓" : "–"} 
+          valueB={teamBFacts[0]?.blownLead ? "✓" : "–"} 
+        />
+        {sampleFact?.winningHole && (
+          <StatRow 
+            label="Closed on Hole" 
+            valueA={sampleFact.winningHole} 
+            valueB={sampleFact.winningHole} 
+          />
+        )}
+      </div>
+
+      {/* Player names legend for team formats */}
+      {(format === "twoManBestBall" || format === "twoManShamble" || format === "twoManScramble") && (
+        <div className="border-t border-slate-200 pt-3">
+          <div className="text-xs text-slate-400 text-center">
+            <span style={{ color: teamAColor }}>{teamAPlayerIds.map(id => getPlayerName(id)).join(" / ")}</span>
+            <span className="mx-2">vs</span>
+            <span style={{ color: teamBColor }}>{teamBPlayerIds.map(id => getPlayerName(id)).join(" / ")}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== END POST-MATCH STATS COMPONENT =====
 
 export default function Match() {
   const { matchId } = useParams();
@@ -18,6 +355,9 @@ export default function Match() {
   
   // DRIVE_TRACKING: Modal state for drive picker - using any for hole to avoid circular type reference
   const [driveModal, setDriveModal] = useState<{ hole: any; team: "A" | "B" } | null>(null);
+  
+  // POST-MATCH STATS: Facts for completed matches
+  const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
 
   // 1. Listen to MATCH
   useEffect(() => {
@@ -87,6 +427,27 @@ export default function Match() {
     });
     return () => unsub();
   }, [match?.roundId]);
+
+  // 3. Fetch playerMatchFacts when match is closed
+  useEffect(() => {
+    if (!matchId || !match?.status?.closed) {
+      setMatchFacts([]);
+      return;
+    }
+    
+    const fetchFacts = async () => {
+      const q = query(
+        collection(db, "playerMatchFacts"),
+        where("matchId", "==", matchId)
+      );
+      const snap = await getDocs(q);
+      const facts: PlayerMatchFact[] = [];
+      snap.forEach(d => facts.push({ ...d.data() } as PlayerMatchFact));
+      setMatchFacts(facts);
+    };
+    
+    fetchFacts();
+  }, [matchId, match?.status?.closed]);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -1255,6 +1616,21 @@ export default function Match() {
             </table>
           </div>
         </div>
+
+        {/* POST-MATCH STATS */}
+        {isMatchClosed && matchFacts.length > 0 && (
+          <PostMatchStats
+            matchFacts={matchFacts}
+            format={format}
+            teamAPlayers={match.teamAPlayers || []}
+            teamBPlayers={match.teamBPlayers || []}
+            teamAName={tournament?.teamA?.name || "Team A"}
+            teamBName={tournament?.teamB?.name || "Team B"}
+            teamAColor={teamAColor}
+            teamBColor={teamBColor}
+            getPlayerName={getPlayerName}
+          />
+        )}
 
         <LastUpdated />
 
