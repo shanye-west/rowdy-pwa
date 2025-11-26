@@ -308,6 +308,7 @@ function summarize(format: RoundFormat, match: any) {
   let runningMargin = 0; // positive = Team A leading, negative = Team B leading
   let wasTeamADown3PlusBack9 = false;
   let wasTeamAUp3PlusBack9 = false;
+  const marginHistory: number[] = []; // Track margin after each completed hole
 
   for (const i of holesRange(match.holes ?? {})) {
     const res = decideHole(format, i, match);
@@ -315,6 +316,9 @@ function summarize(format: RoundFormat, match: any) {
     thru = Math.max(thru, i);
     if (res === "teamA") { a++; runningMargin++; }
     else if (res === "teamB") { b++; runningMargin--; }
+    
+    // Track margin after this hole
+    marginHistory.push(runningMargin);
 
     // Track momentum on back 9 (holes 10-18)
     if (i >= 10) {
@@ -330,7 +334,7 @@ function summarize(format: RoundFormat, match: any) {
   const winner = (thru === 18 && a === b) ? "AS" : (leader ?? "AS");
   return { 
     holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner,
-    wasTeamADown3PlusBack9, wasTeamAUp3PlusBack9
+    wasTeamADown3PlusBack9, wasTeamAUp3PlusBack9, marginHistory
   };
 }
 
@@ -355,7 +359,8 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   const status = { 
     leader: s.leader, margin: s.margin, thru: s.thru, dormie: s.dormie, closed: s.closed,
     wasTeamADown3PlusBack9: s.wasTeamADown3PlusBack9,
-    wasTeamAUp3PlusBack9: s.wasTeamAUp3PlusBack9
+    wasTeamAUp3PlusBack9: s.wasTeamAUp3PlusBack9,
+    marginHistory: s.marginHistory
   };
   const result = { winner: s.winner, holesWonA: s.holesWonA, holesWonB: s.holesWonB };
 

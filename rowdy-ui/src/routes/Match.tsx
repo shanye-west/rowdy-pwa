@@ -7,6 +7,148 @@ import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
+// ===== MATCH FLOW GRAPH COMPONENT (Pure SVG) =====
+
+type MatchFlowGraphProps = {
+  marginHistory: number[];
+  teamAColor: string;
+  teamBColor: string;
+  teamAName: string;
+  teamBName: string;
+};
+
+function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, teamBName }: MatchFlowGraphProps) {
+  if (!marginHistory || marginHistory.length === 0) return null;
+
+  const width = 320;
+  const height = 140;
+  const padding = { top: 20, right: 15, bottom: 25, left: 15 };
+  const graphWidth = width - padding.left - padding.right;
+  const graphHeight = height - padding.top - padding.bottom;
+
+  // Calculate max margin for y-axis scale (minimum 3 for reasonable scale)
+  const maxMargin = Math.max(3, Math.max(...marginHistory.map(Math.abs)));
+  
+  // X scale: evenly distribute holes across width
+  const xScale = (holeIndex: number) => padding.left + (holeIndex / (marginHistory.length - 1 || 1)) * graphWidth;
+  
+  // Y scale: center line is 0, positive (TeamA up) goes up, negative goes down
+  const yScale = (margin: number) => padding.top + graphHeight / 2 - (margin / maxMargin) * (graphHeight / 2);
+
+  // Build polyline points
+  const points = marginHistory.map((m, i) => `${xScale(i)},${yScale(m)}`).join(" ");
+
+  // Center line Y position
+  const centerY = padding.top + graphHeight / 2;
+
+  return (
+    <div className="card p-4">
+      <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center mb-3">
+        Match Flow
+      </h3>
+      
+      <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+        {/* Background fills for each team's side */}
+        <rect 
+          x={padding.left} 
+          y={padding.top} 
+          width={graphWidth} 
+          height={graphHeight / 2} 
+          fill={teamAColor} 
+          opacity={0.08}
+        />
+        <rect 
+          x={padding.left} 
+          y={centerY} 
+          width={graphWidth} 
+          height={graphHeight / 2} 
+          fill={teamBColor} 
+          opacity={0.08}
+        />
+
+        {/* Grid lines */}
+        {[-maxMargin, -Math.floor(maxMargin/2), 0, Math.floor(maxMargin/2), maxMargin].filter((v, i, arr) => arr.indexOf(v) === i).map(m => (
+          <line
+            key={m}
+            x1={padding.left}
+            y1={yScale(m)}
+            x2={width - padding.right}
+            y2={yScale(m)}
+            stroke={m === 0 ? "#94a3b8" : "#e2e8f0"}
+            strokeWidth={m === 0 ? 1.5 : 1}
+            strokeDasharray={m === 0 ? "none" : "4,4"}
+          />
+        ))}
+
+        {/* Front 9 / Back 9 separator */}
+        {marginHistory.length > 9 && (
+          <line
+            x1={xScale(8.5)}
+            y1={padding.top}
+            x2={xScale(8.5)}
+            y2={height - padding.bottom}
+            stroke="#cbd5e1"
+            strokeWidth={1}
+            strokeDasharray="2,2"
+          />
+        )}
+
+        {/* The flow line */}
+        <polyline
+          points={`${padding.left},${centerY} ${points}`}
+          fill="none"
+          stroke="#334155"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Data points */}
+        {marginHistory.map((m, i) => (
+          <circle
+            key={i}
+            cx={xScale(i)}
+            cy={yScale(m)}
+            r={3}
+            fill={m > 0 ? teamAColor : m < 0 ? teamBColor : "#64748b"}
+          />
+        ))}
+
+        {/* Team labels */}
+        <text x={padding.left + 4} y={padding.top + 12} fontSize={9} fill={teamAColor} fontWeight={600}>
+          {teamAName}
+        </text>
+        <text x={padding.left + 4} y={height - padding.bottom - 4} fontSize={9} fill={teamBColor} fontWeight={600}>
+          {teamBName}
+        </text>
+
+        {/* Margin labels on right */}
+        <text x={width - padding.right + 4} y={yScale(maxMargin) + 3} fontSize={8} fill="#94a3b8">
+          +{maxMargin}
+        </text>
+        <text x={width - padding.right + 4} y={centerY + 3} fontSize={8} fill="#94a3b8">
+          AS
+        </text>
+        <text x={width - padding.right + 4} y={yScale(-maxMargin) + 3} fontSize={8} fill="#94a3b8">
+          -{maxMargin}
+        </text>
+
+        {/* Hole markers */}
+        <text x={padding.left} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">1</text>
+        {marginHistory.length >= 9 && (
+          <text x={xScale(8)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">9</text>
+        )}
+        {marginHistory.length >= 10 && (
+          <text x={xScale(9)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">10</text>
+        )}
+        <text x={xScale(marginHistory.length - 1)} y={height - 6} fontSize={8} fill="#94a3b8" textAnchor="middle">
+          {marginHistory.length}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 // ===== POST-MATCH STATS COMPONENT =====
 
 type PostMatchStatsProps = {
@@ -19,6 +161,7 @@ type PostMatchStatsProps = {
   teamAColor: string;
   teamBColor: string;
   getPlayerName: (pid?: string) => string;
+  marginHistory?: number[];
 };
 
 // Format +/- scores like golf standard: +5, -2, E (even)
@@ -38,11 +181,20 @@ function PostMatchStats({
   teamAColor,
   teamBColor,
   getPlayerName,
+  marginHistory,
 }: PostMatchStatsProps) {
   // Get fact for a specific player
   const getFactForPlayer = (playerId: string): PlayerMatchFact | undefined => {
     return matchFacts.find(f => f.playerId === playerId);
   };
+
+  // Compute largest lead from marginHistory
+  const largestLeadA = marginHistory && marginHistory.length > 0 
+    ? Math.max(0, ...marginHistory) 
+    : 0;
+  const largestLeadB = marginHistory && marginHistory.length > 0 
+    ? Math.abs(Math.min(0, ...marginHistory)) 
+    : 0;
 
   // Determine which stat categories apply to this format
   const showIndividualScoring = format === "singles" || format === "twoManBestBall";
@@ -179,6 +331,15 @@ function PostMatchStats({
           valueA={sampleFact?.finalThru} 
           valueB={sampleFact?.finalThru} 
         />
+        {marginHistory && marginHistory.length > 0 && (
+          <>
+            <StatRow 
+              label="Largest Lead" 
+              valueA={largestLeadA > 0 ? largestLeadA : "–"} 
+              valueB={largestLeadB > 0 ? largestLeadB : "–"} 
+            />
+          </>
+        )}
       </div>
 
       {/* INDIVIDUAL SCORING (Singles & Best Ball) */}
@@ -1633,6 +1794,17 @@ export default function Match() {
           </div>
         </div>
 
+        {/* MATCH FLOW GRAPH */}
+        {match.status?.marginHistory && match.status.marginHistory.length > 0 && (
+          <MatchFlowGraph
+            marginHistory={match.status.marginHistory}
+            teamAColor={teamAColor}
+            teamBColor={teamBColor}
+            teamAName={tournament?.teamA?.name || "Team A"}
+            teamBName={tournament?.teamB?.name || "Team B"}
+          />
+        )}
+
         {/* POST-MATCH STATS */}
         {isMatchClosed && matchFacts.length > 0 && (
           <PostMatchStats
@@ -1645,6 +1817,7 @@ export default function Match() {
             teamAColor={teamAColor}
             teamBColor={teamBColor}
             getPlayerName={getPlayerName}
+            marginHistory={match.status?.marginHistory}
           />
         )}
 

@@ -96,6 +96,7 @@ export type MatchDoc = {
     closed: boolean;
     wasTeamADown3PlusBack9?: boolean;
     wasTeamAUp3PlusBack9?: boolean;
+    marginHistory?: number[]; // Running margin after each hole (positive = TeamA up)
   };
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
