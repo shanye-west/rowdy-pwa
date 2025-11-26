@@ -17,9 +17,13 @@ function emptyHolesFor(format: RoundFormat) {
   for (let i = 1; i <= 18; i++) {
     const k = String(i);
     if (format === "twoManScramble") {
-      holes[k] = { input: { teamAGross: null, teamBGross: null } };
+      // DRIVE_TRACKING: Added teamADrive/teamBDrive fields
+      holes[k] = { input: { teamAGross: null, teamBGross: null, teamADrive: null, teamBDrive: null } };
     } else if (format === "singles") {
       holes[k] = { input: { teamAPlayerGross: null, teamBPlayerGross: null } };
+    } else if (format === "twoManShamble") {
+      // DRIVE_TRACKING: Added teamADrive/teamBDrive fields for shamble
+      holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null], teamADrive: null, teamBDrive: null } };
     } else {
       holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null] } };
     }
@@ -59,13 +63,24 @@ function normalizeHoles(existing: Record<string, any> | undefined, format: Round
     if (format === "twoManScramble") {
       const a = exInput.teamAGross ?? null;
       const b = exInput.teamBGross ?? null;
-      holes[k] = { input: { teamAGross: a, teamBGross: b } };
+      // DRIVE_TRACKING: Preserve drive selections
+      const aDrive = exInput.teamADrive ?? null;
+      const bDrive = exInput.teamBDrive ?? null;
+      holes[k] = { input: { teamAGross: a, teamBGross: b, teamADrive: aDrive, teamBDrive: bDrive } };
     } else if (format === "singles") {
       let a = exInput.teamAPlayerGross;
       let b = exInput.teamBPlayerGross;
       if (a == null && Array.isArray(exInput.teamAPlayersGross)) a = exInput.teamAPlayersGross[0] ?? null;
       if (b == null && Array.isArray(exInput.teamBPlayersGross)) b = exInput.teamBPlayersGross[0] ?? null;
       holes[k] = { input: { teamAPlayerGross: a ?? null, teamBPlayerGross: b ?? null } };
+    } else if (format === "twoManShamble") {
+      const aArr = Array.isArray(exInput.teamAPlayersGross) ? exInput.teamAPlayersGross : [null, null];
+      const bArr = Array.isArray(exInput.teamBPlayersGross) ? exInput.teamBPlayersGross : [null, null];
+      const norm2 = (arr: any[]) => [arr[0] ?? null, arr[1] ?? null];
+      // DRIVE_TRACKING: Preserve drive selections for shamble
+      const aDrive = exInput.teamADrive ?? null;
+      const bDrive = exInput.teamBDrive ?? null;
+      holes[k] = { input: { teamAPlayersGross: norm2(aArr), teamBPlayersGross: norm2(bArr), teamADrive: aDrive, teamBDrive: bDrive } };
     } else {
       const aArr = Array.isArray(exInput.teamAPlayersGross) ? exInput.teamAPlayersGross : [null, null];
       const bArr = Array.isArray(exInput.teamBPlayersGross) ? exInput.teamBPlayersGross : [null, null];
@@ -128,6 +143,8 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
   if (data.courseId === undefined) toMerge.courseId = null;
   if (data.locked === undefined) toMerge.locked = false;
   if (data.pointsValue === undefined) toMerge.pointsValue = 1;
+  // DRIVE_TRACKING: Default to false
+  if (data.trackDrives === undefined) toMerge.trackDrives = false;
   if (Object.keys(toMerge).length > 0) {
     toMerge._seededAt = FieldValue.serverTimestamp();
     await ref.set(toMerge, { merge: true });
@@ -282,7 +299,7 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   await event.data!.after.ref.set({ status, result }, { merge: true });
 });
 
-// --- STATS ENGINE (Updated for Nested Tiers + Margin) ---
+// --- STATS ENGINE (Updated with 6 new stats) ---
 
 export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
   const matchId = event.params.matchId;
@@ -303,7 +320,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const tId = after.tournamentId || "";
   const rId = after.roundId || "";
   
-  let format = "unknown";
+  let format: RoundFormat = "twoManBestBall";
   let points = 1;
   let courseId = "";
   let day = 0;
@@ -320,7 +337,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) {
       const rData = rSnap.data();
-      format = rData?.format || "unknown";
+      format = (rData?.format as RoundFormat) || "twoManBestBall";
       points = rData?.pointsValue ?? 1;
       courseId = rData?.courseId || "";
       day = rData?.day ?? 0;
@@ -357,10 +374,99 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
 
+  // --- Calculate match-wide stats by iterating through holes ---
+  const holesData = after.holes || {};
+  let leadChanges = 0;
+  let wasTeamANeverBehind = true;
+  let wasTeamBNeverBehind = true;
+  let winningHole: number | null = null;
+  let prevLeader: "teamA" | "teamB" | null = null;
+  let runningMargin = 0;
+  
+  // Track balls used for best ball format (per player index)
+  const teamABallsUsed = [0, 0]; // [player0, player1]
+  const teamBBallsUsed = [0, 0];
+  
+  // DRIVE_TRACKING: Track drives used for scramble/shamble
+  const teamADrivesUsed = [0, 0];
+  const teamBDrivesUsed = [0, 0];
+  
+  const finalThru = status.thru || 18;
+  
+  for (let i = 1; i <= finalThru; i++) {
+    const h = holesData[String(i)]?.input ?? {};
+    
+    // Determine hole winner (reuse logic from decideHole)
+    const holeResult = decideHole(format, i, after);
+    
+    if (holeResult === "teamA") {
+      runningMargin++;
+    } else if (holeResult === "teamB") {
+      runningMargin--;
+    }
+    
+    // Determine current leader
+    const currentLeader = runningMargin > 0 ? "teamA" : runningMargin < 0 ? "teamB" : null;
+    
+    // Track lead changes (only when leader actually changes, not ties)
+    if (currentLeader !== null && prevLeader !== null && currentLeader !== prevLeader) {
+      leadChanges++;
+    }
+    if (currentLeader !== null) {
+      prevLeader = currentLeader;
+    }
+    
+    // Track "never behind"
+    if (runningMargin < 0) wasTeamANeverBehind = false;
+    if (runningMargin > 0) wasTeamBNeverBehind = false;
+    
+    // Track winning hole (when match was closed)
+    if (status.closed && winningHole === null) {
+      const margin = Math.abs(runningMargin);
+      const holesLeft = 18 - i;
+      if (margin > holesLeft) {
+        winningHole = i;
+      }
+    }
+    
+    // Best Ball: Track whose ball was used (which player had lower net)
+    if (format === "twoManBestBall") {
+      const aArr = h.teamAPlayersGross;
+      const bArr = h.teamBPlayersGross;
+      
+      if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
+        const a0Stroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
+        const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
+        const a0Net = aArr[0] - a0Stroke;
+        const a1Net = aArr[1] - a1Stroke;
+        if (a0Net <= a1Net) teamABallsUsed[0]++;
+        if (a1Net <= a0Net) teamABallsUsed[1]++;
+      }
+      
+      if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
+        const b0Stroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
+        const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
+        const b0Net = bArr[0] - b0Stroke;
+        const b1Net = bArr[1] - b1Stroke;
+        if (b0Net <= b1Net) teamBBallsUsed[0]++;
+        if (b1Net <= b0Net) teamBBallsUsed[1]++;
+      }
+    }
+    
+    // DRIVE_TRACKING: Track drives used for scramble/shamble
+    if (format === "twoManScramble" || format === "twoManShamble") {
+      const aDrive = h.teamADrive;
+      const bDrive = h.teamBDrive;
+      if (aDrive === 0) teamADrivesUsed[0]++;
+      else if (aDrive === 1) teamADrivesUsed[1]++;
+      if (bDrive === 0) teamBDrivesUsed[0]++;
+      else if (bDrive === 1) teamBDrivesUsed[1]++;
+    }
+  }
+
   const batch = db.batch();
 
-  // UPDATED: Accepts 'opponentPlayers' AND 'myTeamPlayers'
-  const writeFact = (p: any, team: "teamA" | "teamB", opponentPlayers: any[], myTeamPlayers: any[]) => {
+  const writeFact = (p: any, team: "teamA" | "teamB", pIdx: number, opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
     
     let outcome: "win" | "loss" | "halve" = "loss"; 
@@ -377,6 +483,26 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const wasUp3PlusBack9 = team === "teamA" ? status.wasTeamAUp3PlusBack9 : status.wasTeamADown3PlusBack9;
     const comebackWin = outcome === "win" && wasDown3PlusBack9 === true;
     const blownLead = outcome === "loss" && wasUp3PlusBack9 === true;
+    
+    // NEW: wasNeverBehind from this player's perspective
+    const wasNeverBehind = team === "teamA" ? wasTeamANeverBehind : wasTeamBNeverBehind;
+    
+    // NEW: strokesGiven - sum of strokesReceived array
+    const strokesGiven = Array.isArray(p.strokesReceived) 
+      ? p.strokesReceived.reduce((sum: number, v: number) => sum + (v || 0), 0)
+      : 0;
+    
+    // NEW: ballsUsed - only for best ball
+    let ballsUsed: number | null = null;
+    if (format === "twoManBestBall") {
+      ballsUsed = team === "teamA" ? teamABallsUsed[pIdx] : teamBBallsUsed[pIdx];
+    }
+    
+    // DRIVE_TRACKING: drivesUsed - only for scramble/shamble
+    let drivesUsed: number | null = null;
+    if (format === "twoManScramble" || format === "twoManShamble") {
+      drivesUsed = team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx];
+    }
 
     const myTier = playerTierLookup[p.playerId] || "Unknown";
     const myTeamId = team === "teamA" ? teamAId : teamBId;
@@ -400,14 +526,13 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       });
     }
 
-    // --- 2. PARTNERS (New Logic) ---
+    // --- 2. PARTNERS ---
     const partnerIds: string[] = [];
     const partnerTiers: string[] = [];
     const partnerHandicaps: (number | null)[] = [];
 
     if (Array.isArray(myTeamPlayers)) {
       myTeamPlayers.forEach((tm) => {
-        // Add if valid ID AND not myself
         if (tm && tm.playerId && tm.playerId !== p.playerId) {
           partnerIds.push(tm.playerId);
           partnerTiers.push(playerTierLookup[tm.playerId] || "Unknown");
@@ -416,7 +541,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       });
     }
 
-    batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), {
+    const factData: any = {
       playerId: p.playerId, matchId, tournamentId: tId, roundId: rId, format,
       outcome, pointsEarned: pts,
       
@@ -429,7 +554,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       opponentHandicaps,
       partnerHandicaps,
 
-      // Opponent Arrays (Source of Truth)
+      // Opponent Arrays
       opponentIds,
       opponentTiers,
 
@@ -443,9 +568,15 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
 
-      // Momentum stats (was down/up 3+ on back 9)
+      // Momentum stats
       comebackWin,
       blownLead,
+      
+      // NEW: Additional stats
+      strokesGiven,
+      leadChanges,
+      wasNeverBehind,
+      winningHole,
 
       // Round context
       courseId,
@@ -457,15 +588,21 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       tournamentSeries,
       
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+    
+    // Format-specific stats (only include if applicable)
+    if (ballsUsed !== null) factData.ballsUsed = ballsUsed;
+    if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
+
+    batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), factData);
   };
 
   const pA = after.teamAPlayers || [];
   const pB = after.teamBPlayers || [];
   
-  // UPDATED: Pass 'pA' as the 4th arg for Team A (to find partners), and 'pB' for Team B
-  if (Array.isArray(pA)) pA.forEach((p: any) => writeFact(p, "teamA", pB, pA));
-  if (Array.isArray(pB)) pB.forEach((p: any) => writeFact(p, "teamB", pA, pB));
+  // Pass player index (pIdx) to writeFact for ballsUsed/drivesUsed lookup
+  if (Array.isArray(pA)) pA.forEach((p: any, idx: number) => writeFact(p, "teamA", idx, pB, pA));
+  if (Array.isArray(pB)) pB.forEach((p: any, idx: number) => writeFact(p, "teamB", idx, pA, pB));
 
   await batch.commit();
 });

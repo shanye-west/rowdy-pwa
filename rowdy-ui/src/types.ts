@@ -57,6 +57,9 @@ export type RoundDoc = {
   courseId?: string; // Reference to courses collection
   pointsValue?: number; // Points value for all matches in this round
   
+  // DRIVE_TRACKING: Feature toggle for scramble/shamble drive tracking
+  trackDrives?: boolean;
+  
   // Legacy: embedded course data (may not be present)
   course?: {
     name: string;
@@ -131,6 +134,16 @@ export type PlayerMatchFact = {
   // Momentum stats (was down/up 3+ on back 9)
   comebackWin?: boolean;
   blownLead?: boolean;
+
+  // Additional match stats
+  strokesGiven?: number;      // Total strokes received in match
+  leadChanges?: number;       // Number of lead changes during match
+  wasNeverBehind?: boolean;   // Never trailed during match
+  winningHole?: number | null; // Hole where match was won (null if went 18 or halved)
+  
+  // Format-specific stats
+  ballsUsed?: number;         // Best Ball: holes where player's net was team's best
+  drivesUsed?: number;        // DRIVE_TRACKING: Scramble/Shamble: drives used by this player
 
   // Round context
   courseId?: string;

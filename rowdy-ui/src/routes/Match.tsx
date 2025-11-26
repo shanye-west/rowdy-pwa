@@ -87,6 +87,9 @@ export default function Match() {
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
+  // DRIVE_TRACKING: Check if drive tracking is enabled for this round
+  const trackDrives = !!round?.trackDrives && (format === "twoManScramble" || format === "twoManShamble");
+  
   // --- LOCKING LOGIC ---
   const roundLocked = !!round?.locked;
   const isMatchClosed = !!match?.status?.closed;
@@ -217,6 +220,71 @@ export default function Match() {
       console.error("Save failed", e);
     }
   }
+
+  // DRIVE_TRACKING: Get current drive selection for a hole
+  function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
+    const { input } = hole;
+    const v = team === "A" ? input?.teamADrive : input?.teamBDrive;
+    return v === 0 || v === 1 ? v : null;
+  }
+
+  // DRIVE_TRACKING: Update drive selection for a hole
+  function updateDrive(hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1) {
+    const { k, input } = hole;
+    const currentDrive = team === "A" ? input?.teamADrive : input?.teamBDrive;
+    // Toggle: if same player, clear it; otherwise set to new player
+    const newDrive = currentDrive === playerIdx ? null : playerIdx;
+    
+    if (format === "twoManScramble") {
+      const newInput = {
+        teamAGross: input?.teamAGross ?? null,
+        teamBGross: input?.teamBGross ?? null,
+        teamADrive: team === "A" ? newDrive : (input?.teamADrive ?? null),
+        teamBDrive: team === "B" ? newDrive : (input?.teamBDrive ?? null),
+      };
+      saveHole(k, newInput);
+    } else if (format === "twoManShamble") {
+      const newInput = {
+        teamAPlayersGross: input?.teamAPlayersGross ?? [null, null],
+        teamBPlayersGross: input?.teamBPlayersGross ?? [null, null],
+        teamADrive: team === "A" ? newDrive : (input?.teamADrive ?? null),
+        teamBDrive: team === "B" ? newDrive : (input?.teamBDrive ?? null),
+      };
+      saveHole(k, newInput);
+    }
+  }
+
+  // DRIVE_TRACKING: Calculate drives used per player per team
+  const drivesUsed = useMemo(() => {
+    if (!trackDrives) return null;
+    
+    const teamA = [0, 0]; // [player0, player1]
+    const teamB = [0, 0];
+    
+    holes.forEach(h => {
+      const aDrive = h.input?.teamADrive;
+      const bDrive = h.input?.teamBDrive;
+      if (aDrive === 0) teamA[0]++;
+      else if (aDrive === 1) teamA[1]++;
+      if (bDrive === 0) teamB[0]++;
+      else if (bDrive === 1) teamB[1]++;
+    });
+    
+    return { teamA, teamB };
+  }, [holes, trackDrives]);
+
+  // DRIVE_TRACKING: Calculate drives still needed (6 min per player, minus holes remaining)
+  const drivesNeeded = useMemo(() => {
+    if (!trackDrives || !drivesUsed) return null;
+    
+    const holesRemaining = 18 - matchThru;
+    const calc = (used: number) => Math.max(0, 6 - used - holesRemaining);
+    
+    return {
+      teamA: [calc(drivesUsed.teamA[0]), calc(drivesUsed.teamA[1])],
+      teamB: [calc(drivesUsed.teamB[0]), calc(drivesUsed.teamB[1])],
+    };
+  }, [drivesUsed, matchThru, trackDrives]);
 
   // Get current value for a cell
   function getCellValue(hole: typeof holes[0], team: "A" | "B", pIdx: number): number | "" {
@@ -439,6 +507,63 @@ export default function Match() {
           <div className="text-xs opacity-80">{format}</div>
         </div>
 
+        {/* DRIVE_TRACKING: Drives Remaining Warning Banner */}
+        {trackDrives && drivesUsed && drivesNeeded && !isMatchClosed && (
+          <div className="card p-3 space-y-2">
+            <div className="text-xs font-bold uppercase text-slate-500">Drives Tracking</div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* Team A */}
+              <div>
+                <div className="font-semibold" style={{ color: teamAColor }}>{tournament?.teamA?.name || "Team A"}</div>
+                <div className="flex gap-3 mt-1">
+                  <div>
+                    <span className="text-slate-500">P1:</span>{" "}
+                    <span className={`font-bold ${drivesNeeded.teamA[0] > 0 ? "text-red-500" : "text-green-600"}`}>
+                      {drivesUsed.teamA[0]}/6
+                    </span>
+                    {drivesNeeded.teamA[0] > 0 && (
+                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[0]}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">P2:</span>{" "}
+                    <span className={`font-bold ${drivesNeeded.teamA[1] > 0 ? "text-red-500" : "text-green-600"}`}>
+                      {drivesUsed.teamA[1]}/6
+                    </span>
+                    {drivesNeeded.teamA[1] > 0 && (
+                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[1]}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Team B */}
+              <div>
+                <div className="font-semibold" style={{ color: teamBColor }}>{tournament?.teamB?.name || "Team B"}</div>
+                <div className="flex gap-3 mt-1">
+                  <div>
+                    <span className="text-slate-500">P1:</span>{" "}
+                    <span className={`font-bold ${drivesNeeded.teamB[0] > 0 ? "text-red-500" : "text-green-600"}`}>
+                      {drivesUsed.teamB[0]}/6
+                    </span>
+                    {drivesNeeded.teamB[0] > 0 && (
+                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[0]}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">P2:</span>{" "}
+                    <span className={`font-bold ${drivesNeeded.teamB[1] > 0 ? "text-red-500" : "text-green-600"}`}>
+                      {drivesUsed.teamB[1]}/6
+                    </span>
+                    {drivesNeeded.teamB[1] > 0 && (
+                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[1]}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         <div className="card p-0 overflow-hidden">
           <div 
@@ -549,6 +674,8 @@ export default function Match() {
                 {/* Team A Player Rows */}
                 {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => {
                   const isLastOfTeamA = rowIdx === teamRows.length - 1;
+                  // DRIVE_TRACKING: Show drive buttons on first row of team for scramble/shamble
+                  const showDriveButtons = trackDrives && pr.pIdx === 0;
                   return (
                     <tr 
                       key={`row-${pr.team}-${pr.pIdx}`}
@@ -564,9 +691,10 @@ export default function Match() {
                       {holes.slice(0, 9).map(h => {
                         const locked = isHoleLocked(h.num);
                         const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        const currentDrive = showDriveButtons ? getDriveValue(h, "A") : null;
                         return (
                           <td key={h.k} className="p-0.5">
-                            <div className="relative">
+                            <div className="relative flex flex-col items-center">
                               <input
                                 type="number"
                                 inputMode="numeric"
@@ -590,6 +718,33 @@ export default function Match() {
                               {stroke && (
                                 <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
+                              {/* DRIVE_TRACKING: Drive selector buttons */}
+                              {showDriveButtons && !locked && (
+                                <div className="flex gap-0.5 mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "A", 0)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 0 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "A", 1)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 1 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P2
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         );
@@ -602,9 +757,10 @@ export default function Match() {
                       {holes.slice(9, 18).map((h, i) => {
                         const locked = isHoleLocked(h.num);
                         const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        const currentDrive = showDriveButtons ? getDriveValue(h, "A") : null;
                         return (
                           <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-                            <div className="relative">
+                            <div className="relative flex flex-col items-center">
                               <input
                                 type="number"
                                 inputMode="numeric"
@@ -627,6 +783,33 @@ export default function Match() {
                               />
                               {stroke && (
                                 <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
+                              )}
+                              {/* DRIVE_TRACKING: Drive selector buttons */}
+                              {showDriveButtons && !locked && (
+                                <div className="flex gap-0.5 mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "A", 0)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 0 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "A", 1)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 1 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P2
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </td>
@@ -770,6 +953,8 @@ export default function Match() {
                 {/* Team B Player Rows */}
                 {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => {
                   const isLastOfTeamB = rowIdx === teamRows.length - 1;
+                  // DRIVE_TRACKING: Show drive buttons on first row of team for scramble/shamble
+                  const showDriveButtons = trackDrives && pr.pIdx === 0;
                   return (
                     <tr 
                       key={`row-${pr.team}-${pr.pIdx}`}
@@ -785,9 +970,10 @@ export default function Match() {
                       {holes.slice(0, 9).map(h => {
                         const locked = isHoleLocked(h.num);
                         const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        const currentDrive = showDriveButtons ? getDriveValue(h, "B") : null;
                         return (
                           <td key={h.k} className="p-0.5">
-                            <div className="relative">
+                            <div className="relative flex flex-col items-center">
                               <input
                                 type="number"
                                 inputMode="numeric"
@@ -811,6 +997,33 @@ export default function Match() {
                               {stroke && (
                                 <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
                               )}
+                              {/* DRIVE_TRACKING: Drive selector buttons */}
+                              {showDriveButtons && !locked && (
+                                <div className="flex gap-0.5 mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "B", 0)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 0 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "B", 1)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 1 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P2
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         );
@@ -823,9 +1036,10 @@ export default function Match() {
                       {holes.slice(9, 18).map((h, i) => {
                         const locked = isHoleLocked(h.num);
                         const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        const currentDrive = showDriveButtons ? getDriveValue(h, "B") : null;
                         return (
                           <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-                            <div className="relative">
+                            <div className="relative flex flex-col items-center">
                               <input
                                 type="number"
                                 inputMode="numeric"
@@ -848,6 +1062,33 @@ export default function Match() {
                               />
                               {stroke && (
                                 <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
+                              )}
+                              {/* DRIVE_TRACKING: Drive selector buttons */}
+                              {showDriveButtons && !locked && (
+                                <div className="flex gap-0.5 mt-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "B", 0)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 0 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateDrive(h, "B", 1)}
+                                    className={`text-[9px] px-1 py-0 rounded ${
+                                      currentDrive === 1 
+                                        ? "bg-blue-500 text-white" 
+                                        : "bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                    }`}
+                                  >
+                                    P2
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </td>
