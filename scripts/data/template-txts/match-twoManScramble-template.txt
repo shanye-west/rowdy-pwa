@@ -1,0 +1,38 @@
+cd /rowdy-pwa/scripts
+npx ts-node seed-match.ts --input data/match-twoManScramble.json
+
+{
+  "id": "2025-rowdycup-day1-match1",
+  "roundId": "2025-rowdycup-day1",
+  "tournamentId": "2025-rowdycup",
+  "courseHandicaps": [0, 0, 0, 0],
+  "teamAPlayers": [
+    {
+      "playerId": "pPlayer1",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pPlayer2",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "teamBPlayers": [
+    {
+      "playerId": "pPlayer3",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pPlayer4",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "holes": {},
+  "status": {
+    "leader": null,
+    "margin": 0,
+    "thru": 0,
+    "dormie": false,
+    "closed": false
+  },
+  "result": {}
+}
