@@ -250,9 +250,13 @@ export default function Round() {
                 bgStyle = { backgroundColor: winnerColor };
                 textColor = "text-white";
               } else if (isClosed && winner === "AS") {
-                // Halved match - grey background with team color dots on sides
-                bgStyle = { backgroundColor: "#94a3b8" }; // slate-400
-                textColor = "text-white";
+                // Halved match - grey background with team color borders
+                bgStyle = { 
+                  backgroundColor: "#cbd5e1",
+                  borderLeft: `4px solid ${tournament?.teamA?.color || 'var(--team-a-default)'}`,
+                  borderRight: `4px solid ${tournament?.teamB?.color || 'var(--team-b-default)'}`
+                };
+                textColor = "text-slate-700";
               } else if (leader === 'teamA') {
                 borderColor = tournament?.teamA?.color || "var(--team-a-default)";
                 bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
@@ -304,40 +308,26 @@ export default function Round() {
                     {isClosed ? (
                       // Completed match
                       winner === 'AS' ? (
-                        // Halved/Tied match - show team color dots
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        // Halved/Tied match - simple text
+                        <>
                           <div style={{ 
-                            width: 8, 
-                            height: 8, 
-                            borderRadius: '50%', 
-                            backgroundColor: tournament?.teamA?.color || 'var(--team-a-default)'
-                          }} />
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <div style={{ 
-                              whiteSpace: 'nowrap',
-                              fontSize: '0.9rem',
-                              fontWeight: 700,
-                              color: 'white'
-                            }}>
-                              TIED
-                            </div>
-                            <div style={{ 
-                              fontSize: '0.65rem', 
-                              fontWeight: 600, 
-                              color: 'rgba(255,255,255,0.85)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.05em'
-                            }}>
-                              FINAL
-                            </div>
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: '#334155'
+                          }}>
+                            TIED
                           </div>
                           <div style={{ 
-                            width: 8, 
-                            height: 8, 
-                            borderRadius: '50%', 
-                            backgroundColor: tournament?.teamB?.color || 'var(--team-b-default)'
-                          }} />
-                        </div>
+                            fontSize: '0.65rem', 
+                            fontWeight: 600, 
+                            color: '#64748b',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            FINAL
+                          </div>
+                        </>
                       ) : (
                         // Match with a winner
                         <>
