@@ -319,15 +319,35 @@ export default function Round() {
                       </div>
                     )}
                     {isClosed ? (
-                      // Completed: show full status text (e.g., "Team A wins 4 & 3")
-                      <div style={{ 
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        color: 'white'
-                      }}>
-                        {statusText}
-                      </div>
+                      // Completed: show team name above score
+                      <>
+                        <div style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 600, 
+                          color: 'rgba(255,255,255,0.85)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          {winner === 'teamA' 
+                            ? (tournament?.teamA?.name || 'Team A')
+                            : winner === 'teamB'
+                              ? (tournament?.teamB?.name || 'Team B')
+                              : 'Match'
+                          }
+                        </div>
+                        <div style={{ 
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: 'white'
+                        }}>
+                          {/* Extract just the score part: "4 & 3", "1 UP", or "Halved" */}
+                          {statusText.includes("wins") 
+                            ? statusText.split(" wins ")[1]
+                            : statusText
+                          }
+                        </div>
+                      </>
                     ) : (
                       // In progress or not started: show badge
                       <div 
