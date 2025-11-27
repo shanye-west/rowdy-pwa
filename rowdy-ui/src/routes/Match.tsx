@@ -191,7 +191,7 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
   });
 
   // X-axis labels (hole numbers)
-  const xLabels = [1, 9, 18].filter(h => h <= numHoles).map(hole => (
+  const xLabels = [1, 3, 5, 7, 9, 10, 12, 14, 16, 18].filter(h => h <= numHoles).map(hole => (
     <text
       key={`x-${hole}`}
       x={`${getX(hole)}%`}
