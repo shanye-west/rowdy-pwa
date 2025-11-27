@@ -1303,6 +1303,11 @@ export default function Match() {
             padding: "16px 12px",
           }}
         >
+          {matchThru > 0 && !isMatchClosed && (
+            <div className="text-xs uppercase tracking-wider mb-1" style={{ opacity: 0.7 }}>
+              Thru {matchThru}
+            </div>
+          )}
           <div className="text-xs uppercase tracking-wider" style={{ opacity: 0.85 }}>
             {isMatchClosed 
               ? (winner === "teamA" 
@@ -1310,9 +1315,13 @@ export default function Match() {
                   : winner === "teamB"
                     ? (tournament?.teamB?.name || "Team B")
                     : "Match")
-              : matchThru > 0 
-                ? `Thru ${matchThru}` 
-                : "Not Started"
+              : leader === "teamA"
+                ? (tournament?.teamA?.name || "Team A")
+                : leader === "teamB"
+                  ? (tournament?.teamB?.name || "Team B")
+                  : matchThru > 0 
+                    ? "All Square" 
+                    : "Not Started"
             }
           </div>
           <div className="text-2xl font-extrabold my-1">
