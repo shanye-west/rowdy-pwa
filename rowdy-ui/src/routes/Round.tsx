@@ -295,25 +295,25 @@ export default function Round() {
                     ))}
                   </div>
 
-                  {/* Center: Status - fixed height for consistency */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 52 }}>
+                  {/* Center: Status - fixed height for consistency, content vertically centered */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52 }}>
                     {isClosed ? (
                       // Completed: team name on top, then "WIN X & Y"
                       <>
-                        <div style={{ 
-                          fontSize: '0.65rem', 
-                          fontWeight: 600, 
-                          color: 'rgba(255,255,255,0.85)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em'
-                        }}>
-                          {winner === 'teamA' 
-                            ? (tournament?.teamA?.name || 'Team A')
-                            : winner === 'teamB'
-                              ? (tournament?.teamB?.name || 'Team B')
-                              : ''
-                          }
-                        </div>
+                        {winner !== 'AS' && (
+                          <div style={{ 
+                            fontSize: '0.65rem', 
+                            fontWeight: 600, 
+                            color: 'rgba(255,255,255,0.85)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            {winner === 'teamA' 
+                              ? (tournament?.teamA?.name || 'Team A')
+                              : (tournament?.teamB?.name || 'Team B')
+                            }
+                          </div>
+                        )}
                         <div style={{ 
                           whiteSpace: 'nowrap',
                           fontSize: '0.9rem',
@@ -326,8 +326,6 @@ export default function Round() {
                             : `WIN ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`
                           }
                         </div>
-                        {/* Empty spacer for consistent height */}
-                        <div style={{ fontSize: '0.65rem', visibility: 'hidden' }}>THRU 18</div>
                       </>
                     ) : isStarted && leader ? (
                       // In progress with leader: team name on top, margin, then thru at bottom
@@ -363,10 +361,8 @@ export default function Round() {
                         </div>
                       </>
                     ) : isStarted ? (
-                      // In progress, All Square: spacer, status, then thru at bottom
+                      // In progress, All Square
                       <>
-                        {/* Empty spacer for consistent height */}
-                        <div style={{ fontSize: '0.65rem', visibility: 'hidden' }}>SPACER</div>
                         <div style={{ 
                           whiteSpace: 'nowrap',
                           fontSize: '0.85rem',
@@ -386,19 +382,15 @@ export default function Round() {
                         </div>
                       </>
                     ) : (
-                      // Not started: spacers for consistent height
-                      <>
-                        <div style={{ fontSize: '0.65rem', visibility: 'hidden' }}>SPACER</div>
-                        <div style={{ 
-                          whiteSpace: 'nowrap',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          color: '#94a3b8'
-                        }}>
-                          Not Started
-                        </div>
-                        <div style={{ fontSize: '0.65rem', visibility: 'hidden' }}>SPACER</div>
-                      </>
+                      // Not started
+                      <div style={{ 
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#94a3b8'
+                      }}>
+                        Not Started
+                      </div>
                     )}
                   </div>
 
