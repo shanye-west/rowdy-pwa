@@ -1616,7 +1616,7 @@ export default function Match() {
                 </tr>
 
                 {/* Yardage Row */}
-                <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
+                <tr className="bg-slate-50 text-slate-900 text-xs border-b border-slate-200">
                   <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1 capitalize">{course?.tees || round?.course?.tee || 'Yards'}</td>
                   {holes.slice(0, 9).map(h => (
                     <td key={h.k} className="py-1">{h.yards || ""}</td>
