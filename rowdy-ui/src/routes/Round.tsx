@@ -348,8 +348,32 @@ export default function Round() {
                           }
                         </div>
                       </>
+                    ) : isStarted && leader ? (
+                      // In progress with a leader: show team name above status (like completed)
+                      <>
+                        <div style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 600, 
+                          color: badgeBgColor,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          {leader === 'teamA' 
+                            ? (tournament?.teamA?.name || 'Team A')
+                            : (tournament?.teamB?.name || 'Team B')
+                          }
+                        </div>
+                        <div style={{ 
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: badgeBgColor
+                        }}>
+                          {displayStatus}
+                        </div>
+                      </>
                     ) : (
-                      // In progress or not started: show badge
+                      // Not started or AS: show badge
                       <div 
                         style={{ 
                           whiteSpace: 'nowrap',
