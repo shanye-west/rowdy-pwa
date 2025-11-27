@@ -189,9 +189,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: "No player session found" };
     }
     
-    // Validate password length
-    if (password.length < 4) {
-      return { success: false, error: "Password must be at least 4 characters" };
+    // Validate password length (Firebase Auth requires minimum 6 characters)
+    if (password.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters" };
     }
     
     try {
