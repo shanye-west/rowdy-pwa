@@ -22,7 +22,7 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
 
   // Chart dimensions
   const height = 140;
-  const padding = { top: 20, right: 10, bottom: 25, left: 45 };
+  const padding = { top: 20, right: 8, bottom: 25, left: 12 }; // left padding for logos
   const chartWidth = 100 - padding.left - padding.right; // as percentage
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -48,27 +48,28 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
   };
 
   // Generate line segments with colors based on leader
-  // When returning to AS, keep the color of the team that was just leading
+  // Gray only for AS-to-AS segments
+  // Team color for any segment where that team is leading on either end
   const lineSegments = [];
-  let lastLeaderColor = teamAColor; // Default to Team A color for first segment
   for (let i = 0; i < data.length - 1; i++) {
     const x1 = getX(i);
     const y1 = getY(data[i]);
     const x2 = getX(i + 1);
     const y2 = getY(data[i + 1]);
     
-    // Color based on who's leading at the END of the segment
-    // If AS, use the last leader's color (no gray lines)
+    const startMargin = data[i];
     const endMargin = data[i + 1];
+    
     let color: string;
-    if (endMargin > 0) {
+    if (startMargin === 0 && endMargin === 0) {
+      // Both endpoints are AS - gray
+      color = "#94a3b8";
+    } else if (startMargin > 0 || endMargin > 0) {
+      // Team A is leading on at least one end
       color = teamAColor;
-      lastLeaderColor = teamAColor;
-    } else if (endMargin < 0) {
-      color = teamBColor;
-      lastLeaderColor = teamBColor;
     } else {
-      color = lastLeaderColor; // Keep previous leader's color when returning to AS
+      // Team B is leading on at least one end
+      color = teamBColor;
     }
     
     lineSegments.push(
@@ -84,6 +85,21 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
       />
     );
   }
+
+  // Calculate max lead for each team, separately for front 9 and back 9
+  const front9 = marginHistory.slice(0, 9);
+  const back9 = marginHistory.slice(9);
+  
+  const maxTeamALeadFront = Math.max(0, ...front9);
+  const maxTeamBLeadFront = Math.max(0, ...front9.map(m => -m));
+  const maxTeamALeadBack = back9.length > 0 ? Math.max(0, ...back9) : 0;
+  const maxTeamBLeadBack = back9.length > 0 ? Math.max(0, ...back9.map(m => -m)) : 0;
+  
+  // Track if we've already shown the max lead label for each team/nine
+  let shownTeamAFront = false;
+  let shownTeamBFront = false;
+  let shownTeamABack = false;
+  let shownTeamBBack = false;
 
   // Generate horizontal grid lines for each margin level (1, 2, 3, etc.)
   const gridLines = [];
@@ -114,22 +130,63 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
     );
   }
 
-  // Generate dots (no labels)
+  // Generate dots with labels only at first occurrence of max lead per nine
   const dots = data.slice(1).map((margin, i) => {
-    const x = getX(i + 1);
+    const holeNum = i + 1; // 1-indexed hole number
+    const isFrontNine = holeNum <= 9;
+    const x = getX(holeNum);
     const y = getY(margin);
     const color = margin > 0 ? teamAColor : margin < 0 ? teamBColor : "#94a3b8";
     
+    // Determine if we should show a label
+    let showLabel = false;
+    let labelAbove = true; // Team A above, Team B below
+    
+    if (margin > 0) {
+      // Team A leading
+      if (isFrontNine && margin === maxTeamALeadFront && maxTeamALeadFront > 0 && !shownTeamAFront) {
+        showLabel = true;
+        shownTeamAFront = true;
+      } else if (!isFrontNine && margin === maxTeamALeadBack && maxTeamALeadBack > 0 && !shownTeamABack) {
+        showLabel = true;
+        shownTeamABack = true;
+      }
+      labelAbove = true;
+    } else if (margin < 0) {
+      // Team B leading
+      if (isFrontNine && -margin === maxTeamBLeadFront && maxTeamBLeadFront > 0 && !shownTeamBFront) {
+        showLabel = true;
+        shownTeamBFront = true;
+      } else if (!isFrontNine && -margin === maxTeamBLeadBack && maxTeamBLeadBack > 0 && !shownTeamBBack) {
+        showLabel = true;
+        shownTeamBBack = true;
+      }
+      labelAbove = false;
+    }
+    
     return (
-      <circle
-        key={`dot-${i}`}
-        cx={`${x}%`}
-        cy={y}
-        r={4}
-        fill={color}
-        stroke="white"
-        strokeWidth={1.5}
-      />
+      <g key={`dot-${i}`}>
+        <circle
+          cx={`${x}%`}
+          cy={y}
+          r={4}
+          fill={color}
+          stroke="white"
+          strokeWidth={1.5}
+        />
+        {showLabel && (
+          <text
+            x={`${x}%`}
+            y={labelAbove ? y - 8 : y + 14}
+            textAnchor="middle"
+            fontSize={8}
+            fontWeight={600}
+            fill={color}
+          >
+            {Math.abs(margin)}UP
+          </text>
+        )}
+      </g>
     );
   });
 
@@ -206,28 +263,28 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
         {teamALogo && (
           <image
             href={teamALogo}
-            x={0}
-            y={padding.top - 2}
-            width={28}
-            height={28}
+            x={2}
+            y={padding.top}
+            width={24}
+            height={24}
             preserveAspectRatio="xMidYMid meet"
           />
         )}
         {teamBLogo && (
           <image
             href={teamBLogo}
-            x={0}
-            y={padding.top + chartHeight - 26}
-            width={28}
-            height={28}
+            x={2}
+            y={padding.top + chartHeight - 24}
+            width={24}
+            height={24}
             preserveAspectRatio="xMidYMid meet"
           />
         )}
         <text
           x={14}
-          y={centerY + 4}
+          y={centerY + 3}
           textAnchor="middle"
-          fontSize={8}
+          fontSize={7}
           fill="#94a3b8"
         >
           AS
