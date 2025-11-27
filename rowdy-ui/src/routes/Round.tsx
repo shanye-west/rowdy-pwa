@@ -106,10 +106,10 @@ export default function Round() {
   const getPlayerName = (pid: string) => {
     const p = players[pid];
     if (!p) return "Unknown";
-    // Try First Last -> First L. -> Username
+    // Try First Last -> F. LastName
     if (p.displayName) {
         const parts = p.displayName.split(" ");
-        if (parts.length > 1) return `${parts[0]} ${parts[parts.length-1][0]}.`;
+        if (parts.length > 1) return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
         return p.displayName;
     }
     return p.username || "Unknown";
@@ -232,27 +232,54 @@ export default function Round() {
             matches.map((m) => {
               const statusText = formatMatchStatus(m.status, tournament?.teamA?.name, tournament?.teamB?.name);
               const isClosed = m.status?.closed === true;
-              const isStarted = (m.status?.thru ?? 0) > 0;
-              
-              // Determine border color based on leader
-              let borderColor = "transparent";
-              let bgStyle = {};
+              const thru = m.status?.thru ?? 0;
+              const isStarted = thru > 0;
               const leader = m.status?.leader;
+              const winner = m.result?.winner;
               
-              if (leader === 'teamA') {
-                 borderColor = tournament?.teamA?.color || "var(--team-a-default)";
-                 bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
+              // Determine styling based on match state
+              let borderColor = "transparent";
+              let bgStyle: React.CSSProperties = {};
+              let textColor = "text-slate-900";
+              
+              if (isClosed && winner && winner !== "AS") {
+                // Completed match with a winner - full team color background
+                const winnerColor = winner === "teamA" 
+                  ? (tournament?.teamA?.color || "var(--team-a-default)")
+                  : (tournament?.teamB?.color || "var(--team-b-default)");
+                bgStyle = { backgroundColor: winnerColor };
+                textColor = "text-white";
+              } else if (isClosed && winner === "AS") {
+                // Halved match - grey background
+                bgStyle = { backgroundColor: "#94a3b8" };
+                textColor = "text-white";
+              } else if (leader === 'teamA') {
+                borderColor = tournament?.teamA?.color || "var(--team-a-default)";
+                bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
               } else if (leader === 'teamB') {
-                 borderColor = tournament?.teamB?.color || "var(--team-b-default)";
-                 bgStyle = { background: `linear-gradient(-90deg, ${borderColor}11 0%, transparent 30%)` };
+                borderColor = tournament?.teamB?.color || "var(--team-b-default)";
+                bgStyle = { background: `linear-gradient(-90deg, ${borderColor}11 0%, transparent 30%)` };
               }
 
-              // Badge style based on match state
-              const badgeClass = isClosed 
-                ? "badge-success" 
-                : isStarted 
-                  ? "badge-info" 
-                  : "badge-default";
+              // Badge color based on match state and leader (only for non-closed matches)
+              let badgeBgColor: string;
+              const badgeTextColor = "white";
+              
+              if (!isStarted) {
+                badgeBgColor = "#1e293b"; // slate-800
+              } else if (leader === 'teamA') {
+                badgeBgColor = tournament?.teamA?.color || "var(--team-a-default)";
+              } else if (leader === 'teamB') {
+                badgeBgColor = tournament?.teamB?.color || "var(--team-b-default)";
+              } else {
+                badgeBgColor = "#94a3b8"; // slate-400
+              }
+
+              // Format display text - remove (thru) from in-progress status
+              let displayStatus = statusText;
+              if (isStarted && !isClosed && statusText.includes("(")) {
+                displayStatus = statusText.replace(/\s*\(\d+\)$/, "");
+              }
 
               return (
                 <Link 
@@ -264,32 +291,65 @@ export default function Round() {
                     gridTemplateColumns: "1fr auto 1fr",
                     gap: 12,
                     alignItems: "center",
-                    borderLeft: leader === 'teamA' ? `4px solid ${borderColor}` : `4px solid transparent`,
-                    borderRight: leader === 'teamB' ? `4px solid ${borderColor}` : `4px solid transparent`,
+                    borderLeft: !isClosed && leader === 'teamA' ? `4px solid ${borderColor}` : `4px solid transparent`,
+                    borderRight: !isClosed && leader === 'teamB' ? `4px solid ${borderColor}` : `4px solid transparent`,
                     ...bgStyle
                   }}
                 >
                   {/* Left: Team A Players */}
-                  <div className="text-left text-sm leading-tight">
+                  <div className={`text-left text-sm leading-tight ${textColor}`}>
                     {(m.teamAPlayers || []).map((p, i) => (
-                        <div key={i} className="font-semibold text-slate-900">
+                        <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
                         </div>
                     ))}
                   </div>
 
-                  {/* Center: Status */}
-                  <div className={badgeClass} style={{ whiteSpace: 'nowrap' }}>
-                    {statusText.includes("wins") 
-                        ? statusText.split(" wins ")[1] // "3 & 2" instead of "Team A wins 3 & 2"
-                        : statusText
-                    }
+                  {/* Center: Thru + Status */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    {isStarted && !isClosed && (
+                      <div style={{ 
+                        fontSize: '0.65rem', 
+                        fontWeight: 600, 
+                        color: '#94a3b8',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        THRU {thru}
+                      </div>
+                    )}
+                    {isClosed ? (
+                      // Completed: show full status text (e.g., "Team A wins 4 & 3")
+                      <div style={{ 
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: 'white'
+                      }}>
+                        {statusText}
+                      </div>
+                    ) : (
+                      // In progress or not started: show badge
+                      <div 
+                        style={{ 
+                          whiteSpace: 'nowrap',
+                          padding: '4px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          backgroundColor: badgeBgColor,
+                          color: badgeTextColor
+                        }}
+                      >
+                        {displayStatus}
+                      </div>
+                    )}
                   </div>
 
                   {/* Right: Team B Players */}
-                  <div className="text-right text-sm leading-tight">
+                  <div className={`text-right text-sm leading-tight ${textColor}`}>
                     {(m.teamBPlayers || []).map((p, i) => (
-                        <div key={i} className="font-semibold text-slate-900">
+                        <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
                         </div>
                     ))}
