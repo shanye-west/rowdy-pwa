@@ -300,9 +300,31 @@ export default function Round() {
                   {/* Center: Status - fixed height for consistency, content vertically centered */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52 }}>
                     {isClosed ? (
-                      // Completed: team name on top, then "WIN X & Y"
-                      <>
-                        {winner !== 'AS' && (
+                      // Completed match
+                      winner === 'AS' ? (
+                        // Halved/Tied match
+                        <>
+                          <div style={{ 
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: 'white'
+                          }}>
+                            TIED
+                          </div>
+                          <div style={{ 
+                            fontSize: '0.65rem', 
+                            fontWeight: 600, 
+                            color: 'rgba(255,255,255,0.85)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            FINAL
+                          </div>
+                        </>
+                      ) : (
+                        // Match with a winner
+                        <>
                           <div style={{ 
                             fontSize: '0.65rem', 
                             fontWeight: 600, 
@@ -315,20 +337,16 @@ export default function Round() {
                               : (tournament?.teamB?.name || 'Team B')
                             }
                           </div>
-                        )}
-                        <div style={{ 
-                          whiteSpace: 'nowrap',
-                          fontSize: '0.9rem',
-                          fontWeight: 700,
-                          color: 'white'
-                        }}>
-                          {/* Extract just the score part: "4 & 3", "1 UP", or "Halved" */}
-                          {winner === 'AS' 
-                            ? 'HALVED'
-                            : `WIN ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`
-                          }
-                        </div>
-                      </>
+                          <div style={{ 
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: 'white'
+                          }}>
+                            {`WIN ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`}
+                          </div>
+                        </>
+                      )
                     ) : isStarted && leader ? (
                       // In progress with leader: team name on top, margin, then thru at bottom
                       <>
