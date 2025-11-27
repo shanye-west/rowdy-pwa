@@ -232,7 +232,8 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
     toMerge.holes = Array.from({ length: 18 }, (_, i) => ({
       number: i + 1,
       hcpIndex: 0,
-      par: 4
+      par: 4,
+      yards: 0
     }));
   }
   

@@ -45,6 +45,7 @@ export type HoleInfo = {
   number: number;
   par: number;
   hcpIndex: number; // Handicap Index (1-18)
+  yards?: number; // Yardage for the hole
 };
 
 // UPDATED: RoundDoc now includes courseId reference

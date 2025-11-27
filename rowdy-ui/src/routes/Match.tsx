@@ -802,7 +802,7 @@ export default function Match() {
       const num = i + 1;
       const k = String(num);
       const info = hCourse.find(h => h.number === num);
-      return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex };
+      return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex, yards: info?.yards };
     });
   }, [match, round, course]);
 
@@ -1546,7 +1546,7 @@ export default function Match() {
                       backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b"
                     }}
                   >
-                    HOLE{(course?.tees || round?.course?.tee) ? ` (${(course?.tees || round?.course?.tee || '').toUpperCase()})` : ''}
+                    HOLE
                   </th>
                   {/* Front 9 */}
                   {holes.slice(0, 9).map(h => (
@@ -1613,6 +1613,26 @@ export default function Match() {
                   ))}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
                   <td className="py-1 bg-slate-200"></td>
+                </tr>
+
+                {/* Yardage Row */}
+                <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
+                  <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1 capitalize">{course?.tees || round?.course?.tee || 'Yards'}</td>
+                  {holes.slice(0, 9).map(h => (
+                    <td key={h.k} className="py-1">{h.yards || ""}</td>
+                  ))}
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
+                    {holes.slice(0, 9).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
+                  </td>
+                  {holes.slice(9, 18).map((h, i) => (
+                    <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
+                  ))}
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
+                    {holes.slice(9, 18).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
+                  </td>
+                  <td className="py-1 bg-slate-200">
+                    {holes.reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
+                  </td>
                 </tr>
 
                 {/* Par Row */}
