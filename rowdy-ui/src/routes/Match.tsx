@@ -1263,6 +1263,33 @@ export default function Match() {
   const labelWidth = 120;
   const totalColWidth = 48;
 
+  // Banner color logic (same as Round page tiles)
+  const winner = match.result?.winner;
+  const leader = match.status?.leader;
+  let bannerBgColor: string;
+  
+  if (isMatchClosed && winner && winner !== "AS") {
+    // Completed with a winner - use winner's team color
+    bannerBgColor = winner === "teamA" 
+      ? (tournament?.teamA?.color || "var(--team-a-default)")
+      : (tournament?.teamB?.color || "var(--team-b-default)");
+  } else if (isMatchClosed && winner === "AS") {
+    // Halved - grey
+    bannerBgColor = "#94a3b8";
+  } else if (!matchThru || matchThru === 0) {
+    // Not started - black
+    bannerBgColor = "#1e293b";
+  } else if (leader === "teamA") {
+    // In progress, Team A leading
+    bannerBgColor = tournament?.teamA?.color || "var(--team-a-default)";
+  } else if (leader === "teamB") {
+    // In progress, Team B leading
+    bannerBgColor = tournament?.teamB?.color || "var(--team-b-default)";
+  } else {
+    // In progress, All Square - grey
+    bannerBgColor = "#94a3b8";
+  }
+
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -1271,18 +1298,30 @@ export default function Match() {
         <div 
           className="rounded-xl text-center shadow-md"
           style={{ 
-            background: isMatchClosed ? "var(--brand-secondary)" : "var(--brand-primary)", 
-            color: "var(--brand-accent)", 
+            backgroundColor: bannerBgColor, 
+            color: "white", 
             padding: "16px 12px",
           }}
         >
-          <div className="text-xs uppercase tracking-wider opacity-90">
-            {isMatchClosed ? "Final Result" : `Thru ${matchThru}`}
+          <div className="text-xs uppercase tracking-wider" style={{ opacity: 0.85 }}>
+            {isMatchClosed 
+              ? (winner === "teamA" 
+                  ? (tournament?.teamA?.name || "Team A")
+                  : winner === "teamB"
+                    ? (tournament?.teamB?.name || "Team B")
+                    : "Match")
+              : matchThru > 0 
+                ? `Thru ${matchThru}` 
+                : "Not Started"
+            }
           </div>
           <div className="text-2xl font-extrabold my-1">
-            {formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)}
+            {isMatchClosed && winner !== "AS"
+              ? formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name).split(" wins ")[1]
+              : formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)
+            }
           </div>
-          <div className="text-xs opacity-80">{format}</div>
+          <div className="text-xs" style={{ opacity: 0.8 }}>{format}</div>
         </div>
 
         {/* DRIVE_TRACKING: Drives Tracker Banner */}
