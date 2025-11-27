@@ -243,12 +243,14 @@ export default function Round() {
               let textColor = "text-slate-900";
               
               if (isClosed && winner && winner !== "AS") {
-                // Completed match with a winner - full team color background
+                // Completed match with a winner - gradient from middle to winner's side
                 const winnerColor = winner === "teamA" 
                   ? (tournament?.teamA?.color || "var(--team-a-default)")
                   : (tournament?.teamB?.color || "var(--team-b-default)");
-                bgStyle = { backgroundColor: winnerColor };
-                textColor = "text-white";
+                // Gradient direction: teamA wins = left side gets color, teamB wins = right side gets color
+                const gradientDir = winner === "teamA" ? "90deg" : "-90deg";
+                bgStyle = { background: `linear-gradient(${gradientDir}, ${winnerColor} 0%, ${winnerColor}33 50%, transparent 50%)` };
+                textColor = "text-slate-900";
               } else if (isClosed && winner === "AS") {
                 // Halved match - grey background with team color borders
                 bgStyle = { 
@@ -332,24 +334,21 @@ export default function Round() {
                         // Match with a winner
                         <>
                           <div style={{ 
-                            fontSize: '0.65rem', 
-                            fontWeight: 600, 
-                            color: 'rgba(255,255,255,0.85)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
-                          }}>
-                            {winner === 'teamA' 
-                              ? (tournament?.teamA?.name || 'Team A')
-                              : (tournament?.teamB?.name || 'Team B')
-                            }
-                          </div>
-                          <div style={{ 
                             whiteSpace: 'nowrap',
                             fontSize: '0.9rem',
                             fontWeight: 700,
-                            color: 'white'
+                            color: '#334155'
                           }}>
                             {statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}
+                          </div>
+                          <div style={{ 
+                            fontSize: '0.65rem', 
+                            fontWeight: 600, 
+                            color: '#64748b',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            FINAL
                           </div>
                         </>
                       )
