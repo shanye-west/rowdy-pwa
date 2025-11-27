@@ -679,7 +679,7 @@ function PostMatchStats({
 
 export default function Match() {
   const { matchId } = useParams();
-  const { canEditMatch, player, needsSetup } = useAuth();
+  const { canEditMatch, player } = useAuth();
   const [match, setMatch] = useState<MatchDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
@@ -813,10 +813,9 @@ export default function Match() {
   // Reason why user can't edit (for displaying message)
   const editBlockReason = useMemo(() => {
     if (!player) return "login";
-    if (needsSetup) return "setup";
     if (!canEdit) return "not-rostered";
     return null;
-  }, [player, needsSetup, canEdit]);
+  }, [player, canEdit]);
 
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo(() => {
@@ -1604,14 +1603,6 @@ export default function Match() {
                   Login
                 </Link>
                 {" "}to enter scores for this match
-              </>
-            )}
-            {editBlockReason === "setup" && (
-              <>
-                <Link to="/setup" className="font-semibold underline" style={{ color: "#2563eb" }}>
-                  Complete your account setup
-                </Link>
-                {" "}to enter scores
               </>
             )}
             {editBlockReason === "not-rostered" && (

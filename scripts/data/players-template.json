@@ -2,13 +2,13 @@
   {
     "id": "pShanePeterson",
     "displayName": "Shane Peterson",
-    "username": "shanepeterson",
-    "tempPassword": "1234"
+    "email": "shane@example.com",
+    "authUid": ""
   },
   {
     "id": "pJohnSmith",
     "displayName": "John Smith",
-    "username": "johnsmith",
-    "tempPassword": "1234"
+    "email": "john@example.com",
+    "authUid": ""
   }
 ]

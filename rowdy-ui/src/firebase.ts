@@ -6,7 +6,7 @@ import {
   browserLocalPersistence, 
   browserSessionPersistence,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   type User
@@ -33,7 +33,7 @@ export {
   browserLocalPersistence,
   browserSessionPersistence,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   type User

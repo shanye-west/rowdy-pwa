@@ -14,7 +14,7 @@ type LayoutProps = {
 export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { player, needsSetup, logout, loading: authLoading } = useAuth();
+  const { player, logout, loading: authLoading } = useAuth();
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -113,7 +113,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               onClick={(e) => e.stopPropagation()}
             >
               {/* Auth Status Section */}
-              {!authLoading && player && !needsSetup && (
+              {!authLoading && player && (
                 <div style={{ 
                   padding: "12px 16px", 
                   background: "#f8fafc", 
@@ -121,7 +121,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
                   fontSize: "0.875rem"
                 }}>
                   <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                    {player.displayName || player.username}
+                    {player.displayName}
                   </div>
                   <div style={{ color: "#64748b", fontSize: "0.75rem" }}>
                     {player.email || "Logged in"}
@@ -148,39 +148,28 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               {!authLoading && (
                 <>
                   {player ? (
-                    <>
-                      {needsSetup && (
-                        <Link 
-                          to="/setup" 
-                          style={{ display: "block", padding: "12px 16px", color: "#2563eb", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          ⚙️ Complete Setup
-                        </Link>
-                      )}
-                      <button
-                        onClick={async () => {
-                          setMenuOpen(false);
-                          await logout();
-                          navigate("/");
-                        }}
-                        style={{ 
-                          display: "block", 
-                          width: "100%", 
-                          padding: "12px 16px", 
-                          color: "#dc2626", 
-                          textDecoration: "none", 
-                          fontWeight: 600,
-                          background: "none",
-                          border: "none",
-                          textAlign: "left",
-                          cursor: "pointer",
-                          fontSize: "1rem"
-                        }}
-                      >
-                        🚪 Logout
-                      </button>
-                    </>
+                    <button
+                      onClick={async () => {
+                        setMenuOpen(false);
+                        await logout();
+                        navigate("/");
+                      }}
+                      style={{ 
+                        display: "block", 
+                        width: "100%", 
+                        padding: "12px 16px", 
+                        color: "#dc2626", 
+                        textDecoration: "none", 
+                        fontWeight: 600,
+                        background: "none",
+                        border: "none",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: "1rem"
+                      }}
+                    >
+                      🚪 Logout
+                    </button>
                   ) : (
                     <Link 
                       to="/login" 

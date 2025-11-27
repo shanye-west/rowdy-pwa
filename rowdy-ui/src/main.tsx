@@ -9,7 +9,6 @@ import Match from "./routes/Match";
 import Round from "./routes/Round";
 import Teams from "./routes/Teams";
 import Login from "./routes/Login";
-import Setup from "./routes/Setup";
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
@@ -17,7 +16,6 @@ const router = createBrowserRouter([
   { path: "/match/:matchId", element: <Match /> },
   { path: "/teams", element: <Teams /> },
   { path: "/login", element: <Login /> },
-  { path: "/setup", element: <Setup /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
