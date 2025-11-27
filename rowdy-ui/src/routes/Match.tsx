@@ -1280,13 +1280,10 @@ export default function Match() {
               style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
             >
               <span>{formatRoundType(format)}</span>
-              {(course?.name || round?.course?.name) && (
+              {(course?.tees || round?.course?.tee) && (
                 <>
                   <span>•</span>
-                  <span>
-                    {course?.name || round?.course?.name}
-                    {(course?.tees || round?.course?.tee) && ` (${course?.tees || round?.course?.tee})`}
-                  </span>
+                  <span>{course?.tees || round?.course?.tee} tees</span>
                 </>
               )}
             </div>
