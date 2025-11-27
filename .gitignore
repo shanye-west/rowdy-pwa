@@ -69,7 +69,7 @@ node_modules/
 .dataconnect
 
 # service-account for firebase functions
-rowdy-pwa-firebase-adminsdk-fbsvc-e0402c5455.json
+service-account.json
 
 # real data for seeding
 scripts/data/players.json
