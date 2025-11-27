@@ -1316,10 +1316,15 @@ export default function Match() {
             }
           </div>
           <div className="text-2xl font-extrabold my-1">
-            {isMatchClosed && winner !== "AS"
-              ? formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name).split(" wins ")[1]
-              : formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)
-            }
+            {(() => {
+              const statusText = formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name);
+              if (isMatchClosed && winner !== "AS") {
+                // Completed with winner - just show score
+                return statusText.split(" wins ")[1];
+              }
+              // In progress - remove (thru) suffix
+              return statusText.replace(/\s*\(\d+\)$/, "");
+            })()}
           </div>
           <div className="text-xs" style={{ opacity: 0.8 }}>{format}</div>
         </div>
