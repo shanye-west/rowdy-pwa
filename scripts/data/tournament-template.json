@@ -5,25 +5,23 @@
   "series": "rowdyCup",
   "active": true,
   "tournamentLogo": "",
+  "roundIds": [],
   "teamA": {
     "id": "teamA",
-    "name": "Rancheros",
+    "name": "Team A Name",
     "logo": "",
     "color": "#1e3a5f",
     "rosterByTier": {
-      "A": ["pShanePeterson", "pJohnSmith"],
+      "A": [],
       "B": [],
       "C": [],
       "D": []
     },
-    "handicapByPlayer": {
-      "pShanePeterson": 7.4,
-      "pJohnSmith": 12.2
-    }
+    "handicapByPlayer": {}
   },
   "teamB": {
     "id": "teamB",
-    "name": "Coyotes",
+    "name": "Team B Name",
     "logo": "",
     "color": "#8b0000",
     "rosterByTier": {

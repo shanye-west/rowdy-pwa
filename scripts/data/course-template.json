@@ -1,0 +1,28 @@
+{
+  "id": "courseName",
+  "name": "Course Name",
+  "tees": "Blue",
+  "rating": 71.5,
+  "slope": 131,
+  "par": 72,
+  "holes": [
+    { "number": 1,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 2,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 3,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 4,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 5,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 6,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 7,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 8,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 9,  "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 10, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 11, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 12, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 13, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 14, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 15, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 16, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 17, "par": 4, "hcpIndex": 0, "yards": 0 },
+    { "number": 18, "par": 4, "hcpIndex": 0, "yards": 0 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "2025-rowdycup-day1",
+  "tournamentId": "2025-rowdycup",
+  "day": 1,
+  "format": "twoManBestBall",
+  "courseId": "courseName",
+  "pointsValue": 1,
+  "trackDrives": false,
+  "locked": false,
+  "matchIds": []
+}

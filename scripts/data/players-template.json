@@ -1,0 +1,14 @@
+[
+  {
+    "id": "pShanePeterson",
+    "displayName": "Shane Peterson",
+    "username": "shanepeterson",
+    "tempPassword": "1234"
+  },
+  {
+    "id": "pJohnSmith",
+    "displayName": "John Smith",
+    "username": "johnsmith",
+    "tempPassword": "1234"
+  }
+]
