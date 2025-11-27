@@ -1799,7 +1799,7 @@ export default function Match() {
                 {/* Team A Score Row (Best Ball: low net, Shamble: low gross) */}
                 {(format === "twoManBestBall" || format === "twoManShamble") && (
                   <tr style={{ backgroundColor: teamAColor }}>
-                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamAColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis" style={{ backgroundColor: teamAColor }}>
                       {tournament?.teamA?.name || "Team A"}
                     </td>
                     {/* Front 9 low score */}
@@ -1883,7 +1883,7 @@ export default function Match() {
                 {/* Team B Score Row (Best Ball: low net, Shamble: low gross) */}
                 {(format === "twoManBestBall" || format === "twoManShamble") && (
                   <tr style={{ backgroundColor: teamBColor }}>
-                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamBColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis" style={{ backgroundColor: teamBColor }}>
                       {tournament?.teamB?.name || "Team B"}
                     </td>
                     {/* Front 9 low score */}
