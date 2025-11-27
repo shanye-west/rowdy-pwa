@@ -70,3 +70,13 @@ node_modules/
 
 # service-account for firebase functions
 rowdy-pwa-firebase-adminsdk-fbsvc-e0402c5455.json
+
+# real data for seeding
+scripts/data/players.json
+scripts/data/course.json
+scripts/data/match-singles.json
+scripts/data/match-twoManBestBall.json
+scripts/data/match-twoManShamble.json
+scripts/data/match-twoManScramble.json
+scripts/data/round.json
+scripts/data/tournament.json
