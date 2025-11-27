@@ -1,3 +1,9 @@
+cd /rowdy-pwa/scripts
+npx ts-node seed-tournament.ts --input data/tournament.json
+
+npx ts-node seed-tournament.ts --input data/tournament.json --force (if needed)
+
+
 {
   "id": "", //2025RowdyCup or 2025ChristmasClassic
   "year": 2025,
@@ -10,20 +16,24 @@
     "id": "teamA",
     "name": "Team A Name",
     "logo": "", //URL from firebase storage
-    "color": "#1e3a5f", //"#165B33"
+    "color": "#132448", //"#00863c"
     "rosterByTier": {
-      "A": [],
-      "B": [],
-      "C": [],
-      "D": []
+      "A": ["pPlayer1", "pPlayer2", "pPlayer3"],
+      "B": ["pPlayer4", "pPlayer5", "pPlayer6"],
+      "C": ["pPlayer7", "pPlayer8", "pPlayer9"],
+      "D": ["pPlayer10", pPlayer11", "pPlayer12"]
     },
-    "handicapByPlayer": {}
+    "handicapByPlayer": {
+        "pPlayer1": 2.0,
+        "pPlayer2": 2.7,
+        "pPlayer3": 5.4
+    }
   },
   "teamB": {
     "id": "teamB",
     "name": "Team B Name",
     "logo": "", //URL from firebase storage
-    "color": "#8b0000", //"#BB2528"
+    "color": "#bf203c", //"#ef211c"
     "rosterByTier": {
       "A": [],
       "B": [],
