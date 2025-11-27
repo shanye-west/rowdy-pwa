@@ -1263,85 +1263,112 @@ export default function Match() {
   const labelWidth = 120;
   const totalColWidth = 48;
 
-  // Banner color logic (same as Round page tiles)
+  // Match state variables
   const winner = match.result?.winner;
   const leader = match.status?.leader;
-  let bannerBgColor: string;
-  
-  if (isMatchClosed && winner && winner !== "AS") {
-    // Completed with a winner - use winner's team color
-    bannerBgColor = winner === "teamA" 
-      ? (tournament?.teamA?.color || "var(--team-a-default)")
-      : (tournament?.teamB?.color || "var(--team-b-default)");
-  } else if (isMatchClosed && winner === "AS") {
-    // Halved - grey
-    bannerBgColor = "#94a3b8";
-  } else if (!matchThru || matchThru === 0) {
-    // Not started - black
-    bannerBgColor = "#1e293b";
-  } else if (leader === "teamA") {
-    // In progress, Team A leading
-    bannerBgColor = tournament?.teamA?.color || "var(--team-a-default)";
-  } else if (leader === "teamB") {
-    // In progress, Team B leading
-    bannerBgColor = tournament?.teamB?.color || "var(--team-b-default)";
-  } else {
-    // In progress, All Square - grey
-    bannerBgColor = "#94a3b8";
-  }
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
-        {/* MATCH STATUS BANNER */}
-        <div 
-          className="rounded-xl text-center shadow-md"
-          style={{ 
-            backgroundColor: bannerBgColor, 
-            color: "white", 
-            padding: "16px 12px",
-          }}
-        >
-          {matchThru > 0 && !isMatchClosed && (
-            <div className="text-xs uppercase tracking-wider mb-1" style={{ opacity: 0.7 }}>
-              Thru {matchThru}
+        {/* MATCH STATUS HEADER */}
+        <div className="space-y-3">
+          {/* Top row: Thru + Format in subtle pill */}
+          <div className="flex justify-center">
+            <div 
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
+              style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
+            >
+              {matchThru > 0 ? (
+                <span>THRU {matchThru}</span>
+              ) : (
+                <span>NOT STARTED</span>
+              )}
+              <span>•</span>
+              <span>{format}</span>
             </div>
-          )}
-          <div className="text-xs uppercase tracking-wider" style={{ opacity: 0.85 }}>
-            {isMatchClosed 
-              ? (winner === "teamA" 
+          </div>
+          
+          {/* Main status display */}
+          {isMatchClosed ? (
+            // Completed match - show winner with colored background
+            <div 
+              className="rounded-xl text-center py-4 px-3"
+              style={{ 
+                backgroundColor: winner === "AS" ? "#94a3b8" : (winner === "teamA" 
+                  ? (tournament?.teamA?.color || "var(--team-a-default)")
+                  : (tournament?.teamB?.color || "var(--team-b-default)")),
+                color: "white"
+              }}
+            >
+              <div className="text-xs uppercase tracking-wider mb-1" style={{ opacity: 0.85 }}>
+                {winner === "teamA" 
                   ? (tournament?.teamA?.name || "Team A")
                   : winner === "teamB"
                     ? (tournament?.teamB?.name || "Team B")
-                    : "Match")
-              : leader === "teamA"
-                ? (tournament?.teamA?.name || "Team A")
-                : leader === "teamB"
-                  ? (tournament?.teamB?.name || "Team B")
-                  : matchThru > 0 
-                    ? "All Square" 
-                    : "Not Started"
-            }
-          </div>
-          <div className="text-2xl font-extrabold my-1">
-            {(() => {
-              const statusText = formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name);
-              if (isMatchClosed && winner !== "AS") {
-                // Completed with winner - just show score
-                return statusText.split(" wins ")[1];
-              }
-              // In progress - remove (thru) suffix and team name (since team name is shown above)
-              let display = statusText.replace(/\s*\(\d+\)$/, "");
-              // If there's a leader, the format is "TeamName X UP" - extract just "X UP"
-              if (leader && display.includes(" UP")) {
-                const upMatch = display.match(/(\d+\s*UP)/i);
-                if (upMatch) return upMatch[1];
-              }
-              return display;
-            })()}
-          </div>
-          <div className="text-xs" style={{ opacity: 0.8 }}>{format}</div>
+                    : "Match Halved"
+                }
+              </div>
+              <div className="text-2xl font-extrabold">
+                {(() => {
+                  const statusText = formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name);
+                  if (winner !== "AS") {
+                    return statusText.split(" wins ")[1];
+                  }
+                  return "HALVED";
+                })()}
+              </div>
+            </div>
+          ) : matchThru > 0 ? (
+            // In progress - show status
+            leader ? (
+              // Team leading - gradient style with border
+              <div 
+                className="rounded-xl text-center py-4 px-3"
+                style={{ 
+                  background: leader === "teamA"
+                    ? `linear-gradient(90deg, ${tournament?.teamA?.color || "var(--team-a-default)"}25 0%, transparent 60%)`
+                    : `linear-gradient(-90deg, ${tournament?.teamB?.color || "var(--team-b-default)"}25 0%, transparent 60%)`,
+                  borderLeft: leader === "teamA" ? `4px solid ${tournament?.teamA?.color || "var(--team-a-default)"}` : "4px solid transparent",
+                  borderRight: leader === "teamB" ? `4px solid ${tournament?.teamB?.color || "var(--team-b-default)"}` : "4px solid transparent",
+                }}
+              >
+                <div 
+                  className="text-xs uppercase tracking-wider mb-1 font-semibold"
+                  style={{ 
+                    color: leader === "teamA" 
+                      ? (tournament?.teamA?.color || "var(--team-a-default)")
+                      : (tournament?.teamB?.color || "var(--team-b-default)")
+                  }}
+                >
+                  {leader === "teamA" 
+                    ? (tournament?.teamA?.name || "Team A")
+                    : (tournament?.teamB?.name || "Team B")
+                  }
+                </div>
+                <div 
+                  className="text-2xl font-extrabold"
+                  style={{ 
+                    color: leader === "teamA" 
+                      ? (tournament?.teamA?.color || "var(--team-a-default)")
+                      : (tournament?.teamB?.color || "var(--team-b-default)")
+                  }}
+                >
+                  {match.status?.margin} UP
+                </div>
+              </div>
+            ) : (
+              // All Square - grey background
+              <div 
+                className="rounded-xl text-center py-4 px-3"
+                style={{ backgroundColor: "#94a3b8", color: "white" }}
+              >
+                <div className="text-2xl font-extrabold">
+                  ALL SQUARE
+                </div>
+              </div>
+            )
+          ) : null}
         </div>
 
         {/* DRIVE_TRACKING: Drives Tracker Banner */}
