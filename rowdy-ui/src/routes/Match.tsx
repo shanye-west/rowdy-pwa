@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { doc, onSnapshot, getDoc, updateDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc, PlayerMatchFact } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import { useAuth } from "../contexts/AuthContext";
 
 // ===== MATCH FLOW GRAPH COMPONENT (Pure SVG) =====
 
@@ -678,6 +679,7 @@ function PostMatchStats({
 
 export default function Match() {
   const { matchId } = useParams();
+  const { canEditMatch, player, needsSetup } = useAuth();
   const [match, setMatch] = useState<MatchDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
@@ -793,6 +795,28 @@ export default function Match() {
   const roundLocked = !!round?.locked;
   const isMatchClosed = !!match?.status?.closed;
   const matchThru = match?.status?.thru ?? 0;
+  
+  // --- AUTH / PERMISSIONS ---
+  // Get player IDs from match rosters
+  const teamAPlayerIds = useMemo(() => 
+    match?.teamAPlayers?.map(p => p.playerId).filter(Boolean) || [], 
+    [match?.teamAPlayers]
+  );
+  const teamBPlayerIds = useMemo(() => 
+    match?.teamBPlayers?.map(p => p.playerId).filter(Boolean) || [], 
+    [match?.teamBPlayers]
+  );
+  
+  // Check if current user can edit this match
+  const canEdit = canEditMatch(teamAPlayerIds, teamBPlayerIds);
+  
+  // Reason why user can't edit (for displaying message)
+  const editBlockReason = useMemo(() => {
+    if (!player) return "login";
+    if (needsSetup) return "setup";
+    if (!canEdit) return "not-rostered";
+    return null;
+  }, [player, needsSetup, canEdit]);
 
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo(() => {
@@ -987,7 +1011,7 @@ export default function Match() {
   }, [holes, format, match]);
 
   async function saveHole(k: string, nextInput: any) {
-    if (!match?.id || roundLocked) return;
+    if (!match?.id || roundLocked || !canEdit) return;
     try {
       await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
     } catch (e) {
@@ -1128,9 +1152,10 @@ export default function Match() {
     }
   }
 
-  // Check if hole is locked
+  // Check if hole is locked (includes auth check)
   function isHoleLocked(holeNum: number) {
-    return roundLocked || (isMatchClosed && holeNum > matchThru);
+    // Can't edit if: round locked, match closed past this hole, OR user can't edit
+    return roundLocked || (isMatchClosed && holeNum > matchThru) || !canEdit;
   }
 
   // Calculate running match status after each hole
@@ -1563,6 +1588,40 @@ export default function Match() {
         )}
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
+        
+        {/* AUTH BANNER - Show when user can't edit */}
+        {editBlockReason && !roundLocked && !isMatchClosed && (
+          <div 
+            className="rounded-lg p-3 text-center text-sm"
+            style={{ 
+              backgroundColor: editBlockReason === "not-rostered" ? "#f1f5f9" : "#fef3c7",
+              color: editBlockReason === "not-rostered" ? "#64748b" : "#92400e"
+            }}
+          >
+            {editBlockReason === "login" && (
+              <>
+                <Link to="/login" className="font-semibold underline" style={{ color: "#2563eb" }}>
+                  Login
+                </Link>
+                {" "}to enter scores for this match
+              </>
+            )}
+            {editBlockReason === "setup" && (
+              <>
+                <Link to="/setup" className="font-semibold underline" style={{ color: "#2563eb" }}>
+                  Complete your account setup
+                </Link>
+                {" "}to enter scores
+              </>
+            )}
+            {editBlockReason === "not-rostered" && (
+              <>
+                👀 Viewing as spectator — you're not in this match
+              </>
+            )}
+          </div>
+        )}
+        
         <div className="card p-0 overflow-hidden">
           <div 
             className="overflow-x-auto"

@@ -1,13 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public read
+    // Public read for all collections
     match /{document=**} {
       allow read: if true;
     }
-    // TEMP: authenticated users can update any field on matches
+    
+    // Players collection: public read
+    // Updates allowed for account setup (linking authUid)
+    match /players/{playerId} {
+      allow read: if true;
+      // Allow update if:
+      // 1. User is authenticated AND
+      // 2. Either setting authUid for first time (account setup) OR already owns this doc
+      allow update: if request.auth != null && (
+        // Account setup: user can set authUid if not already set
+        (resource.data.authUid == null && request.resource.data.authUid == request.auth.uid) ||
+        // Already owns this doc
+        resource.data.authUid == request.auth.uid
+      );
+      allow create, delete: if false;
+    }
+    
+    // Matches: authenticated users who are rostered can update
     match /matches/{matchId} {
-      allow update: if request.auth != null;
+      // Check if auth user's UID matches a playerId in the roster
+      // (After account setup, player.id === player.authUid)
+      function isRosteredPlayer() {
+        let teamAIds = resource.data.teamAPlayers.size() > 0 
+          ? resource.data.teamAPlayers[0].playerId 
+          : '';
+        let teamA2 = resource.data.teamAPlayers.size() > 1 
+          ? resource.data.teamAPlayers[1].playerId 
+          : '';
+        let teamBIds = resource.data.teamBPlayers.size() > 0 
+          ? resource.data.teamBPlayers[0].playerId 
+          : '';
+        let teamB2 = resource.data.teamBPlayers.size() > 1 
+          ? resource.data.teamBPlayers[1].playerId 
+          : '';
+        
+        return request.auth.uid == teamAIds || 
+               request.auth.uid == teamA2 ||
+               request.auth.uid == teamBIds || 
+               request.auth.uid == teamB2;
+      }
+      
+      allow update: if request.auth != null && isRosteredPlayer();
       allow create, delete: if false;
     }
   }

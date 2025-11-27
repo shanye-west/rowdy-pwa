@@ -1,0 +1,16 @@
+{
+  "name": "rowdy-scripts",
+  "version": "1.0.0",
+  "description": "Admin scripts for Rowdy PWA",
+  "scripts": {
+    "seed-players": "ts-node seed-players.ts"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
