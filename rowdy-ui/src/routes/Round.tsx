@@ -250,9 +250,19 @@ export default function Round() {
                 bgStyle = { backgroundColor: winnerColor };
                 textColor = "text-white";
               } else if (isClosed && winner === "AS") {
-                // Halved match - light background with team color borders on each side
-                bgStyle = { backgroundColor: "#f1f5f9" }; // slate-100
-                textColor = "text-slate-700";
+                // Halved match - diagonal stripes with both team colors
+                const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
+                const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
+                bgStyle = { 
+                  background: `repeating-linear-gradient(
+                    135deg,
+                    ${teamAColor},
+                    ${teamAColor} 8px,
+                    ${teamBColor} 8px,
+                    ${teamBColor} 16px
+                  )`
+                };
+                textColor = "text-white";
               } else if (leader === 'teamA') {
                 borderColor = tournament?.teamA?.color || "var(--team-a-default)";
                 bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
@@ -283,14 +293,10 @@ export default function Round() {
                     alignItems: "center",
                     borderLeft: !isClosed && leader === 'teamA' 
                       ? `4px solid ${borderColor}` 
-                      : isClosed && winner === 'AS' 
-                        ? `4px solid ${tournament?.teamA?.color || "var(--team-a-default)"}` 
-                        : `4px solid transparent`,
+                      : `4px solid transparent`,
                     borderRight: !isClosed && leader === 'teamB' 
                       ? `4px solid ${borderColor}` 
-                      : isClosed && winner === 'AS' 
-                        ? `4px solid ${tournament?.teamB?.color || "var(--team-b-default)"}` 
-                        : `4px solid transparent`,
+                      : `4px solid transparent`,
                     ...bgStyle
                   }}
                 >
@@ -314,16 +320,18 @@ export default function Round() {
                             whiteSpace: 'nowrap',
                             fontSize: '0.9rem',
                             fontWeight: 700,
-                            color: '#334155' // slate-700
+                            color: 'white',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                           }}>
                             TIED
                           </div>
                           <div style={{ 
                             fontSize: '0.65rem', 
                             fontWeight: 600, 
-                            color: '#64748b', // slate-500
+                            color: 'rgba(255,255,255,0.9)',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
+                            letterSpacing: '0.05em',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                           }}>
                             FINAL
                           </div>
