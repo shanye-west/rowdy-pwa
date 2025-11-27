@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import type { TournamentDoc, RoundDoc, MatchDoc } from "./types";
+import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
@@ -13,6 +13,7 @@ export default function App() {
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [matchesByRound, setMatchesByRound] = useState<Record<string, MatchDoc[]>>({});
+  const [coursesByRound, setCoursesByRound] = useState<Record<string, CourseDoc | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -51,6 +52,22 @@ export default function App() {
         const bucket: Record<string, MatchDoc[]> = {};
         results.forEach((res) => { bucket[res.roundId] = res.matches; });
         setMatchesByRound(bucket);
+
+        // 4) Load courses for each round
+        const coursesPromises = rds.map(async (r) => {
+          if (r.courseId) {
+            const cSnap = await getDoc(doc(db, "courses", r.courseId));
+            if (cSnap.exists()) {
+              return { roundId: r.id, course: { id: cSnap.id, ...cSnap.data() } as CourseDoc };
+            }
+          }
+          return { roundId: r.id, course: null };
+        });
+
+        const courseResults = await Promise.all(coursesPromises);
+        const courseBucket: Record<string, CourseDoc | null> = {};
+        courseResults.forEach((res) => { courseBucket[res.roundId] = res.course; });
+        setCoursesByRound(courseBucket);
 
       } catch (e) {
         console.error(e);
@@ -233,6 +250,10 @@ export default function App() {
             
             {rounds.map((r, idx) => {
               const rs = roundStats[r.id];
+              const course = coursesByRound[r.id];
+              // Get course name only (no tees) for round tiles
+              const courseName = course?.name || r.course?.name;
+              
               return (
                 <Link 
                   key={r.id} 
@@ -262,6 +283,9 @@ export default function App() {
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 2 }}>Round {idx + 1}</div>
                     <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{formatRoundType(r.format)}</div>
+                    {courseName && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>{courseName}</div>
+                    )}
                   </div>
 
                   {/* Team B - Right */}

@@ -191,7 +191,7 @@ function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALogo, team
   });
 
   // X-axis labels (hole numbers)
-  const xLabels = [1, 3, 5, 7, 9, 10, 12, 14, 16, 18].filter(h => h <= numHoles).map(hole => (
+  const xLabels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].filter(h => h <= numHoles).map(hole => (
     <text
       key={`x-${hole}`}
       x={`${getX(hole)}%`}
@@ -1276,10 +1276,19 @@ export default function Match() {
           {/* Top row: Format in subtle pill */}
           <div className="flex justify-center">
             <div 
-              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
               style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
             >
               <span>{formatRoundType(format)}</span>
+              {(course?.name || round?.course?.name) && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {course?.name || round?.course?.name}
+                    {(course?.tees || round?.course?.tee) && ` (${course?.tees || round?.course?.tee})`}
+                  </span>
+                </>
+              )}
             </div>
           </div>
           
