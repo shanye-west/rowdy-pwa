@@ -1331,8 +1331,14 @@ export default function Match() {
                 // Completed with winner - just show score
                 return statusText.split(" wins ")[1];
               }
-              // In progress - remove (thru) suffix
-              return statusText.replace(/\s*\(\d+\)$/, "");
+              // In progress - remove (thru) suffix and team name (since team name is shown above)
+              let display = statusText.replace(/\s*\(\d+\)$/, "");
+              // If there's a leader, the format is "TeamName X UP" - extract just "X UP"
+              if (leader && display.includes(" UP")) {
+                const upMatch = display.match(/(\d+\s*UP)/i);
+                if (upMatch) return upMatch[1];
+              }
+              return display;
             })()}
           </div>
           <div className="text-xs" style={{ opacity: 0.8 }}>{format}</div>
