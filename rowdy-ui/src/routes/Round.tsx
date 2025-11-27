@@ -295,21 +295,10 @@ export default function Round() {
                     ))}
                   </div>
 
-                  {/* Center: Thru + Status */}
+                  {/* Center: Status */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    {isStarted && !isClosed && (
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: '#94a3b8',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        THRU {thru}
-                      </div>
-                    )}
                     {isClosed ? (
-                      // Completed: show "wins X & Y" format
+                      // Completed: show "WIN X & Y" format
                       <>
                         <div style={{ 
                           whiteSpace: 'nowrap',
@@ -320,7 +309,7 @@ export default function Round() {
                           {/* Extract just the score part: "4 & 3", "1 UP", or "Halved" */}
                           {winner === 'AS' 
                             ? 'HALVED'
-                            : `WINS ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`
+                            : `WIN ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`
                           }
                         </div>
                         <div style={{ 
@@ -339,16 +328,8 @@ export default function Round() {
                         </div>
                       </>
                     ) : isStarted && leader ? (
-                      // In progress with leader: margin on top, team name below in team color
+                      // In progress with leader: team name on top, margin, then thru at bottom
                       <>
-                        <div style={{ 
-                          whiteSpace: 'nowrap',
-                          fontSize: '0.9rem',
-                          fontWeight: 700,
-                          color: statusColor
-                        }}>
-                          {m.status?.margin} UP
-                        </div>
                         <div style={{ 
                           fontSize: '0.65rem', 
                           fontWeight: 600, 
@@ -361,17 +342,45 @@ export default function Round() {
                             : (tournament?.teamB?.name || 'Team B')
                           }
                         </div>
+                        <div style={{ 
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          color: statusColor
+                        }}>
+                          {m.status?.margin} UP
+                        </div>
+                        <div style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 600, 
+                          color: '#94a3b8',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          THRU {thru}
+                        </div>
                       </>
                     ) : isStarted ? (
-                      // In progress, All Square: grey text (no pill)
-                      <div style={{ 
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        color: '#94a3b8'
-                      }}>
-                        ALL SQUARE
-                      </div>
+                      // In progress, All Square: status then thru at bottom
+                      <>
+                        <div style={{ 
+                          whiteSpace: 'nowrap',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          color: '#94a3b8'
+                        }}>
+                          ALL SQUARE
+                        </div>
+                        <div style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 600, 
+                          color: '#94a3b8',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          THRU {thru}
+                        </div>
+                      </>
                     ) : (
                       // Not started: subtle grey text
                       <div style={{ 
