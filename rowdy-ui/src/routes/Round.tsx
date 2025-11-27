@@ -250,16 +250,16 @@ export default function Round() {
                 bgStyle = { backgroundColor: winnerColor };
                 textColor = "text-white";
               } else if (isClosed && winner === "AS") {
-                // Halved match - diagonal stripes with both team colors
+                // Halved match - subtle diagonal stripes with both team colors
                 const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
                 const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
                 bgStyle = { 
                   background: `repeating-linear-gradient(
                     135deg,
-                    ${teamAColor},
-                    ${teamAColor} 8px,
-                    ${teamBColor} 8px,
-                    ${teamBColor} 16px
+                    ${teamAColor}99,
+                    ${teamAColor}99 8px,
+                    ${teamBColor}99 8px,
+                    ${teamBColor}99 16px
                   )`
                 };
                 textColor = "text-white";
