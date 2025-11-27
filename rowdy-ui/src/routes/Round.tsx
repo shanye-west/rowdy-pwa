@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { collection, doc, getDoc, getDocs, query, where, documentId } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc } from "../types";
+import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -14,6 +14,7 @@ export default function Round() {
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
+  const [course, setCourse] = useState<CourseDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -74,6 +75,14 @@ export default function Round() {
             pSnap.forEach(doc => { playerMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerDoc; });
           }
           setPlayers(playerMap);
+        }
+
+        // 5. Fetch course if courseId exists
+        if (rData.courseId) {
+          const cSnap = await getDoc(doc(db, "courses", rData.courseId));
+          if (cSnap.exists()) {
+            setCourse({ id: cSnap.id, ...cSnap.data() } as CourseDoc);
+          }
         }
 
       } catch (err) {
@@ -146,9 +155,14 @@ export default function Round() {
           <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
             Round {round.day ?? ""}
           </h1>
-          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 4 }}>
             {formatRoundType(round.format)}
           </div>
+          {(course?.name || round.course?.name) && (
+            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 12 }}>
+              {course?.name || round.course?.name}
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
              {/* Team A */}
