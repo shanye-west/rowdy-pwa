@@ -1276,16 +1276,10 @@ export default function Match() {
           {/* Top row: Format in subtle pill */}
           <div className="flex justify-center">
             <div 
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
             >
               <span>{formatRoundType(format)}</span>
-              {(course?.tees || round?.course?.tee) && (
-                <>
-                  <span>•</span>
-                  <span>{course?.tees || round?.course?.tee} tees</span>
-                </>
-              )}
             </div>
           </div>
           
@@ -1552,7 +1546,7 @@ export default function Match() {
                       backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b"
                     }}
                   >
-                    HOLE
+                    HOLE{(course?.tees || round?.course?.tee) ? ` (${(course?.tees || round?.course?.tee || '').toUpperCase()})` : ''}
                   </th>
                   {/* Front 9 */}
                   {holes.slice(0, 9).map(h => (
