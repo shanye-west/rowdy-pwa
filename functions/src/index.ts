@@ -509,6 +509,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let marginGoingInto18 = 0;
   let hole18Result: "teamA" | "teamB" | "AS" | null = null;
   
+  // BALL_USED_ON_18: Track if player's ball was used on hole 18 (Best Ball/Shamble only)
+  // Values: true = player's ball used solo, false = partner's ball used solo, null = tied or N/A
+  const teamABallUsedOn18: (boolean | null)[] = [null, null];
+  const teamBBallUsedOn18: (boolean | null)[] = [null, null];
+  
   for (let i = 1; i <= finalThru; i++) {
     const h = holesData[String(i)]?.input ?? {};
     
@@ -573,14 +578,26 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           teamABallsUsedSolo[0]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamABallUsedOn18[0] = true;
+            teamABallUsedOn18[1] = false;
+          }
         } else if (a1Net < a0Net) {
           teamABallsUsedSolo[1]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamABallUsedOn18[0] = false;
+            teamABallUsedOn18[1] = true;
+          }
         } else {
           // Tied - both shared
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
+          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
+          // Already initialized to null, so no action needed
         }
       }
       
@@ -597,14 +614,26 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           teamBBallsUsedSolo[0]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamBBallUsedOn18[0] = true;
+            teamBBallUsedOn18[1] = false;
+          }
         } else if (b1Net < b0Net) {
           teamBBallsUsedSolo[1]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamBBallUsedOn18[0] = false;
+            teamBBallUsedOn18[1] = true;
+          }
         } else {
           // Tied - both shared
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
+          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
+          // Already initialized to null, so no action needed
         }
       }
     }
@@ -623,14 +652,26 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           teamABallsUsedSolo[0]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamABallUsedOn18[0] = true;
+            teamABallUsedOn18[1] = false;
+          }
         } else if (aArr[1] < aArr[0]) {
           teamABallsUsedSolo[1]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamABallUsedOn18[0] = false;
+            teamABallUsedOn18[1] = true;
+          }
         } else {
           // Tied - both shared
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
+          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
+          // Already initialized to null, so no action needed
         }
       }
       
@@ -643,14 +684,26 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           teamBBallsUsedSolo[0]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamBBallUsedOn18[0] = true;
+            teamBBallUsedOn18[1] = false;
+          }
         } else if (bArr[1] < bArr[0]) {
           teamBBallsUsedSolo[1]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
+          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
+          if (i === 18) {
+            teamBBallUsedOn18[0] = false;
+            teamBBallUsedOn18[1] = true;
+          }
         } else {
           // Tied - both shared
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
+          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
+          // Already initialized to null, so no action needed
         }
       }
     }
@@ -786,6 +839,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       ballsUsedShared = team === "teamA" ? teamABallsUsedShared[pIdx] : teamBBallsUsedShared[pIdx];
       ballsUsedSoloWonHole = team === "teamA" ? teamABallsUsedSoloWonHole[pIdx] : teamBBallsUsedSoloWonHole[pIdx];
       ballsUsedSoloPush = team === "teamA" ? teamABallsUsedSoloPush[pIdx] : teamBBallsUsedSoloPush[pIdx];
+    }
+    
+    // BALL_USED_ON_18: ballUsedOn18 - only for best ball/shamble
+    let ballUsedOn18: boolean | null = null;
+    if (format === "twoManBestBall" || format === "twoManShamble") {
+      ballUsedOn18 = team === "teamA" ? teamABallUsedOn18[pIdx] : teamBBallUsedOn18[pIdx];
     }
     
     // DRIVE_TRACKING: drivesUsed - only for scramble/shamble
@@ -954,6 +1013,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (ballsUsedShared !== null) factData.ballsUsedShared = ballsUsedShared;
     if (ballsUsedSoloWonHole !== null) factData.ballsUsedSoloWonHole = ballsUsedSoloWonHole;
     if (ballsUsedSoloPush !== null) factData.ballsUsedSoloPush = ballsUsedSoloPush;
+    if (ballUsedOn18 !== null) factData.ballUsedOn18 = ballUsedOn18;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     
     // Scoring stats
