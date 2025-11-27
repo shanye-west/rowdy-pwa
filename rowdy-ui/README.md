@@ -224,6 +224,11 @@ These stats track when your individual score was used as the team score. Best Ba
 | `ballsUsedShared` | Holes where your score = partner's score | How many times did you and your partner tie? |
 | `ballsUsedSoloWonHole` | Holes where you were solo AND your team won the hole | Times you single-handedly won a hole |
 | `ballsUsedSoloPush` | Holes where you were solo AND the hole was halved | Times you single-handedly pushed (tied) a hole |
+| `ballUsedOn18` | `true` if your ball was used solo on 18, `false` if partner's, `null` if tied | Was your ball the counting ball on the final hole? |
+
+**Derived Clutch Stats (combining with 18th hole stats):**
+- **Clutch Hero**: `decidedOn18 && won18thHole === true && ballUsedOn18 === true` — Your ball won the decisive 18th
+- **Clutch Goat**: `decidedOn18 && won18thHole === false && ballUsedOn18 === true` — Your ball lost the decisive 18th
 
 ### Drive Usage Stats (Scramble & Shamble Only)
 
