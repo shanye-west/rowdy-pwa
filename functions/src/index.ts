@@ -329,8 +329,9 @@ function summarize(format: RoundFormat, match: any) {
   const leader = a > b ? "teamA" : b > a ? "teamB" : null;
   const margin = Math.abs(a - b);
   const holesLeft = 18 - thru;
-  const closed = leader !== null && margin > holesLeft;
-  const dormie = leader !== null && margin === holesLeft;
+  // Match closes when: someone wins (margin > holesLeft), OR all 18 holes are completed
+  const closed = (leader !== null && margin > holesLeft) || thru === 18;
+  const dormie = leader !== null && margin === holesLeft && thru < 18;
   const winner = (thru === 18 && a === b) ? "AS" : (leader ?? "AS");
   return { 
     holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner,
