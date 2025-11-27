@@ -1279,7 +1279,9 @@ export default function Match() {
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
               style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
             >
-              {matchThru > 0 ? (
+              {isMatchClosed ? (
+                <span>FINAL</span>
+              ) : matchThru > 0 ? (
                 <span>THRU {matchThru}</span>
               ) : (
                 <span>NOT STARTED</span>
@@ -1345,25 +1347,14 @@ export default function Match() {
                   // Completed match
                   winner === 'AS' ? (
                     // Halved/Tied match
-                    <>
-                      <div style={{ 
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                        color: '#334155'
-                      }}>
-                        TIED
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        FINAL
-                      </div>
-                    </>
+                    <div style={{ 
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      color: '#334155'
+                    }}>
+                      TIED
+                    </div>
                   ) : (
                     // Match with a winner
                     <>
@@ -1389,15 +1380,6 @@ export default function Match() {
                           const statusText = formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name);
                           return statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText;
                         })()}
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: 'rgba(255,255,255,0.85)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        FINAL
                       </div>
                     </>
                   )
