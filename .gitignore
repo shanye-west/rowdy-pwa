@@ -67,3 +67,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# service-account for firebase functions
+rowdy-pwa-firebase-adminsdk-fbsvc-e0402c5455.json
