@@ -9,28 +9,26 @@ import { describe, it, expect } from "vitest";
 
 /** 
  * Simulates the strokesVsParNet calculation
- * This mirrors the logic in updateMatchFacts but isolated for testing
+ * Uses course handicap from match document (integer), not tournament handicap (decimal)
  */
 function calculateStrokesVsParNet(
   totalGross: number,
-  playerHandicap: number,
+  playerCourseHandicap: number,
   coursePar: number
 ): number {
-  // Bug: current code uses totalNet (sum of strokesReceived deductions)
-  // Fix: should use actual playerHandicap (whole number course handicap)
-  return totalGross - playerHandicap - coursePar;
+  // Uses course handicap from match.courseHandicaps array (integer)
+  return totalGross - playerCourseHandicap - coursePar;
 }
 
 /**
- * Simulates the buggy strokesVsParNet calculation using strokesReceived
+ * Simulates the buggy strokesVsParNet calculation using tournament handicap (decimal)
  */
 function calculateStrokesVsParNetBuggy(
   totalGross: number,
-  strokesReceivedSum: number,
+  tournamentHandicap: number, // This was the bug - using decimal handicap from tournament
   coursePar: number
 ): number {
-  const totalNet = totalGross - strokesReceivedSum;
-  return totalNet - coursePar;
+  return totalGross - tournamentHandicap - coursePar;
 }
 
 /**
@@ -125,80 +123,97 @@ function calculateBallUsedOn18Buggy(
 // --- strokesVsParNet tests ---
 
 describe("strokesVsParNet calculation", () => {
-  describe("correct calculation using playerHandicap", () => {
+  describe("correct calculation using course handicap from match document", () => {
     it("calculates correctly for scratch golfer", () => {
-      // Scratch golfer (0 handicap) shoots 76 on par 72
+      // Scratch golfer (0 course handicap) shoots 76 on par 72
       const result = calculateStrokesVsParNet(76, 0, 72);
       expect(result).toBe(4); // 76 - 0 - 72 = +4
     });
 
     it("calculates correctly for mid-handicap golfer", () => {
-      // 12 handicap shoots 88 on par 72
+      // 12 course handicap shoots 88 on par 72
       const result = calculateStrokesVsParNet(88, 12, 72);
       expect(result).toBe(4); // 88 - 12 - 72 = +4 (net 76)
     });
 
+    it("calculates correctly for 9 handicap shooting even par gross", () => {
+      // Real scenario: 9 course handicap shoots 72 gross on par 72
+      // strokesVsParNet should be 72 - 9 - 72 = -9 (9 under net)
+      const result = calculateStrokesVsParNet(72, 9, 72);
+      expect(result).toBe(-9);
+    });
+
+    it("calculates correctly for 9 handicap shooting 73 gross", () => {
+      // Real scenario: 9 course handicap shoots 73 gross on par 72
+      // strokesVsParNet should be 73 - 9 - 72 = -8 (8 under net)
+      const result = calculateStrokesVsParNet(73, 9, 72);
+      expect(result).toBe(-8);
+    });
+
     it("calculates correctly for high-handicap golfer", () => {
-      // 18 handicap shoots 90 on par 72
+      // 18 course handicap shoots 90 on par 72
       const result = calculateStrokesVsParNet(90, 18, 72);
       expect(result).toBe(0); // 90 - 18 - 72 = 0 (net even)
     });
 
     it("handles negative result (under par net)", () => {
-      // 10 handicap shoots 78 on par 72
+      // 10 course handicap shoots 78 on par 72
       const result = calculateStrokesVsParNet(78, 10, 72);
       expect(result).toBe(-4); // 78 - 10 - 72 = -4 (net 68)
     });
 
     it("handles par 70 course", () => {
-      // 8 handicap shoots 82 on par 70
+      // 8 course handicap shoots 82 on par 70
       const result = calculateStrokesVsParNet(82, 8, 70);
       expect(result).toBe(4); // 82 - 8 - 70 = +4
     });
   });
 
-  describe("buggy calculation using strokesReceived (for comparison)", () => {
-    it("differs from correct calculation when strokesReceived != handicap", () => {
-      // Player has 12 handicap but only receives 6 strokes in match (rolled down)
-      const totalGross = 88;
-      const playerHandicap = 12;
-      const strokesReceivedSum = 6; // Only 6 strokes from match handicap difference
+  describe("buggy calculation using tournament decimal handicap (for comparison)", () => {
+    it("demonstrates the bug with decimal tournament handicap", () => {
+      // Real bug scenario: player has course handicap 9 (integer)
+      // but tournament.handicapByPlayer has decimal like 4.3
+      // Player shoots 72 gross on par 72
+      const totalGross = 72;
+      const courseHandicap = 9;       // From match.courseHandicaps (integer)
+      const tournamentHandicap = 4.3; // From tournament.handicapByPlayer (decimal)
       const coursePar = 72;
 
-      const correct = calculateStrokesVsParNet(totalGross, playerHandicap, coursePar);
-      const buggy = calculateStrokesVsParNetBuggy(totalGross, strokesReceivedSum, coursePar);
+      const correct = calculateStrokesVsParNet(totalGross, courseHandicap, coursePar);
+      const buggy = calculateStrokesVsParNetBuggy(totalGross, tournamentHandicap, coursePar);
 
-      expect(correct).toBe(4);  // 88 - 12 - 72 = +4 (TRUE net score vs par)
-      expect(buggy).toBe(10);   // 88 - 6 - 72 = +10 (WRONG - uses match strokes)
+      expect(correct).toBe(-9);   // 72 - 9 - 72 = -9 ✓
+      expect(buggy).toBeCloseTo(-4.3, 1);  // 72 - 4.3 - 72 = -4.3 ✗
       expect(correct).not.toBe(buggy);
     });
 
-    it("matches when player receives full handicap strokes", () => {
-      // Edge case: player IS lowest handicap, receives 0 match strokes
-      // but their actual handicap is 0 too
-      const totalGross = 76;
-      const playerHandicap = 0;
-      const strokesReceivedSum = 0;
+    it("shows decimal handicap produces floating point results", () => {
+      // Player shoots 73 gross, course handicap 9, tournament handicap 4.7
+      const totalGross = 73;
+      const courseHandicap = 9;
+      const tournamentHandicap = 4.7;
       const coursePar = 72;
 
-      const correct = calculateStrokesVsParNet(totalGross, playerHandicap, coursePar);
-      const buggy = calculateStrokesVsParNetBuggy(totalGross, strokesReceivedSum, coursePar);
+      const correct = calculateStrokesVsParNet(totalGross, courseHandicap, coursePar);
+      const buggy = calculateStrokesVsParNetBuggy(totalGross, tournamentHandicap, coursePar);
 
-      expect(correct).toBe(buggy); // Both = +4 when handicap = strokesReceived = 0
+      expect(correct).toBe(-8);  // 73 - 9 - 72 = -8 (integer result)
+      expect(buggy).toBeCloseTo(-3.7, 1); // 73 - 4.7 - 72 = -3.7 (floating point)
+      expect(Number.isInteger(correct)).toBe(true);
+      expect(Number.isInteger(buggy)).toBe(false);
     });
 
-    it("differs significantly for high-handicap player receiving few strokes", () => {
-      // 18 handicap player only receives 4 strokes (opponent is 14 handicap)
-      const totalGross = 95;
-      const playerHandicap = 18;
-      const strokesReceivedSum = 4;
+    it("matches when tournament handicap equals course handicap (unlikely)", () => {
+      // Edge case: tournament handicap happens to be integer matching course
+      const totalGross = 76;
+      const courseHandicap = 4;
+      const tournamentHandicap = 4;
       const coursePar = 72;
 
-      const correct = calculateStrokesVsParNet(totalGross, playerHandicap, coursePar);
-      const buggy = calculateStrokesVsParNetBuggy(totalGross, strokesReceivedSum, coursePar);
+      const correct = calculateStrokesVsParNet(totalGross, courseHandicap, coursePar);
+      const buggy = calculateStrokesVsParNetBuggy(totalGross, tournamentHandicap, coursePar);
 
-      expect(correct).toBe(5);   // 95 - 18 - 72 = +5
-      expect(buggy).toBe(19);    // 95 - 4 - 72 = +19 (14 strokes difference!)
+      expect(correct).toBe(buggy); // Both = 0 when handicaps match
     });
   });
 });
@@ -425,9 +440,10 @@ describe("integration: playerMatchFacts stat generation", () => {
     expect(decided.won18thHole).toBe(null);
   });
 
-  it("calculates strokesVsParNet correctly with different handicaps", () => {
-    // Two players on same team: 8 handicap and 16 handicap
-    // Player 1 shoots 84, Player 2 shoots 92
+  it("calculates strokesVsParNet correctly using course handicap from match", () => {
+    // Two players on same team with course handicaps from match.courseHandicaps
+    // Player 1: course handicap 8, shoots 84 gross
+    // Player 2: course handicap 16, shoots 92 gross
     // Course par: 72
     
     const player1 = calculateStrokesVsParNet(84, 8, 72);
@@ -435,6 +451,22 @@ describe("integration: playerMatchFacts stat generation", () => {
     
     expect(player1).toBe(4);  // 84 - 8 - 72 = +4
     expect(player2).toBe(4);  // 92 - 16 - 72 = +4 (same net performance!)
+  });
+
+  it("calculates strokesVsParNet for real scenario with 9 handicaps", () => {
+    // Real scenario from user: both players have course handicap 9
+    // Player 1: shoots 72 gross on par 72 → strokesVsParNet = 72 - 9 - 72 = -9
+    // Player 2: shoots 73 gross on par 72 → strokesVsParNet = 73 - 9 - 72 = -8
+    
+    const player1 = calculateStrokesVsParNet(72, 9, 72);
+    const player2 = calculateStrokesVsParNet(73, 9, 72);
+    
+    expect(player1).toBe(-9);  // 72 - 9 - 72 = -9 (9 under net par)
+    expect(player2).toBe(-8);  // 73 - 9 - 72 = -8 (8 under net par)
+    
+    // Results should be integers, not decimals like -4.7 or -4.3
+    expect(Number.isInteger(player1)).toBe(true);
+    expect(Number.isInteger(player2)).toBe(true);
   });
 
   it("handles comeback win scenarios correctly", () => {
@@ -446,9 +478,9 @@ describe("integration: playerMatchFacts stat generation", () => {
     
     // Test strokesVsParNet for a player who came back
     const grossScore = 82;
-    const handicap = 10;
+    const courseHandicap = 10;
     const coursePar = 72;
-    const strokesVsParNet = calculateStrokesVsParNet(grossScore, handicap, coursePar);
+    const strokesVsParNet = calculateStrokesVsParNet(grossScore, courseHandicap, coursePar);
     expect(strokesVsParNet).toBe(0); // 82 - 10 - 72 = net even par
   });
 });

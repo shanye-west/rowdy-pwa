@@ -242,6 +242,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const tId = after.tournamentId || "";
   const rId = after.roundId || "";
   
+  // Extract course handicaps from match document
+  // Array order: [teamA[0], teamA[1], teamB[0], teamB[1]]
+  const matchCourseHandicaps: number[] = Array.isArray(after.courseHandicaps) 
+    ? after.courseHandicaps 
+    : [0, 0, 0, 0];
+  
   let format: RoundFormat = "twoManBestBall";
   let points = 1;
   let courseId = "";
@@ -639,15 +645,19 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let teamTotalGross: number | null = null;
     let teamStrokesVsParGross: number | null = null;
     
+    // Get player's course handicap from match document
+    // Array order: [teamA[0], teamA[1], teamB[0], teamB[1]]
+    const courseHcpIndex = team === "teamA" ? pIdx : pIdx + 2;
+    const playerCourseHandicap = matchCourseHandicaps[courseHcpIndex] ?? 0;
+    
     if (format === "twoManBestBall" || format === "singles") {
       const playerGrossArr = team === "teamA" ? teamAPlayerGross : teamBPlayerGross;
       const playerNetArr = team === "teamA" ? teamAPlayerNet : teamBPlayerNet;
       totalGross = playerGrossArr[pIdx];
       totalNet = playerNetArr[pIdx];
       strokesVsParGross = totalGross - coursePar;
-      // strokesVsParNet uses actual course handicap (whole number), not match strokesReceived
-      const courseHcp = playerHandicapLookup[p.playerId] ?? 0;
-      strokesVsParNet = totalGross - courseHcp - coursePar;
+      // strokesVsParNet uses course handicap from match document (integer)
+      strokesVsParNet = totalGross - playerCourseHandicap - coursePar;
     } else if (format === "twoManScramble" || format === "twoManShamble") {
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
       teamStrokesVsParGross = teamTotalGross - coursePar;
@@ -761,6 +771,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     
     factData.coursePar = coursePar;
+    factData.playerCourseHandicap = playerCourseHandicap;
     if (totalGross !== null) factData.totalGross = totalGross;
     if (totalNet !== null) factData.totalNet = totalNet;
     if (strokesVsParGross !== null) factData.strokesVsParGross = strokesVsParGross;
