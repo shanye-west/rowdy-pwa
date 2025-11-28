@@ -43,4 +43,25 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Split vendor chunks for better caching
+        manualChunks: {
+          // Firebase SDK in its own chunk (~300KB) - rarely changes
+          firebase: [
+            'firebase/app',
+            'firebase/auth', 
+            'firebase/firestore',
+          ],
+          // React ecosystem in its own chunk
+          'react-vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ],
+        },
+      },
+    },
+  },
 });
