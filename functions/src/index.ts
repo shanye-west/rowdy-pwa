@@ -14,19 +14,19 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 // Import shared modules
-import type { RoundFormat } from "./types";
+import type { RoundFormat } from "./types.js";
 import { 
   playersPerSide, 
   ensureSideSize, 
   normalizeHoles, 
   defaultStatus 
-} from "./helpers/matchHelpers";
+} from "./helpers/matchHelpers.js";
 import { 
   summarize, 
   buildStatusAndResult,
   decideHole,
   holesRange
-} from "./scoring/matchScoring";
+} from "./scoring/matchScoring.js";
 
 initializeApp();
 const db = getFirestore();
