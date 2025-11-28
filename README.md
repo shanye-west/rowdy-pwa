@@ -1,3 +1,5 @@
+LAST UPDATED ON FRI NOV 28 3:53PM
+
 What the app is
 
 A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Our webpage (for styling, etc. is www.rowdycup.com). Admins seed all setup data in Firestore (no admin UI). Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
@@ -286,5 +288,3 @@ These stats track when your individual score was used as the team score. Best Ba
 - **Two-Man Best Ball**: 2v2, each player plays their own ball, best **net** score per team counts. Ball usage stats tracked.
 - **Two-Man Shamble**: 2v2, players select a drive then play their own ball, best **gross** score counts (no handicap). Ball usage and drive stats tracked.
 - **Two-Man Scramble**: 2v2, team picks best shot each time, one team gross score. Drive stats tracked.
-
-### Last Updated on Thu Nov 27, 2025 at 6:16 PM
