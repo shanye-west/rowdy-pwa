@@ -9,6 +9,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      includeAssets: [
+        "images/rowdy-reindeer.svg",
+        "images/rowdycup-logo-christmas.svg",
+        "images/rowdycup-logo.svg",
+        "images/stocking-stuffers.svg",
+      ],
       registerType: 'autoUpdate',
       devOptions: {
         enabled: true // Enables PWA in local dev (npm run dev)
