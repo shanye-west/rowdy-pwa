@@ -607,11 +607,29 @@ describe("summarize", () => {
       expect(result.wasTeamADown3PlusBack9).toBe(false);
     });
 
-    it("does not trigger momentum flags on front 9 only", () => {
-      // Team A 5 up through 9 (all on front 9)
+    it("triggers momentum flags when 3+ up/down after hole 9 (entering back 9)", () => {
+      // Team A 5 up through 9 - should trigger wasTeamAUp3PlusBack9
+      // because "entering back 9" means the score after completing hole 9
       const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
       for (let i = 1; i <= 9; i++) {
         if (i <= 5) {
+          holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 5 } }; // A wins
+        } else {
+          holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } }; // Halved
+        }
+      }
+      const match = createMatch({ holes });
+      const result = summarize("singles", match);
+      
+      expect(result.wasTeamAUp3PlusBack9).toBe(true);  // 5 up entering back 9 triggers flag
+      expect(result.wasTeamADown3PlusBack9).toBe(false);
+    });
+
+    it("does not trigger momentum flags when only 2 up after hole 9", () => {
+      // Team A only 2 up through 9 - should NOT trigger
+      const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
+      for (let i = 1; i <= 9; i++) {
+        if (i <= 2) {
           holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 5 } }; // A wins
         } else {
           holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } }; // Halved
@@ -788,8 +806,21 @@ describe("summarize", () => {
   });
 
   describe("momentum flag boundary conditions", () => {
+    it("triggers flag at exactly 3 down after hole 9 (entering back 9)", () => {
+      // Team B wins holes 1-9 (Team A is 9 down after hole 9, entering back 9)
+      // Momentum should trigger after completing hole 9, before playing hole 10
+      const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
+      for (let i = 1; i <= 9; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } };
+      }
+      const match = createMatch({ holes });
+      const result = summarize("singles", match);
+      
+      expect(result.wasTeamADown3PlusBack9).toBe(true);
+    });
+
     it("triggers flag at exactly 3 down on hole 10", () => {
-      // Team B wins holes 1-9 + hole 10 (10 down total, but flag triggered at hole 10)
+      // Team B wins holes 1-9 + hole 10 (10 down total, flag triggered at hole 9 and stays)
       const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
       // Team A loses all first 10 holes
       for (let i = 1; i <= 10; i++) {
@@ -801,10 +832,14 @@ describe("summarize", () => {
       expect(result.wasTeamADown3PlusBack9).toBe(true);
     });
 
-    it("does NOT trigger flag at exactly 3 down on hole 9", () => {
+    it("does NOT trigger flag at exactly 3 down on hole 8 (front 9 only)", () => {
       const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
-      for (let i = 1; i <= 9; i++) {
-        holes[String(i)] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } };
+      for (let i = 1; i <= 8; i++) {
+        if (i <= 3) {
+          holes[String(i)] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } }; // B wins
+        } else {
+          holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } }; // Halved
+        }
       }
       const match = createMatch({ holes });
       const result = summarize("singles", match);
@@ -812,9 +847,9 @@ describe("summarize", () => {
       expect(result.wasTeamADown3PlusBack9).toBe(false);
     });
 
-    it("does NOT trigger flag at 2 down on hole 10", () => {
+    it("does NOT trigger flag at 2 down on hole 9", () => {
       const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 1; i <= 9; i++) {
         if (i <= 2) {
           holes[String(i)] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } }; // B wins
         } else {
