@@ -3,7 +3,7 @@
  * Calculates hole winners, running status, and match results
  */
 
-import type { RoundFormat, MatchData, MatchStatus, MatchResult, PlayerInMatch } from "../types";
+import type { RoundFormat, MatchData, MatchStatus, MatchResult, PlayerInMatch } from "../types.js";
 
 // --- SCORING HELPERS ---
 
