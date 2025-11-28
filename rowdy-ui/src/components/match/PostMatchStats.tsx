@@ -58,19 +58,19 @@ export function PostMatchStats({
   // Stat row component for team-level stats (1 value per team)
   const StatRow = ({ label, valueA, valueB, highlight = false }: { 
     label: string; 
-    valueA: string | number | null | undefined; 
-    valueB: string | number | null | undefined;
+    valueA: React.ReactNode; 
+    valueB: React.ReactNode;
     highlight?: boolean;
   }) => (
     <div className={`flex items-center py-1.5 ${highlight ? "bg-slate-50 -mx-2 px-2 rounded" : ""}`}>
       <div className="flex-1 text-right pr-3 font-semibold" style={{ color: teamAColor }}>
-        {valueA ?? "–"}
+        {valueA != null ? valueA : "–"}
       </div>
       <div className="text-xs text-slate-500 font-medium text-center w-24 shrink-0">
         {label}
       </div>
       <div className="flex-1 text-left pl-3 font-semibold" style={{ color: teamBColor }}>
-        {valueB ?? "–"}
+        {valueB != null ? valueB : "–"}
       </div>
     </div>
   );
@@ -105,28 +105,39 @@ export function PostMatchStats({
   // Stat row for per-player stats (4 columns: 2 players per team)
   const PlayerStatRow = ({ label, teamA, teamB, highlight = false }: { 
     label: string; 
-    teamA: (string | number | null | undefined)[];
-    teamB: (string | number | null | undefined)[];
+    teamA: React.ReactNode[];
+    teamB: React.ReactNode[];
     highlight?: boolean;
   }) => (
     <div className={`flex items-center py-1.5 ${highlight ? "bg-slate-50 -mx-2 px-2 rounded" : ""}`}>
       <div className="flex-1 text-right pr-1 font-semibold text-sm" style={{ color: teamAColor }}>
-        {teamA[0] ?? "–"}
+        {teamA[0] != null ? teamA[0] : "–"}
       </div>
       <div className="flex-1 text-right pr-3 font-semibold text-sm" style={{ color: teamAColor }}>
-        {teamA[1] ?? "–"}
+        {teamA[1] != null ? teamA[1] : "–"}
       </div>
       <div className="text-xs text-slate-500 font-medium text-center w-24 shrink-0">
         {label}
       </div>
       <div className="flex-1 text-left pl-3 font-semibold text-sm" style={{ color: teamBColor }}>
-        {teamB[0] ?? "–"}
+        {teamB[0] != null ? teamB[0] : "–"}
       </div>
       <div className="flex-1 text-left pl-1 font-semibold text-sm" style={{ color: teamBColor }}>
-        {teamB[1] ?? "–"}
+        {teamB[1] != null ? teamB[1] : "–"}
       </div>
     </div>
   );
+
+  // Helper to render a combined value: number + smaller vs-par in parentheses
+  const renderCombined = (total: number | undefined | null, vsPar: number | undefined | null) => {
+    if (total == null) return null;
+    return (
+      <>
+        <span className="font-semibold">{total}</span>
+        <span className="text-xs text-slate-500 ml-2">({formatStrokesVsPar(vsPar)})</span>
+      </>
+    );
+  };
 
   // Get aggregated stats for display
   const teamAFacts = teamAPlayerIds.map(id => getFactForPlayer(id)).filter(Boolean) as PlayerMatchFact[];
@@ -198,63 +209,51 @@ export function PostMatchStats({
             Scoring
           </div>
           {format === "singles" ? (
-            // Singles: one player per team
+            // Singles: one player per team (Gross shown first)
             <>
-              <StatRow 
-                label="Total Gross" 
-                valueA={teamAFacts[0]?.totalGross} 
-                valueB={teamBFacts[0]?.totalGross} 
+              {/* Gross row */}
+              <StatRow
+                label="Gross"
+                valueA={renderCombined(teamAFacts[0]?.totalGross, teamAFacts[0]?.strokesVsParGross)}
+                valueB={renderCombined(teamBFacts[0]?.totalGross, teamBFacts[0]?.strokesVsParGross)}
               />
-              <StatRow 
-                label="Total Net" 
-                valueA={teamAFacts[0]?.totalNet} 
-                valueB={teamBFacts[0]?.totalNet} 
+
+              {/* Net row (highlight) */}
+              <StatRow
+                label="Net"
+                valueA={renderCombined(teamAFacts[0]?.totalNet, teamAFacts[0]?.strokesVsParNet)}
+                valueB={renderCombined(teamBFacts[0]?.totalNet, teamBFacts[0]?.strokesVsParNet)}
                 highlight
               />
-              <StatRow 
-                label="vs Par (Gross)" 
-                valueA={formatStrokesVsPar(teamAFacts[0]?.strokesVsParGross)} 
-                valueB={formatStrokesVsPar(teamBFacts[0]?.strokesVsParGross)} 
-              />
-              <StatRow 
-                label="vs Par (Net)" 
-                valueA={formatStrokesVsPar(teamAFacts[0]?.strokesVsParNet)} 
-                valueB={formatStrokesVsPar(teamBFacts[0]?.strokesVsParNet)} 
-              />
-              <StatRow 
-                label="Strokes Received" 
-                valueA={teamAFacts[0]?.strokesGiven} 
-                valueB={teamBFacts[0]?.strokesGiven} 
+
+              <StatRow
+                label="Strokes Received"
+                valueA={teamAFacts[0]?.strokesGiven}
+                valueB={teamBFacts[0]?.strokesGiven}
               />
             </>
           ) : (
             // Best Ball: two players per team
             <>
               <PlayerNamesHeader />
-              <PlayerStatRow 
-                label="Total Gross" 
-                teamA={teamAFacts.map(f => f.totalGross)} 
-                teamB={teamBFacts.map(f => f.totalGross)} 
+              {/* Gross row (per player) */}
+              <PlayerStatRow
+                label="Gross"
+                teamA={teamAFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
+                teamB={teamBFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
               />
-              <PlayerStatRow 
-                label="Total Net" 
-                teamA={teamAFacts.map(f => f.totalNet)} 
-                teamB={teamBFacts.map(f => f.totalNet)} 
+
+              {/* Net row (per player) */}
+              <PlayerStatRow
+                label="Net"
+                teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
+                teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
               />
-              <PlayerStatRow 
-                label="vs Par (Gross)" 
-                teamA={teamAFacts.map(f => formatStrokesVsPar(f.strokesVsParGross))} 
-                teamB={teamBFacts.map(f => formatStrokesVsPar(f.strokesVsParGross))} 
-              />
-              <PlayerStatRow 
-                label="vs Par (Net)" 
-                teamA={teamAFacts.map(f => formatStrokesVsPar(f.strokesVsParNet))} 
-                teamB={teamBFacts.map(f => formatStrokesVsPar(f.strokesVsParNet))} 
-              />
-              <PlayerStatRow 
-                label="Strokes Recv'd" 
-                teamA={teamAFacts.map(f => f.strokesGiven)} 
-                teamB={teamBFacts.map(f => f.strokesGiven)} 
+
+              <PlayerStatRow
+                label="Strokes Recv'd"
+                teamA={teamAFacts.map(f => f.strokesGiven)}
+                teamB={teamBFacts.map(f => f.strokesGiven)}
               />
             </>
           )}
