@@ -51,51 +51,51 @@ export function PostMatchStats({
   const showBallUsage = format === "twoManBestBall" || format === "twoManShamble";
   const showDrives = format === "twoManScramble" || format === "twoManShamble";
 
-  // Build player lists
-  const teamAPlayerIds = teamAPlayers.map(p => p.playerId);
-  const teamBPlayerIds = teamBPlayers.map(p => p.playerId);
+  // Build player id lists
+  const teamAPlayerIds: string[] = teamAPlayers.map(p => p.playerId);
+  const teamBPlayerIds: string[] = teamBPlayers.map(p => p.playerId);
 
-  // Stat row component for team-level stats (1 value per team)
-  const StatRow = ({ label, valueA, valueB, highlight = false }: { 
-    label: string; 
-    valueA: React.ReactNode; 
-    valueB: React.ReactNode;
-    highlight?: boolean;
-  }) => (
-    <div className={`flex items-center py-1.5 ${highlight ? "bg-slate-50 -mx-2 px-2 rounded" : ""}`}>
-      <div className="flex-1 text-right pr-3 font-semibold" style={{ color: teamAColor }}>
-        {valueA != null ? valueA : "–"}
+    const StatRow = ({ label, valueA, valueB, highlight = false, center = false }: { 
+      label: string; 
+      valueA: React.ReactNode; 
+      valueB: React.ReactNode;
+      highlight?: boolean;
+      center?: boolean;
+    }) => (
+      <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-slate-50 px-3 py-1 rounded-md" : ""}`}>
+        <div className={`flex-1 ${center ? "text-right" : "text-right pr-3"} font-semibold text-sm`} style={{ color: teamAColor }}>
+          {valueA != null ? valueA : "–"}
+        </div>
+        <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">
+          {label}
+        </div>
+        <div className={`flex-1 ${center ? "text-left" : "text-left pl-3"} font-semibold text-sm`} style={{ color: teamBColor }}>
+          {valueB != null ? valueB : "–"}
+        </div>
       </div>
-      <div className="text-xs text-slate-500 font-medium text-center w-24 shrink-0">
-        {label}
-      </div>
-      <div className="flex-1 text-left pl-3 font-semibold" style={{ color: teamBColor }}>
-        {valueB != null ? valueB : "–"}
-      </div>
-    </div>
-  );
+    );
 
   // Player names header row for per-player stat sections
   const PlayerNamesHeader = () => (
-    <div className="flex items-center py-1 mb-1 border-b border-slate-100">
-      <div className="flex-1 text-right pr-1">
-        <span className="text-xs font-semibold truncate" style={{ color: teamAColor }}>
+    <div className="flex items-center py-2 mb-2 border-b border-slate-100">
+      <div className="flex-1 text-right pr-3">
+        <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
           {getPlayerName(teamAPlayerIds[0])}
         </span>
       </div>
       <div className="flex-1 text-right pr-3">
-        <span className="text-xs font-semibold truncate" style={{ color: teamAColor }}>
+        <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
           {getPlayerName(teamAPlayerIds[1])}
         </span>
       </div>
-      <div className="w-24 shrink-0" />
+      <div className="w-28 shrink-0" />
       <div className="flex-1 text-left pl-3">
-        <span className="text-xs font-semibold truncate" style={{ color: teamBColor }}>
+        <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
           {getPlayerName(teamBPlayerIds[0])}
         </span>
       </div>
-      <div className="flex-1 text-left pl-1">
-        <span className="text-xs font-semibold truncate" style={{ color: teamBColor }}>
+      <div className="flex-1 text-left pl-3">
+        <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
           {getPlayerName(teamBPlayerIds[1])}
         </span>
       </div>
@@ -109,7 +109,7 @@ export function PostMatchStats({
     teamB: React.ReactNode[];
     highlight?: boolean;
   }) => (
-    <div className={`flex items-center py-1.5 ${highlight ? "bg-slate-50 -mx-2 px-2 rounded" : ""}`}>
+    <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-slate-50 px-3 py-1 rounded-md" : ""}`}>
       <div className="flex-1 text-right pr-1 font-semibold text-sm" style={{ color: teamAColor }}>
         {teamA[0] != null ? teamA[0] : "–"}
       </div>
@@ -133,10 +133,20 @@ export function PostMatchStats({
     if (total == null) return null;
     return (
       <>
-        <span className="font-semibold">{total}</span>
-        <span className="text-xs text-slate-500 ml-2">({formatStrokesVsPar(vsPar)})</span>
+        <span className="font-semibold text-lg">{total}</span>
+        <span className="text-sm text-slate-500 ml-2">({formatStrokesVsPar(vsPar)})</span>
       </>
     );
+  };
+
+  // Helper to shorten a full name to first-initial + last name (e.g. "J. Smith")
+  const shortName = (fullName?: string) => {
+    if (!fullName) return "";
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    const first = parts[0][0] || "";
+    const last = parts[parts.length - 1] || "";
+    return `${first}. ${last}`;
   };
 
   // Get aggregated stats for display
@@ -205,33 +215,39 @@ export function PostMatchStats({
           Match Stats
         </h3>
 
-        {/* Team Headers */}
-        <div className="flex items-center pb-2 border-b border-slate-200">
-          <div className="flex-1 text-right pr-3">
-            <span className="text-xs font-bold uppercase" style={{ color: teamAColor }}>{teamAName}</span>
-          </div>
-          <div className="w-24 shrink-0" />
-          <div className="flex-1 text-left pl-3">
-            <span className="text-xs font-bold uppercase" style={{ color: teamBColor }}>{teamBName}</span>
-          </div>
-        </div>
+              {/* Player Headers (Singles) - show short player names (initial + last) in team colors */}
+              <div className="flex items-center pb-2 border-b border-slate-200">
+                <div className="flex-1 text-right pr-3">
+                  <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
+                    {shortName(getPlayerName(teamAPlayerIds[0]))}
+                  </span>
+                </div>
+                <div className="w-24 shrink-0" />
+                <div className="flex-1 text-left pl-3">
+                  <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
+                    {shortName(getPlayerName(teamBPlayerIds[0]))}
+                  </span>
+                </div>
+              </div>
 
         {/* SCORING (Singles) */}
         {hasScoring && (
           <div>
-            {/* Gross row */}
+            {/* Gross row (centered under player names) */}
             <StatRow
               label="Gross"
               valueA={renderCombined(teamAFacts[0]?.totalGross, teamAFacts[0]?.strokesVsParGross)}
               valueB={renderCombined(teamBFacts[0]?.totalGross, teamBFacts[0]?.strokesVsParGross)}
+              center
             />
 
-            {/* Net row (highlight) */}
+            {/* Net row (highlight, centered) */}
             <StatRow
               label="Net"
               valueA={renderCombined(teamAFacts[0]?.totalNet, teamAFacts[0]?.strokesVsParNet)}
               valueB={renderCombined(teamBFacts[0]?.totalNet, teamBFacts[0]?.strokesVsParNet)}
               highlight
+              center
             />
           </div>
         )}
