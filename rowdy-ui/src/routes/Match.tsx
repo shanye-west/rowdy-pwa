@@ -1771,7 +1771,7 @@ export default function Match() {
                                   focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
                                   transition-colors duration-100
                                   ${locked 
-                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
                                     : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
                                   }
                                 `}
@@ -1814,7 +1814,7 @@ export default function Match() {
                                   focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
                                   transition-colors duration-100
                                   ${locked 
-                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
                                     : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
                                   }
                                 `}
@@ -2002,7 +2002,7 @@ export default function Match() {
                                   focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
                                   transition-colors duration-100
                                   ${locked 
-                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
                                     : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
                                   }
                                 `}
@@ -2045,7 +2045,7 @@ export default function Match() {
                                   focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
                                   transition-colors duration-100
                                   ${locked 
-                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
                                     : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
                                   }
                                 `}
@@ -2107,7 +2107,7 @@ export default function Match() {
                               className={`
                                 w-10 h-7 text-xs font-bold rounded border transition-colors
                                 ${locked || isMatchClosed
-                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
                                   : initials
                                     ? "text-white border-transparent"
                                     : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
@@ -2140,7 +2140,7 @@ export default function Match() {
                               className={`
                                 w-10 h-7 text-xs font-bold rounded border transition-colors
                                 ${locked || isMatchClosed
-                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
                                   : initials
                                     ? "text-white border-transparent"
                                     : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
@@ -2184,7 +2184,7 @@ export default function Match() {
                               className={`
                                 w-10 h-7 text-xs font-bold rounded border transition-colors
                                 ${locked || isMatchClosed
-                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
                                   : initials
                                     ? "text-white border-transparent"
                                     : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
@@ -2217,7 +2217,7 @@ export default function Match() {
                               className={`
                                 w-10 h-7 text-xs font-bold rounded border transition-colors
                                 ${locked || isMatchClosed
-                                  ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
                                   : initials
                                     ? "text-white border-transparent"
                                     : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
