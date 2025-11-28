@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, onSnapshot, getDoc, updateDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
-import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
+import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc, PlayerMatchFact } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
