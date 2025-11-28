@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, limit, query, where, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, limit, query, where, documentId } from "firebase/firestore";
 import { db } from "./firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
@@ -33,40 +33,66 @@ export default function App() {
         const t = { id: tSnap.docs[0].id, ...tData } as TournamentDoc;
         setTournament(t);
 
-        // 2) Load rounds
+        // 2) Load rounds, matches, and courses in parallel with batched queries
         const rQuery = query(collection(db, "rounds"), where("tournamentId", "==", t.id));
-        const rSnap = await getDocs(rQuery);
+        
+        // Single query for ALL matches in this tournament (instead of N queries per round)
+        const allMatchesQuery = query(collection(db, "matches"), where("tournamentId", "==", t.id));
+        
+        const [rSnap, allMatchesSnap] = await Promise.all([
+          getDocs(rQuery),
+          getDocs(allMatchesQuery),
+        ]);
+
         let rds = rSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as RoundDoc));
         // Sort by day, then ID
         rds = rds.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
         setRounds(rds);
 
-        // 3) Load matches for stats
-        const matchesPromises = rds.map(async (r) => {
-          const mSnap = await getDocs(query(collection(db, "matches"), where("roundId", "==", r.id)));
-          const matches = mSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as MatchDoc));
-          return { roundId: r.id, matches };
-        });
-
-        const results = await Promise.all(matchesPromises);
+        // Group matches by roundId in memory (instead of N separate queries)
         const bucket: Record<string, MatchDoc[]> = {};
-        results.forEach((res) => { bucket[res.roundId] = res.matches; });
+        rds.forEach(r => { bucket[r.id] = []; }); // Initialize empty arrays
+        allMatchesSnap.docs.forEach(d => {
+          const match = { id: d.id, ...(d.data() as any) } as MatchDoc;
+          if (match.roundId && bucket[match.roundId]) {
+            bucket[match.roundId].push(match);
+          }
+        });
         setMatchesByRound(bucket);
 
-        // 4) Load courses for each round
-        const coursesPromises = rds.map(async (r) => {
-          if (r.courseId) {
-            const cSnap = await getDoc(doc(db, "courses", r.courseId));
-            if (cSnap.exists()) {
-              return { roundId: r.id, course: { id: cSnap.id, ...cSnap.data() } as CourseDoc };
-            }
-          }
-          return { roundId: r.id, course: null };
-        });
-
-        const courseResults = await Promise.all(coursesPromises);
+        // Batch fetch all unique courses (instead of N separate queries)
+        const uniqueCourseIds = [...new Set(rds.map(r => r.courseId).filter((id): id is string => !!id))];
         const courseBucket: Record<string, CourseDoc | null> = {};
-        courseResults.forEach((res) => { courseBucket[res.roundId] = res.course; });
+        rds.forEach(r => { courseBucket[r.id] = null; }); // Initialize
+
+        if (uniqueCourseIds.length > 0) {
+          // Firestore 'in' query limit is 30, chunk if needed
+          const courseChunks: string[][] = [];
+          for (let i = 0; i < uniqueCourseIds.length; i += 30) {
+            courseChunks.push(uniqueCourseIds.slice(i, i + 30));
+          }
+          
+          const courseResults = await Promise.all(
+            courseChunks.map(chunk =>
+              getDocs(query(collection(db, "courses"), where(documentId(), "in", chunk)))
+            )
+          );
+          
+          // Build courseId -> CourseDoc lookup
+          const courseLookup: Record<string, CourseDoc> = {};
+          courseResults.forEach(snap => {
+            snap.docs.forEach(d => {
+              courseLookup[d.id] = { id: d.id, ...d.data() } as CourseDoc;
+            });
+          });
+          
+          // Map courses to rounds
+          rds.forEach(r => {
+            if (r.courseId && courseLookup[r.courseId]) {
+              courseBucket[r.id] = courseLookup[r.courseId];
+            }
+          });
+        }
         setCoursesByRound(courseBucket);
 
       } catch (e) {

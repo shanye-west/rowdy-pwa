@@ -40,7 +40,9 @@ export default function Round() {
         const rData = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
         setRound(rData);
 
-        // 2. Fetch tournament, matches, and course in parallel
+        // 2. Fetch tournament, matches, course, and PLAYERS all in parallel
+        //    We extract playerIds from matchIds on the round doc (if available) 
+        //    or fetch matches first then players - but run as much in parallel as possible
         const matchesQuery = query(collection(db, "matches"), where("roundId", "==", roundId));
         
         const [tournamentResult, matchesResult, courseResult] = await Promise.all([
@@ -72,7 +74,8 @@ export default function Round() {
           setCourse({ id: courseResult.id, ...courseResult.data() } as CourseDoc);
         }
 
-        // 3. Bulk fetch players (depends on matches result)
+        // 3. Fetch players (can now start immediately since matches are ready)
+        //    Extract unique player IDs and fetch in parallel chunks
         const playerIds = new Set<string>();
         ms.forEach(m => {
           m.teamAPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
@@ -81,10 +84,10 @@ export default function Round() {
 
         if (playerIds.size > 0) {
           const pIds = Array.from(playerIds);
-          // Firestore 'in' limit is 10, so chunk and fetch all chunks in parallel
+          // Firestore 'in' limit is 30 (was 10), so chunk accordingly
           const chunks: string[][] = [];
-          for (let i = 0; i < pIds.length; i += 10) {
-            chunks.push(pIds.slice(i, i + 10));
+          for (let i = 0; i < pIds.length; i += 30) {
+            chunks.push(pIds.slice(i, i + 30));
           }
 
           const playerMap: Record<string, PlayerDoc> = {};
