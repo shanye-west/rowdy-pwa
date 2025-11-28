@@ -1,120 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, onSnapshot, getDoc, updateDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat, CourseDoc, PlayerMatchFact } from "../types";
+import type { RoundFormat } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
+import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { useAuth } from "../contexts/AuthContext";
 import { MatchFlowGraph } from "../components/match/MatchFlowGraph";
 import { PostMatchStats } from "../components/match/PostMatchStats";
+import { useMatchData } from "../hooks/useMatchData";
 
 export default function Match() {
   const { matchId } = useParams();
   const { canEditMatch, player } = useAuth();
-  const [match, setMatch] = useState<MatchDoc | null>(null);
-  const [round, setRound] = useState<RoundDoc | null>(null);
-  const [course, setCourse] = useState<CourseDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
-  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  const [loading, setLoading] = useState(true);
+  
+  // Use custom hook for all data fetching
+  const { match, round, course, tournament, players, matchFacts, loading } = useMatchData(matchId);
   
   // DRIVE_TRACKING: Modal state for drive picker - using any for hole to avoid circular type reference
   const [driveModal, setDriveModal] = useState<{ hole: any; team: "A" | "B" } | null>(null);
-  
-  // POST-MATCH STATS: Facts for completed matches
-  const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
-
-  // 1. Listen to MATCH
-  useEffect(() => {
-    if (!matchId) return;
-    setLoading(true);
-
-    const unsub = onSnapshot(doc(db, "matches", matchId), (mSnap) => {
-      if (!mSnap.exists()) { setMatch(null); setLoading(false); return; }
-      
-      const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
-      setMatch(mData);
-
-      // Load players 
-      const ids = Array.from(new Set([
-        ...(mData.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
-        ...(mData.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
-      ]));
-      
-      if (ids.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const fetchPlayers = async () => {
-        const batches = [];
-        for (let i = 0; i < ids.length; i += 10) batches.push(ids.slice(i, i + 10));
-        
-        const newPlayers: Record<string, PlayerDoc> = {};
-        for (const batch of batches) {
-            const q = query(collection(db, "players"), where(documentId(), "in", batch));
-            const snap = await getDocs(q);
-            snap.forEach(d => { newPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc; });
-        }
-        setPlayers(prev => ({ ...prev, ...newPlayers }));
-      };
-
-      fetchPlayers().finally(() => setLoading(false));
-    });
-
-    return () => unsub();
-  }, [matchId]);
-
-  // 2. Listen to ROUND and fetch Course
-  useEffect(() => {
-    if (!match?.roundId) return;
-    const unsub = onSnapshot(doc(db, "rounds", match.roundId), async (rSnap) => {
-      if (rSnap.exists()) {
-        const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
-        setRound(rData);
-        
-        // Fetch tournament
-        if (rData.tournamentId) {
-            const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
-            if (tSnap.exists()) {
-                setTournament({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc);
-            }
-        }
-        
-        // Fetch course if courseId exists
-        if (rData.courseId) {
-          const cSnap = await getDoc(doc(db, "courses", rData.courseId));
-          if (cSnap.exists()) {
-            setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
-          }
-        }
-      }
-    });
-    return () => unsub();
-  }, [match?.roundId]);
-
-  // 3. Fetch playerMatchFacts when match is closed
-  useEffect(() => {
-    if (!matchId || !match?.status?.closed) {
-      setMatchFacts([]);
-      return;
-    }
-    
-    const fetchFacts = async () => {
-      const q = query(
-        collection(db, "playerMatchFacts"),
-        where("matchId", "==", matchId)
-      );
-      const snap = await getDocs(q);
-      const facts: PlayerMatchFact[] = [];
-      snap.forEach(d => facts.push({ ...d.data() } as PlayerMatchFact));
-      setMatchFacts(facts);
-    };
-    
-    fetchFacts();
-  }, [matchId, match?.status?.closed]);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -204,38 +110,10 @@ export default function Match() {
     };
   }, [holes, format]);
 
-  function getPlayerName(pid?: string) {
-    if (!pid) return "Player";
-    const p = players[pid];
-    if (!p) return "...";
-    return p.displayName || p.username || "Unknown";
-  }
-
-  // Get short name: first initial + last name (e.g., "S. West")
-  function getPlayerShortName(pid?: string) {
-    if (!pid) return "?";
-    const p = players[pid];
-    if (!p) return "?";
-    const name = p.displayName || p.username || "Unknown";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].charAt(0) + ".";
-    const firstInitial = parts[0].charAt(0);
-    const lastName = parts[parts.length - 1];
-    return `${firstInitial}. ${lastName}`;
-  }
-
-  // Get player initials: first initial + last initial (e.g., "SW")
-  function getPlayerInitials(pid?: string) {
-    if (!pid) return "?";
-    const p = players[pid];
-    if (!p) return "?";
-    const name = p.displayName || p.username || "Unknown";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-    const firstInitial = parts[0].charAt(0).toUpperCase();
-    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-    return `${firstInitial}${lastInitial}`;
-  }
+  // Player name helpers - wrap shared utilities with local players state
+  const getPlayerName = (pid?: string) => getPlayerNameFromLookup(pid, players);
+  const getPlayerShortName = (pid?: string) => getPlayerShortNameFromLookup(pid, players);
+  const getPlayerInitials = (pid?: string) => getPlayerInitialsFromLookup(pid, players);
 
   function hasStroke(team: "A" | "B", pIdx: number, holeIdx: number) {
     const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
