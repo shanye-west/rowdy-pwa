@@ -6,6 +6,7 @@ import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
+import OfflineImage from "./components/OfflineImage";
 import { formatRoundType } from "./utils";
 
 export default function App() {
@@ -202,15 +203,14 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
               {/* Team A */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {tournament.teamA?.logo && (
-                  <Link to="/teams?team=A">
-                    <img 
-                      src={tournament.teamA.logo} 
-                      alt={tournament.teamA?.name || "Team A"}
-                      style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
-                    />
-                  </Link>
-                )}
+                <Link to="/teams?team=A">
+                  <OfflineImage 
+                    src={tournament.teamA?.logo} 
+                    alt={tournament.teamA?.name || "Team A"}
+                    fallbackIcon="🔵"
+                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
+                  />
+                </Link>
                 <div style={{ 
                   fontWeight: 800, 
                   color: tournament.teamA?.color || "var(--team-a-default)", 
@@ -245,15 +245,14 @@ export default function App() {
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {tournament.teamB?.logo && (
-                  <Link to="/teams?team=B">
-                    <img 
-                      src={tournament.teamB.logo} 
-                      alt={tournament.teamB?.name || "Team B"}
-                      style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
-                    />
-                  </Link>
-                )}
+                <Link to="/teams?team=B">
+                  <OfflineImage 
+                    src={tournament.teamB?.logo} 
+                    alt={tournament.teamB?.name || "Team B"}
+                    fallbackIcon="🔴"
+                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
+                  />
+                </Link>
                 <div style={{ 
                   fontWeight: 800, 
                   color: tournament.teamB?.color || "var(--team-b-default)", 
@@ -313,13 +312,12 @@ export default function App() {
                 >
                   {/* Team A - Left */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {tournament.teamA?.logo && (
-                      <img 
-                        src={tournament.teamA.logo} 
-                        alt={tournament.teamA?.name || "Team A"}
-                        style={{ width: 28, height: 28, objectFit: "contain" }}
-                      />
-                    )}
+                    <OfflineImage 
+                      src={tournament.teamA?.logo} 
+                      alt={tournament.teamA?.name || "Team A"}
+                      fallbackIcon="🔵"
+                      style={{ width: 28, height: 28, objectFit: "contain" }}
+                    />
                     <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
                       <ScoreBlock
                         final={rs.fA}
@@ -348,13 +346,12 @@ export default function App() {
                         projLeft
                       />
                     </span>
-                    {tournament.teamB?.logo && (
-                      <img 
-                        src={tournament.teamB.logo} 
-                        alt={tournament.teamB?.name || "Team B"}
-                        style={{ width: 28, height: 28, objectFit: "contain" }}
-                      />
-                    )}
+                    <OfflineImage 
+                      src={tournament.teamB?.logo} 
+                      alt={tournament.teamB?.name || "Team B"}
+                      fallbackIcon="🔴"
+                      style={{ width: 28, height: 28, objectFit: "contain" }}
+                    />
                   </div>
                 </Link>
               );

@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PullToRefresh from "./PullToRefresh";
+import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
+import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 
 type LayoutProps = {
   title: string;
@@ -15,6 +17,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
+  const { isOnline, wasOffline } = useOnlineStatusWithHistory();
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -55,17 +58,14 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               </svg>
             </button>
           )}
-          {tournamentLogo ? (
-            <Link to="/" aria-label="Home">
-              <img 
-                src={tournamentLogo} 
-                alt="Tournament Logo" 
-                style={{ height: 44, width: "auto", objectFit: "contain" }} 
-              />
-            </Link>
-          ) : (
-            <div style={{ width: showBack ? 0 : 44 }}></div>
-          )}
+          <Link to="/" aria-label="Home">
+            <OfflineImage 
+              src={tournamentLogo} 
+              alt="Tournament Logo"
+              fallbackIcon="⛳"
+              style={{ height: 44, width: 44, objectFit: "contain" }} 
+            />
+          </Link>
         </div>
 
         {/* Center: Tournament Title (year small on top, main title below) */}
@@ -188,6 +188,48 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
 
       {/* WRAP CONTENT IN PULL-TO-REFRESH */}
       <PullToRefresh>
+        {/* Offline Status Banner */}
+        {!isOnline && (
+          <div 
+            style={{
+              background: "#fbbf24",
+              color: "#78350f",
+              padding: "8px 16px",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span>📶</span>
+            <span>You're offline — changes will sync when connected</span>
+          </div>
+        )}
+        
+        {/* Back Online Banner (auto-dismisses after 3s) */}
+        {wasOffline && isOnline && (
+          <div 
+            style={{
+              background: "#22c55e",
+              color: "white",
+              padding: "8px 16px",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span>✓</span>
+            <span>Back online — syncing changes</span>
+          </div>
+        )}
+
         <main className="app-container">
           {children}
         </main>

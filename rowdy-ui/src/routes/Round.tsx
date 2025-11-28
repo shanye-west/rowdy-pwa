@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { collection, doc, getDocs, query, where, documentId, onSnapshot } from "firebase/firestore";
+import { collection, doc, query, where, documentId, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import OfflineImage from "../components/OfflineImage";
 
 export default function Round() {
   const { roundId } = useParams();
@@ -111,7 +112,7 @@ export default function Round() {
     return () => unsub();
   }, [roundId]);
 
-  // 5) Fetch players when matches change (one-time fetch is fine for players)
+  // 5) Subscribe to players when matches change (onSnapshot for offline cache)
   useEffect(() => {
     if (matches.length === 0) {
       setPlayers({});
@@ -136,21 +137,37 @@ export default function Round() {
       chunks.push(pIds.slice(i, i + 30));
     }
 
-    Promise.all(
-      chunks.map(chunk =>
-        getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
-      )
-    ).then(results => {
-      const playerMap: Record<string, PlayerDoc> = {};
-      results.forEach(snap => {
-        snap.forEach(d => {
-          playerMap[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-        });
-      });
-      setPlayers(playerMap);
-    }).catch(err => {
-      console.error("Players fetch error:", err);
+    // Track players from all chunks
+    const playersByChunk: Record<number, Record<string, PlayerDoc>> = {};
+    const unsubscribers: (() => void)[] = [];
+
+    chunks.forEach((chunk, chunkIndex) => {
+      const unsub = onSnapshot(
+        query(collection(db, "players"), where(documentId(), "in", chunk)),
+        (snap) => {
+          const chunkPlayers: Record<string, PlayerDoc> = {};
+          snap.forEach(d => {
+            chunkPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+          });
+          playersByChunk[chunkIndex] = chunkPlayers;
+          
+          // Merge all chunks into players state
+          const merged: Record<string, PlayerDoc> = {};
+          Object.values(playersByChunk).forEach(chunkData => {
+            Object.assign(merged, chunkData);
+          });
+          setPlayers(merged);
+        },
+        (err) => {
+          console.error("Players subscription error:", err);
+        }
+      );
+      unsubscribers.push(unsub);
     });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, [matches]);
 
   // Coordinated loading state
@@ -222,13 +239,12 @@ export default function Round() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
              {/* Team A */}
              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {tournament?.teamA?.logo && (
-                  <img 
-                    src={tournament.teamA.logo} 
-                    alt={tournament.teamA?.name || "Team A"}
-                    style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
-                  />
-                )}
+                <OfflineImage 
+                  src={tournament?.teamA?.logo} 
+                  alt={tournament?.teamA?.name || "Team A"}
+                  fallbackIcon="🔵"
+                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
+                />
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }}>
                   {tournament?.teamA?.name}
                 </div>
@@ -257,13 +273,12 @@ export default function Round() {
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {tournament?.teamB?.logo && (
-                  <img 
-                    src={tournament.teamB.logo} 
-                    alt={tournament.teamB?.name || "Team B"}
-                    style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
-                  />
-                )}
+                <OfflineImage 
+                  src={tournament?.teamB?.logo} 
+                  alt={tournament?.teamB?.name || "Team B"}
+                  fallbackIcon="🔴"
+                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
+                />
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }}>
                   {tournament?.teamB?.name}
                 </div>

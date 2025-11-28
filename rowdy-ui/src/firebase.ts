@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { 
   getAuth, 
   setPersistence, 
@@ -25,17 +25,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 
-// Enable offline persistence for better reliability on golf courses (spotty cell coverage)
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === "failed-precondition") {
-    // Multiple tabs open - persistence can only be enabled in one tab at a time
-    console.warn("Firestore persistence unavailable: multiple tabs open");
-  } else if (err.code === "unimplemented") {
-    // Browser doesn't support IndexedDB persistence
-    console.warn("Firestore persistence unavailable: browser not supported");
-  }
+// Initialize Firestore with modern persistence API
+// - persistentLocalCache: Enables IndexedDB persistence for offline support
+// - persistentMultipleTabManager: Allows multiple tabs to share the same cache
+// This is critical for golf courses with spotty cell coverage
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
 });
 
 // Export auth utilities for use in AuthContext

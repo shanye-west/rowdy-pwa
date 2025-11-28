@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, getDocs, query, where, documentId, onSnapshot, limit } from "firebase/firestore";
+import { collection, query, where, documentId, onSnapshot, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import OfflineImage from "../components/OfflineImage";
 import type { TournamentDoc, PlayerDoc, PlayerMatchFact, TierMap } from "../types";
 
 // We define a local type for the aggregated tournament stats
@@ -50,7 +51,7 @@ export default function Teams() {
     return () => unsub();
   }, []);
 
-  // 2) Fetch players when tournament loads (one-time fetch is fine for player docs)
+  // 2) Subscribe to players when tournament loads (using onSnapshot for offline cache)
   useEffect(() => {
     if (!tournament) {
       setPlayers({});
@@ -66,27 +67,44 @@ export default function Teams() {
       return;
     }
 
-    // Firestore 'in' limit is 30
+    // Firestore 'in' limit is 30, so we need to chunk
+    // For real-time updates, we create multiple subscriptions
     const chunks: string[][] = [];
     for (let i = 0; i < allIds.length; i += 30) {
       chunks.push(allIds.slice(i, i + 30));
     }
 
-    Promise.all(
-      chunks.map(chunk =>
-        getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
-      )
-    ).then(results => {
-      const pMap: Record<string, PlayerDoc> = {};
-      results.forEach(snap => {
-        snap.forEach(d => {
-          pMap[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-        });
-      });
-      setPlayers(pMap);
-    }).catch(err => {
-      console.error("Players fetch error:", err);
+    // Track players from all chunks
+    const playersByChunk: Record<number, Record<string, PlayerDoc>> = {};
+    const unsubscribers: (() => void)[] = [];
+
+    chunks.forEach((chunk, chunkIndex) => {
+      const unsub = onSnapshot(
+        query(collection(db, "players"), where(documentId(), "in", chunk)),
+        (snap) => {
+          const chunkPlayers: Record<string, PlayerDoc> = {};
+          snap.forEach(d => {
+            chunkPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+          });
+          playersByChunk[chunkIndex] = chunkPlayers;
+          
+          // Merge all chunks into players state
+          const merged: Record<string, PlayerDoc> = {};
+          Object.values(playersByChunk).forEach(chunkData => {
+            Object.assign(merged, chunkData);
+          });
+          setPlayers(merged);
+        },
+        (err) => {
+          console.error("Players subscription error:", err);
+        }
+      );
+      unsubscribers.push(unsub);
     });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, [tournament]);
 
   // 3) Subscribe to playerMatchFacts for this tournament (real-time for live stats)
@@ -240,13 +258,12 @@ export default function Teams() {
               transition: "all 0.2s ease",
             }}
           >
-            {teamALogo && (
-              <img 
-                src={teamALogo} 
-                alt={teamAName}
-                style={{ width: 28, height: 28, objectFit: "contain" }}
-              />
-            )}
+            <OfflineImage 
+              src={teamALogo} 
+              alt={teamAName}
+              fallbackIcon="🔵"
+              style={{ width: 28, height: 28, objectFit: "contain" }}
+            />
             <span style={{ 
               fontWeight: 700, 
               fontSize: "0.95rem",
@@ -277,13 +294,12 @@ export default function Teams() {
               transition: "all 0.2s ease",
             }}
           >
-            {teamBLogo && (
-              <img 
-                src={teamBLogo} 
-                alt={teamBName}
-                style={{ width: 28, height: 28, objectFit: "contain" }}
-              />
-            )}
+            <OfflineImage 
+              src={teamBLogo} 
+              alt={teamBName}
+              fallbackIcon="🔴"
+              style={{ width: 28, height: 28, objectFit: "contain" }}
+            />
             <span style={{ 
               fontWeight: 700, 
               fontSize: "0.95rem",
