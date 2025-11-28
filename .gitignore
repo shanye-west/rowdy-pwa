@@ -80,3 +80,6 @@ scripts/data/match-twoManShamble.json
 scripts/data/match-twoManScramble.json
 scripts/data/round.json
 scripts/data/tournament.json
+
+# Lighthouse reports
+rowdy-pwa.web.app-lighthouse-report.json
