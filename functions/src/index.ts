@@ -420,6 +420,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         } else {
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
+          if (i === 18) { teamABallUsedOn18[0] = true; teamABallUsedOn18[1] = true; }
         }
       }
       
@@ -443,6 +444,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         } else {
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
+          if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = true; }
         }
       }
     }
@@ -468,6 +470,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         } else {
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
+          if (i === 18) { teamABallUsedOn18[0] = true; teamABallUsedOn18[1] = true; }
         }
       }
       
@@ -487,6 +490,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         } else {
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
+          if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = true; }
         }
       }
     }
@@ -638,7 +642,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       totalGross = playerGrossArr[pIdx];
       totalNet = playerNetArr[pIdx];
       strokesVsParGross = totalGross - coursePar;
-      strokesVsParNet = totalNet - coursePar;
+      // strokesVsParNet uses actual course handicap (whole number), not match strokesReceived
+      const courseHcp = playerHandicapLookup[p.playerId] ?? 0;
+      strokesVsParNet = totalGross - courseHcp - coursePar;
     } else if (format === "twoManScramble" || format === "twoManShamble") {
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
       teamStrokesVsParGross = teamTotalGross - coursePar;

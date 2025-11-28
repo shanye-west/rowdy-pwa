@@ -102,8 +102,8 @@ export function summarize(format: RoundFormat, match: MatchData): MatchSummary {
     // Track margin after this hole
     marginHistory.push(runningMargin);
 
-    // Track momentum on back 9 (holes 10-18)
-    if (i >= 10) {
+    // Track momentum entering back 9 (after hole 9 through 18)
+    if (i >= 9) {
       if (runningMargin <= -3) wasTeamADown3PlusBack9 = true;
       if (runningMargin >= 3) wasTeamAUp3PlusBack9 = true;
     }
