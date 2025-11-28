@@ -13,6 +13,13 @@ export default defineConfig({
       devOptions: {
         enabled: true // Enables PWA in local dev (npm run dev)
       },
+      workbox: {
+        // Prevent returning index.html for files with extensions (.js, .css, .png, etc.)
+        // This fixes "text/html is not a valid JavaScript MIME type" errors after deployments
+        navigateFallbackDenylist: [/\.[a-z0-9]+$/i],
+        // Clean up old precaches when new SW activates
+        cleanupOutdatedCaches: true,
+      },
       manifest: {
         name: 'Rowdy Cup',
         short_name: 'RowdyCup',
