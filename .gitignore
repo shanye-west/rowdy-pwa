@@ -45,7 +45,10 @@ bower_components
 build/Release
 
 # Dependency directories
-node_modules/
+**/node_modules/
+
+# Build outputs
+rowdy-ui/dev-dist/
 
 # Optional npm cache directory
 .npm
