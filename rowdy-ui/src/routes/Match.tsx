@@ -13,6 +13,98 @@ import { PostMatchStats } from "../components/match/PostMatchStats";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 
+// --- MATCH CLOSING HELPERS ---
+
+/** Calculates if a score change would close the match */
+function wouldCloseMatch(
+  holes: Array<{ k: string; num: number; input: any; par: number }>,
+  pendingHoleKey: string,
+  pendingInput: any,
+  format: RoundFormat,
+  teamAPlayers?: any[],
+  teamBPlayers?: any[]
+): { wouldClose: boolean; winner: "teamA" | "teamB" | "AS" | null; margin: number; thru: number } {
+  let teamAUp = 0;
+  let thru = 0;
+  
+  for (let i = 0; i < 18; i++) {
+    const hole = holes[i];
+    // Use pending input if this is the hole being edited
+    const input = hole.k === pendingHoleKey ? pendingInput : hole.input;
+    
+    let teamAScore: number | null = null;
+    let teamBScore: number | null = null;
+    let holeComplete = false;
+    
+    if (format === "twoManScramble") {
+      const aGross = input?.teamAGross ?? null;
+      const bGross = input?.teamBGross ?? null;
+      holeComplete = aGross != null && bGross != null;
+      teamAScore = aGross;
+      teamBScore = bGross;
+    } else if (format === "singles") {
+      const aGross = input?.teamAPlayerGross ?? null;
+      const bGross = input?.teamBPlayerGross ?? null;
+      holeComplete = aGross != null && bGross != null;
+      if (holeComplete) {
+        const teamAStroke = (teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        const teamBStroke = (teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        teamAScore = aGross! - teamAStroke;
+        teamBScore = bGross! - teamBStroke;
+      }
+    } else if (format === "twoManShamble") {
+      const aArr = input?.teamAPlayersGross;
+      const bArr = input?.teamBPlayersGross;
+      const a0 = Array.isArray(aArr) ? aArr[0] : null;
+      const a1 = Array.isArray(aArr) ? aArr[1] : null;
+      const b0 = Array.isArray(bArr) ? bArr[0] : null;
+      const b1 = Array.isArray(bArr) ? bArr[1] : null;
+      holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
+      if (holeComplete) {
+        teamAScore = Math.min(a0!, a1!);
+        teamBScore = Math.min(b0!, b1!);
+      }
+    } else {
+      // Best Ball
+      const aArr = input?.teamAPlayersGross;
+      const bArr = input?.teamBPlayersGross;
+      const a0 = Array.isArray(aArr) ? aArr[0] : null;
+      const a1 = Array.isArray(aArr) ? aArr[1] : null;
+      const b0 = Array.isArray(bArr) ? bArr[0] : null;
+      const b1 = Array.isArray(bArr) ? bArr[1] : null;
+      holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
+      if (holeComplete) {
+        const a0Stroke = (teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        const a1Stroke = (teamAPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        const b0Stroke = (teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        const b1Stroke = (teamBPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
+        const a0Net = a0! - a0Stroke;
+        const a1Net = a1! - a1Stroke;
+        const b0Net = b0! - b0Stroke;
+        const b1Net = b1! - b1Stroke;
+        teamAScore = Math.min(a0Net, a1Net);
+        teamBScore = Math.min(b0Net, b1Net);
+      }
+    }
+    
+    if (holeComplete && teamAScore != null && teamBScore != null) {
+      thru = hole.num;
+      if (teamAScore < teamBScore) teamAUp += 1;
+      else if (teamBScore < teamAScore) teamAUp -= 1;
+    }
+  }
+  
+  const margin = Math.abs(teamAUp);
+  const holesLeft = 18 - thru;
+  const leader = teamAUp > 0 ? "teamA" : teamAUp < 0 ? "teamB" : null;
+  
+  // Match closes when margin > holesLeft OR all 18 holes complete
+  const wouldClose = (leader !== null && margin > holesLeft) || thru === 18;
+  const winner = wouldClose ? (thru === 18 && teamAUp === 0 ? "AS" : leader) : null;
+  
+  return { wouldClose, winner, margin, thru };
+}
+
 // --- MEMOIZED COMPONENTS ---
 
 /** Props for ScoreInputCell */
@@ -185,6 +277,15 @@ export default function Match() {
   
   // DRIVE_TRACKING: Modal state for drive picker - using any for hole to avoid circular type reference
   const [driveModal, setDriveModal] = useState<{ hole: any; team: "A" | "B" } | null>(null);
+  
+  // CONFIRM CLOSE: Modal state for confirming match close
+  const [confirmCloseModal, setConfirmCloseModal] = useState<{
+    holeKey: string;
+    pendingInput: any;
+    winner: "teamA" | "teamB" | "AS" | null;
+    margin: number;
+    thru: number;
+  } | null>(null);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -522,53 +623,95 @@ export default function Match() {
     return roundLocked || (isMatchClosed && holeNum > matchThru) || !canEdit;
   }, [roundLocked, isMatchClosed, matchThru, canEdit]);
 
+  // Helper to build new input object based on format
+  const buildNewInput = useCallback((hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) => {
+    const { input } = hole;
+    
+    if (format === "twoManScramble") {
+      return {
+        teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
+        teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
+        ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
+        ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
+      };
+    }
+    
+    if (format === "singles") {
+      return {
+        teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
+        teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
+      };
+    }
+    
+    // Best Ball & Shamble: individual player scores
+    const aArr = Array.isArray(input?.teamAPlayersGross) ? [...input.teamAPlayersGross] : [null, null];
+    const bArr = Array.isArray(input?.teamBPlayersGross) ? [...input.teamBPlayersGross] : [null, null];
+    
+    if (team === "A") aArr[pIdx] = value;
+    else bArr[pIdx] = value;
+    
+    if (format === "twoManShamble") {
+      return { 
+        teamAPlayersGross: aArr, 
+        teamBPlayersGross: bArr,
+        ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
+        ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
+      };
+    }
+    
+    return { teamAPlayersGross: aArr, teamBPlayersGross: bArr };
+  }, [format]);
+
   // Memoized cell change handlers for each player row (prevents re-creating on every render)
   const createCellChangeHandler = useCallback((team: "A" | "B", pIdx: number) => {
     return (holeKey: string, value: number | null) => {
       const hole = holes.find(h => h.k === holeKey);
       if (!hole) return;
       
-      const { input } = hole;
+      const newInput = buildNewInput(hole, team, pIdx, value);
       
-      if (format === "twoManScramble") {
-        const newInput = {
-          teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
-          teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
-          ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
-          ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
-        };
-        debouncedSaveHole(holeKey, newInput);
-        return;
+      // Check if this score change would close the match (and match isn't already closed)
+      if (!isMatchClosed) {
+        const closeCheck = wouldCloseMatch(
+          holes,
+          holeKey,
+          newInput,
+          format,
+          match?.teamAPlayers,
+          match?.teamBPlayers
+        );
+        
+        if (closeCheck.wouldClose) {
+          // Show confirmation modal instead of saving
+          setConfirmCloseModal({
+            holeKey,
+            pendingInput: newInput,
+            winner: closeCheck.winner,
+            margin: closeCheck.margin,
+            thru: closeCheck.thru,
+          });
+          return;
+        }
       }
       
-      if (format === "singles") {
-        const newInput = {
-          teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
-          teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
-        };
-        debouncedSaveHole(holeKey, newInput);
-        return;
-      }
-      
-      // Best Ball & Shamble: individual player scores
-      const aArr = Array.isArray(input?.teamAPlayersGross) ? [...input.teamAPlayersGross] : [null, null];
-      const bArr = Array.isArray(input?.teamBPlayersGross) ? [...input.teamBPlayersGross] : [null, null];
-      
-      if (team === "A") aArr[pIdx] = value;
-      else bArr[pIdx] = value;
-      
-      if (format === "twoManShamble") {
-        debouncedSaveHole(holeKey, { 
-          teamAPlayersGross: aArr, 
-          teamBPlayersGross: bArr,
-          ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
-          ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
-        });
-      } else {
-        debouncedSaveHole(holeKey, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
-      }
+      // Not closing match, save normally with debounce
+      debouncedSaveHole(holeKey, newInput);
     };
-  }, [holes, format, debouncedSaveHole]);
+  }, [holes, format, debouncedSaveHole, isMatchClosed, match?.teamAPlayers, match?.teamBPlayers, buildNewInput]);
+
+  // Handle confirm close - save the pending score
+  const handleConfirmClose = useCallback(async () => {
+    if (!confirmCloseModal) return;
+    
+    // Save immediately (no debounce) since user confirmed
+    await saveHole(confirmCloseModal.holeKey, confirmCloseModal.pendingInput);
+    setConfirmCloseModal(null);
+  }, [confirmCloseModal, saveHole]);
+
+  // Handle cancel close - don't save, clear modal
+  const handleCancelClose = useCallback(() => {
+    setConfirmCloseModal(null);
+  }, []);
 
   // Create stable handlers for each player row
   const cellChangeHandlerA0 = useMemo(() => createCellChangeHandler("A", 0), [createCellChangeHandler]);
@@ -1519,6 +1662,49 @@ export default function Match() {
         )}
 
         <LastUpdated />
+
+        {/* CONFIRM MATCH CLOSE MODAL */}
+        {confirmCloseModal && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={handleCancelClose}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-xl p-6 mx-4 max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold text-center text-slate-800 mb-2">
+                End Match?
+              </h3>
+              <p className="text-center text-slate-600 mb-4">
+                {confirmCloseModal.winner === "AS" 
+                  ? "This score will end the match All Square."
+                  : `This score will close the match ${confirmCloseModal.margin}&${18 - confirmCloseModal.thru} for ${
+                      confirmCloseModal.winner === "teamA" 
+                        ? (tournament?.teamA?.name || "Team A") 
+                        : (tournament?.teamB?.name || "Team B")
+                    }.`
+                }
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelClose}
+                  className="flex-1 py-3 px-4 rounded-lg bg-slate-200 text-slate-700 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmClose}
+                  className="flex-1 py-3 px-4 rounded-lg bg-green-600 text-white font-semibold text-base transition-transform active:scale-95 hover:bg-green-700"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* DRIVE SELECTOR MODAL */}
         {driveModal && (

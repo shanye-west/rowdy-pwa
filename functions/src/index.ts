@@ -239,8 +239,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     return;
   }
 
-  const result = after.result || {};
-  const status = after.status || {};
   const tId = after.tournamentId || "";
   const rId = after.roundId || "";
   
@@ -272,6 +270,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
   }
+  
+  // Re-compute status/result to ensure we have latest calculations
+  // (avoids race condition with computeMatchOnWrite)
+  const matchSummary = summarize(format, after);
+  const { status, result } = buildStatusAndResult(matchSummary);
   
   if (courseId) {
     const cSnap = await db.collection("courses").doc(courseId).get();
