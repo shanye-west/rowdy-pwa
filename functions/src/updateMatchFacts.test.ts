@@ -43,8 +43,11 @@ function calculateDecidedOn18(
   hole18Result: "teamA" | "teamB" | "AS" | null,
   team: "teamA" | "teamB"
 ): { decidedOn18: boolean; won18thHole: boolean | null } {
-  // Match must go all 18 holes (not closed early)
-  if (finalThru !== 18 || winningHole !== null || hole18Result === null) {
+  // Match must go all 18 holes (not closed before 18)
+  // winningHole === null means AS match, winningHole === 18 means decided on 18
+  const matchWentTo18 = finalThru === 18 && (winningHole === null || winningHole === 18);
+  
+  if (!matchWentTo18 || hole18Result === null) {
     return { decidedOn18: false, won18thHole: null };
   }
 

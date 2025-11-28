@@ -662,7 +662,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let decidedOn18 = false;
     let won18thHole: boolean | null = null;
     
-    if (finalThru === 18 && winningHole === null && hole18Result !== null) {
+    // decidedOn18 = true when match went to 18 AND wasn't closed before hole 18
+    // winningHole === null means AS match, winningHole === 18 means decided on 18
+    const matchWentTo18 = finalThru === 18 && (winningHole === null || winningHole === 18);
+    
+    if (matchWentTo18 && hole18Result !== null) {
       const myTeamWon18 = (team === "teamA" && hole18Result === "teamA") || 
                           (team === "teamB" && hole18Result === "teamB");
       const myTeamLost18 = (team === "teamA" && hole18Result === "teamB") || 
