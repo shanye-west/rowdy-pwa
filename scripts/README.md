@@ -1,3 +1,5 @@
+LAST UPDATED ON FRI NOV 28, 2025 AT 3:47PM
+
 # Rowdy Cup Scripts
 
 Scripts for seeding and managing Firestore data for the Rowdy Cup PWA.
