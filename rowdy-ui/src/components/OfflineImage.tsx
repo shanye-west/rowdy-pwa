@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ImgHTMLAttributes } from "react";
 
 type OfflineImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   fallbackIcon?: string; // Emoji or text to show when image fails
   fallbackText?: string; // Alt text for accessibility
   showFallback?: "always" | "offline" | "error"; // When to show fallback
+  fallbackSrc?: string; // local/static fallback image to try when src fails
 };
 
 /**
@@ -19,30 +20,47 @@ export default function OfflineImage({
   showFallback = "error",
   style,
   className,
+  fallbackSrc,
   ...rest
 }: OfflineImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [displayedSrc, setDisplayedSrc] = useState<string | undefined>(src);
+  const [triedFallbackSrc, setTriedFallbackSrc] = useState(false);
 
-  // Reset error state when src changes
+  // Reset state when src changes
   useEffect(() => {
     setHasError(false);
     setIsLoaded(false);
+    setDisplayedSrc(src);
+    setTriedFallbackSrc(false);
   }, [src]);
 
-  // If no src provided, show fallback
-  if (!src) {
-    return (
-      <FallbackDisplay
-        icon={fallbackIcon}
-        text={fallbackText || alt}
-        style={style}
-        className={className}
-      />
-    );
+  // Ref callback to handle already-cached images (onLoad fires before React attaches handler)
+  const imgRef = useCallback((img: HTMLImageElement | null) => {
+    if (img && img.complete && img.naturalHeight > 0) {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // If no src provided, but a fallbackSrc exists, try it; otherwise show fallback
+  if (!displayedSrc) {
+    if (fallbackSrc) {
+      // attempt fallback image
+      setDisplayedSrc(fallbackSrc);
+    } else {
+      return (
+        <FallbackDisplay
+          icon={fallbackIcon}
+          text={fallbackText || alt}
+          style={style}
+          className={className}
+        />
+      );
+    }
   }
 
-  // If error occurred, show fallback
+  // If error occurred, show fallback icon
   if (hasError) {
     return (
       <FallbackDisplay
@@ -56,7 +74,8 @@ export default function OfflineImage({
 
   return (
     <img
-      src={src}
+      ref={imgRef}
+      src={displayedSrc}
       alt={alt}
       style={{
         ...style,
@@ -66,7 +85,17 @@ export default function OfflineImage({
       }}
       className={className}
       onLoad={() => setIsLoaded(true)}
-      onError={() => setHasError(true)}
+      onError={() => {
+        // Try fallbackSrc once before showing the icon fallback
+        if (fallbackSrc && !triedFallbackSrc && displayedSrc !== fallbackSrc) {
+          setTriedFallbackSrc(true);
+          setDisplayedSrc(fallbackSrc);
+          setHasError(false);
+          setIsLoaded(false);
+        } else {
+          setHasError(true);
+        }
+      }}
       {...rest}
     />
   );
