@@ -1673,19 +1673,87 @@ export default function Match() {
               className="bg-white rounded-xl shadow-xl p-6 mx-4 max-w-sm w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-center text-slate-800 mb-2">
+              <h3 className="text-lg font-bold text-center text-slate-800 mb-4">
                 End Match?
               </h3>
-              <p className="text-center text-slate-600 mb-4">
-                {confirmCloseModal.winner === "AS" 
-                  ? "This score will end the match All Square."
-                  : `This score will close the match ${confirmCloseModal.margin}&${18 - confirmCloseModal.thru} for ${
-                      confirmCloseModal.winner === "teamA" 
-                        ? (tournament?.teamA?.name || "Team A") 
-                        : (tournament?.teamB?.name || "Team B")
-                    }.`
-                }
-              </p>
+              
+              {/* Match Score Tile - same format as scorecard */}
+              <div 
+                className="rounded-lg mb-4"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 16px',
+                  backgroundColor: confirmCloseModal.winner === "AS" 
+                    ? '#f1f5f9' 
+                    : confirmCloseModal.winner === "teamA" 
+                      ? teamAColor 
+                      : teamBColor,
+                  border: confirmCloseModal.winner === "AS" ? '2px solid #cbd5e1' : 'none'
+                }}
+              >
+                {confirmCloseModal.winner === "AS" ? (
+                  // Halved/Tied match
+                  <>
+                    <div style={{ 
+                      whiteSpace: 'nowrap',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#334155'
+                    }}>
+                      TIED
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 600, 
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      FINAL
+                    </div>
+                  </>
+                ) : (
+                  // Match with a winner
+                  <>
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 600, 
+                      color: 'rgba(255,255,255,0.85)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      {confirmCloseModal.winner === "teamA" 
+                        ? (tournament?.teamA?.name || 'Team A')
+                        : (tournament?.teamB?.name || 'Team B')
+                      }
+                    </div>
+                    <div style={{ 
+                      whiteSpace: 'nowrap',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: 'white'
+                    }}>
+                      {confirmCloseModal.thru === 18 
+                        ? `${confirmCloseModal.margin}UP`
+                        : `${confirmCloseModal.margin}&${18 - confirmCloseModal.thru}`
+                      }
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 600, 
+                      color: 'rgba(255,255,255,0.85)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      FINAL
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="flex gap-3">
                 <button
                   type="button"
