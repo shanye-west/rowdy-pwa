@@ -24,26 +24,32 @@ service cloud.firestore {
     
     // Matches: authenticated users who are rostered can update
     match /matches/{matchId} {
-      // Check if auth user's UID matches a playerId in the roster
-      // (After account setup, player.id === player.authUid)
-      function isRosteredPlayer() {
-        let teamAIds = resource.data.teamAPlayers.size() > 0 
-          ? resource.data.teamAPlayers[0].playerId 
-          : '';
-        let teamA2 = resource.data.teamAPlayers.size() > 1 
-          ? resource.data.teamAPlayers[1].playerId 
-          : '';
-        let teamBIds = resource.data.teamBPlayers.size() > 0 
-          ? resource.data.teamBPlayers[0].playerId 
-          : '';
-        let teamB2 = resource.data.teamBPlayers.size() > 1 
-          ? resource.data.teamBPlayers[1].playerId 
-          : '';
+      // Get player IDs from the match roster
+      function getTeamPlayerIds() {
+        let teamA = resource.data.teamAPlayers;
+        let teamB = resource.data.teamBPlayers;
+        let ids = [];
         
-        return request.auth.uid == teamAIds || 
-               request.auth.uid == teamA2 ||
-               request.auth.uid == teamBIds || 
-               request.auth.uid == teamB2;
+        // Build list of player IDs from both teams
+        return (teamA.size() > 0 ? [teamA[0].playerId] : [])
+          .concat(teamA.size() > 1 ? [teamA[1].playerId] : [])
+          .concat(teamB.size() > 0 ? [teamB[0].playerId] : [])
+          .concat(teamB.size() > 1 ? [teamB[1].playerId] : []);
+      }
+      
+      // Check if the authenticated user's linked player is in this match
+      function isRosteredPlayer() {
+        let playerIds = getTeamPlayerIds();
+        
+        // Check each player doc to see if their authUid matches the request
+        return (playerIds.size() > 0 && exists(/databases/$(database)/documents/players/$(playerIds[0])) && 
+                get(/databases/$(database)/documents/players/$(playerIds[0])).data.authUid == request.auth.uid) ||
+               (playerIds.size() > 1 && exists(/databases/$(database)/documents/players/$(playerIds[1])) && 
+                get(/databases/$(database)/documents/players/$(playerIds[1])).data.authUid == request.auth.uid) ||
+               (playerIds.size() > 2 && exists(/databases/$(database)/documents/players/$(playerIds[2])) && 
+                get(/databases/$(database)/documents/players/$(playerIds[2])).data.authUid == request.auth.uid) ||
+               (playerIds.size() > 3 && exists(/databases/$(database)/documents/players/$(playerIds[3])) && 
+                get(/databases/$(database)/documents/players/$(playerIds[3])).data.authUid == request.auth.uid);
       }
       
       allow update: if request.auth != null && isRosteredPlayer();
