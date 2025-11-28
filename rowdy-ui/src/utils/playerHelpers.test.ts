@@ -3,7 +3,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { getPlayerName, getPlayerShortName, getPlayerInitials, PlayerLookup } from "./playerHelpers";
+import { getPlayerName, getPlayerShortName, getPlayerInitials } from "./playerHelpers";
+import type { PlayerLookup } from "./playerHelpers";
 
 // --- Test data ---
 
