@@ -1337,14 +1337,25 @@ export default function Match() {
         
         {/* MATCH STATUS HEADER */}
         <div className="space-y-3">
-          {/* Top row: Format in subtle pill */}
-          <div className="flex justify-center">
+          {/* Top row: Format pill on left, auth status on right */}
+          <div className="flex justify-between items-center">
             <div 
               className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
             >
               <span>{formatRoundType(format)}</span>
             </div>
+            {/* Auth status - subtle right-aligned text */}
+            {editBlockReason && !roundLocked && !isMatchClosed && (
+              <div className="text-xs" style={{ color: "#94a3b8" }}>
+                {editBlockReason === "login" && (
+                  <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
+                )}
+                {editBlockReason === "not-rostered" && (
+                  <span>👀 Spectator</span>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Main status display - matches Round page tile styling */}
@@ -1587,31 +1598,6 @@ export default function Match() {
         )}
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
-        
-        {/* AUTH BANNER - Show when user can't edit */}
-        {editBlockReason && !roundLocked && !isMatchClosed && (
-          <div 
-            className="rounded-lg p-3 text-center text-sm"
-            style={{ 
-              backgroundColor: editBlockReason === "not-rostered" ? "#f1f5f9" : "#fef3c7",
-              color: editBlockReason === "not-rostered" ? "#64748b" : "#92400e"
-            }}
-          >
-            {editBlockReason === "login" && (
-              <>
-                <Link to="/login" className="font-semibold underline" style={{ color: "#2563eb" }}>
-                  Login
-                </Link>
-                {" "}to enter scores for this match
-              </>
-            )}
-            {editBlockReason === "not-rostered" && (
-              <>
-                👀 Viewing as spectator — you're not in this match
-              </>
-            )}
-          </div>
-        )}
         
         <div className="card p-0 overflow-hidden">
           <div 
