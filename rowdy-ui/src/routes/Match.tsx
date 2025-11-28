@@ -1355,7 +1355,7 @@ export default function Match() {
                   <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
                 )}
                 {editBlockReason === "not-rostered" && (
-                  <span>👀 Spectator</span>
+                  <span>👀 Spectating</span>
                 )}
               </div>
             )}
