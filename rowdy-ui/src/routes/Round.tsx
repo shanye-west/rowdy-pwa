@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, query, where, documentId } from "fire
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
+import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
@@ -112,17 +113,8 @@ export default function Round() {
     return { fA, fB, pA, pB };
   }, [matches, round]);
 
-  const getPlayerName = (pid: string) => {
-    const p = players[pid];
-    if (!p) return "Unknown";
-    // Try First Last -> F. LastName
-    if (p.displayName) {
-        const parts = p.displayName.split(" ");
-        if (parts.length > 1) return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
-        return p.displayName;
-    }
-    return p.username || "Unknown";
-  };
+  // Use shared player helper - this returns short name format (F. LastName)
+  const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -312,7 +304,7 @@ export default function Round() {
                   <div className={`text-left text-sm leading-tight ${textColor}`}>
                     {(m.teamAPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
-                            {getPlayerName(p.playerId)}
+                            {getPlayerShortName(p.playerId)}
                         </div>
                     ))}
                   </div>
@@ -447,7 +439,7 @@ export default function Round() {
                   <div className={`text-right text-sm leading-tight ${textColor}`}>
                     {(m.teamBPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
-                            {getPlayerName(p.playerId)}
+                            {getPlayerShortName(p.playerId)}
                         </div>
                     ))}
                   </div>

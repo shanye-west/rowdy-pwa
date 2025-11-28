@@ -1,99 +1,40 @@
+/**
+ * Firebase Cloud Functions for Rowdy Cup PWA
+ * 
+ * This file orchestrates all cloud functions, importing shared logic from modules.
+ * 
+ * Structure:
+ * - helpers/matchHelpers.ts - Match setup utilities
+ * - scoring/matchScoring.ts - Match scoring calculations
+ * - types.ts - Shared TypeScript types
+ */
+
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
+// Import shared modules
+import type { RoundFormat } from "./types.js";
+import { 
+  playersPerSide, 
+  ensureSideSize, 
+  normalizeHoles, 
+  defaultStatus 
+} from "./helpers/matchHelpers.js";
+import { 
+  summarize, 
+  buildStatusAndResult,
+  decideHole,
+  holesRange
+} from "./scoring/matchScoring.js";
+
 initializeApp();
 const db = getFirestore();
 
-type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
-
-// --- HELPERS ---
-function playersPerSide(format: RoundFormat): number {
-  return format === "singles" ? 1 : 2;
-}
-
-function emptyHolesFor(format: RoundFormat) {
-  const holes: Record<string, any> = {};
-  for (let i = 1; i <= 18; i++) {
-    const k = String(i);
-    if (format === "twoManScramble") {
-      // Scramble: one score per team + drive tracking
-      holes[k] = { input: { teamAGross: null, teamBGross: null, teamADrive: null, teamBDrive: null } };
-    } else if (format === "singles") {
-      holes[k] = { input: { teamAPlayerGross: null, teamBPlayerGross: null } };
-    } else if (format === "twoManShamble") {
-      // Shamble: individual player scores + drive tracking
-      holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null], teamADrive: null, teamBDrive: null } };
-    } else {
-      // Best Ball: individual player scores
-      holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null] } };
-    }
-  }
-  return holes;
-}
-
-function defaultStatus() {
-  return { leader: null, margin: 0, thru: 0, dormie: false, closed: false };
-}
-
-function zeros18(): number[] {
-  return Array.from({ length: 18 }, () => 0);
-}
-
-function ensureSideSize(side: any, count: number) {
-  const make = () => ({ playerId: "", strokesReceived: zeros18() });
-  if (!Array.isArray(side)) return Array.from({ length: count }, make);
-  const trimmed = side.slice(0, count).map((p: any) => ({
-    playerId: typeof p?.playerId === "string" ? p.playerId : "",
-    strokesReceived: Array.isArray(p?.strokesReceived) && p.strokesReceived.length === 18 ? p.strokesReceived : zeros18(),
-  }));
-  while (trimmed.length < count) trimmed.push(make());
-  return trimmed;
-}
-
-function normalizeHoles(existing: Record<string, any> | undefined, format: RoundFormat) {
-  const desired = emptyHolesFor(format);
-  const holes: Record<string, any> = { ...(existing || {}) };
-  for (let i = 1; i <= 18; i++) {
-    const k = String(i);
-    const want = desired[k];
-    const ex = holes[k];
-    if (!ex || typeof ex !== "object") { holes[k] = want; continue; }
-    const exInput = ex.input ?? {};
-    
-    if (format === "twoManScramble") {
-      // Scramble: one score per team + drive tracking
-      const a = exInput.teamAGross ?? null;
-      const b = exInput.teamBGross ?? null;
-      const aDrive = exInput.teamADrive ?? null;
-      const bDrive = exInput.teamBDrive ?? null;
-      holes[k] = { input: { teamAGross: a, teamBGross: b, teamADrive: aDrive, teamBDrive: bDrive } };
-    } else if (format === "singles") {
-      let a = exInput.teamAPlayerGross;
-      let b = exInput.teamBPlayerGross;
-      if (a == null && Array.isArray(exInput.teamAPlayersGross)) a = exInput.teamAPlayersGross[0] ?? null;
-      if (b == null && Array.isArray(exInput.teamBPlayersGross)) b = exInput.teamBPlayersGross[0] ?? null;
-      holes[k] = { input: { teamAPlayerGross: a ?? null, teamBPlayerGross: b ?? null } };
-    } else if (format === "twoManShamble") {
-      // Shamble: individual player scores + drive tracking
-      const aArr = Array.isArray(exInput.teamAPlayersGross) ? exInput.teamAPlayersGross : [null, null];
-      const bArr = Array.isArray(exInput.teamBPlayersGross) ? exInput.teamBPlayersGross : [null, null];
-      const norm2 = (arr: any[]) => [arr[0] ?? null, arr[1] ?? null];
-      const aDrive = exInput.teamADrive ?? null;
-      const bDrive = exInput.teamBDrive ?? null;
-      holes[k] = { input: { teamAPlayersGross: norm2(aArr), teamBPlayersGross: norm2(bArr), teamADrive: aDrive, teamBDrive: bDrive } };
-    } else {
-      // Best Ball: individual player scores
-      const aArr = Array.isArray(exInput.teamAPlayersGross) ? exInput.teamAPlayersGross : [null, null];
-      const bArr = Array.isArray(exInput.teamBPlayersGross) ? exInput.teamBPlayersGross : [null, null];
-      const norm2 = (arr: any[]) => [arr[0] ?? null, arr[1] ?? null];
-      holes[k] = { input: { teamAPlayersGross: norm2(aArr), teamBPlayersGross: norm2(bArr) } };
-    }
-  }
-  return holes;
-}
-
-// --- TRIGGERS ---
+// ============================================================================
+// DOCUMENT SEED TRIGGERS
+// These functions initialize default values when documents are created
+// ============================================================================
 
 export const seedMatchBoilerplate = onDocumentCreated("matches/{matchId}", async (event) => {
   const matchRef = event.data?.ref;
@@ -145,8 +86,8 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
   if (data.courseId === undefined) toMerge.courseId = null;
   if (data.locked === undefined) toMerge.locked = false;
   if (data.pointsValue === undefined) toMerge.pointsValue = 1;
-  // DRIVE_TRACKING: Default to false
   if (data.trackDrives === undefined) toMerge.trackDrives = false;
+  
   if (Object.keys(toMerge).length > 0) {
     toMerge._seededAt = FieldValue.serverTimestamp();
     await ref.set(toMerge, { merge: true });
@@ -188,7 +129,6 @@ export const seedTournamentDefaults = onDocumentCreated("tournaments/{tournament
   if (!data.teamA || typeof data.teamA !== "object") {
     toMerge.teamA = { id: "teamA", name: "", logo: "", color: "", rosterByTier: {}, handicapByPlayer: {} };
   } else {
-    // Fill in missing teamA fields
     const teamA: any = { ...data.teamA };
     if (teamA.id === undefined) teamA.id = "teamA";
     if (teamA.name === undefined) teamA.name = "";
@@ -203,7 +143,6 @@ export const seedTournamentDefaults = onDocumentCreated("tournaments/{tournament
   if (!data.teamB || typeof data.teamB !== "object") {
     toMerge.teamB = { id: "teamB", name: "", logo: "", color: "", rosterByTier: {}, handicapByPlayer: {} };
   } else {
-    // Fill in missing teamB fields
     const teamB: any = { ...data.teamB };
     if (teamB.id === undefined) teamB.id = "teamB";
     if (teamB.name === undefined) teamB.name = "";
@@ -227,7 +166,6 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
 
   const toMerge: any = {};
   
-  // Create holes array with 18 holes if not present
   if (!Array.isArray(data.holes)) {
     toMerge.holes = Array.from({ length: 18 }, (_, i) => ({
       number: i + 1,
@@ -237,13 +175,8 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
     }));
   }
   
-  // Set default par (72) if not present
   if (data.par === undefined) toMerge.par = 72;
-  
-  // Set default name if not present
   if (data.name === undefined) toMerge.name = "";
-  
-  // Set default tees if not present
   if (data.tees === undefined) toMerge.tees = "";
   
   if (Object.keys(toMerge).length > 0) {
@@ -252,100 +185,17 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
   }
 });
 
-// --- SCORING ---
-
-function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
-function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
-function to2(arr: any[]) { return [isNum(arr?.[0]) ? arr[0] : null, isNum(arr?.[1]) ? arr[1] : null]; }
-function holesRange(obj: Record<string, any>) {
-  const keys = Object.keys(obj).filter(k => /^[1-9]$|^1[0-8]$/.test(k)).map(Number);
-  keys.sort((a,b)=>a-b);
-  return keys;
-}
-
-function decideHole(format: RoundFormat, i: number, match: any) {
-  const h = match.holes?.[String(i)]?.input ?? {};
-  if (format === "twoManScramble") {
-    // Scramble: one gross score per team
-    const { teamAGross: a, teamBGross: b } = h;
-    if (!isNum(a) || !isNum(b)) return null;
-    return a < b ? "teamA" : b < a ? "teamB" : "AS";
-  }
-  if (format === "singles") {
-    const { teamAPlayerGross: aG, teamBPlayerGross: bG } = h;
-    if (!isNum(aG) || !isNum(bG)) return null;
-    const aNet = aG - clamp01(match.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
-    const bNet = bG - clamp01(match.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
-    return aNet < bNet ? "teamA" : bNet < aNet ? "teamB" : "AS";
-  }
-  if (format === "twoManShamble") {
-    // Shamble: individual player scores, GROSS only (no strokes applied)
-    const aArr = to2(h.teamAPlayersGross || []);
-    const bArr = to2(h.teamBPlayersGross || []);
-    if (aArr[0]==null || aArr[1]==null || bArr[0]==null || bArr[1]==null) return null;
-    
-    // Best GROSS (no handicap) for each team
-    const aBest = Math.min(aArr[0]!, aArr[1]!);
-    const bBest = Math.min(bArr[0]!, bArr[1]!);
-    return aBest < bBest ? "teamA" : bBest < aBest ? "teamB" : "AS";
-  }
-  // Best Ball: individual player scores with NET calculation
-  const aArr = to2(h.teamAPlayersGross || []);
-  const bArr = to2(h.teamBPlayersGross || []);
-  if (aArr[0]==null || aArr[1]==null || bArr[0]==null || bArr[1]==null) return null;
-
-  const getNet = (g:number|null, pIdx:number, teamArr:any[]) => {
-    const s = clamp01(teamArr?.[pIdx]?.strokesReceived?.[i-1]);
-    return g! - s;
-  };
-  const aBest = Math.min(getNet(aArr[0],0,match.teamAPlayers), getNet(aArr[1],1,match.teamAPlayers));
-  const bBest = Math.min(getNet(bArr[0],0,match.teamBPlayers), getNet(bArr[1],1,match.teamBPlayers));
-  
-  return aBest < bBest ? "teamA" : bBest < aBest ? "teamB" : "AS";
-}
-
-function summarize(format: RoundFormat, match: any) {
-  let a = 0, b = 0, thru = 0;
-  let runningMargin = 0; // positive = Team A leading, negative = Team B leading
-  let wasTeamADown3PlusBack9 = false;
-  let wasTeamAUp3PlusBack9 = false;
-  const marginHistory: number[] = []; // Track margin after each completed hole
-
-  for (const i of holesRange(match.holes ?? {})) {
-    const res = decideHole(format, i, match);
-    if (res === null) continue;
-    thru = Math.max(thru, i);
-    if (res === "teamA") { a++; runningMargin++; }
-    else if (res === "teamB") { b++; runningMargin--; }
-    
-    // Track margin after this hole
-    marginHistory.push(runningMargin);
-
-    // Track momentum on back 9 (holes 10-18)
-    if (i >= 10) {
-      if (runningMargin <= -3) wasTeamADown3PlusBack9 = true;
-      if (runningMargin >= 3) wasTeamAUp3PlusBack9 = true;
-    }
-  }
-  const leader = a > b ? "teamA" : b > a ? "teamB" : null;
-  const margin = Math.abs(a - b);
-  const holesLeft = 18 - thru;
-  // Match closes when: someone wins (margin > holesLeft), OR all 18 holes are completed
-  const closed = (leader !== null && margin > holesLeft) || thru === 18;
-  const dormie = leader !== null && margin === holesLeft && thru < 18;
-  const winner = (thru === 18 && a === b) ? "AS" : (leader ?? "AS");
-  return { 
-    holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner,
-    wasTeamADown3PlusBack9, wasTeamAUp3PlusBack9, marginHistory
-  };
-}
+// ============================================================================
+// MATCH SCORING
+// Computes match status and result on every match write
+// ============================================================================
 
 export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before?.data() || {};
-  const after  = event.data?.after?.data();
+  const after = event.data?.after?.data();
   if (!after) return;
   
-  // Prevent loops
+  // Prevent loops - only run if meaningful data changed
   const changed = [
     ...Object.keys(after).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k])),
     ...Object.keys(before).filter(k => after[k] === undefined)
@@ -355,16 +205,11 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   const roundId = after.roundId;
   if (!roundId) return;
   const rSnap = await db.collection("rounds").doc(roundId).get();
-  const format = rSnap.data()?.format || "twoManBestBall";
+  const format = (rSnap.data()?.format as RoundFormat) || "twoManBestBall";
 
-  const s = summarize(format, after);
-  const status = { 
-    leader: s.leader, margin: s.margin, thru: s.thru, dormie: s.dormie, closed: s.closed,
-    wasTeamADown3PlusBack9: s.wasTeamADown3PlusBack9,
-    wasTeamAUp3PlusBack9: s.wasTeamAUp3PlusBack9,
-    marginHistory: s.marginHistory
-  };
-  const result = { winner: s.winner, holesWonA: s.holesWonA, holesWonB: s.holesWonB };
+  // Use imported scoring functions
+  const summary = summarize(format, after);
+  const { status, result } = buildStatusAndResult(summary);
 
   if (JSON.stringify(before.status) === JSON.stringify(status) && 
       JSON.stringify(before.result) === JSON.stringify(result)) return;
@@ -372,7 +217,14 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   await event.data!.after.ref.set({ status, result }, { merge: true });
 });
 
-// --- STATS ENGINE (Updated with 6 new stats) ---
+// ============================================================================
+// STATS ENGINE
+// Generates PlayerMatchFact documents when matches close
+// ============================================================================
+
+// Helper functions for stats calculation
+function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
+function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
 
 export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
   const matchId = event.params.matchId;
@@ -396,7 +248,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let format: RoundFormat = "twoManBestBall";
   let points = 1;
   let courseId = "";
-  let coursePar = 72; // Default, will be updated from course doc
+  let coursePar = 72;
   let day = 0;
   let playerTierLookup: Record<string, string> = {};
   let playerHandicapLookup: Record<string, number> = {};
@@ -416,19 +268,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       courseId = rData?.courseId || "";
       day = rData?.day ?? 0;
       
-      // Try to get course par from embedded course data
       if (rData?.course?.holes && Array.isArray(rData.course.holes)) {
         coursePar = rData.course.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
       }
     }
   }
   
-  // Fetch course par from courseId if available (overrides embedded)
   if (courseId) {
     const cSnap = await db.collection("courses").doc(courseId).get();
     if (cSnap.exists) {
       const cData = cSnap.data();
-      // Use stored par if available, otherwise calculate from holes
       if (typeof cData?.par === "number") {
         coursePar = cData.par;
       } else if (Array.isArray(cData?.holes)) {
@@ -436,6 +285,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
   }
+
   if (tId) {
     const tSnap = await db.collection("tournaments").doc(tId).get();
     if (tSnap.exists) {
@@ -455,7 +305,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       flattenTiers(d.teamA?.rosterByTier);
       flattenTiers(d.teamB?.rosterByTier);
 
-      // Flatten handicaps from both teams
       const flattenHandicaps = (hcpMap?: Record<string, number>) => {
         if (!hcpMap) return;
         Object.entries(hcpMap).forEach(([pid, hcp]) => {
@@ -467,7 +316,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
 
-  // --- Calculate match-wide stats by iterating through holes ---
+  // Calculate match-wide stats by iterating through holes
   const holesData = after.holes || {};
   let leadChanges = 0;
   let wasTeamANeverBehind = true;
@@ -476,56 +325,47 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let prevLeader: "teamA" | "teamB" | null = null;
   let runningMargin = 0;
   
-  // Track balls used for best ball format (per player index)
-  const teamABallsUsed = [0, 0]; // [player0, player1] - total (includes ties)
+  // Ball usage tracking (best ball & shamble)
+  const teamABallsUsed = [0, 0];
   const teamBBallsUsed = [0, 0];
-  const teamABallsUsedSolo = [0, 0]; // strictly better than partner
+  const teamABallsUsedSolo = [0, 0];
   const teamBBallsUsedSolo = [0, 0];
-  const teamABallsUsedShared = [0, 0]; // tied with partner
+  const teamABallsUsedShared = [0, 0];
   const teamBBallsUsedShared = [0, 0];
-  const teamABallsUsedSoloWonHole = [0, 0]; // solo ball AND team won hole
+  const teamABallsUsedSoloWonHole = [0, 0];
   const teamBBallsUsedSoloWonHole = [0, 0];
-  const teamABallsUsedSoloPush = [0, 0]; // solo ball AND hole was halved
+  const teamABallsUsedSoloPush = [0, 0];
   const teamBBallsUsedSoloPush = [0, 0];
   
-  // DRIVE_TRACKING: Track drives used for scramble/shamble
+  // Drive tracking (scramble & shamble)
   const teamADrivesUsed = [0, 0];
   const teamBDrivesUsed = [0, 0];
   
-  // SCORING STATS: Track individual gross/net scores (for best ball & singles)
-  const teamAPlayerGross = [0, 0]; // Sum of gross scores per player
+  // Scoring stats
+  const teamAPlayerGross = [0, 0];
   const teamBPlayerGross = [0, 0];
-  const teamAPlayerNet = [0, 0];   // Sum of net scores per player
+  const teamAPlayerNet = [0, 0];
   const teamBPlayerNet = [0, 0];
-  
-  // SCORING STATS: Track team gross scores (for scramble & shamble)
   let teamATotalGross = 0;
   let teamBTotalGross = 0;
   
   const finalThru = status.thru || 18;
   
-  // DECIDED_ON_18: Track if match was decided by the 18th hole result
-  // We need to know the margin going INTO hole 18 and the 18th hole result
+  // 18th hole tracking
   let marginGoingInto18 = 0;
   let hole18Result: "teamA" | "teamB" | "AS" | null = null;
-  
-  // BALL_USED_ON_18: Track if player's ball was used on hole 18 (Best Ball/Shamble only)
-  // Values: true = player's ball used solo, false = partner's ball used solo, null = tied or N/A
   const teamABallUsedOn18: (boolean | null)[] = [null, null];
   const teamBBallUsedOn18: (boolean | null)[] = [null, null];
   
-  for (let i = 1; i <= finalThru; i++) {
+  for (const i of holesRange(holesData)) {
     const h = holesData[String(i)]?.input ?? {};
     
-    // Capture margin going into hole 18 (before processing hole 18)
     if (i === 18) {
       marginGoingInto18 = runningMargin;
     }
     
-    // Determine hole winner (reuse logic from decideHole)
     const holeResult = decideHole(format, i, after);
     
-    // Capture hole 18 result
     if (i === 18) {
       hole18Result = holeResult;
     }
@@ -536,10 +376,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       runningMargin--;
     }
     
-    // Determine current leader
     const currentLeader = runningMargin > 0 ? "teamA" : runningMargin < 0 ? "teamB" : null;
     
-    // Track lead changes (only when leader actually changes, not ties)
     if (currentLeader !== null && prevLeader !== null && currentLeader !== prevLeader) {
       leadChanges++;
     }
@@ -547,11 +385,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       prevLeader = currentLeader;
     }
     
-    // Track "never behind"
     if (runningMargin < 0) wasTeamANeverBehind = false;
     if (runningMargin > 0) wasTeamBNeverBehind = false;
     
-    // Track winning hole (when match was closed)
     if (status.closed && winningHole === null) {
       const margin = Math.abs(runningMargin);
       const holesLeft = 18 - i;
@@ -560,7 +396,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
     
-    // Best Ball: Track whose ball was used (which player had lower net)
+    // Best Ball ball usage tracking
     if (format === "twoManBestBall") {
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
@@ -570,34 +406,21 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
         const a0Net = aArr[0] - a0Stroke;
         const a1Net = aArr[1] - a1Stroke;
-        // Total balls used (includes ties)
         if (a0Net <= a1Net) teamABallsUsed[0]++;
         if (a1Net <= a0Net) teamABallsUsed[1]++;
-        // Solo vs Shared
         if (a0Net < a1Net) {
           teamABallsUsedSolo[0]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamABallUsedOn18[0] = true;
-            teamABallUsedOn18[1] = false;
-          }
+          if (i === 18) { teamABallUsedOn18[0] = true; teamABallUsedOn18[1] = false; }
         } else if (a1Net < a0Net) {
           teamABallsUsedSolo[1]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamABallUsedOn18[0] = false;
-            teamABallUsedOn18[1] = true;
-          }
+          if (i === 18) { teamABallUsedOn18[0] = false; teamABallUsedOn18[1] = true; }
         } else {
-          // Tied - both shared
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
-          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
-          // Already initialized to null, so no action needed
         }
       }
       
@@ -606,109 +429,70 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
         const b0Net = bArr[0] - b0Stroke;
         const b1Net = bArr[1] - b1Stroke;
-        // Total balls used (includes ties)
         if (b0Net <= b1Net) teamBBallsUsed[0]++;
         if (b1Net <= b0Net) teamBBallsUsed[1]++;
-        // Solo vs Shared
         if (b0Net < b1Net) {
           teamBBallsUsedSolo[0]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamBBallUsedOn18[0] = true;
-            teamBBallUsedOn18[1] = false;
-          }
+          if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = false; }
         } else if (b1Net < b0Net) {
           teamBBallsUsedSolo[1]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamBBallUsedOn18[0] = false;
-            teamBBallUsedOn18[1] = true;
-          }
+          if (i === 18) { teamBBallUsedOn18[0] = false; teamBBallUsedOn18[1] = true; }
         } else {
-          // Tied - both shared
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
-          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
-          // Already initialized to null, so no action needed
         }
       }
     }
     
-    // Shamble: Track whose ball was used (which player had lower GROSS - no strokes)
+    // Shamble ball usage tracking (GROSS scores)
     if (format === "twoManShamble") {
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       
       if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
-        // Total balls used (includes ties)
         if (aArr[0] <= aArr[1]) teamABallsUsed[0]++;
         if (aArr[1] <= aArr[0]) teamABallsUsed[1]++;
-        // Solo vs Shared
         if (aArr[0] < aArr[1]) {
           teamABallsUsedSolo[0]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamABallUsedOn18[0] = true;
-            teamABallUsedOn18[1] = false;
-          }
+          if (i === 18) { teamABallUsedOn18[0] = true; teamABallUsedOn18[1] = false; }
         } else if (aArr[1] < aArr[0]) {
           teamABallsUsedSolo[1]++;
           if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamABallUsedOn18[0] = false;
-            teamABallUsedOn18[1] = true;
-          }
+          if (i === 18) { teamABallUsedOn18[0] = false; teamABallUsedOn18[1] = true; }
         } else {
-          // Tied - both shared
           teamABallsUsedShared[0]++;
           teamABallsUsedShared[1]++;
-          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
-          // Already initialized to null, so no action needed
         }
       }
       
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
-        // Total balls used (includes ties)
         if (bArr[0] <= bArr[1]) teamBBallsUsed[0]++;
         if (bArr[1] <= bArr[0]) teamBBallsUsed[1]++;
-        // Solo vs Shared
         if (bArr[0] < bArr[1]) {
           teamBBallsUsedSolo[0]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamBBallUsedOn18[0] = true;
-            teamBBallUsedOn18[1] = false;
-          }
+          if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = false; }
         } else if (bArr[1] < bArr[0]) {
           teamBBallsUsedSolo[1]++;
           if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
           if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
-          // BALL_USED_ON_18: Track if this player's ball was used on hole 18
-          if (i === 18) {
-            teamBBallUsedOn18[0] = false;
-            teamBBallUsedOn18[1] = true;
-          }
+          if (i === 18) { teamBBallUsedOn18[0] = false; teamBBallUsedOn18[1] = true; }
         } else {
-          // Tied - both shared
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
-          // BALL_USED_ON_18: Tied = null (both balls contributed equally)
-          // Already initialized to null, so no action needed
         }
       }
     }
     
-    // DRIVE_TRACKING: Track drives used for scramble/shamble
+    // Drive tracking
     if (format === "twoManScramble" || format === "twoManShamble") {
       const aDrive = h.teamADrive;
       const bDrive = h.teamBDrive;
@@ -718,15 +502,13 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       else if (bDrive === 1) teamBDrivesUsed[1]++;
     }
     
-    // SCORING STATS: Calculate scores based on format
+    // Scoring stats by format
     if (format === "twoManScramble") {
-      // Team format: one gross score per team
       const aGross = h.teamAGross;
       const bGross = h.teamBGross;
       if (isNum(aGross)) teamATotalGross += aGross;
       if (isNum(bGross)) teamBTotalGross += bGross;
     } else if (format === "singles") {
-      // Individual format: one score per player
       const aGross = h.teamAPlayerGross;
       const bGross = h.teamBPlayerGross;
       if (isNum(aGross)) {
@@ -740,13 +522,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         teamBPlayerNet[0] += (bGross - bStroke);
       }
     } else if (format === "twoManShamble") {
-      // Shamble: individual scores but team uses best gross
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       if (Array.isArray(aArr)) {
         if (isNum(aArr[0])) teamAPlayerGross[0] += aArr[0];
         if (isNum(aArr[1])) teamAPlayerGross[1] += aArr[1];
-        // Team total is best gross
         if (isNum(aArr[0]) && isNum(aArr[1])) {
           teamATotalGross += Math.min(aArr[0], aArr[1]);
         } else if (isNum(aArr[0])) {
@@ -758,7 +538,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       if (Array.isArray(bArr)) {
         if (isNum(bArr[0])) teamBPlayerGross[0] += bArr[0];
         if (isNum(bArr[1])) teamBPlayerGross[1] += bArr[1];
-        // Team total is best gross
         if (isNum(bArr[0]) && isNum(bArr[1])) {
           teamBTotalGross += Math.min(bArr[0], bArr[1]);
         } else if (isNum(bArr[0])) {
@@ -768,7 +547,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         }
       }
     } else {
-      // Best Ball: individual scores with net calculation
+      // Best Ball
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       if (Array.isArray(aArr)) {
@@ -808,52 +587,45 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (result.winner === "AS") { outcome = "halve"; pts = points / 2; }
     else if (result.winner === team) { outcome = "win"; pts = points; }
 
-    // Holes won/lost/halved from this player's perspective
     const holesWon = team === "teamA" ? (result.holesWonA || 0) : (result.holesWonB || 0);
     const holesLost = team === "teamA" ? (result.holesWonB || 0) : (result.holesWonA || 0);
     const holesHalved = finalThru - holesWon - holesLost;
 
-    // Comeback/BlownLead: Was down/up 3+ on back 9
     const wasDown3PlusBack9 = team === "teamA" ? status.wasTeamADown3PlusBack9 : status.wasTeamAUp3PlusBack9;
     const wasUp3PlusBack9 = team === "teamA" ? status.wasTeamAUp3PlusBack9 : status.wasTeamADown3PlusBack9;
     const comebackWin = outcome === "win" && wasDown3PlusBack9 === true;
     const blownLead = outcome === "loss" && wasUp3PlusBack9 === true;
     
-    // NEW: wasNeverBehind from this player's perspective
     const wasNeverBehind = team === "teamA" ? wasTeamANeverBehind : wasTeamBNeverBehind;
     
-    // NEW: strokesGiven - sum of strokesReceived array
     const strokesGiven = Array.isArray(p.strokesReceived) 
       ? p.strokesReceived.reduce((sum: number, v: number) => sum + (v || 0), 0)
       : 0;
     
-    // NEW: ballsUsed stats - for best ball and shamble
+    // Ball usage stats
     let ballsUsed: number | null = null;
     let ballsUsedSolo: number | null = null;
     let ballsUsedShared: number | null = null;
     let ballsUsedSoloWonHole: number | null = null;
     let ballsUsedSoloPush: number | null = null;
+    let ballUsedOn18: boolean | null = null;
+    
     if (format === "twoManBestBall" || format === "twoManShamble") {
       ballsUsed = team === "teamA" ? teamABallsUsed[pIdx] : teamBBallsUsed[pIdx];
       ballsUsedSolo = team === "teamA" ? teamABallsUsedSolo[pIdx] : teamBBallsUsedSolo[pIdx];
       ballsUsedShared = team === "teamA" ? teamABallsUsedShared[pIdx] : teamBBallsUsedShared[pIdx];
       ballsUsedSoloWonHole = team === "teamA" ? teamABallsUsedSoloWonHole[pIdx] : teamBBallsUsedSoloWonHole[pIdx];
       ballsUsedSoloPush = team === "teamA" ? teamABallsUsedSoloPush[pIdx] : teamBBallsUsedSoloPush[pIdx];
-    }
-    
-    // BALL_USED_ON_18: ballUsedOn18 - only for best ball/shamble
-    let ballUsedOn18: boolean | null = null;
-    if (format === "twoManBestBall" || format === "twoManShamble") {
       ballUsedOn18 = team === "teamA" ? teamABallUsedOn18[pIdx] : teamBBallUsedOn18[pIdx];
     }
     
-    // DRIVE_TRACKING: drivesUsed - only for scramble/shamble
+    // Drive stats
     let drivesUsed: number | null = null;
     if (format === "twoManScramble" || format === "twoManShamble") {
       drivesUsed = team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx];
     }
     
-    // SCORING STATS: Calculate based on format
+    // Scoring stats
     let totalGross: number | null = null;
     let totalNet: number | null = null;
     let strokesVsParGross: number | null = null;
@@ -862,7 +634,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let teamStrokesVsParGross: number | null = null;
     
     if (format === "twoManBestBall" || format === "singles") {
-      // Individual scoring formats - track player's own gross and net
       const playerGrossArr = team === "teamA" ? teamAPlayerGross : teamBPlayerGross;
       const playerNetArr = team === "teamA" ? teamAPlayerNet : teamBPlayerNet;
       totalGross = playerGrossArr[pIdx];
@@ -870,7 +641,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       strokesVsParGross = totalGross - coursePar;
       strokesVsParNet = totalNet - coursePar;
     } else if (format === "twoManScramble" || format === "twoManShamble") {
-      // Team scoring formats - track team gross
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
       teamStrokesVsParGross = teamTotalGross - coursePar;
     }
@@ -878,55 +648,42 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const myTier = playerTierLookup[p.playerId] || "Unknown";
     const myTeamId = team === "teamA" ? teamAId : teamBId;
     const oppTeamId = team === "teamA" ? teamBId : teamAId;
-
-    // Player's own handicap
     const playerHandicap = playerHandicapLookup[p.playerId] ?? null;
 
-    // DECIDED_ON_18: Calculate if match was decided by 18th hole result
-    // A match is "decided on 18" if:
-    // 1. Match went to 18 holes (finalThru === 18 and not closed early)
-    // 2. The 18th hole result changed the outcome (wasn't just padding a lead)
-    // Specifically: AS going in + push to halve does NOT count
+    // 18th hole decision tracking
     let decidedOn18 = false;
     let won18thHole: boolean | null = null;
     
     if (finalThru === 18 && winningHole === null && hole18Result !== null) {
-      // Match went full 18 and wasn't closed early
       const myTeamWon18 = (team === "teamA" && hole18Result === "teamA") || 
                           (team === "teamB" && hole18Result === "teamB");
       const myTeamLost18 = (team === "teamA" && hole18Result === "teamB") || 
                            (team === "teamB" && hole18Result === "teamA");
       const pushed18 = hole18Result === "AS";
       
-      // Determine if decided on 18 based on margin going in and hole result
       if (marginGoingInto18 === 0) {
-        // AS going into 18
         if (!pushed18) {
-          // Someone won the hole to win the match - counts as decided on 18
           decidedOn18 = true;
           won18thHole = myTeamWon18 ? true : false;
         }
-        // AS + push = halve, but NOT decided on 18 (excluded per spec)
       } else if (Math.abs(marginGoingInto18) === 1) {
-        // 1UP going into 18 - opponent can tie the match by winning the hole
         if ((marginGoingInto18 > 0 && team === "teamB" && hole18Result === "teamB") ||
             (marginGoingInto18 < 0 && team === "teamA" && hole18Result === "teamA") ||
             (marginGoingInto18 > 0 && team === "teamA" && hole18Result === "teamB") ||
             (marginGoingInto18 < 0 && team === "teamB" && hole18Result === "teamA")) {
-          // Team trailing won hole 18 to halve the match
           decidedOn18 = true;
           won18thHole = myTeamWon18 ? true : myTeamLost18 ? false : null;
         }
-        // 1UP + push = still win 1UP, NOT decided on 18
-        // 1UP + win another = win 2UP, NOT decided on 18
       }
-      // 2UP+ going into 18 - match would have closed before 18, shouldn't reach here
     }
 
-    // --- 1. OPPONENTS ---
+    // Opponent/Partner arrays
     const opponentIds: string[] = [];
     const opponentTiers: string[] = [];
     const opponentHandicaps: (number | null)[] = [];
+    const partnerIds: string[] = [];
+    const partnerTiers: string[] = [];
+    const partnerHandicaps: (number | null)[] = [];
 
     if (Array.isArray(opponentPlayers)) {
       opponentPlayers.forEach((op) => {
@@ -937,11 +694,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         }
       });
     }
-
-    // --- 2. PARTNERS ---
-    const partnerIds: string[] = [];
-    const partnerTiers: string[] = [];
-    const partnerHandicaps: (number | null)[] = [];
 
     if (Array.isArray(myTeamPlayers)) {
       myTeamPlayers.forEach((tm) => {
@@ -956,58 +708,38 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const factData: any = {
       playerId: p.playerId, matchId, tournamentId: tId, roundId: rId, format,
       outcome, pointsEarned: pts,
-      
       playerTier: myTier,
       playerTeamId: myTeamId,
       opponentTeamId: oppTeamId,
-      
-      // Handicaps
       playerHandicap,
       opponentHandicaps,
       partnerHandicaps,
-
-      // Opponent Arrays
       opponentIds,
       opponentTiers,
-
-      // Partner Arrays
       partnerIds,
       partnerTiers,
-
-      // Match result details
       holesWon,
       holesLost,
       holesHalved,
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
-
-      // Momentum stats
       comebackWin,
       blownLead,
-      
-      // NEW: Additional stats
       strokesGiven,
       leadChanges,
       wasNeverBehind,
       winningHole,
-      
-      // DECIDED_ON_18: Clutch/choke stats
       decidedOn18,
       won18thHole,
-
-      // Round context
       courseId,
       day,
-
-      // Tournament context
       tournamentYear,
       tournamentName,
       tournamentSeries,
-      
       updatedAt: FieldValue.serverTimestamp(),
     };
     
-    // Format-specific stats (only include if applicable)
+    // Conditionally add format-specific stats
     if (ballsUsed !== null) factData.ballsUsed = ballsUsed;
     if (ballsUsedSolo !== null) factData.ballsUsedSolo = ballsUsedSolo;
     if (ballsUsedShared !== null) factData.ballsUsedShared = ballsUsedShared;
@@ -1016,7 +748,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (ballUsedOn18 !== null) factData.ballUsedOn18 = ballUsedOn18;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     
-    // Scoring stats
     factData.coursePar = coursePar;
     if (totalGross !== null) factData.totalGross = totalGross;
     if (totalNet !== null) factData.totalNet = totalNet;
@@ -1031,19 +762,23 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const pA = after.teamAPlayers || [];
   const pB = after.teamBPlayers || [];
   
-  // Pass player index (pIdx) to writeFact for ballsUsed/drivesUsed lookup
   if (Array.isArray(pA)) pA.forEach((p: any, idx: number) => writeFact(p, "teamA", idx, pB, pA));
   if (Array.isArray(pB)) pB.forEach((p: any, idx: number) => writeFact(p, "teamB", idx, pA, pB));
 
   await batch.commit();
 });
 
+// ============================================================================
+// PLAYER STATS AGGREGATION
+// Aggregates PlayerMatchFact documents into PlayerStats
+// ============================================================================
+
 export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
   const data = event.data?.after?.data() || event.data?.before?.data();
   if (!data?.playerId) return;
 
   const snap = await db.collection("playerMatchFacts").where("playerId", "==", data.playerId).get();
-  let wins=0, losses=0, halves=0, totalPoints=0, matchesPlayed=0;
+  let wins = 0, losses = 0, halves = 0, totalPoints = 0, matchesPlayed = 0;
 
   snap.forEach(d => {
     const f = d.data();
