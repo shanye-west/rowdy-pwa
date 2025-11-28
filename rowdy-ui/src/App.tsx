@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, limit, query, where, documentId } from "firebase/firestore";
+import { collection, query, where, onSnapshot, limit } from "firebase/firestore";
 import { db } from "./firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
@@ -13,95 +13,119 @@ export default function App() {
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [matchesByRound, setMatchesByRound] = useState<Record<string, MatchDoc[]>>({});
-  const [coursesByRound, setCoursesByRound] = useState<Record<string, CourseDoc | null>>({});
+  const [courses, setCourses] = useState<Record<string, CourseDoc>>({});
 
+  // Track which data has loaded for coordinated loading state
+  const [tournamentLoaded, setTournamentLoaded] = useState(false);
+  const [roundsLoaded, setRoundsLoaded] = useState(false);
+  const [matchesLoaded, setMatchesLoaded] = useState(false);
+
+  // 1) Subscribe to active tournament
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        // 1) Find active tournament
-        const tSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true), limit(1)));
-        if (tSnap.empty) { 
-          setTournament(null); 
-          setRounds([]); 
-          setMatchesByRound({}); 
-          setLoading(false); 
-          return; 
+    const unsub = onSnapshot(
+      query(collection(db, "tournaments"), where("active", "==", true), limit(1)),
+      (snap) => {
+        if (snap.empty) {
+          setTournament(null);
+        } else {
+          const doc = snap.docs[0];
+          setTournament({ id: doc.id, ...doc.data() } as TournamentDoc);
         }
-        
-        const tData = tSnap.docs[0].data();
-        const t = { id: tSnap.docs[0].id, ...tData } as TournamentDoc;
-        setTournament(t);
+        setTournamentLoaded(true);
+      },
+      (err) => {
+        console.error("Tournament subscription error:", err);
+        setTournamentLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
 
-        // 2) Load rounds, matches, and courses in parallel with batched queries
-        const rQuery = query(collection(db, "rounds"), where("tournamentId", "==", t.id));
-        
-        // Single query for ALL matches in this tournament (instead of N queries per round)
-        const allMatchesQuery = query(collection(db, "matches"), where("tournamentId", "==", t.id));
-        
-        const [rSnap, allMatchesSnap] = await Promise.all([
-          getDocs(rQuery),
-          getDocs(allMatchesQuery),
-        ]);
+  // 2) Subscribe to rounds when tournament is available
+  useEffect(() => {
+    if (!tournament?.id) {
+      setRounds([]);
+      setRoundsLoaded(tournamentLoaded);
+      return;
+    }
 
-        let rds = rSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as RoundDoc));
-        // Sort by day, then ID
+    const unsub = onSnapshot(
+      query(collection(db, "rounds"), where("tournamentId", "==", tournament.id)),
+      (snap) => {
+        let rds = snap.docs.map(d => ({ id: d.id, ...d.data() } as RoundDoc));
         rds = rds.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
         setRounds(rds);
+        setRoundsLoaded(true);
+      },
+      (err) => {
+        console.error("Rounds subscription error:", err);
+        setRoundsLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, [tournament?.id, tournamentLoaded]);
 
-        // Group matches by roundId in memory (instead of N separate queries)
+  // 3) Subscribe to ALL matches for this tournament (single query, grouped in memory)
+  useEffect(() => {
+    if (!tournament?.id) {
+      setMatchesByRound({});
+      setMatchesLoaded(tournamentLoaded);
+      return;
+    }
+
+    const unsub = onSnapshot(
+      query(collection(db, "matches"), where("tournamentId", "==", tournament.id)),
+      (snap) => {
         const bucket: Record<string, MatchDoc[]> = {};
-        rds.forEach(r => { bucket[r.id] = []; }); // Initialize empty arrays
-        allMatchesSnap.docs.forEach(d => {
-          const match = { id: d.id, ...(d.data() as any) } as MatchDoc;
-          if (match.roundId && bucket[match.roundId]) {
+        snap.docs.forEach(d => {
+          const match = { id: d.id, ...d.data() } as MatchDoc;
+          if (match.roundId) {
+            if (!bucket[match.roundId]) bucket[match.roundId] = [];
             bucket[match.roundId].push(match);
           }
         });
         setMatchesByRound(bucket);
-
-        // Batch fetch all unique courses (instead of N separate queries)
-        const uniqueCourseIds = [...new Set(rds.map(r => r.courseId).filter((id): id is string => !!id))];
-        const courseBucket: Record<string, CourseDoc | null> = {};
-        rds.forEach(r => { courseBucket[r.id] = null; }); // Initialize
-
-        if (uniqueCourseIds.length > 0) {
-          // Firestore 'in' query limit is 30, chunk if needed
-          const courseChunks: string[][] = [];
-          for (let i = 0; i < uniqueCourseIds.length; i += 30) {
-            courseChunks.push(uniqueCourseIds.slice(i, i + 30));
-          }
-          
-          const courseResults = await Promise.all(
-            courseChunks.map(chunk =>
-              getDocs(query(collection(db, "courses"), where(documentId(), "in", chunk)))
-            )
-          );
-          
-          // Build courseId -> CourseDoc lookup
-          const courseLookup: Record<string, CourseDoc> = {};
-          courseResults.forEach(snap => {
-            snap.docs.forEach(d => {
-              courseLookup[d.id] = { id: d.id, ...d.data() } as CourseDoc;
-            });
-          });
-          
-          // Map courses to rounds
-          rds.forEach(r => {
-            if (r.courseId && courseLookup[r.courseId]) {
-              courseBucket[r.id] = courseLookup[r.courseId];
-            }
-          });
-        }
-        setCoursesByRound(courseBucket);
-
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+        setMatchesLoaded(true);
+      },
+      (err) => {
+        console.error("Matches subscription error:", err);
+        setMatchesLoaded(true);
       }
-    })();
+    );
+    return () => unsub();
+  }, [tournament?.id, tournamentLoaded]);
+
+  // 4) Subscribe to courses (all courses - small collection, cached well)
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, "courses"),
+      (snap) => {
+        const lookup: Record<string, CourseDoc> = {};
+        snap.docs.forEach(d => {
+          lookup[d.id] = { id: d.id, ...d.data() } as CourseDoc;
+        });
+        setCourses(lookup);
+      },
+      (err) => console.error("Courses subscription error:", err)
+    );
+    return () => unsub();
   }, []);
+
+  // Compute loading state - done when tournament loaded AND (no tournament OR rounds+matches loaded)
+  useEffect(() => {
+    if (tournamentLoaded && (!tournament || (roundsLoaded && matchesLoaded))) {
+      setLoading(false);
+    }
+  }, [tournamentLoaded, tournament, roundsLoaded, matchesLoaded]);
+
+  // Build coursesByRound lookup from rounds + courses
+  const coursesByRound = useMemo(() => {
+    const result: Record<string, CourseDoc | null> = {};
+    rounds.forEach(r => {
+      result[r.id] = r.courseId ? (courses[r.courseId] || null) : null;
+    });
+    return result;
+  }, [rounds, courses]);
 
   // --- Stats Calculation ---
   const { stats, roundStats } = useMemo(() => {
