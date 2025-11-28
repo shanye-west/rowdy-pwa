@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, memo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -11,6 +11,169 @@ import { useAuth } from "../contexts/AuthContext";
 import { MatchFlowGraph } from "../components/match/MatchFlowGraph";
 import { PostMatchStats } from "../components/match/PostMatchStats";
 import { useMatchData } from "../hooks/useMatchData";
+
+// --- MEMOIZED COMPONENTS ---
+
+/** Props for ScoreInputCell */
+interface ScoreInputCellProps {
+  holeKey: string;
+  value: number | "";
+  locked: boolean;
+  hasStroke: boolean;
+  hasDrive: boolean;
+  lowScoreStatus: 'solo' | 'tied' | null;
+  teamColor: 'A' | 'B';
+  onChange: (holeKey: string, value: number | null) => void;
+}
+
+/** Memoized score input cell - prevents re-render unless props change */
+const ScoreInputCell = memo(function ScoreInputCell({
+  holeKey,
+  value,
+  locked,
+  hasStroke,
+  hasDrive,
+  lowScoreStatus,
+  teamColor,
+  onChange,
+}: ScoreInputCellProps) {
+  // Use team-specific colors for low score highlighting
+  const lowScoreBg = teamColor === 'A'
+    ? (lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '')
+    : (lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '');
+
+  return (
+    <div className="relative flex flex-col items-center">
+      <input
+        type="number"
+        inputMode="numeric"
+        className={`
+          w-10 h-10 text-center text-base font-semibold rounded-md border
+          focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+          transition-colors duration-100
+          ${locked 
+            ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
+            : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
+          }
+        `}
+        value={value}
+        disabled={locked}
+        onChange={(e) => {
+          const val = e.target.value === "" ? null : Number(e.target.value);
+          onChange(holeKey, val);
+        }}
+      />
+      {hasStroke && (
+        <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
+      )}
+      {hasDrive && (
+        <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
+      )}
+    </div>
+  );
+});
+
+/** Props for PlayerScoreRow */
+interface PlayerScoreRowProps {
+  team: "A" | "B";
+  pIdx: number;
+  label: string;
+  color: string;
+  holes: Array<{ k: string; num: number; input: any; par: number; hcpIndex?: number; yards?: number }>;
+  isLastOfTeam: boolean;
+  isTeamB?: boolean; // For different bottom border style
+  trackDrives: boolean;
+  getCellValue: (holeKey: string) => number | "";
+  isHoleLocked: (holeNum: number) => boolean;
+  hasStroke: (holeIdx: number) => boolean;
+  getDriveValue: (holeKey: string) => 0 | 1 | null;
+  getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+  onCellChange: (holeKey: string, value: number | null) => void;
+  outTotal: number | null;
+  inTotal: number | null;
+  totalScore: number | null;
+}
+
+/** Memoized player score row - renders 18 ScoreInputCells + totals */
+const PlayerScoreRow = memo(function PlayerScoreRow({
+  team,
+  pIdx,
+  label,
+  color,
+  holes,
+  isLastOfTeam,
+  isTeamB,
+  trackDrives,
+  getCellValue,
+  isHoleLocked,
+  hasStroke,
+  getDriveValue,
+  getLowScoreStatus,
+  onCellChange,
+  outTotal,
+  inTotal,
+  totalScore,
+}: PlayerScoreRowProps) {
+  // Team B last row has thicker border
+  const rowClassName = isTeamB && isLastOfTeam 
+    ? "border-b-2 border-slate-300" 
+    : isLastOfTeam 
+      ? "" 
+      : "border-b border-slate-100";
+
+  return (
+    <tr className={rowClassName}>
+      <td 
+        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
+        style={{ color }}
+      >
+        {label}
+      </td>
+      {/* Front 9 holes */}
+      {holes.slice(0, 9).map(h => (
+        <td key={h.k} className="p-0.5">
+          <ScoreInputCell
+            holeKey={h.k}
+            value={getCellValue(h.k)}
+            locked={isHoleLocked(h.num)}
+            hasStroke={hasStroke(h.num - 1)}
+            hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
+            lowScoreStatus={getLowScoreStatus(h.k)}
+            teamColor={team}
+            onChange={onCellChange}
+          />
+        </td>
+      ))}
+      {/* OUT total */}
+      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+        {outTotal ?? "–"}
+      </td>
+      {/* Back 9 holes */}
+      {holes.slice(9, 18).map((h, i) => (
+        <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
+          <ScoreInputCell
+            holeKey={h.k}
+            value={getCellValue(h.k)}
+            locked={isHoleLocked(h.num)}
+            hasStroke={hasStroke(h.num - 1)}
+            hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
+            lowScoreStatus={getLowScoreStatus(h.k)}
+            teamColor={team}
+            onChange={onCellChange}
+          />
+        </td>
+      ))}
+      {/* IN total */}
+      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+        {inTotal ?? "–"}
+      </td>
+      {/* TOTAL */}
+      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
+        {totalScore ?? "–"}
+      </td>
+    </tr>
+  );
+});
 
 export default function Match() {
   const { matchId } = useParams();
@@ -115,50 +278,6 @@ export default function Match() {
   const getPlayerShortName = (pid?: string) => getPlayerShortNameFromLookup(pid, players);
   const getPlayerInitials = (pid?: string) => getPlayerInitialsFromLookup(pid, players);
 
-  function hasStroke(team: "A" | "B", pIdx: number, holeIdx: number) {
-    const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
-    return (roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0) > 0;
-  }
-
-  // Determine if a player has the low score for their team on a hole
-  // Returns 'solo' if they're the only low scorer, 'tied' if both players tied, null if not low
-  function getLowScoreStatus(hole: typeof holes[0], team: "A" | "B", pIdx: number): 'solo' | 'tied' | null {
-    if (format !== "twoManBestBall" && format !== "twoManShamble") return null;
-    
-    const { input } = hole;
-    const holeIdx = hole.num - 1;
-    const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
-    
-    if (!Array.isArray(arr)) return null;
-    
-    const p0Gross = arr[0];
-    const p1Gross = arr[1];
-    
-    // Need both scores to determine low score status
-    if (p0Gross == null || p1Gross == null) return null;
-    
-    if (format === "twoManShamble") {
-      // Shamble: compare GROSS scores (no strokes)
-      if (p0Gross === p1Gross) return 'tied';
-      if (pIdx === 0 && p0Gross < p1Gross) return 'solo';
-      if (pIdx === 1 && p1Gross < p0Gross) return 'solo';
-      return null;
-    }
-    
-    // Best Ball: compare NET scores
-    const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
-    const p0Stroke = (roster?.[0]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
-    const p1Stroke = (roster?.[1]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
-    
-    const p0Net = p0Gross - p0Stroke;
-    const p1Net = p1Gross - p1Stroke;
-    
-    if (p0Net === p1Net) return 'tied';
-    if (pIdx === 0 && p0Net < p1Net) return 'solo';
-    if (pIdx === 1 && p1Net < p0Net) return 'solo';
-    return null;
-  }
-
   // For twoManBestBall: get the team's low net score for a hole
   // For twoManShamble: get the team's low gross score for a hole
   function getTeamLowScore(hole: typeof holes[0], team: "A" | "B"): number | null {
@@ -220,14 +339,15 @@ export default function Match() {
     };
   }, [holes, format, match]);
 
-  async function saveHole(k: string, nextInput: any) {
+  // Memoized save function
+  const saveHole = useCallback(async (k: string, nextInput: any) => {
     if (!match?.id || roundLocked || !canEdit) return;
     try {
       await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
     } catch (e) {
       console.error("Save failed", e);
     }
-  }
+  }, [match?.id, roundLocked, canEdit]);
 
   // DRIVE_TRACKING: Get current drive selection for a hole
   function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
@@ -237,7 +357,7 @@ export default function Match() {
   }
 
   // DRIVE_TRACKING: Update drive selection for a hole (playerIdx can be null to clear)
-  function updateDrive(hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1 | null) {
+  const updateDrive = useCallback((hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1 | null) => {
     const { k, input } = hole;
     
     if (format === "twoManScramble") {
@@ -257,15 +377,15 @@ export default function Match() {
       };
       saveHole(k, newInput);
     }
-  }
+  }, [format, saveHole]);
 
   // DRIVE_TRACKING: Handle modal selection
-  function handleDriveSelect(playerIdx: 0 | 1 | null) {
+  const handleDriveSelect = useCallback((playerIdx: 0 | 1 | null) => {
     if (driveModal) {
       updateDrive(driveModal.hole, driveModal.team, playerIdx);
       setDriveModal(null);
     }
-  }
+  }, [driveModal, updateDrive]);
 
   // DRIVE_TRACKING: Calculate drives used per player per team
   const drivesUsed = useMemo(() => {
@@ -299,74 +419,157 @@ export default function Match() {
     };
   }, [drivesUsed, matchThru, trackDrives]);
 
-  // Get current value for a cell
-  function getCellValue(hole: typeof holes[0], team: "A" | "B", pIdx: number): number | "" {
-    const { input } = hole;
-    if (format === "twoManScramble") {
-      // Scramble: one score per team
-      const v = team === "A" ? input?.teamAGross : input?.teamBGross;
-      return v ?? "";
-    }
-    if (format === "singles") {
-      const v = team === "A" ? input?.teamAPlayerGross : input?.teamBPlayerGross;
-      return v ?? "";
-    }
-    // Best Ball & Shamble: individual player scores
-    const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
-    return Array.isArray(arr) ? (arr[pIdx] ?? "") : "";
-  }
+  // Memoized getter functions for PlayerScoreRow - lookup by hole key
+  const createGetCellValue = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeKey: string): number | "" => {
+      const hole = holes.find(h => h.k === holeKey);
+      if (!hole) return "";
+      const { input } = hole;
+      if (format === "twoManScramble") {
+        const v = team === "A" ? input?.teamAGross : input?.teamBGross;
+        return v ?? "";
+      }
+      if (format === "singles") {
+        const v = team === "A" ? input?.teamAPlayerGross : input?.teamBPlayerGross;
+        return v ?? "";
+      }
+      const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
+      return Array.isArray(arr) ? (arr[pIdx] ?? "") : "";
+    };
+  }, [holes, format]);
 
-  // Update a cell value
-  function updateCell(hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) {
-    const { k, input } = hole;
-    
-    if (format === "twoManScramble") {
-      // Scramble: one score per team
-      const newInput = {
-        teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
-        teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
-        // Preserve drive tracking fields if present
-        ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
-        ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
-      };
-      saveHole(k, newInput);
-      return;
-    }
-    
-    if (format === "singles") {
-      const newInput = {
-        teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
-        teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
-      };
-      saveHole(k, newInput);
-      return;
-    }
-    
-    // Best Ball & Shamble: individual player scores
-    const aArr = Array.isArray(input?.teamAPlayersGross) ? [...input.teamAPlayersGross] : [null, null];
-    const bArr = Array.isArray(input?.teamBPlayersGross) ? [...input.teamBPlayersGross] : [null, null];
-    
-    if (team === "A") aArr[pIdx] = value;
-    else bArr[pIdx] = value;
-    
-    // For shamble, preserve drive tracking fields
-    if (format === "twoManShamble") {
-      saveHole(k, { 
-        teamAPlayersGross: aArr, 
-        teamBPlayersGross: bArr,
-        ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
-        ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
-      });
-    } else {
-      saveHole(k, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
-    }
-  }
+  const createHasStroke = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeIdx: number): boolean => {
+      const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+      return (roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0) > 0;
+    };
+  }, [match?.teamAPlayers, match?.teamBPlayers]);
+
+  const createGetDriveValue = useCallback((team: "A" | "B") => {
+    return (holeKey: string): 0 | 1 | null => {
+      const hole = holes.find(h => h.k === holeKey);
+      if (!hole) return null;
+      const v = team === "A" ? hole.input?.teamADrive : hole.input?.teamBDrive;
+      return v === 0 || v === 1 ? v : null;
+    };
+  }, [holes]);
+
+  const createGetLowScoreStatus = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeKey: string): 'solo' | 'tied' | null => {
+      if (format !== "twoManBestBall" && format !== "twoManShamble") return null;
+      const hole = holes.find(h => h.k === holeKey);
+      if (!hole) return null;
+      
+      const { input, num } = hole;
+      const holeIdx = num - 1;
+      const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
+      
+      if (!Array.isArray(arr)) return null;
+      
+      const p0Gross = arr[0];
+      const p1Gross = arr[1];
+      
+      if (p0Gross == null || p1Gross == null) return null;
+      
+      if (format === "twoManShamble") {
+        if (p0Gross === p1Gross) return 'tied';
+        if (pIdx === 0 && p0Gross < p1Gross) return 'solo';
+        if (pIdx === 1 && p1Gross < p0Gross) return 'solo';
+        return null;
+      }
+      
+      const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+      const p0Stroke = (roster?.[0]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+      const p1Stroke = (roster?.[1]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+      
+      const p0Net = p0Gross - p0Stroke;
+      const p1Net = p1Gross - p1Stroke;
+      
+      if (p0Net === p1Net) return 'tied';
+      if (pIdx === 0 && p0Net < p1Net) return 'solo';
+      if (pIdx === 1 && p1Net < p0Net) return 'solo';
+      return null;
+    };
+  }, [holes, format, match?.teamAPlayers, match?.teamBPlayers]);
+
+  // Create stable getter instances for each player row
+  const getCellValueA0 = useMemo(() => createGetCellValue("A", 0), [createGetCellValue]);
+  const getCellValueA1 = useMemo(() => createGetCellValue("A", 1), [createGetCellValue]);
+  const getCellValueB0 = useMemo(() => createGetCellValue("B", 0), [createGetCellValue]);
+  const getCellValueB1 = useMemo(() => createGetCellValue("B", 1), [createGetCellValue]);
+  
+  const hasStrokeA0 = useMemo(() => createHasStroke("A", 0), [createHasStroke]);
+  const hasStrokeA1 = useMemo(() => createHasStroke("A", 1), [createHasStroke]);
+  const hasStrokeB0 = useMemo(() => createHasStroke("B", 0), [createHasStroke]);
+  const hasStrokeB1 = useMemo(() => createHasStroke("B", 1), [createHasStroke]);
+  
+  const getDriveValueA = useMemo(() => createGetDriveValue("A"), [createGetDriveValue]);
+  const getDriveValueB = useMemo(() => createGetDriveValue("B"), [createGetDriveValue]);
+  
+  const getLowScoreStatusA0 = useMemo(() => createGetLowScoreStatus("A", 0), [createGetLowScoreStatus]);
+  const getLowScoreStatusA1 = useMemo(() => createGetLowScoreStatus("A", 1), [createGetLowScoreStatus]);
+  const getLowScoreStatusB0 = useMemo(() => createGetLowScoreStatus("B", 0), [createGetLowScoreStatus]);
+  const getLowScoreStatusB1 = useMemo(() => createGetLowScoreStatus("B", 1), [createGetLowScoreStatus]);
 
   // Check if hole is locked (includes auth check)
-  function isHoleLocked(holeNum: number) {
+  const isHoleLocked = useCallback((holeNum: number) => {
     // Can't edit if: round locked, match closed past this hole, OR user can't edit
     return roundLocked || (isMatchClosed && holeNum > matchThru) || !canEdit;
-  }
+  }, [roundLocked, isMatchClosed, matchThru, canEdit]);
+
+  // Memoized cell change handlers for each player row (prevents re-creating on every render)
+  const createCellChangeHandler = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeKey: string, value: number | null) => {
+      const hole = holes.find(h => h.k === holeKey);
+      if (!hole) return;
+      
+      const { input } = hole;
+      
+      if (format === "twoManScramble") {
+        const newInput = {
+          teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
+          teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
+          ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
+          ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
+        };
+        saveHole(holeKey, newInput);
+        return;
+      }
+      
+      if (format === "singles") {
+        const newInput = {
+          teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
+          teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
+        };
+        saveHole(holeKey, newInput);
+        return;
+      }
+      
+      // Best Ball & Shamble: individual player scores
+      const aArr = Array.isArray(input?.teamAPlayersGross) ? [...input.teamAPlayersGross] : [null, null];
+      const bArr = Array.isArray(input?.teamBPlayersGross) ? [...input.teamBPlayersGross] : [null, null];
+      
+      if (team === "A") aArr[pIdx] = value;
+      else bArr[pIdx] = value;
+      
+      if (format === "twoManShamble") {
+        saveHole(holeKey, { 
+          teamAPlayersGross: aArr, 
+          teamBPlayersGross: bArr,
+          ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
+          ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
+        });
+      } else {
+        saveHole(holeKey, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
+      }
+    };
+  }, [holes, format, saveHole]);
+
+  // Create stable handlers for each player row
+  const cellChangeHandlerA0 = useMemo(() => createCellChangeHandler("A", 0), [createCellChangeHandler]);
+  const cellChangeHandlerA1 = useMemo(() => createCellChangeHandler("A", 1), [createCellChangeHandler]);
+  const cellChangeHandlerB0 = useMemo(() => createCellChangeHandler("B", 0), [createCellChangeHandler]);
+  const cellChangeHandlerB1 = useMemo(() => createCellChangeHandler("B", 1), [createCellChangeHandler]);
 
   // Calculate running match status after each hole
   // Returns array of { status: string, leader: "A" | "B" | null } for each hole
@@ -508,29 +711,39 @@ export default function Match() {
   // Four player rows: Best Ball and Shamble (individual player scores)
   const isFourPlayerRows = format === "twoManBestBall" || format === "twoManShamble";
 
-  // Build player rows config
-  type PlayerRowConfig = { team: "A" | "B"; pIdx: number; label: string; color: string };
+  // Build player rows config with memoized handlers and getters
+  type PlayerRowConfig = { 
+    team: "A" | "B"; 
+    pIdx: number; 
+    label: string; 
+    color: string;
+    onCellChange: (holeKey: string, value: number | null) => void;
+    getCellValue: (holeKey: string) => number | "";
+    hasStroke: (holeIdx: number) => boolean;
+    getDriveValue: (holeKey: string) => 0 | 1 | null;
+    getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+  };
   const playerRows: PlayerRowConfig[] = [];
   
   if (isFourPlayerRows) {
     // 4 players: A1, A2, B1, B2 (Best Ball & Shamble)
     playerRows.push(
-      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
-      { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+      { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1 },
+      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+      { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1 },
     );
   } else if (isTeamFormat) {
     // 2 rows with TEAM NAMES for scramble only
     playerRows.push(
-      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
     );
   } else {
     // 2 rows: Player A, Player B (singles)
     playerRows.push(
-      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
     );
   }
 
@@ -939,113 +1152,28 @@ export default function Match() {
                   <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
                 </tr>
 
-                {/* Team A Player Rows */}
-                {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => {
-                  const isLastOfTeamA = rowIdx === teamRows.length - 1;
-                  return (
-                    <tr 
-                      key={`row-${pr.team}-${pr.pIdx}`}
-                      className={`${isLastOfTeamA ? "" : "border-b border-slate-100"}`}
-                    >
-                      <td 
-                        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
-                        style={{ color: pr.color }}
-                      >
-                        {pr.label}
-                      </td>
-                      {/* Front 9 holes */}
-                      {holes.slice(0, 9).map(h => {
-                        const locked = isHoleLocked(h.num);
-                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
-                        const hasDrive = trackDrives && getDriveValue(h, pr.team) === pr.pIdx;
-                        const lowScoreStatus = getLowScoreStatus(h, pr.team, pr.pIdx);
-                        const lowScoreBg = lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '';
-                        return (
-                          <td key={h.k} className="p-0.5">
-                            <div className="relative flex flex-col items-center">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                className={`
-                                  w-10 h-10 text-center text-base font-semibold rounded-md border
-                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                  transition-colors duration-100
-                                  ${locked 
-                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-                                    : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
-                                  }
-                                `}
-                                value={getCellValue(h, pr.team, pr.pIdx)}
-                                disabled={locked}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? null : Number(e.target.value);
-                                  updateCell(h, pr.team, pr.pIdx, val);
-                                }}
-                              />
-                              {stroke && (
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
-                              )}
-                              {hasDrive && (
-                                <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {/* OUT total */}
-                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-                        {totals.getOut(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                      {/* Back 9 holes */}
-                      {holes.slice(9, 18).map((h, i) => {
-                        const locked = isHoleLocked(h.num);
-                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
-                        const hasDrive = trackDrives && getDriveValue(h, pr.team) === pr.pIdx;
-                        const lowScoreStatus = getLowScoreStatus(h, pr.team, pr.pIdx);
-                        const lowScoreBg = lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '';
-                        return (
-                          <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-                            <div className="relative flex flex-col items-center">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                className={`
-                                  w-10 h-10 text-center text-base font-semibold rounded-md border
-                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                  transition-colors duration-100
-                                  ${locked 
-                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-                                    : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
-                                  }
-                                `}
-                                value={getCellValue(h, pr.team, pr.pIdx)}
-                                disabled={locked}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? null : Number(e.target.value);
-                                  updateCell(h, pr.team, pr.pIdx, val);
-                                }}
-                              />
-                              {stroke && (
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
-                              )}
-                              {hasDrive && (
-                                <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {/* IN total */}
-                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-                        {totals.getIn(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                      {/* TOTAL */}
-                      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
-                        {totals.getTotal(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {/* Team A Player Rows - Using memoized PlayerScoreRow */}
+                {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => (
+                  <PlayerScoreRow
+                    key={`row-${pr.team}-${pr.pIdx}`}
+                    team={pr.team}
+                    pIdx={pr.pIdx}
+                    label={pr.label}
+                    color={pr.color}
+                    holes={holes}
+                    isLastOfTeam={rowIdx === teamRows.length - 1}
+                    trackDrives={trackDrives}
+                    getCellValue={pr.getCellValue}
+                    isHoleLocked={isHoleLocked}
+                    hasStroke={pr.hasStroke}
+                    getDriveValue={pr.getDriveValue}
+                    getLowScoreStatus={pr.getLowScoreStatus}
+                    onCellChange={pr.onCellChange}
+                    outTotal={totals.getOut(pr.team, pr.pIdx)}
+                    inTotal={totals.getIn(pr.team, pr.pIdx)}
+                    totalScore={totals.getTotal(pr.team, pr.pIdx)}
+                  />
+                ))}
 
                 {/* Team A Score Row (Best Ball: low net, Shamble: low gross) */}
                 {(format === "twoManBestBall" || format === "twoManShamble") && (
@@ -1170,113 +1298,29 @@ export default function Match() {
                   </tr>
                 )}
 
-                {/* Team B Player Rows */}
-                {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => {
-                  const isLastOfTeamB = rowIdx === teamRows.length - 1;
-                  return (
-                    <tr 
-                      key={`row-${pr.team}-${pr.pIdx}`}
-                      className={`${isLastOfTeamB ? "border-b-2 border-slate-300" : "border-b border-slate-100"}`}
-                    >
-                      <td 
-                        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
-                        style={{ color: pr.color }}
-                      >
-                        {pr.label}
-                      </td>
-                      {/* Front 9 holes */}
-                      {holes.slice(0, 9).map(h => {
-                        const locked = isHoleLocked(h.num);
-                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
-                        const hasDrive = trackDrives && getDriveValue(h, pr.team) === pr.pIdx;
-                        const lowScoreStatus = getLowScoreStatus(h, pr.team, pr.pIdx);
-                        const lowScoreBg = lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '';
-                        return (
-                          <td key={h.k} className="p-0.5">
-                            <div className="relative flex flex-col items-center">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                className={`
-                                  w-10 h-10 text-center text-base font-semibold rounded-md border
-                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                  transition-colors duration-100
-                                  ${locked 
-                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-                                    : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
-                                  }
-                                `}
-                                value={getCellValue(h, pr.team, pr.pIdx)}
-                                disabled={locked}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? null : Number(e.target.value);
-                                  updateCell(h, pr.team, pr.pIdx, val);
-                                }}
-                              />
-                              {stroke && (
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
-                              )}
-                              {hasDrive && (
-                                <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {/* OUT total */}
-                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-                        {totals.getOut(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                      {/* Back 9 holes */}
-                      {holes.slice(9, 18).map((h, i) => {
-                        const locked = isHoleLocked(h.num);
-                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
-                        const hasDrive = trackDrives && getDriveValue(h, pr.team) === pr.pIdx;
-                        const lowScoreStatus = getLowScoreStatus(h, pr.team, pr.pIdx);
-                        const lowScoreBg = lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '';
-                        return (
-                          <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-                            <div className="relative flex flex-col items-center">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                className={`
-                                  w-10 h-10 text-center text-base font-semibold rounded-md border
-                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                  transition-colors duration-100
-                                  ${locked 
-                                    ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-                                    : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
-                                  }
-                                `}
-                                value={getCellValue(h, pr.team, pr.pIdx)}
-                                disabled={locked}
-                                onChange={(e) => {
-                                  const val = e.target.value === "" ? null : Number(e.target.value);
-                                  updateCell(h, pr.team, pr.pIdx, val);
-                                }}
-                              />
-                              {stroke && (
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
-                              )}
-                              {hasDrive && (
-                                <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {/* IN total */}
-                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-                        {totals.getIn(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                      {/* TOTAL */}
-                      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
-                        {totals.getTotal(pr.team, pr.pIdx) ?? "–"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {/* Team B Player Rows - Using memoized PlayerScoreRow */}
+                {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => (
+                  <PlayerScoreRow
+                    key={`row-${pr.team}-${pr.pIdx}`}
+                    team={pr.team}
+                    pIdx={pr.pIdx}
+                    label={pr.label}
+                    color={pr.color}
+                    holes={holes}
+                    isLastOfTeam={rowIdx === teamRows.length - 1}
+                    isTeamB={true}
+                    trackDrives={trackDrives}
+                    getCellValue={pr.getCellValue}
+                    isHoleLocked={isHoleLocked}
+                    hasStroke={pr.hasStroke}
+                    getDriveValue={pr.getDriveValue}
+                    getLowScoreStatus={pr.getLowScoreStatus}
+                    onCellChange={pr.onCellChange}
+                    outTotal={totals.getOut(pr.team, pr.pIdx)}
+                    inTotal={totals.getIn(pr.team, pr.pIdx)}
+                    totalScore={totals.getTotal(pr.team, pr.pIdx)}
+                  />
+                ))}
 
                 {/* DRIVE SELECTOR ROWS - Inside scorecard table */}
                 {trackDrives && (
