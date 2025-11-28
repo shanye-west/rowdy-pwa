@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "rowdy-pwa"
-  }
+    "default": "rowdy-pwa",
+    "prod": "rowdycupleaderboard",
+    "dev": "rowdy-pwa"
+  },
+  "targets": {},
+  "etags": {}
 }
