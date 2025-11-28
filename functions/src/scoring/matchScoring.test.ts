@@ -1253,4 +1253,111 @@ describe("updateMatchFacts compatibility", () => {
       expect(summary.marginHistory.length).toBe(2); // Only 2 complete holes counted
     });
   });
+
+  describe("match reopening on earlier hole edit", () => {
+    it("reopens closed match when earlier hole changes flip result", () => {
+      // Scenario: Team A wins 4&3 (4 up with 3 to play after hole 15)
+      // Then hole 1 score is edited to flip that hole from Team A win to Team B win
+      // This swings margin by 2 (lose a win, gain a loss) → now 2 up instead of 4 up
+      
+      const holes: Record<string, { input: Record<string, number> }> = {};
+      
+      // Team A wins holes 1-4 (4 up after 4)
+      for (let i = 1; i <= 4; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 5 } };
+      }
+      // All square holes 5-15 (still 4 up after 15, match closes)
+      for (let i = 5; i <= 15; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      }
+      
+      const match = createMatch({ holes });
+      const summary = summarize("singles", match);
+      const { status } = buildStatusAndResult(summary);
+      
+      // Verify match is closed 4&3
+      expect(status.closed).toBe(true);
+      expect(status.leader).toBe("teamA");
+      expect(status.margin).toBe(4);
+      
+      // Edit hole 1 to Team B winning (swing of 2: Team A loses a win, Team B gains one)
+      holes["1"] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } };
+      
+      const matchAfterEdit = createMatch({ holes });
+      const summaryAfterEdit = summarize("singles", matchAfterEdit);
+      const statusAfterEdit = buildStatusAndResult(summaryAfterEdit).status;
+      
+      // Match should now be 2 up (not 4) - no longer closed at hole 15 (3 holes left > 2 lead)
+      expect(statusAfterEdit.closed).toBe(false);
+      expect(statusAfterEdit.margin).toBe(2);
+    });
+
+    it("keeps match closed if edit does not change outcome", () => {
+      // Team A wins 5&3 - editing a middle hole to AS still leaves them 4&3
+      const holes: Record<string, { input: Record<string, number> }> = {};
+      
+      // Team A wins holes 1-5
+      for (let i = 1; i <= 5; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 5 } };
+      }
+      // Holes 6-15 all square
+      for (let i = 6; i <= 15; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      }
+      
+      const match = createMatch({ holes });
+      const { status: statusBefore } = buildStatusAndResult(summarize("singles", match));
+      
+      expect(statusBefore.closed).toBe(true);
+      expect(statusBefore.margin).toBe(5);
+      
+      // Edit hole 3 to be all square (loses 1 hole of lead)
+      holes["3"] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      
+      const matchAfterEdit = createMatch({ holes });
+      const { status: statusAfter } = buildStatusAndResult(summarize("singles", matchAfterEdit));
+      
+      // Still closed at 4&3
+      expect(statusAfter.closed).toBe(true);
+      expect(statusAfter.margin).toBe(4);
+    });
+
+    it("correctly recalculates through 18 holes after reopening", () => {
+      // Start with closed match, edit to make it not closed, add remaining holes
+      const holes: Record<string, { input: Record<string, number> }> = {};
+      
+      // Team A wins holes 1-4
+      for (let i = 1; i <= 4; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 5 } };
+      }
+      // AS for 5-15
+      for (let i = 5; i <= 15; i++) {
+        holes[String(i)] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      }
+      
+      // Initially closed 4&3
+      const { status: s1 } = buildStatusAndResult(summarize("singles", createMatch({ holes })));
+      expect(s1.closed).toBe(true);
+      
+      // Edit holes 1-2 to AS (now 2 up after 15, not closed)
+      holes["1"] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      holes["2"] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      
+      const { status: s2 } = buildStatusAndResult(summarize("singles", createMatch({ holes })));
+      expect(s2.closed).toBe(false);
+      expect(s2.margin).toBe(2);
+      
+      // Add holes 16-18 where Team B wins 2 (ties match)
+      holes["16"] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } };
+      holes["17"] = { input: { teamAPlayerGross: 5, teamBPlayerGross: 4 } };
+      holes["18"] = { input: { teamAPlayerGross: 4, teamBPlayerGross: 4 } };
+      
+      const summary = summarize("singles", createMatch({ holes }));
+      const { status: s3, result } = buildStatusAndResult(summary);
+      
+      expect(s3.thru).toBe(18);
+      expect(s3.closed).toBe(true);
+      expect(result.winner).toBe("AS"); // All square after 18
+    });
+  });
 });

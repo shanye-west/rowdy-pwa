@@ -30,7 +30,7 @@ export default function Round() {
       setError(null);
 
       try {
-        // 1. Get Round
+        // 1. Get Round first (needed to fetch related data)
         const rSnap = await getDoc(doc(db, "rounds", roundId));
         if (!rSnap.exists()) {
           setError("Round not found.");
@@ -40,23 +40,39 @@ export default function Round() {
         const rData = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
         setRound(rData);
 
-        // 2. Get Tournament (for Theme & Colors)
-        if (rData.tournamentId) {
-          const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
-          if (tSnap.exists()) {
-            setTournament({ id: tSnap.id, ...tSnap.data() } as TournamentDoc);
-          }
+        // 2. Fetch tournament, matches, and course in parallel
+        const matchesQuery = query(collection(db, "matches"), where("roundId", "==", roundId));
+        
+        const [tournamentResult, matchesResult, courseResult] = await Promise.all([
+          // Tournament (for theme & colors)
+          rData.tournamentId 
+            ? getDoc(doc(db, "tournaments", rData.tournamentId))
+            : Promise.resolve(null),
+          // Matches
+          getDocs(matchesQuery),
+          // Course
+          rData.courseId
+            ? getDoc(doc(db, "courses", rData.courseId))
+            : Promise.resolve(null),
+        ]);
+
+        // Process tournament
+        if (tournamentResult?.exists()) {
+          setTournament({ id: tournamentResult.id, ...tournamentResult.data() } as TournamentDoc);
         }
 
-        // 3. Get Matches
-        const q = query(collection(db, "matches"), where("roundId", "==", roundId));
-        const mSnap = await getDocs(q);
-        const ms = mSnap.docs
+        // Process matches
+        const ms = matchesResult.docs
           .map((d) => ({ id: d.id, ...d.data() } as MatchDoc))
           .sort((a, b) => a.id.localeCompare(b.id));
         setMatches(ms);
 
-        // 4. Bulk Fetch Players (so we can show names on the cards)
+        // Process course
+        if (courseResult?.exists()) {
+          setCourse({ id: courseResult.id, ...courseResult.data() } as CourseDoc);
+        }
+
+        // 3. Bulk fetch players (depends on matches result)
         const playerIds = new Set<string>();
         ms.forEach(m => {
           m.teamAPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
@@ -65,25 +81,25 @@ export default function Round() {
 
         if (playerIds.size > 0) {
           const pIds = Array.from(playerIds);
-          // Firestore 'in' limit is 10, so chunk if necessary (simple version here assumes <10 for now or does 1 batch)
-          // For production with many players, you'd chunk this.
-          const chunks = [];
-          for (let i=0; i<pIds.length; i+=10) chunks.push(pIds.slice(i, i+10));
+          // Firestore 'in' limit is 10, so chunk and fetch all chunks in parallel
+          const chunks: string[][] = [];
+          for (let i = 0; i < pIds.length; i += 10) {
+            chunks.push(pIds.slice(i, i + 10));
+          }
 
           const playerMap: Record<string, PlayerDoc> = {};
-          for (const chunk of chunks) {
-            const pSnap = await getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)));
-            pSnap.forEach(doc => { playerMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerDoc; });
-          }
+          const chunkResults = await Promise.all(
+            chunks.map(chunk => 
+              getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
+            )
+          );
+          
+          chunkResults.forEach(pSnap => {
+            pSnap.forEach(doc => { 
+              playerMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerDoc; 
+            });
+          });
           setPlayers(playerMap);
-        }
-
-        // 5. Fetch course if courseId exists
-        if (rData.courseId) {
-          const cSnap = await getDoc(doc(db, "courses", rData.courseId));
-          if (cSnap.exists()) {
-            setCourse({ id: cSnap.id, ...cSnap.data() } as CourseDoc);
-          }
         }
 
       } catch (err) {
