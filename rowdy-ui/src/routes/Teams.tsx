@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, getDocs, query, where, documentId } from "firebase/firestore";
+import { collection, getDocs, query, where, documentId, onSnapshot, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -24,67 +24,112 @@ export default function Teams() {
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
 
+  // Track loading states
+  const [tournamentLoaded, setTournamentLoaded] = useState(false);
+  const [factsLoaded, setFactsLoaded] = useState(false);
+
+  // 1) Subscribe to active tournament
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // 1. Fetch Active Tournament
-        const tSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
-        if (tSnap.empty) { setLoading(false); return; }
-        const tData = { id: tSnap.docs[0].id, ...tSnap.docs[0].data() } as TournamentDoc;
-        setTournament(tData);
-
-        // 2. Collect all Player IDs from Rosters
-        const teamAIds = Object.values(tData.teamA.rosterByTier || {}).flat();
-        const teamBIds = Object.values(tData.teamB.rosterByTier || {}).flat();
-        const allIds = [...teamAIds, ...teamBIds];
-
-        if (allIds.length === 0) { setLoading(false); return; }
-
-        // 3. Fetch Players (chunked to avoid Firestore limit of 10)
-        const pMap: Record<string, PlayerDoc> = {};
-        const chunks = [];
-        for (let i=0; i<allIds.length; i+=10) chunks.push(allIds.slice(i, i+10));
-        
-        for (const chunk of chunks) {
-          const pSnap = await getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)));
-          pSnap.forEach(doc => { pMap[doc.id] = { id: doc.id, ...doc.data() } as PlayerDoc; });
+    const unsub = onSnapshot(
+      query(collection(db, "tournaments"), where("active", "==", true), limit(1)),
+      (snap) => {
+        if (snap.empty) {
+          setTournament(null);
+        } else {
+          const doc = snap.docs[0];
+          setTournament({ id: doc.id, ...doc.data() } as TournamentDoc);
         }
-        setPlayers(pMap);
+        setTournamentLoaded(true);
+      },
+      (err) => {
+        console.error("Tournament subscription error:", err);
+        setError("Failed to load tournament");
+        setTournamentLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
 
-        // 4. Fetch Match Facts ONLY for this Tournament
-        // This allows us to calculate the record specific to this event.
-        const factsQuery = query(
-          collection(db, "playerMatchFacts"), 
-          where("tournamentId", "==", tData.id)
-        );
-        const fSnap = await getDocs(factsQuery);
-        
+  // 2) Fetch players when tournament loads (one-time fetch is fine for player docs)
+  useEffect(() => {
+    if (!tournament) {
+      setPlayers({});
+      return;
+    }
+
+    const teamAIds = Object.values(tournament.teamA?.rosterByTier || {}).flat();
+    const teamBIds = Object.values(tournament.teamB?.rosterByTier || {}).flat();
+    const allIds = [...teamAIds, ...teamBIds];
+
+    if (allIds.length === 0) {
+      setPlayers({});
+      return;
+    }
+
+    // Firestore 'in' limit is 30
+    const chunks: string[][] = [];
+    for (let i = 0; i < allIds.length; i += 30) {
+      chunks.push(allIds.slice(i, i + 30));
+    }
+
+    Promise.all(
+      chunks.map(chunk =>
+        getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
+      )
+    ).then(results => {
+      const pMap: Record<string, PlayerDoc> = {};
+      results.forEach(snap => {
+        snap.forEach(d => {
+          pMap[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+        });
+      });
+      setPlayers(pMap);
+    }).catch(err => {
+      console.error("Players fetch error:", err);
+    });
+  }, [tournament]);
+
+  // 3) Subscribe to playerMatchFacts for this tournament (real-time for live stats)
+  useEffect(() => {
+    if (!tournament?.id) {
+      setStats({});
+      setFactsLoaded(tournamentLoaded);
+      return;
+    }
+
+    const unsub = onSnapshot(
+      query(collection(db, "playerMatchFacts"), where("tournamentId", "==", tournament.id)),
+      (snap) => {
         const sMap: Record<string, TournamentStat> = {};
-
-        fSnap.forEach((doc) => {
-          const f = doc.data() as PlayerMatchFact;
+        
+        snap.docs.forEach(d => {
+          const f = d.data() as PlayerMatchFact;
           const pid = f.playerId;
           
-          // Initialize if not exists
           if (!sMap[pid]) sMap[pid] = { wins: 0, losses: 0, halves: 0 };
-
-          // Aggregate
+          
           if (f.outcome === "win") sMap[pid].wins++;
           else if (f.outcome === "loss") sMap[pid].losses++;
           else if (f.outcome === "halve") sMap[pid].halves++;
         });
-
+        
         setStats(sMap);
-      } catch (err) {
-        console.error("Failed to load teams", err);
-        setError("Something went wrong while loading teams. Please try again later.");
-      } finally {
-        setLoading(false);
+        setFactsLoaded(true);
+      },
+      (err) => {
+        console.error("Facts subscription error:", err);
+        setFactsLoaded(true);
       }
-    })();
-  }, []);
+    );
+    return () => unsub();
+  }, [tournament?.id, tournamentLoaded]);
+
+  // Coordinated loading state
+  useEffect(() => {
+    if (tournamentLoaded && (!tournament || factsLoaded)) {
+      setLoading(false);
+    }
+  }, [tournamentLoaded, tournament, factsLoaded]);
 
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>) => {
     if (!roster) return (
