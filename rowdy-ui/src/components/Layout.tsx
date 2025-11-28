@@ -63,6 +63,11 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               src={tournamentLogo} 
               alt="Tournament Logo"
               fallbackIcon="⛳"
+              fallbackSrc={
+                series === "christmasClassic" 
+                  ? "/images/rowdycup-logo-christmas.svg" 
+                  : "/images/rowdycup-logo.svg"
+              }
               style={{ height: 44, width: 44, objectFit: "contain" }} 
             />
           </Link>
