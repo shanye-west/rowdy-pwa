@@ -32,6 +32,8 @@ export type TournamentDoc = {
     color?: string; 
     rosterByTier?: TierMap;
     handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 7.4)
+    captainId?: string;
+    coCaptainId?: string;
   };
   teamB: { 
     id: string; 
@@ -40,6 +42,8 @@ export type TournamentDoc = {
     color?: string; 
     rosterByTier?: TierMap;
     handicapByPlayer?: Record<string, number>; // playerId -> handicap index (e.g., 9.5)
+    captainId?: string;
+    coCaptainId?: string;
   };
 };
 
