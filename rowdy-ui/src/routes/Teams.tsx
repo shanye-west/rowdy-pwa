@@ -168,9 +168,9 @@ export default function Teams() {
 
             return (
               <div key={tier}>
-                {/* Tier Label */}
+                {/* Tier header (single letter) */}
                 <div className="section-header">
-                  Tier {tier}
+                  {tier}
                 </div>
 
                 {/* Player Rows */}
@@ -183,13 +183,12 @@ export default function Teams() {
                   return (
                     <div 
                       key={pid} 
-                      className="flex justify-between items-center px-4 py-3 border-b border-slate-200 
-                                 hover:bg-slate-50 transition-colors duration-150"
+                      className="flex justify-between items-center px-4 py-3 border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150"
                     >
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold">{name}</span>
                         {hcp != null && (
-                          <span className="text-xs text-slate-500">({hcp})</span>
+                          <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
                         )}
                       </div>
                       <div className="text-sm text-slate-500 font-mono">
