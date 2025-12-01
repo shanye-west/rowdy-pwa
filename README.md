@@ -298,18 +298,24 @@ Use these scripts to export a production Firestore snapshot to JSON and to seed 
 Files & location
 - `scripts/exportFirestore.js` — exports all top-level collections to `scripts/data/firestore-snapshot.json`
 - `scripts/seedFirestore.js` — seeds Firestore from the snapshot (only runs on an EMPTY target DB)
-- `scripts/serviceAccountKey.json` — your service account key (DO NOT commit)
+- `service-account.json` (repo root) — preferred location for your service account key (DO NOT commit)
+- `scripts/serviceAccountKey.json` — local fallback for the scripts folder (also DO NOT commit)
 
 Important safety rules
-- The `export` script reads from the project tied to the service account key you place at `scripts/serviceAccountKey.json`. Put your *PROD* key there when exporting.
-- The `seed` script writes to the project tied to the service account key you place at `scripts/serviceAccountKey.json`. Put your *DEV* key there when seeding.
+- The `export` script reads from the project tied to the service account key you place at **either**:
+	- repository root: `service-account.json` (recommended), or
+	- `scripts/serviceAccountKey.json` (fallback for local-only keys)
+
+- The `seed` script writes to the project tied to the service account key you place at **either**:
+	- repository root: `service-account.json` (recommended), or
+	- `scripts/serviceAccountKey.json` (fallback for local-only keys)
 - The `seed` script will refuse to run unless the target Firestore is completely empty. You must manually delete all collections/documents in the Firebase Console before running the seed script.
 - Service account keys and the snapshot file are ignored in `.gitignore` (`scripts/serviceAccountKey.json`, `scripts/data/firestore-snapshot.json`).
 
 How to export (PROD → JSON)
 
 1. Download a service account key for your **PROD** project (Firebase Console → Project Settings → Service Accounts → Generate new private key).
-2. Save the key as `scripts/serviceAccountKey.json` in this repository (local only; it is gitignored).
+2. Save the key as `service-account.json` in the repository root (recommended) or as `scripts/serviceAccountKey.json` (local fallback). Both locations are gitignored.
 3. Run the export script from the repository root:
 
 ```bash
@@ -322,7 +328,7 @@ npm run export
 How to seed (JSON → DEV)
 
 1. In the Firebase Console, manually delete all data in your DEV Firestore project. The seed script will abort if it finds any existing documents.
-2. Download a service account key for your **DEV** project and save it as `scripts/serviceAccountKey.json` (replacing the prod key).
+2. Download a service account key for your **DEV** project and save it as `service-account.json` in the repository root (recommended) or `scripts/serviceAccountKey.json` (fallback), replacing the prod key.
 3. Ensure `scripts/data/firestore-snapshot.json` exists (created by the export step).
 4. Run the seed script from the repository root:
 

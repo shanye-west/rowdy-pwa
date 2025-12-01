@@ -22,8 +22,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // === CONFIGURATION ===
-const SERVICE_ACCOUNT_PATH = join(__dirname, 'serviceAccountKey.json');
+// Prefer a service account key at the repository root: `service-account.json`.
+// Fallback to `scripts/serviceAccountKey.json` for local-only keys.
+const ROOT_SERVICE_ACCOUNT = join(__dirname, '..', 'service-account.json');
+const LOCAL_SERVICE_ACCOUNT = join(__dirname, 'serviceAccountKey.json');
 const OUTPUT_PATH = join(__dirname, 'data', 'firestore-snapshot.json');
+
+let SERVICE_ACCOUNT_PATH = null;
+if (existsSync(ROOT_SERVICE_ACCOUNT)) {
+  SERVICE_ACCOUNT_PATH = ROOT_SERVICE_ACCOUNT;
+} else if (existsSync(LOCAL_SERVICE_ACCOUNT)) {
+  SERVICE_ACCOUNT_PATH = LOCAL_SERVICE_ACCOUNT;
+}
 
 // === HELPERS ===
 
@@ -69,17 +79,21 @@ async function main() {
   console.log('=== Firestore Export Script ===\n');
 
   // Check for service account key
-  if (!existsSync(SERVICE_ACCOUNT_PATH)) {
-    console.error(`❌ Service account key not found at:\n   ${SERVICE_ACCOUNT_PATH}`);
-    console.error('\nTo generate one:');
+  if (!SERVICE_ACCOUNT_PATH) {
+    console.error('❌ No service account key found.');
+    console.error('\nPlace one of the following files:');
+    console.error(' - repository root: service-account.json (recommended)');
+    console.error(' - scripts/serviceAccountKey.json (local fallback)');
+    console.error('\nTo generate a key:');
     console.error('1. Go to Firebase Console → Project Settings → Service Accounts');
     console.error('2. Click "Generate new private key"');
-    console.error('3. Save the file as "serviceAccountKey.json" in the scripts folder');
+    console.error('3. Save the file as stated above (do NOT commit it).');
     process.exit(1);
   }
 
   // Initialize Firebase Admin
   const serviceAccount = JSON.parse(readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+  console.log(`Using service account key: ${SERVICE_ACCOUNT_PATH}`);
   
   initializeApp({
     credential: cert(serviceAccount),
