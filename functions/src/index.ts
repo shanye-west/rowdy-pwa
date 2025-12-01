@@ -591,6 +591,19 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   const batch = db.batch();
 
+  // Fetch course holes data for holePerformance
+  let courseHoles: { number: number; par: number }[] = [];
+  if (courseId) {
+    const cSnap2 = await db.collection("courses").doc(courseId).get();
+    if (cSnap2.exists && Array.isArray(cSnap2.data()?.holes)) {
+      courseHoles = cSnap2.data()!.holes.map((h: any) => ({ number: h.number || 0, par: h.par || 4 }));
+    }
+  }
+  // Fallback to default pars if no course data
+  if (courseHoles.length === 0) {
+    courseHoles = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }));
+  }
+
   const writeFact = (p: any, team: "teamA" | "teamB", pIdx: number, opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
     
@@ -708,6 +721,60 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
 
+    // Build holePerformance array
+    const holePerformance: any[] = [];
+    for (const holeNum of holesRange(holesData)) {
+      const h = holesData[String(holeNum)]?.input ?? {};
+      const holeInfo = courseHoles.find(ch => ch.number === holeNum) || { number: holeNum, par: 4 };
+      
+      // Determine hole result from team perspective
+      const hResult = decideHole(format, holeNum, after);
+      let holeResult: 'win' | 'loss' | 'halve' | null = null;
+      if (hResult === team) holeResult = 'win';
+      else if (hResult === 'AS') holeResult = 'halve';
+      else if (hResult !== null) holeResult = 'loss';
+      
+      const holeData: any = {
+        hole: holeNum,
+        par: holeInfo.par,
+        result: holeResult,
+      };
+      
+      if (format === "singles") {
+        const gross = team === "teamA" ? h.teamAPlayerGross : h.teamBPlayerGross;
+        holeData.gross = gross ?? null;
+        if (gross != null) {
+          const strokeVal = clamp01(p.strokesReceived?.[holeNum - 1]);
+          holeData.strokes = strokeVal as 0 | 1;
+          holeData.net = gross - strokeVal;
+        }
+      } else if (format === "twoManBestBall") {
+        const arr = team === "teamA" ? h.teamAPlayersGross : h.teamBPlayersGross;
+        const gross = Array.isArray(arr) ? arr[pIdx] : null;
+        holeData.gross = gross ?? null;
+        if (gross != null) {
+          const strokeVal = clamp01(p.strokesReceived?.[holeNum - 1]);
+          holeData.strokes = strokeVal as 0 | 1;
+          holeData.net = gross - strokeVal;
+        }
+      } else if (format === "twoManShamble") {
+        // Shamble: individual gross, no net/strokes, but has driveUsed
+        const arr = team === "teamA" ? h.teamAPlayersGross : h.teamBPlayersGross;
+        const gross = Array.isArray(arr) ? arr[pIdx] : null;
+        holeData.gross = gross ?? null;
+        const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
+        holeData.driveUsed = driveVal === pIdx;
+      } else if (format === "twoManScramble") {
+        // Scramble: team gross, has driveUsed
+        const gross = team === "teamA" ? h.teamAGross : h.teamBGross;
+        holeData.gross = gross ?? null;
+        const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
+        holeData.driveUsed = driveVal === pIdx;
+      }
+      
+      holePerformance.push(holeData);
+    }
+
     // Opponent/Partner arrays
     const opponentIds: string[] = [];
     const opponentTiers: string[] = [];
@@ -787,6 +854,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (strokesVsParNet !== null) factData.strokesVsParNet = strokesVsParNet;
     if (teamTotalGross !== null) factData.teamTotalGross = teamTotalGross;
     if (teamStrokesVsParGross !== null) factData.teamStrokesVsParGross = teamStrokesVsParGross;
+    
+    // Add holePerformance array
+    factData.holePerformance = holePerformance;
 
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), factData);
   };

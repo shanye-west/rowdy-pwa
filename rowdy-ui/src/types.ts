@@ -112,6 +112,17 @@ export type MatchDoc = {
   courseHandicaps?: number[]; // Course handicaps for all players in match order [teamA..., teamB...]
 };
 
+// Per-hole performance data for advanced queries
+export type HolePerformance = {
+  hole: number;                           // 1-18
+  par: number;                            // from course data
+  gross: number | null;                   // raw score (individual for singles/bestBall, team for scramble/shamble)
+  net?: number | null;                    // gross - strokesReceived (singles/bestBall only)
+  strokes?: 0 | 1;                        // strokesReceived for this hole (singles/bestBall only)
+  driveUsed?: boolean;                    // true if this player's drive was used (scramble/shamble only)
+  result?: 'win' | 'loss' | 'halve' | null; // hole result from player's perspective
+};
+
 export type PlayerMatchFact = {
   playerId: string;
   matchId: string;
@@ -172,6 +183,9 @@ export type PlayerMatchFact = {
   // Team scoring stats (twoManScramble, twoManShamble only)
   teamTotalGross?: number;        // Team's combined gross score
   teamStrokesVsParGross?: number; // teamTotalGross - coursePar
+
+  // Per-hole performance array for advanced queries
+  holePerformance?: HolePerformance[];
 
   // Course context
   coursePar?: number;         // Course par for reference
