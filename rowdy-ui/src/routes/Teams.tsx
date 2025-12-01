@@ -188,6 +188,9 @@ export default function Teams() {
                     >
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold">{name}</span>
+                        {hcp != null && (
+                          <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
+                        )}
                         {isCaptain && (
                           <span 
                             style={{ 
@@ -199,13 +202,11 @@ export default function Teams() {
                               padding: '1px 5px',
                               borderRadius: 4,
                               background: `color-mix(in srgb, ${teamColor} 15%, white)`,
+                              marginLeft: 6,
                             }}
                           >
                             Captain
                           </span>
-                        )}
-                        {hcp != null && (
-                          <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
                         )}
                       </div>
                       <div className="text-sm text-slate-500 font-mono">
