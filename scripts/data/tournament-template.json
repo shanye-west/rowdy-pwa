@@ -5,6 +5,7 @@
   "series": "rowdyCup",
   "tournamentLogo": "",
   "roundIds": [],
+  "openPublicEdits": false,
   "teamA": {
     "id": "teamA",
     "name": "Team A Name",

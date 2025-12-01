@@ -12,6 +12,7 @@ npx ts-node seed-tournament.ts --input data/tournament.json --force (if needed)
   "active": false,
   "tournamentLogo": "", //URL from firebase storage
   "roundIds": [],
+  "openPublicEdits": false, // optional: allow public editing of matches when true
   "teamA": {
     "id": "teamA",
     "name": "Team A Name",
