@@ -44,6 +44,8 @@ export type TournamentDoc = {
     captainId?: string;
     coCaptainId?: string;
   };
+  // Temporary feature toggle: when true, clients may edit matches without being rostered/logged-in.
+  openPublicEdits?: boolean;
 };
 
 // NEW: Hole definition (static data)

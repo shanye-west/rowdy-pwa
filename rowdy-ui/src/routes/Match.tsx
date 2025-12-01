@@ -311,15 +311,17 @@ export default function Match() {
     [match?.teamBPlayers]
   );
   
-  // Check if current user can edit this match
-  const canEdit = canEditMatch(teamAPlayerIds, teamBPlayerIds);
+  // Check if current user can edit this match. Also allow editing when
+  // the tournament is explicitly opened for public edits (feature toggle).
+  const canEdit = !!tournament?.openPublicEdits || canEditMatch(teamAPlayerIds, teamBPlayerIds);
   
   // Reason why user can't edit (for displaying message)
   const editBlockReason = useMemo(() => {
-    if (!player) return "login";
+    // If the tournament allows public edits, don't force login messaging
+    if (!player && !tournament?.openPublicEdits) return "login";
     if (!canEdit) return "not-rostered";
     return null;
-  }, [player, canEdit]);
+  }, [player, canEdit, tournament?.openPublicEdits]);
 
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo(() => {
