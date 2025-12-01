@@ -101,6 +101,8 @@ firebase deploy --only firestore:rules
 
 2. Turn on public edits for a tournament (example using `firebase-tools`):
 
+Run these commands from the repository root (project root) — that is, one level up from this `scripts/` folder.
+
 ```bash
 # set the flag to true
 firebase firestore:update tournaments/2025ChristmasClassic --data '{"openPublicEdits": true}'
