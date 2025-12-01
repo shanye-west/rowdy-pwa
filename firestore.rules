@@ -51,8 +51,23 @@ service cloud.firestore {
                (playerIds.size() > 3 && exists(/databases/$(database)/documents/players/$(playerIds[3])) && 
                 get(/databases/$(database)/documents/players/$(playerIds[3])).data.authUid == request.auth.uid);
       }
-      
-      allow update: if request.auth != null && isRosteredPlayer();
+
+      // New: allow public edits if the tournament explicitly enables openPublicEdits
+      function isTournamentOpen() {
+        // Try to read tournamentId from resource (existing doc) first, fallback to incoming request resource
+        let tid = null;
+        if (resource.data.tournamentId != null) {
+          tid = resource.data.tournamentId;
+        } else if (request.resource != null && request.resource.data.tournamentId != null) {
+          tid = request.resource.data.tournamentId;
+        }
+        return tid != null &&
+               exists(/databases/$(database)/documents/tournaments/$(tid)) &&
+               get(/databases/$(database)/documents/tournaments/$(tid)).data.openPublicEdits == true;
+      }
+
+      // Allow updates if user is authenticated and rostered OR the tournament allows public edits.
+      allow update: if (request.auth != null && isRosteredPlayer()) || isTournamentOpen();
       allow create, delete: if false;
     }
   }
