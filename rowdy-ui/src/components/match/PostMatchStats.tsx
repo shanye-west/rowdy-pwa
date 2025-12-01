@@ -13,6 +13,8 @@ export type PostMatchStatsProps = {
   teamBColor: string;
   getPlayerName: (pid?: string) => string;
   marginHistory?: number[];
+  teamAName?: string;
+  teamBName?: string;
 };
 
 // =============================================================================
@@ -114,6 +116,24 @@ function PlayerNamesHeader({ teamANames, teamBNames, teamAColor, teamBColor }: {
   );
 }
 
+/** Simple header that lists each team name (left/right) with a centered label */
+function TeamNamesHeader({ teamAName, teamBName, teamAColor, teamBColor }: {
+  teamAName?: string;
+  teamBName?: string;
+} & TeamColors) {
+  return (
+    <div className="flex items-center py-2 mb-2">
+      <div className="flex-1 text-right pr-3 font-semibold text-sm" style={{ color: teamAColor }}>
+        {teamAName ?? "Team A"}
+      </div>
+      <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">Team</div>
+      <div className="flex-1 text-left pl-3 font-semibold text-sm" style={{ color: teamBColor }}>
+        {teamBName ?? "Team B"}
+      </div>
+    </div>
+  );
+}
+
 /** Player-level stat row for 2-man formats (4 columns: 2 per team) */
 function PlayerStatRow({ label, teamA, teamB, teamAColor, teamBColor, highlight = false }: {
   label: string;
@@ -174,6 +194,8 @@ export function PostMatchStats({
   teamBColor,
   getPlayerName,
   marginHistory,
+  teamAName,
+  teamBName,
 }: PostMatchStatsProps) {
   // ---------------------------------------------------------------------------
   // DATA EXTRACTION
@@ -413,6 +435,7 @@ export function PostMatchStats({
       {/* Visual separator + grouped team-wide stats */}
       {(showHamAndEgg || hasLeadChanges) && (
         <div className="mt-3 pt-3 border-t border-slate-200">
+          <TeamNamesHeader teamAName={teamAName} teamBName={teamBName} {...colors} />
           {showHamAndEgg && (
             <TeamStatRow label="🍳 Ham & Eggs" {...colors}
               valueA={factA?.hamAndEggCount ?? 0}

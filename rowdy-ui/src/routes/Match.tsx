@@ -1657,6 +1657,8 @@ export default function Match() {
             teamAColor={teamAColor}
             teamBColor={teamBColor}
             getPlayerName={getPlayerName}
+            teamAName={tournament?.teamA?.name}
+            teamBName={tournament?.teamB?.name}
             marginHistory={match.status?.marginHistory}
           />
         )}
