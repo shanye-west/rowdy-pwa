@@ -44,20 +44,25 @@ export default function OfflineImage({
   }, []);
 
   // If no src provided, but a fallbackSrc exists, try it; otherwise show fallback
-  if (!displayedSrc) {
-    if (fallbackSrc) {
-      // attempt fallback image
-      setDisplayedSrc(fallbackSrc);
-    } else {
-      return (
-        <FallbackDisplay
-          icon={fallbackIcon}
-          text={fallbackText || alt}
-          style={style}
-          className={className}
-        />
-      );
+  // If no src provided, try fallbackSrc via effect (avoid setState during render)
+  useEffect(() => {
+    if (!displayedSrc) {
+      if (fallbackSrc) {
+        setDisplayedSrc(fallbackSrc);
+      }
     }
+  }, [displayedSrc, fallbackSrc]);
+
+  // If still no displayedSrc (and no fallback), show fallback display immediately
+  if (!displayedSrc) {
+    return (
+      <FallbackDisplay
+        icon={fallbackIcon}
+        text={fallbackText || alt}
+        style={style}
+        className={className}
+      />
+    );
   }
 
   // If error occurred, show fallback icon
