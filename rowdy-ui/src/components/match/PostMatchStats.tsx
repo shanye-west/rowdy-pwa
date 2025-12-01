@@ -5,8 +5,6 @@ export type PostMatchStatsProps = {
   format: RoundFormat;
   teamAPlayers: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers: { playerId: string; strokesReceived: number[] }[];
-  teamAName: string;
-  teamBName: string;
   teamAColor: string;
   teamBColor: string;
   getPlayerName: (pid?: string) => string;
@@ -31,8 +29,6 @@ export function PostMatchStats({
   format,
   teamAPlayers,
   teamBPlayers,
-  teamAName,
-  teamBName,
   teamAColor,
   teamBColor,
   getPlayerName,
@@ -54,7 +50,8 @@ export function PostMatchStats({
   // Determine which stat categories apply to this format
   const showIndividualScoring = format === "twoManBestBall";
   const showTeamScoring = format === "twoManScramble" || format === "twoManShamble";
-  const showBallUsage = format === "twoManBestBall" || format === "twoManShamble";
+  // Ball usage applies to shamble/scramble only; exclude bestBall per UX request
+  const showBallUsage = format === "twoManShamble" || format === "twoManScramble";
   const showDrives = format === "twoManScramble" || format === "twoManShamble";
 
   // Build player id lists
@@ -374,46 +371,39 @@ export function PostMatchStats({
         Match Stats
       </h3>
 
-      {/* Team Headers */}
-      <div className="flex items-center pb-2 border-b border-slate-200">
-        <div className="flex-1 text-right pr-3">
-          <span className="text-xs font-bold uppercase" style={{ color: teamAColor }}>{teamAName}</span>
-        </div>
-        <div className="w-24 shrink-0" />
-        <div className="flex-1 text-left pl-3">
-          <span className="text-xs font-bold uppercase" style={{ color: teamBColor }}>{teamBName}</span>
-        </div>
-      </div>
+      {/* Team Headers removed per UX: start directly with scoring and player names */}
 
       {/* MATCH RESULT */}
-      <div>
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-          Match Result
-        </div>
-        <StatRow 
-          label="Holes Won" 
-          valueA={teamAFacts[0]?.holesWon} 
-          valueB={teamBFacts[0]?.holesWon} 
-          highlight 
-        />
-        <StatRow 
-          label="Holes Lost" 
-          valueA={teamAFacts[0]?.holesLost} 
-          valueB={teamBFacts[0]?.holesLost} 
-        />
-        <StatRow 
-          label="Holes Halved" 
-          valueA={teamAFacts[0]?.holesHalved} 
-          valueB={teamBFacts[0]?.holesHalved} 
-        />
-        {marginHistory && marginHistory.length > 0 && (
+      {format !== "twoManBestBall" && (
+        <div>
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
+            Match Result
+          </div>
           <StatRow 
-            label="Largest Lead" 
-            valueA={largestLeadA > 0 ? largestLeadA : "–"} 
-            valueB={largestLeadB > 0 ? largestLeadB : "–"} 
+            label="Holes Won" 
+            valueA={teamAFacts[0]?.holesWon} 
+            valueB={teamBFacts[0]?.holesWon} 
+            highlight 
           />
-        )}
-      </div>
+          <StatRow 
+            label="Holes Lost" 
+            valueA={teamAFacts[0]?.holesLost} 
+            valueB={teamBFacts[0]?.holesLost} 
+          />
+          <StatRow 
+            label="Holes Halved" 
+            valueA={teamAFacts[0]?.holesHalved} 
+            valueB={teamBFacts[0]?.holesHalved} 
+          />
+          {marginHistory && marginHistory.length > 0 && (
+            <StatRow 
+              label="Largest Lead" 
+              valueA={largestLeadA > 0 ? largestLeadA : "–"} 
+              valueB={largestLeadB > 0 ? largestLeadB : "–"} 
+            />
+          )}
+        </div>
+      )}
 
       {/* INDIVIDUAL SCORING (Best Ball) */}
       {showIndividualScoring && (
@@ -431,11 +421,6 @@ export function PostMatchStats({
             label="Net"
             teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
             teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
-          />
-          <PlayerStatRow
-            label="Strokes Recv'd"
-            teamA={teamAFacts.map(f => f.strokesGiven)}
-            teamB={teamBFacts.map(f => f.strokesGiven)}
           />
         </div>
       )}

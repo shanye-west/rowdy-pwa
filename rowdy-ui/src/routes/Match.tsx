@@ -1654,8 +1654,6 @@ export default function Match() {
             format={format}
             teamAPlayers={match.teamAPlayers || []}
             teamBPlayers={match.teamBPlayers || []}
-            teamAName={tournament?.teamA?.name || "Team A"}
-            teamBName={tournament?.teamB?.name || "Team B"}
             teamAColor={teamAColor}
             teamBColor={teamBColor}
             getPlayerName={getPlayerName}
