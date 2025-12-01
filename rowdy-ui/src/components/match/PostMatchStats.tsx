@@ -214,7 +214,8 @@ export function PostMatchStats({
     teamColor: string;
     alignRight?: boolean;
   }) => (
-    <div className={`flex items-center gap-2 ${alignRight ? "flex-row-reverse text-right" : ""}`}>
+    // add small padding on the side closest to the card edge so emoji doesn't touch the tile edge
+    <div className={`flex items-center gap-2 ${alignRight ? "flex-row-reverse text-right pr-3" : "pl-3"}`}>
       <span className="text-lg">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm" style={{ color: teamColor }}>{title}</div>
