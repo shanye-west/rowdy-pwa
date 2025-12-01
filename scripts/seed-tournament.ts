@@ -67,6 +67,11 @@ async function seedTournament(inputFile: string, force: boolean) {
     process.exit(1);
   }
 
+  // Ensure the optional feature toggle exists and defaults to false
+  if (typeof tournament.openPublicEdits === "undefined") {
+    tournament.openPublicEdits = false;
+  }
+
   const docRef = db.collection("tournaments").doc(tournament.id);
   const existing = await docRef.get();
 
