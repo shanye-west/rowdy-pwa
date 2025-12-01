@@ -10,7 +10,7 @@
     "name": "Team A Name",
     "logo": "",
     "captainId": "",
-    "coCaptainId?": "",
+    "coCaptainId": "",
     "color": "#1e3a5f",
     "rosterByTier": {
       "A": [],
@@ -25,7 +25,7 @@
     "name": "Team B Name",
     "logo": "",
     "captainId": "",
-    "coCaptainId?": "",
+    "coCaptainId": "",
     "color": "#8b0000",
     "rosterByTier": {
       "A": [],

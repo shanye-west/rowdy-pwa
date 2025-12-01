@@ -55,11 +55,11 @@ async function seedTournament(inputFile: string, force: boolean) {
   if (!tournament.teamA?.id) errors.push("Missing 'teamA.id'");
   if (!tournament.teamA?.name) errors.push("Missing 'teamA.name'");
   if (!tournament.teamA?.captainId) errors.push("Missing 'teamA.captainId'");
-  if (!tournament.teamA?.coCaptainId) errors.push("Missing 'teamA.coCaptainId'");
+  // coCaptainId is optional
   if (!tournament.teamB?.id) errors.push("Missing 'teamB.id'");
   if (!tournament.teamB?.name) errors.push("Missing 'teamB.name'");
   if (!tournament.teamB?.captainId) errors.push("Missing 'teamB.captainId'");
-  if (!tournament.teamB?.coCaptainId) errors.push("Missing 'teamB.coCaptainId'");
+  // coCaptainId is optional
 
   if (errors.length > 0) {
     console.error("❌ Validation failed:\n");
