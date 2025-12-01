@@ -20,6 +20,12 @@ function formatStrokesVsPar(value: number | undefined | null): string {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
+// Count birdies from holePerformance array (gross < par)
+function countBirdies(fact: PlayerMatchFact | undefined): number {
+  if (!fact?.holePerformance) return 0;
+  return fact.holePerformance.filter(hp => hp.gross != null && hp.par != null && hp.gross < hp.par).length;
+}
+
 export function PostMatchStats({
   matchFacts,
   format,
@@ -172,18 +178,21 @@ export function PostMatchStats({
   const clutchWinTeamA = teamAWon && sampleFact?.winningHole === 18;
   const clutchWinTeamB = teamBWon && sampleFact?.winningHole === 18;
 
-  // Check if any story stats exist
+  // Check if any story stats exist (for singles: exclude blownLead since comebackWin is shown instead)
+  const hasStoryStatsSingles = teamAComebackWin || teamBComebackWin || 
+                               teamANeverBehind || teamBNeverBehind || clutchWinTeamA || clutchWinTeamB;
   const hasStoryStats = teamAComebackWin || teamBComebackWin || teamABlownLead || teamBBlownLead || 
                         teamANeverBehind || teamBNeverBehind || clutchWinTeamA || clutchWinTeamB;
 
-  // Story badge component
-  const StoryBadge = ({ icon, title, description, teamColor }: { 
+  // Story badge component with optional right alignment for Team B
+  const StoryBadge = ({ icon, title, description, teamColor, alignRight = false }: { 
     icon: string; 
     title: string; 
     description: string;
     teamColor: string;
+    alignRight?: boolean;
   }) => (
-    <div className="flex items-start gap-2 py-2 px-3 bg-slate-50 rounded-lg">
+    <div className={`flex items-start gap-2 py-2 px-3 bg-slate-50 rounded-lg ${alignRight ? "flex-row-reverse text-right" : ""}`}>
       <span className="text-lg">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm" style={{ color: teamColor }}>{title}</div>
@@ -207,7 +216,12 @@ export function PostMatchStats({
     const hasLargestLead = largestLeadA > 0 || largestLeadB > 0;
     const hasLeadChanges = sampleFact?.leadChanges != null && sampleFact.leadChanges > 0;
 
-    if (!hasScoring && !hasLargestLead && !hasLeadChanges && !hasStoryStats) return null;
+    // Calculate birdies for each player
+    const birdiesA = countBirdies(teamAFacts[0]);
+    const birdiesB = countBirdies(teamBFacts[0]);
+    const hasBirdies = birdiesA > 0 || birdiesB > 0;
+
+    if (!hasScoring && !hasLargestLead && !hasLeadChanges && !hasStoryStatsSingles && !hasBirdies) return null;
 
     return (
       <div className="card p-4 space-y-4">
@@ -252,6 +266,17 @@ export function PostMatchStats({
           </div>
         )}
 
+        {/* BIRDIES */}
+        {hasBirdies && (
+          <div className="border-t border-slate-200 pt-3">
+            <StatRow 
+              label="Birdies" 
+              valueA={birdiesA > 0 ? birdiesA : null} 
+              valueB={birdiesB > 0 ? birdiesB : null} 
+            />
+          </div>
+        )}
+
         {/* LARGEST LEAD */}
         {hasLargestLead && (
           <div className="border-t border-slate-200 pt-3">
@@ -270,8 +295,8 @@ export function PostMatchStats({
           </div>
         )}
 
-        {/* STORY STATS (conditional badges) */}
-        {hasStoryStats && (
+        {/* STORY STATS (conditional badges) - no blownLead for singles, Team B aligned right */}
+        {hasStoryStatsSingles && (
           <div className="border-t border-slate-200 pt-3 space-y-2">
             {clutchWinTeamA && (
               <StoryBadge 
@@ -287,6 +312,7 @@ export function PostMatchStats({
                 title="Clutch Win" 
                 description="Won on 18 to take the match"
                 teamColor={teamBColor}
+                alignRight
               />
             )}
             {teamAComebackWin && (
@@ -303,22 +329,7 @@ export function PostMatchStats({
                 title="Comeback Win" 
                 description="Rallied from 3+ down on the back 9"
                 teamColor={teamBColor}
-              />
-            )}
-            {teamABlownLead && (
-              <StoryBadge 
-                icon="💔" 
-                title="Blown Lead" 
-                description="Lost 3+ lead on the back 9"
-                teamColor={teamAColor}
-              />
-            )}
-            {teamBBlownLead && (
-              <StoryBadge 
-                icon="💔" 
-                title="Blown Lead" 
-                description="Lost 3+ lead on the back 9"
-                teamColor={teamBColor}
+                alignRight
               />
             )}
             {teamANeverBehind && (
@@ -335,6 +346,7 @@ export function PostMatchStats({
                 title="Never Behind" 
                 description="Led or tied the entire match"
                 teamColor={teamBColor}
+                alignRight
               />
             )}
           </div>
