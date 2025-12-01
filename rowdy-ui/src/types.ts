@@ -119,6 +119,8 @@ export type HolePerformance = {
   gross: number | null;                   // raw score (individual for singles/bestBall, team for scramble/shamble)
   net?: number | null;                    // gross - strokesReceived (singles/bestBall only)
   strokes?: 0 | 1;                        // strokesReceived for this hole (singles/bestBall only)
+  partnerNet?: number | null;             // partner's net score (bestBall only)
+  partnerGross?: number | null;           // partner's gross score (shamble only)
   driveUsed?: boolean;                    // true if this player's drive was used (scramble/shamble only)
   result?: 'win' | 'loss' | 'halve' | null; // hole result from player's perspective
 };

@@ -759,11 +759,27 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           holeData.strokes = strokeVal as 0 | 1;
           holeData.net = gross - strokeVal;
         }
+        // Partner's net score for comparison
+        if (Array.isArray(arr)) {
+          const partnerIdx = pIdx === 0 ? 1 : 0;
+          const partnerGross = arr[partnerIdx];
+          if (isNum(partnerGross)) {
+            const partnerStroke = clamp01(myTeamPlayers?.[partnerIdx]?.strokesReceived?.[holeNum - 1]);
+            holeData.partnerNet = partnerGross - partnerStroke;
+          } else {
+            holeData.partnerNet = null;
+          }
+        }
       } else if (format === "twoManShamble") {
         // Shamble: individual gross, no net/strokes, but has driveUsed
         const arr = team === "teamA" ? h.teamAPlayersGross : h.teamBPlayersGross;
         const gross = Array.isArray(arr) ? arr[pIdx] : null;
         holeData.gross = gross ?? null;
+        // Partner's gross score for comparison (shamble uses gross)
+        if (Array.isArray(arr)) {
+          const partnerIdx = pIdx === 0 ? 1 : 0;
+          holeData.partnerGross = isNum(arr[partnerIdx]) ? arr[partnerIdx] : null;
+        }
         const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
         holeData.driveUsed = driveVal === pIdx;
       } else if (format === "twoManScramble") {
