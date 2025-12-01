@@ -61,52 +61,80 @@ export function PostMatchStats({
   const teamAPlayerIds: string[] = teamAPlayers.map(p => p.playerId);
   const teamBPlayerIds: string[] = teamBPlayers.map(p => p.playerId);
 
-    const StatRow = ({ label, valueA, valueB, highlight = false, center = false }: { 
+    const StatRow = (props: { 
       label: string; 
       valueA: React.ReactNode; 
       valueB: React.ReactNode;
       highlight?: boolean;
       center?: boolean;
-    }) => (
-      <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-slate-50 px-3 py-1 rounded-md" : ""}`}>
-        <div className={`flex-1 ${center ? "text-right" : "text-right pr-3"} font-semibold text-sm`} style={{ color: teamAColor }}>
-          {valueA != null ? valueA : "–"}
+      compact?: boolean;
+    }) => {
+      const { label, valueA, valueB, highlight = false, center = false, compact = false } = props;
+      // reference compact to avoid TS unused var error; spacing is uniform regardless
+      void compact;
+      return (
+        <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-slate-50 px-3 rounded-md" : ""}`}>
+          <div className={`flex-1 ${center ? "text-right" : "text-right pr-3"} font-semibold text-sm`} style={{ color: teamAColor }}>
+            {valueA != null ? valueA : "–"}
+          </div>
+          <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">
+            {label}
+          </div>
+          <div className={`flex-1 ${center ? "text-left" : "text-left pl-3"} font-semibold text-sm`} style={{ color: teamBColor }}>
+            {valueB != null ? valueB : "–"}
+          </div>
         </div>
-        <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">
-          {label}
+      );
+    };
+
+  // Player names header row for per-player stat sections
+  const PlayerNamesHeader = ({ compact = false }: { compact?: boolean }) => {
+    if (compact) {
+      // Singles/compact view: show one player per team (centered)
+      return (
+        <div className="flex items-center py-2">
+          <div className="flex-1 text-right pr-3">
+            <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
+              {getPlayerName(teamAPlayerIds[0])}
+            </span>
+          </div>
+          <div className="w-24 shrink-0" />
+          <div className="flex-1 text-left pl-3">
+            <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
+              {getPlayerName(teamBPlayerIds[0])}
+            </span>
+          </div>
         </div>
-        <div className={`flex-1 ${center ? "text-left" : "text-left pl-3"} font-semibold text-sm`} style={{ color: teamBColor }}>
-          {valueB != null ? valueB : "–"}
+      );
+    }
+
+    // Default (non-compact) view: show two players per team
+    return (
+      <div className="flex items-center py-2 mb-2">
+        <div className="flex-1 text-right pr-3">
+          <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
+            {getPlayerName(teamAPlayerIds[0])}
+          </span>
+        </div>
+        <div className="flex-1 text-right pr-3">
+          <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
+            {getPlayerName(teamAPlayerIds[1])}
+          </span>
+        </div>
+        <div className="w-28 shrink-0" />
+        <div className="flex-1 text-left pl-3">
+          <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
+            {getPlayerName(teamBPlayerIds[0])}
+          </span>
+        </div>
+        <div className="flex-1 text-left pl-3">
+          <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
+            {getPlayerName(teamBPlayerIds[1])}
+          </span>
         </div>
       </div>
     );
-
-  // Player names header row for per-player stat sections
-  const PlayerNamesHeader = () => (
-    <div className="flex items-center py-2 mb-2 border-b border-slate-100">
-      <div className="flex-1 text-right pr-3">
-        <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
-          {getPlayerName(teamAPlayerIds[0])}
-        </span>
-      </div>
-      <div className="flex-1 text-right pr-3">
-        <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
-          {getPlayerName(teamAPlayerIds[1])}
-        </span>
-      </div>
-      <div className="w-28 shrink-0" />
-      <div className="flex-1 text-left pl-3">
-        <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
-          {getPlayerName(teamBPlayerIds[0])}
-        </span>
-      </div>
-      <div className="flex-1 text-left pl-3">
-        <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
-          {getPlayerName(teamBPlayerIds[1])}
-        </span>
-      </div>
-    </div>
-  );
+  };
 
   // Stat row for per-player stats (4 columns: 2 players per team)
   const PlayerStatRow = ({ label, teamA, teamB, highlight = false }: { 
@@ -145,15 +173,7 @@ export function PostMatchStats({
     );
   };
 
-  // Helper to shorten a full name to first-initial + last name (e.g. "J. Smith")
-  const shortName = (fullName?: string) => {
-    if (!fullName) return "";
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    const first = parts[0][0] || "";
-    const last = parts[parts.length - 1] || "";
-    return `${first}. ${last}`;
-  };
+  
 
   // Get aggregated stats for display
   const teamAFacts = teamAPlayerIds.map(id => getFactForPlayer(id)).filter(Boolean) as PlayerMatchFact[];
@@ -192,7 +212,7 @@ export function PostMatchStats({
     teamColor: string;
     alignRight?: boolean;
   }) => (
-    <div className={`flex items-start gap-2 py-2 px-3 bg-slate-50 rounded-lg ${alignRight ? "flex-row-reverse text-right" : ""}`}>
+    <div className={`flex items-center gap-2 ${alignRight ? "flex-row-reverse text-right" : ""}`}>
       <span className="text-lg">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm" style={{ color: teamColor }}>{title}</div>
@@ -203,7 +223,7 @@ export function PostMatchStats({
 
   // Centered match-level stat row
   const MatchLevelStat = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="flex items-center justify-center gap-2 py-1.5">
+    <div className="flex items-center justify-center gap-2 py-2">
       <span className="text-slate-600 font-semibold">{value}</span>
       <span className="text-xs text-slate-500 font-medium">{label}</span>
     </div>
@@ -224,80 +244,59 @@ export function PostMatchStats({
     if (!hasScoring && !hasLargestLead && !hasLeadChanges && !hasStoryStatsSingles && !hasBirdies) return null;
 
     return (
-      <div className="card p-4 space-y-4">
-        <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center">
-          Match Stats
-        </h3>
+      <div className="card p-0">
+        {/* Compact single-list layout: player names header (compact) */}
+        <PlayerNamesHeader compact />
 
-              {/* Player Headers (Singles) - show short player names (initial + last) in team colors */}
-              <div className="flex items-center pb-2 border-b border-slate-200">
-                <div className="flex-1 text-right pr-3">
-                  <span className="text-sm font-semibold truncate" style={{ color: teamAColor }}>
-                    {shortName(getPlayerName(teamAPlayerIds[0]))}
-                  </span>
-                </div>
-                <div className="w-24 shrink-0" />
-                <div className="flex-1 text-left pl-3">
-                  <span className="text-sm font-semibold truncate" style={{ color: teamBColor }}>
-                    {shortName(getPlayerName(teamBPlayerIds[0]))}
-                  </span>
-                </div>
-              </div>
-
-        {/* SCORING (Singles) */}
+        {/* SCORING (Singles) - compact rows with no extra spacing */}
         {hasScoring && (
-          <div>
-            {/* Gross row (centered under player names) */}
+          <>
             <StatRow
               label="Gross"
               valueA={renderCombined(teamAFacts[0]?.totalGross, teamAFacts[0]?.strokesVsParGross)}
               valueB={renderCombined(teamBFacts[0]?.totalGross, teamBFacts[0]?.strokesVsParGross)}
               center
+              compact
             />
-
-            {/* Net row (highlight, centered) */}
             <StatRow
               label="Net"
               valueA={renderCombined(teamAFacts[0]?.totalNet, teamAFacts[0]?.strokesVsParNet)}
               valueB={renderCombined(teamBFacts[0]?.totalNet, teamBFacts[0]?.strokesVsParNet)}
               highlight
               center
+              compact
             />
-          </div>
+          </>
         )}
 
         {/* BIRDIES */}
         {hasBirdies && (
-          <div className="border-t border-slate-200 pt-3">
-            <StatRow 
-              label="Birdies" 
-              valueA={birdiesA > 0 ? birdiesA : null} 
-              valueB={birdiesB > 0 ? birdiesB : null} 
-            />
-          </div>
+          <StatRow 
+            label="Birdies" 
+            valueA={birdiesA > 0 ? birdiesA : null} 
+            valueB={birdiesB > 0 ? birdiesB : null} 
+            compact
+          />
         )}
 
         {/* LARGEST LEAD */}
         {hasLargestLead && (
-          <div className="border-t border-slate-200 pt-3">
-            <StatRow 
-              label="Largest Lead" 
-              valueA={largestLeadA > 0 ? largestLeadA : null} 
-              valueB={largestLeadB > 0 ? largestLeadB : null} 
-            />
-          </div>
+          <StatRow 
+            label="Largest Lead" 
+            valueA={largestLeadA > 0 ? largestLeadA : null} 
+            valueB={largestLeadB > 0 ? largestLeadB : null} 
+            compact
+          />
         )}
 
         {/* MATCH-LEVEL STATS (centered) */}
         {hasLeadChanges && (
-          <div className="border-t border-slate-200 pt-3">
-            <MatchLevelStat label="Lead Changes" value={sampleFact?.leadChanges} />
-          </div>
+          <MatchLevelStat label="Lead Changes" value={sampleFact?.leadChanges} />
         )}
 
         {/* STORY STATS (conditional badges) - no blownLead for singles, Team B aligned right */}
         {hasStoryStatsSingles && (
-          <div className="border-t border-slate-200 pt-3 space-y-2">
+          <>
             {clutchWinTeamA && (
               <StoryBadge 
                 icon="⚡" 
@@ -349,7 +348,7 @@ export function PostMatchStats({
                 alignRight
               />
             )}
-          </div>
+          </>
         )}
       </div>
     );
