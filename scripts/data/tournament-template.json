@@ -1,33 +1,32 @@
 {
-  "id": "", //2025RowdyCup or 2025ChristmasClassic
+  "id": "",
   "year": 2025,
-  "name": "", //"Rowdy Cup 2025" or "Christmas Classic 2025"
-  "series": "rowdyCup", //rowdyCup or christmasClassic
-    "rosterByTier": {
-  "tournamentLogo": "", //URL from firebase storage
+  "name": "",
+  "series": "rowdyCup",
+  "tournamentLogo": "",
   "roundIds": [],
   "teamA": {
     "id": "teamA",
     "name": "Team A Name",
-    "logo": "", //URL from firebase storage
-    "captainId": "", // playerId of team captain
-    "coCaptainId": "" // playerId of team co-captain
-    "color": "#1e3a5f", //"#165B33"
+    "logo": "",
+    "captainId": "",
+    "coCaptainId?": "",
+    "color": "#1e3a5f",
     "rosterByTier": {
       "A": [],
       "B": [],
       "C": [],
       "D": []
-    "rosterByTier": {
+    },
     "handicapByPlayer": {}
   },
   "teamB": {
     "id": "teamB",
     "name": "Team B Name",
-    "logo": "", //URL from firebase storage
-    "captainId": "", // playerId of team captain
-    "coCaptainId": "" // playerId of team co-captain
-    "color": "#8b0000", //"#BB2528"
+    "logo": "",
+    "captainId": "",
+    "coCaptainId?": "",
+    "color": "#8b0000",
     "rosterByTier": {
       "A": [],
       "B": [],
