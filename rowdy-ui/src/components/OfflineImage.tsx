@@ -43,6 +43,33 @@ export default function OfflineImage({
     }
   }, []);
 
+  // Preload displayedSrc via Image() to ensure load events fire reliably
+  useEffect(() => {
+    if (!displayedSrc) return;
+    let cancelled = false;
+    const loader = new Image();
+    loader.src = displayedSrc;
+    loader.onload = () => {
+      if (cancelled) return;
+      setIsLoaded(true);
+      setHasError(false);
+    };
+    loader.onerror = () => {
+      if (cancelled) return;
+      // Try fallbackSrc once if available and not already tried
+      if (fallbackSrc && !triedFallbackSrc && displayedSrc !== fallbackSrc) {
+        setTriedFallbackSrc(true);
+        setDisplayedSrc(fallbackSrc);
+        setHasError(false);
+        setIsLoaded(false);
+      } else {
+        setHasError(true);
+      }
+    };
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedSrc]);
+
   // If no src provided, but a fallbackSrc exists, try it; otherwise show fallback
   // If no src provided, try fallbackSrc via effect (avoid setState during render)
   useEffect(() => {
