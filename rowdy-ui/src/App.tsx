@@ -6,6 +6,7 @@ import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
+import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import OfflineImage from "./components/OfflineImage";
 import { formatRoundType } from "./utils";
 
@@ -129,8 +130,9 @@ export default function App() {
   }, [rounds, courses]);
 
   // --- Stats Calculation ---
-  const { stats, roundStats } = useMemo(() => {
+  const { stats, roundStats, totalPointsAvailable } = useMemo(() => {
     let fA = 0, fB = 0, pA = 0, pB = 0;
+    let totalPts = 0;
     const rStats: Record<string, { fA: number; fB: number; pA: number; pB: number }> = {};
 
     // Create a lookup for round pointsValue
@@ -164,9 +166,16 @@ export default function App() {
           rStats[m.roundId].pB += ptsB;
         }
       }
+
+      // Add to total points available (each match contributes its pointsValue)
+      totalPts += pv;
     }
-    return { stats: { fA, fB, pA, pB }, roundStats: rStats };
-  }, [matchesByRound, rounds]);
+
+    // Use tournament.totalPointsAvailable if set, otherwise use calculated total
+    const finalTotalPts = tournament?.totalPointsAvailable ?? totalPts;
+
+    return { stats: { fA, fB, pA, pB }, roundStats: rStats, totalPointsAvailable: finalTotalPts };
+  }, [matchesByRound, rounds, tournament?.totalPointsAvailable]);
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -177,6 +186,8 @@ export default function App() {
   const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
+  const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
+  const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
   return (
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
@@ -191,7 +202,7 @@ export default function App() {
           {/* HERO SCOREBOARD */}
           <section className="card" style={{ textAlign: 'center', padding: 24 }}>
             <h2 style={{ 
-              margin: "0 0 16px 0", 
+              margin: "0 0 8px 0", 
               fontSize: "0.85rem", 
               color: "var(--text-secondary)", 
               textTransform: "uppercase", 
@@ -199,7 +210,25 @@ export default function App() {
             }}>
               Total Score
             </h2>
-            
+
+            {/* Score Tracker Bar (above logos) */}
+            {totalPointsAvailable > 0 && (
+              <div style={{ margin: "6px 0 12px 0" }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  {pointsToWinDisplay} points needed to win
+                </div>
+                <ScoreTrackerBar
+                  totalPoints={totalPointsAvailable}
+                  teamAConfirmed={stats.fA}
+                  teamBConfirmed={stats.fB}
+                  teamAPending={stats.pA}
+                  teamBPending={stats.pB}
+                  teamAColor={tournament.teamA?.color}
+                  teamBColor={tournament.teamB?.color}
+                />
+              </div>
+            )}
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
               {/* Team A */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -221,27 +250,12 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
-                  {stats.pA > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        left: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginLeft: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pA})
-                    </span>
-                  )}
+                  {/* Pending points hidden on main scoreboard */}
                 </div>
               </div>
 
-              {/* Divider Line */}
-              <div style={{ height: 40, width: 1, background: "var(--divider)" }}></div>
+              {/* Center spacer (midpoint marker moved into ScoreTrackerBar) */}
+              <div style={{ height: 40, width: 2 }}></div>
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -262,26 +276,13 @@ export default function App() {
                   {tournament.teamB?.name || "Team B"}
                 </div>
                 <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  {stats.pB > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        right: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginRight: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pB})
-                    </span>
-                  )}
+                  {/* Pending points hidden on main scoreboard */}
                   <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
                 </div>
               </div>
             </div>
+
+            
           </section>
 
           {/* ROUNDS LIST */}

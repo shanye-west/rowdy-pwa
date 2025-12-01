@@ -23,6 +23,7 @@ export type TournamentDoc = {
   active: boolean;
   roundIds?: string[];
   tournamentLogo?: string;
+  totalPointsAvailable?: number; // Total points available in tournament (for score tracker bar)
   teamA: { 
     id: string; 
     name: string;
