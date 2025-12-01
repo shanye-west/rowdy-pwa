@@ -81,6 +81,45 @@ Notes:
    `teamA.handicapByPlayer.<playerId>` or `teamB.handicapByPlayer.<playerId>`.
 - The script validates numeric handicaps and will skip unknown player IDs (it reports skipped entries).
 
+## Temporary Public Match Editing (developer testing)
+
+You can temporarily allow any client (anonymous or signed-in) to update `matches/{matchId}` for a specific
+tournament by toggling a flag on the tournament document. This is useful for UI testing when you want to
+open match editing to testers without requiring their auth to be linked to a player.
+
+How it works
+- An addition was made to `firestore.rules` to allow `update` on `matches/{matchId}` when:
+   - the requesting user is an authenticated, rostered player (unchanged behavior), OR
+   - the tournament document at `tournaments/{tournamentId}` has `openPublicEdits == true`.
+
+Steps to enable temporary public editing
+1. Deploy the updated security rules (rules are included in the repo):
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+2. Turn on public edits for a tournament (example using `firebase-tools`):
+
+```bash
+# set the flag to true
+firebase firestore:update tournaments/2025ChristmasClassic --data '{"openPublicEdits": true}'
+
+# when you're finished, turn it off
+firebase firestore:update tournaments/2025ChristmasClassic --data '{"openPublicEdits": false}'
+```
+
+Notes & safety
+- This toggle is intentionally simple so you can flip it on/off directly on the tournament document.
+- While `openPublicEdits` is `true`, any client can update matches for that tournament — use only for
+   short-term testing in development or controlled QA sessions.
+- After testing, set `openPublicEdits` back to `false` immediately.
+- Changes made while the flag is enabled are normal Firestore writes and will trigger any Cloud Functions
+   that respond to match updates (e.g., computing match status/results). Audit changes if needed.
+
+If you'd like, I can add a short script to flip the flag from the command line (one-liner using
+`firebase firestore:update`) or add a note in your deployment checklist.
+
 
 ## Auth Scripts
 
