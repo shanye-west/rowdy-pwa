@@ -196,8 +196,6 @@ export function PostMatchStats({
   const teamBWon = teamBFacts[0]?.outcome === "win";
   const teamAComebackWin = teamAFacts[0]?.comebackWin;
   const teamBComebackWin = teamBFacts[0]?.comebackWin;
-  const teamABlownLead = teamAFacts[0]?.blownLead;
-  const teamBBlownLead = teamBFacts[0]?.blownLead;
   const teamANeverBehind = teamAFacts[0]?.wasNeverBehind && !teamBFacts[0]?.wasNeverBehind;
   const teamBNeverBehind = teamBFacts[0]?.wasNeverBehind && !teamAFacts[0]?.wasNeverBehind;
   
@@ -210,7 +208,7 @@ export function PostMatchStats({
   // Check if any story stats exist (for singles: exclude blownLead since comebackWin is shown instead)
   const hasStoryStatsSingles = teamAComebackWin || teamBComebackWin || 
                                teamANeverBehind || teamBNeverBehind || clutchWinTeamA || clutchWinTeamB;
-  const hasStoryStats = teamAComebackWin || teamBComebackWin || teamABlownLead || teamBBlownLead || 
+  const hasStoryStats = teamAComebackWin || teamBComebackWin || 
                         teamANeverBehind || teamBNeverBehind || clutchWinTeamA || clutchWinTeamB;
 
   // Story badge component with optional right alignment for Team B
@@ -495,12 +493,7 @@ export function PostMatchStats({
             {teamBComebackWin && (
               <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamBColor} alignRight />
             )}
-            {teamABlownLead && (
-              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamAColor} />
-            )}
-            {teamBBlownLead && (
-              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamBColor} alignRight />
-            )}
+            {/* Blown Lead badge intentionally removed for all formats */}
             {teamANeverBehind && (
               <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamAColor} />
             )}
