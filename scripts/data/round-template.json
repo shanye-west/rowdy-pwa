@@ -1,10 +1,10 @@
 {
-  "id": "2025-rowdycup-day1",
-  "tournamentId": "2025-rowdycup",
-  "day": 1,
-  "format": "twoManBestBall",
-  "courseId": "courseName",
-  "pointsValue": 1,
+  "id": "2025ChristmasClassic-R02-singles",
+  "tournamentId": "2025ChristmasClassic",
+  "day": 2,
+  "format": "singles",
+  "courseId": "journeyAtPechanga-Black",
+  "pointsValue": 0.5,
   "trackDrives": false,
   "locked": false,
   "matchIds": []
