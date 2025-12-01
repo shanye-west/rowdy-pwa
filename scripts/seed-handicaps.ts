@@ -40,7 +40,8 @@ async function seedHandicaps(inputFile: string, tournamentFlag?: string) {
   try {
     payload = JSON.parse(raw);
   } catch (err) {
-    console.error("❌ Failed to parse JSON input:", err.message || err);
+    const msg = (err as any)?.message ?? String(err);
+    console.error("❌ Failed to parse JSON input:", msg);
     process.exit(1);
   }
 
