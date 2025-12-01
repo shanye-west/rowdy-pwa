@@ -208,7 +208,22 @@ export default function App() {
             }}>
               Total Score
             </h2>
-            
+
+            {/* Score Tracker Bar (above logos) */}
+            {totalPointsAvailable > 0 && (
+              <div style={{ margin: "8px 0 12px 0" }}>
+                <ScoreTrackerBar
+                  totalPoints={totalPointsAvailable}
+                  teamAConfirmed={stats.fA}
+                  teamBConfirmed={stats.fB}
+                  teamAPending={stats.pA}
+                  teamBPending={stats.pB}
+                  teamAColor={tournament.teamA?.color}
+                  teamBColor={tournament.teamB?.color}
+                />
+              </div>
+            )}
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
               {/* Team A */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -292,20 +307,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Score Tracker Bar */}
-            {totalPointsAvailable > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <ScoreTrackerBar
-                  totalPoints={totalPointsAvailable}
-                  teamAConfirmed={stats.fA}
-                  teamBConfirmed={stats.fB}
-                  teamAPending={stats.pA}
-                  teamBPending={stats.pB}
-                  teamAColor={tournament.teamA?.color}
-                  teamBColor={tournament.teamB?.color}
-                />
-              </div>
-            )}
+            
           </section>
 
           {/* ROUNDS LIST */}
