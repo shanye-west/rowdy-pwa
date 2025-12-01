@@ -177,7 +177,7 @@ export default function Teams() {
                 {pIds.map(pid => {
                   const p = players[pid];
                   const s = stats[pid];
-                  const name = p?.displayName || p?.username || "Unknown";
+                  const name = p?.displayName || "Unknown";
                   const hcp = handicaps?.[pid];
                   
                   return (

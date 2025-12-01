@@ -3,8 +3,6 @@ export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" 
 export type PlayerDoc = { 
   id: string; 
   displayName?: string; 
-  username?: string;
-  tempPassword?: string;  // Temporary password for first login (cleared after setup)
   authUid?: string;       // Firebase Auth UID (set after account setup)
   email?: string;         // Email for login (set after account setup)
 };

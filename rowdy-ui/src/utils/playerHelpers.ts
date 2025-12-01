@@ -17,7 +17,7 @@ export function getPlayerName(pid: string | undefined, players: PlayerLookup): s
   if (!pid) return "Player";
   const p = players[pid];
   if (!p) return "...";
-  return p.displayName || p.username || "Unknown";
+  return p.displayName || "Unknown";
 }
 
 /**
@@ -28,7 +28,7 @@ export function getPlayerShortName(pid: string | undefined, players: PlayerLooku
   if (!pid) return "?";
   const p = players[pid];
   if (!p) return "?";
-  const name = p.displayName || p.username || "Unknown";
+  const name = p.displayName || "Unknown";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].charAt(0) + ".";
   const firstInitial = parts[0].charAt(0);
@@ -44,7 +44,7 @@ export function getPlayerInitials(pid: string | undefined, players: PlayerLookup
   if (!pid) return "?";
   const p = players[pid];
   if (!p) return "?";
-  const name = p.displayName || p.username || "Unknown";
+  const name = p.displayName || "Unknown";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
   const firstInitial = parts[0].charAt(0).toUpperCase();

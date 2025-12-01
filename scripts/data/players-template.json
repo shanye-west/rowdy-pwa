@@ -1,14 +1,10 @@
 [
   {
     "id": "pShanePeterson",
-    "displayName": "Shane Peterson",
-    "email": "shane@example.com",
-    "authUid": ""
+    "displayName": "Shane Peterson"
   },
   {
     "id": "pJohnSmith",
-    "displayName": "John Smith",
-    "email": "john@example.com",
-    "authUid": ""
+    "displayName": "John Smith"
   }
 ]
