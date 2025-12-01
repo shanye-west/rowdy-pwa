@@ -47,6 +47,41 @@ npx ts-node seed-match.ts --input data/match-twoManShamble.json
 npx ts-node seed-match.ts --input data/match-twoManScramble.json
 ```
 
+### Seed Handicaps
+Update tournament player handicaps from a JSON file. Accepts either an object map (`{ "playerId": handicap }`),
+an array (`[{ "playerId": "p1", "handicap": 12.3 }, ...]`), or a JSON that includes `tournamentId` and
+`handicapByPlayer`.
+
+Examples:
+
+Object map (recommended):
+```json
+{
+   "pShanePeterson": 7.0,
+   "pJohnSmith": 9.8
+}
+```
+
+Array form:
+```json
+[
+   { "playerId": "pShanePeterson", "handicap": 7.0 },
+   { "playerId": "pJohnSmith", "handicap": 9.8 }
+]
+```
+
+Run the seed script (either include `tournamentId` inside the JSON or pass `--tournament`):
+```bash
+npx ts-node seed-handicaps.ts --input data/update-handicaps.json --tournament 2025-rowdycup
+```
+
+Notes:
+- The script uses `service-account.json` in the repo root if present (same as other seed scripts).
+- It will detect whether each player belongs to `teamA` or `teamB` and write to
+   `teamA.handicapByPlayer.<playerId>` or `teamB.handicapByPlayer.<playerId>`.
+- The script validates numeric handicaps and will skip unknown player IDs (it reports skipped entries).
+
+
 ## Auth Scripts
 
 ### Link Single Auth User to Player
