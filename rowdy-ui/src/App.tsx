@@ -186,6 +186,8 @@ export default function App() {
   const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
+  const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
+  const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
   return (
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
@@ -264,8 +266,13 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Divider Line */}
-              <div style={{ height: 40, width: 1, background: "var(--divider)" }}></div>
+              {/* Center info: points needed + divider (black) */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000', textTransform: 'none' }}>
+                  {pointsToWinDisplay} points needed to win
+                </div>
+                <div style={{ height: 40, width: 2, background: '#000', borderRadius: 2 }}></div>
+              </div>
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
