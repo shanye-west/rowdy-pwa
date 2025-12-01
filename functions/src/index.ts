@@ -7,6 +7,8 @@
  * - helpers/matchHelpers.ts - Match setup utilities
  * - scoring/matchScoring.ts - Match scoring calculations
  * - types.ts - Shared TypeScript types
+ * 
+ * Updated: 2025-12-01 - Added holePerformance array to playerMatchFacts
  */
 
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
