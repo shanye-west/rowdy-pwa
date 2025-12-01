@@ -194,9 +194,11 @@ export function PostMatchStats({
   const teamANeverBehind = teamAFacts[0]?.wasNeverBehind && !teamBFacts[0]?.wasNeverBehind;
   const teamBNeverBehind = teamBFacts[0]?.wasNeverBehind && !teamAFacts[0]?.wasNeverBehind;
   
-  // Clutch win: won on hole 18 (winningHole === 18 means decided on final hole)
-  const clutchWinTeamA = teamAWon && sampleFact?.winningHole === 18;
-  const clutchWinTeamB = teamBWon && sampleFact?.winningHole === 18;
+  // Clutch win: match was ALL SQUARE (margin = 0) going into hole 18, then won on 18.
+  // marginHistory[16] is the margin after hole 17 (0-indexed); must be 0 for "AS thru 17".
+  const wasAllSquareThru17 = marginHistory && marginHistory.length >= 17 && marginHistory[16] === 0;
+  const clutchWinTeamA = teamAWon && sampleFact?.winningHole === 18 && wasAllSquareThru17;
+  const clutchWinTeamB = teamBWon && sampleFact?.winningHole === 18 && wasAllSquareThru17;
 
   // Check if any story stats exist (for singles: exclude blownLead since comebackWin is shown instead)
   const hasStoryStatsSingles = teamAComebackWin || teamBComebackWin || 
