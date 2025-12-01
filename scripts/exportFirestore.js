@@ -86,9 +86,17 @@ async function main() {
   }
 
   // Initialize Firebase Admin
-  const serviceAccount = JSON.parse(readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+  let serviceAccount;
+  try {
+    const raw = readFileSync(SERVICE_ACCOUNT_PATH, 'utf8');
+    serviceAccount = JSON.parse(raw);
+  } catch (err) {
+    console.error(`❌ Failed to read or parse production service account at: ${SERVICE_ACCOUNT_PATH}`);
+    console.error('Make sure the file contains the JSON key you downloaded from the Firebase Console.');
+    process.exit(1);
+  }
   console.log(`Using service account key: ${SERVICE_ACCOUNT_PATH}`);
-  
+
   initializeApp({
     credential: cert(serviceAccount),
   });
