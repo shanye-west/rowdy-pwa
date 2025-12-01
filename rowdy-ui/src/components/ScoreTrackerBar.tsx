@@ -88,54 +88,74 @@ export default function ScoreTrackerBar({
   return (
     <div
       style={{
-        display: "flex",
+        position: "relative",
         width: "100%",
-        height: 24,
-        borderRadius: 4,
+        height: 28,
+        borderRadius: 10,
         overflow: "hidden",
-        background: "#e5e7eb", // neutral gray for empty boxes
-        gap: 2,
+        background: "#e5e7eb", // neutral base for empty
       }}
     >
-      {boxes.map((box, idx) => (
+      {/* Segments container: each segment is flexible and contains fills */}
+      <div style={{ display: "flex", height: "100%" }}>
+        {boxes.map((box, idx) => (
+          <div
+            key={idx}
+            style={{
+              flex: 1,
+              position: "relative",
+              minWidth: 12,
+              height: "100%",
+            }}
+          >
+            {/* Team A fill (left within this segment) */}
+            {box.teamAFill > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${box.teamAFill * 100}%`,
+                  background: teamAColor,
+                  opacity: box.teamAConfirmed ? 1 : 0.4,
+                }}
+              />
+            )}
+
+            {/* Team B fill (right within this segment) */}
+            {box.teamBFill > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${box.teamBFill * 100}%`,
+                  background: teamBColor,
+                  opacity: box.teamBConfirmed ? 1 : 0.4,
+                }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Vertical white separators between segments */}
+      {Array.from({ length: totalPoints - 1 }).map((_, i) => (
         <div
-          key={idx}
+          key={i}
           style={{
-            flex: 1,
-            position: "relative",
-            background: "#e5e7eb",
-            minWidth: 0, // allow shrinking
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: `${((i + 1) / totalPoints) * 100}%`,
+            width: 1,
+            background: "white",
+            transform: "translateX(-0.5px)",
+            zIndex: 2,
           }}
-        >
-          {/* Team A fill (from left side of box) */}
-          {box.teamAFill > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: `${box.teamAFill * 100}%`,
-                background: teamAColor,
-                opacity: box.teamAConfirmed ? 1 : 0.4,
-              }}
-            />
-          )}
-          {/* Team B fill (from right side of box) */}
-          {box.teamBFill > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: `${box.teamBFill * 100}%`,
-                background: teamBColor,
-                opacity: box.teamBConfirmed ? 1 : 0.4,
-              }}
-            />
-          )}
-        </div>
+        />
       ))}
     </div>
   );
