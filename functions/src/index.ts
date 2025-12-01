@@ -262,6 +262,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let tournamentYear = 0;
   let tournamentName = "";
   let tournamentSeries = "";
+  let teamACaptainId: string | null = null;
+  let teamACoCaptainId: string | null = null;
+  let teamBCaptainId: string | null = null;
+  let teamBCoCaptainId: string | null = null;
 
   // Fetch Context (Round & Tournament)
   if (rId) {
@@ -305,6 +309,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       tournamentYear = d.year || 0;
       tournamentName = d.name || "";
       tournamentSeries = d.series || "";
+      teamACaptainId = d.teamA?.captainId || null;
+      teamACoCaptainId = d.teamA?.coCaptainId || null;
+      teamBCaptainId = d.teamB?.captainId || null;
+      teamBCoCaptainId = d.teamB?.coCaptainId || null;
       
       const flattenTiers = (roster?: Record<string, string[]>) => {
         if (!roster) return;
@@ -595,6 +603,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   // Fetch course holes data for holePerformance
   let courseHoles: { number: number; par: number }[] = [];
+
+  // Determine which players in this match are captains
+  const pA = after.teamAPlayers || [];
+  const pB = after.teamBPlayers || [];
+  const teamAPlayerIds = pA.map((p: any) => p?.playerId).filter(Boolean);
+  const teamBPlayerIds = pB.map((p: any) => p?.playerId).filter(Boolean);
+  
+  const teamACaptainInMatch = teamACaptainId && teamAPlayerIds.includes(teamACaptainId);
+  const teamBCaptainInMatch = teamBCaptainId && teamBPlayerIds.includes(teamBCaptainId);
+  const isCaptainVsCaptainMatch = teamACaptainInMatch && teamBCaptainInMatch;
   if (courseId) {
     const cSnap2 = await db.collection("courses").doc(courseId).get();
     if (cSnap2.exists && Array.isArray(cSnap2.data()?.holes)) {
@@ -608,6 +626,14 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   const writeFact = (p: any, team: "teamA" | "teamB", pIdx: number, opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
+    
+    // Captain status for this player
+    const myCaptainId = team === "teamA" ? teamACaptainId : teamBCaptainId;
+    const myCoCaptainId = team === "teamA" ? teamACoCaptainId : teamBCoCaptainId;
+    const isCaptain = p.playerId === myCaptainId;
+    const isCoCaptain = p.playerId === myCoCaptainId;
+    // captainVsCaptain is only true for the captains themselves in a captain-vs-captain match
+    const captainVsCaptain = isCaptainVsCaptainMatch && isCaptain;
     
     let outcome: "win" | "loss" | "halve" = "loss"; 
     let pts = 0;
@@ -855,6 +881,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       updatedAt: FieldValue.serverTimestamp(),
     };
     
+    // Captain tracking - only add if true to avoid clutter
+    if (isCaptain) factData.isCaptain = true;
+    if (isCoCaptain) factData.isCoCaptain = true;
+    if (captainVsCaptain) factData.captainVsCaptain = true;
+    
     // Conditionally add format-specific stats
     if (ballsUsed !== null) factData.ballsUsed = ballsUsed;
     if (ballsUsedSolo !== null) factData.ballsUsedSolo = ballsUsedSolo;
@@ -879,9 +910,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), factData);
   };
 
-  const pA = after.teamAPlayers || [];
-  const pB = after.teamBPlayers || [];
-  
   if (Array.isArray(pA)) pA.forEach((p: any, idx: number) => writeFact(p, "teamA", idx, pB, pA));
   if (Array.isArray(pB)) pB.forEach((p: any, idx: number) => writeFact(p, "teamB", idx, pA, pB));
 

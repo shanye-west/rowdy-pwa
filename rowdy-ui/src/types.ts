@@ -202,6 +202,11 @@ export type PlayerMatchFact = {
   tournamentName?: string;
   tournamentSeries?: string;
 
+  // Captain tracking
+  isCaptain?: boolean;           // Player was captain for their team in this tournament
+  isCoCaptain?: boolean;         // Player was co-captain for their team in this tournament
+  captainVsCaptain?: boolean;    // Match had captains from both teams AND this player is one of them
+
   updatedAt?: any;
 };
 
