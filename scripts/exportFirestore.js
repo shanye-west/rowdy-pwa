@@ -22,17 +22,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // === CONFIGURATION ===
-// Prefer a service account key at the repository root: `service-account.json`.
-// Fallback to `scripts/serviceAccountKey.json` for local-only keys.
+// The export script MUST use the production service account at the repository root:
+// `service-account.json`. This prevents accidentally exporting from a non-prod project.
 const ROOT_SERVICE_ACCOUNT = join(__dirname, '..', 'service-account.json');
-const LOCAL_SERVICE_ACCOUNT = join(__dirname, 'serviceAccountKey.json');
 const OUTPUT_PATH = join(__dirname, 'data', 'firestore-snapshot.json');
 
+// Only accept the root prod key for export. Fail explicitly otherwise.
 let SERVICE_ACCOUNT_PATH = null;
 if (existsSync(ROOT_SERVICE_ACCOUNT)) {
   SERVICE_ACCOUNT_PATH = ROOT_SERVICE_ACCOUNT;
-} else if (existsSync(LOCAL_SERVICE_ACCOUNT)) {
-  SERVICE_ACCOUNT_PATH = LOCAL_SERVICE_ACCOUNT;
 }
 
 // === HELPERS ===
@@ -78,16 +76,12 @@ function serializeValue(value) {
 async function main() {
   console.log('=== Firestore Export Script ===\n');
 
-  // Check for service account key
+  // Check for service account key — must be the production key at repo root
   if (!SERVICE_ACCOUNT_PATH) {
-    console.error('❌ No service account key found.');
-    console.error('\nPlace one of the following files:');
-    console.error(' - repository root: service-account.json (recommended)');
-    console.error(' - scripts/serviceAccountKey.json (local fallback)');
-    console.error('\nTo generate a key:');
-    console.error('1. Go to Firebase Console → Project Settings → Service Accounts');
-    console.error('2. Click "Generate new private key"');
-    console.error('3. Save the file as stated above (do NOT commit it).');
+    console.error('❌ Production service account key not found.');
+    console.error('\nThis export script ONLY accepts the production key at the repository root:');
+    console.error('   service-account.json');
+    console.error('\nPlace your PROD service account key at that path and re-run the script.');
     process.exit(1);
   }
 

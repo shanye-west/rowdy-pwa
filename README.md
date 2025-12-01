@@ -300,15 +300,15 @@ Files & location
 - `scripts/seedFirestore.js` — seeds Firestore from the snapshot (only runs on an EMPTY target DB)
 - `service-account.json` (repo root) — preferred location for your service account key (DO NOT commit)
 - `scripts/serviceAccountKey.json` — local fallback for the scripts folder (also DO NOT commit)
+- `dev-service-account.json` (repo root) — optional/dev-only key (useful for seeding dev without overwriting your main key)
 
 Important safety rules
-- The `export` script reads from the project tied to the service account key you place at **either**:
-	- repository root: `service-account.json` (recommended), or
-	- `scripts/serviceAccountKey.json` (fallback for local-only keys)
+- The `export` script ONLY reads from the production service account file at the repository root: `service-account.json`. This prevents exporting from a non-prod project.
 
-- The `seed` script writes to the project tied to the service account key you place at **either**:
-	- repository root: `service-account.json` (recommended), or
-	- `scripts/serviceAccountKey.json` (fallback for local-only keys)
+- The `seed` script ONLY writes using the dev service account file at the repository root: `dev-service-account.json`. This prevents seeding a production database.
+
+	(Both filenames are gitignored; use them intentionally and never commit them.)
+	You can also place a dev-specific key at the repository root named `dev-service-account.json` and the scripts will pick it up.
 - The `seed` script will refuse to run unless the target Firestore is completely empty. You must manually delete all collections/documents in the Firebase Console before running the seed script.
 - Service account keys and the snapshot file are ignored in `.gitignore` (`scripts/serviceAccountKey.json`, `scripts/data/firestore-snapshot.json`).
 
