@@ -6,6 +6,7 @@ import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "./types";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
+import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import OfflineImage from "./components/OfflineImage";
 import { formatRoundType } from "./utils";
 
@@ -129,8 +130,9 @@ export default function App() {
   }, [rounds, courses]);
 
   // --- Stats Calculation ---
-  const { stats, roundStats } = useMemo(() => {
+  const { stats, roundStats, totalPointsAvailable } = useMemo(() => {
     let fA = 0, fB = 0, pA = 0, pB = 0;
+    let totalPts = 0;
     const rStats: Record<string, { fA: number; fB: number; pA: number; pB: number }> = {};
 
     // Create a lookup for round pointsValue
@@ -164,9 +166,16 @@ export default function App() {
           rStats[m.roundId].pB += ptsB;
         }
       }
+
+      // Add to total points available (each match contributes its pointsValue)
+      totalPts += pv;
     }
-    return { stats: { fA, fB, pA, pB }, roundStats: rStats };
-  }, [matchesByRound, rounds]);
+
+    // Use tournament.totalPointsAvailable if set, otherwise use calculated total
+    const finalTotalPts = tournament?.totalPointsAvailable ?? totalPts;
+
+    return { stats: { fA, fB, pA, pB }, roundStats: rStats, totalPointsAvailable: finalTotalPts };
+  }, [matchesByRound, rounds, tournament?.totalPointsAvailable]);
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -282,6 +291,21 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* Score Tracker Bar */}
+            {totalPointsAvailable > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <ScoreTrackerBar
+                  totalPoints={totalPointsAvailable}
+                  teamAConfirmed={stats.fA}
+                  teamBConfirmed={stats.fB}
+                  teamAPending={stats.pA}
+                  teamBPending={stats.pB}
+                  teamAColor={tournament.teamA?.color}
+                  teamBColor={tournament.teamB?.color}
+                />
+              </div>
+            )}
           </section>
 
           {/* ROUNDS LIST */}
