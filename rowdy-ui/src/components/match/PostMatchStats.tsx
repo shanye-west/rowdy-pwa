@@ -409,18 +409,19 @@ export function PostMatchStats({
         </>
       )}
 
-      {/* ===== SECTION 3: MATCH-LEVEL & TEAM COMPARISON STATS ===== */}
-      
-      {/* Ham & Egg (Best Ball & Shamble) */}
-      {showHamAndEgg && (
-        <TeamStatRow label="🍳 Ham & Eggs" {...colors}
-          valueA={factA?.hamAndEggCount ?? 0}
-          valueB={factB?.hamAndEggCount ?? 0}
-        />
+      {/* ===== SECTION 3: TEAM COMPARISON STATS ===== */}
+      {/* Visual separator + grouped team-wide stats */}
+      {(showHamAndEgg || hasLeadChanges) && (
+        <div className="mt-3 pt-3 border-t border-slate-200">
+          {showHamAndEgg && (
+            <TeamStatRow label="🍳 Ham & Eggs" {...colors}
+              valueA={factA?.hamAndEggCount ?? 0}
+              valueB={factB?.hamAndEggCount ?? 0}
+            />
+          )}
+          {hasLeadChanges && <MatchStat label="Lead Changes" value={factA?.leadChanges} />}
+        </div>
       )}
-
-      {/* Lead Changes */}
-      {hasLeadChanges && <MatchStat label="Lead Changes" value={factA?.leadChanges} />}
 
       {/* ===== SECTION 4: BADGES ===== */}
       
