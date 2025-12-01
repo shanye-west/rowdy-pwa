@@ -412,6 +412,12 @@ export function PostMatchStats({
             teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
             teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
           />
+          {/* Solo Balls Used - show immediately after Net for Best Ball */}
+          <PlayerStatRow
+            label="Solo Balls Used"
+            teamA={teamAFacts.map(f => f.ballsUsedSolo)}
+            teamB={teamBFacts.map(f => f.ballsUsedSolo)}
+          />
         </>
       )}
 
@@ -432,6 +438,18 @@ export function PostMatchStats({
         </>
       )}
 
+      {/* For Shamble, show Solo Balls Used right after team scoring (to appear near Net area) */}
+      {format === "twoManShamble" && (
+        <>
+          <PlayerNamesHeader />
+          <PlayerStatRow
+            label="Solo Balls Used"
+            teamA={teamAFacts.map(f => f.ballsUsedSolo)}
+            teamB={teamBFacts.map(f => f.ballsUsedSolo)}
+          />
+        </>
+      )}
+
       {/* HAM & EGG (Best Ball & Shamble) */}
       {showHamAndEgg && (
         <StatRow 
@@ -439,6 +457,11 @@ export function PostMatchStats({
           valueA={teamAFacts[0]?.hamAndEggCount ?? 0} 
           valueB={teamBFacts[0]?.hamAndEggCount ?? 0} 
         />
+      )}
+
+      {/* Centered Lead Changes: moved to appear just below Ham & Eggs */}
+      {sampleFact?.leadChanges != null && sampleFact.leadChanges > 0 && (
+        <MatchLevelStat label="Lead Changes" value={sampleFact.leadChanges} />
       )}
 
       {/* JEKYLL & HYDE BADGES (Best Ball & Shamble) */}
@@ -506,9 +529,6 @@ export function PostMatchStats({
 
       {/* MOMENTUM STATS (non-singles) */}
       <>
-        {sampleFact?.leadChanges != null && sampleFact.leadChanges > 0 && (
-          <MatchLevelStat label="Lead Changes" value={sampleFact.leadChanges} />
-        )}
         {hasStoryStats && (
           <div>
             {clutchWinTeamA && (
