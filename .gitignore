@@ -71,6 +71,7 @@ node_modules/
 # service-account for firebase functions
 service-account.json
 dev-service-account.json
+service-account-prod.json
 scripts/serviceAccountKey.json
 
 # firestore snapshot (exported prod data)

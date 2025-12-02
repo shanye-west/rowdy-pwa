@@ -1,7 +1,7 @@
 {
   "projects": {
     "default": "rowdy-pwa",
-    "dev": "rowdy-pwa-dev",
+    "dev": "dev-rowdy-pwa",
     "prod": "rowdy-pwa"
   },
   "targets": {},
