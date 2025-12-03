@@ -111,6 +111,7 @@ function wouldCloseMatch(
 interface ScoreInputCellProps {
   holeKey: string;
   value: number | "";
+  par: number;
   locked: boolean;
   hasStroke: boolean;
   hasDrive: boolean;
@@ -123,6 +124,7 @@ interface ScoreInputCellProps {
 const ScoreInputCell = memo(function ScoreInputCell({
   holeKey,
   value,
+  par,
   locked,
   hasStroke,
   hasDrive,
@@ -134,6 +136,11 @@ const ScoreInputCell = memo(function ScoreInputCell({
   const lowScoreBg = teamColor === 'A'
     ? (lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '')
     : (lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '');
+
+  // Calculate how many under par (only for birdies or better)
+  const underPar = typeof value === 'number' && par ? par - value : 0;
+  // Number of circles: 1 for birdie (1 under), 2 for eagle (2 under), etc.
+  const circleCount = underPar > 0 ? underPar : 0;
 
   return (
     <div className="relative flex flex-col items-center">
@@ -156,6 +163,35 @@ const ScoreInputCell = memo(function ScoreInputCell({
           onChange(holeKey, val);
         }}
       />
+      {/* Birdie/Eagle circles - centered over input */}
+      {circleCount > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Outer circles for eagle+ (2+ under par) */}
+          {circleCount >= 2 && (
+            <div 
+              className="absolute rounded-full border-2 border-black"
+              style={{ width: '38px', height: '38px' }}
+            />
+          )}
+          {circleCount >= 3 && (
+            <div 
+              className="absolute rounded-full border-2 border-black"
+              style={{ width: '44px', height: '44px' }}
+            />
+          )}
+          {circleCount >= 4 && (
+            <div 
+              className="absolute rounded-full border-2 border-black"
+              style={{ width: '50px', height: '50px' }}
+            />
+          )}
+          {/* Inner circle for birdie (always shown when under par) */}
+          <div 
+            className="absolute rounded-full border-2 border-black"
+            style={{ width: '32px', height: '32px' }}
+          />
+        </div>
+      )}
       {hasStroke && (
         <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
       )}
@@ -228,6 +264,7 @@ const PlayerScoreRow = memo(function PlayerScoreRow({
           <ScoreInputCell
             holeKey={h.k}
             value={getCellValue(h.k)}
+            par={h.par}
             locked={isHoleLocked(h.num)}
             hasStroke={hasStroke(h.num - 1)}
             hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
@@ -247,6 +284,7 @@ const PlayerScoreRow = memo(function PlayerScoreRow({
           <ScoreInputCell
             holeKey={h.k}
             value={getCellValue(h.k)}
+            par={h.par}
             locked={isHoleLocked(h.num)}
             hasStroke={hasStroke(h.num - 1)}
             hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
