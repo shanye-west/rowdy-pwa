@@ -3,7 +3,7 @@
  * Used by triggers to initialize and normalize match data
  */
 
-import type { RoundFormat, HoleInput } from "../types";
+import type { RoundFormat, HoleInputLoose, SinglesHoleInput, ScrambleHoleInput, BestBallHoleInput, ShambleHoleInput } from "../types";
 
 /**
  * Returns the number of players per side for a given format
@@ -13,23 +13,28 @@ export function playersPerSide(format: RoundFormat): number {
 }
 
 /**
- * Creates empty holes structure for a given format
+ * Creates empty holes structure for a given format.
+ * Returns format-specific input types cast to HoleInputLoose for compatibility.
  */
-export function emptyHolesFor(format: RoundFormat): Record<string, { input: HoleInput }> {
-  const holes: Record<string, { input: HoleInput }> = {};
+export function emptyHolesFor(format: RoundFormat): Record<string, { input: HoleInputLoose }> {
+  const holes: Record<string, { input: HoleInputLoose }> = {};
   for (let i = 1; i <= 18; i++) {
     const k = String(i);
     if (format === "twoManScramble") {
       // Scramble: one score per team + drive tracking
-      holes[k] = { input: { teamAGross: null, teamBGross: null, teamADrive: null, teamBDrive: null } };
+      const input: ScrambleHoleInput = { teamAGross: null, teamBGross: null, teamADrive: null, teamBDrive: null };
+      holes[k] = { input };
     } else if (format === "singles") {
-      holes[k] = { input: { teamAPlayerGross: null, teamBPlayerGross: null } };
+      const input: SinglesHoleInput = { teamAPlayerGross: null, teamBPlayerGross: null };
+      holes[k] = { input };
     } else if (format === "twoManShamble") {
       // Shamble: individual player scores + drive tracking
-      holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null], teamADrive: null, teamBDrive: null } };
+      const input: ShambleHoleInput = { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null], teamADrive: null, teamBDrive: null };
+      holes[k] = { input };
     } else {
       // Best Ball: individual player scores
-      holes[k] = { input: { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null] } };
+      const input: BestBallHoleInput = { teamAPlayersGross: [null, null], teamBPlayersGross: [null, null] };
+      holes[k] = { input };
     }
   }
   return holes;

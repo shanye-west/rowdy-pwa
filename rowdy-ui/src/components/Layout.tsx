@@ -150,7 +150,13 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               >
                 Team Rosters
               </Link>
-              {/* menu items continue */}
+              <Link 
+                to="/history" 
+                style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
+                onClick={() => setMenuOpen(false)}
+              >
+                History
+              </Link>
               
               {/* Auth Actions */}
               {!authLoading && (

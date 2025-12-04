@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { collection, doc, query, where, documentId, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
-import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
+import { useRoundData } from "../hooks/useRoundData";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
@@ -11,187 +8,20 @@ import OfflineImage from "../components/OfflineImage";
 
 export default function Round() {
   const { roundId } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [round, setRound] = useState<RoundDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
-  const [matches, setMatches] = useState<MatchDoc[]>([]);
-  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  const [course, setCourse] = useState<CourseDoc | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
+  const {
+    loading,
+    error,
+    round,
+    tournament,
+    course,
+    matches,
+    players,
+    stats: { finalTeamA: fA, finalTeamB: fB, projectedTeamA: pA, projectedTeamB: pB },
+  } = useRoundData(roundId);
 
-  // Track loading states for coordinated display
-  const [roundLoaded, setRoundLoaded] = useState(false);
-  const [matchesLoaded, setMatchesLoaded] = useState(false);
-
-  // 1) Subscribe to round document
-  useEffect(() => {
-    if (!roundId) {
-      setLoading(false);
-      setError("Round ID is missing.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setRoundLoaded(false);
-    setMatchesLoaded(false);
-
-    const unsub = onSnapshot(
-      doc(db, "rounds", roundId),
-      (snap) => {
-        if (!snap.exists()) {
-          setError("Round not found.");
-          setRound(null);
-        } else {
-          setRound({ id: snap.id, ...snap.data() } as RoundDoc);
-        }
-        setRoundLoaded(true);
-      },
-      (err) => {
-        console.error("Round subscription error:", err);
-        setError("Unable to load round data.");
-        setRoundLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [roundId]);
-
-  // 2) Subscribe to tournament when round is loaded
-  useEffect(() => {
-    if (!round?.tournamentId) return;
-
-    const unsub = onSnapshot(
-      doc(db, "tournaments", round.tournamentId),
-      (snap) => {
-        if (snap.exists()) {
-          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
-        }
-      },
-      (err) => console.error("Tournament subscription error:", err)
-    );
-    return () => unsub();
-  }, [round?.tournamentId]);
-
-  // 3) Subscribe to course when round is loaded
-  useEffect(() => {
-    if (!round?.courseId) {
-      setCourse(null);
-      return;
-    }
-
-    const unsub = onSnapshot(
-      doc(db, "courses", round.courseId),
-      (snap) => {
-        if (snap.exists()) {
-          setCourse({ id: snap.id, ...snap.data() } as CourseDoc);
-        }
-      },
-      (err) => console.error("Course subscription error:", err)
-    );
-    return () => unsub();
-  }, [round?.courseId]);
-
-  // 4) Subscribe to matches for this round
-  useEffect(() => {
-    if (!roundId) return;
-
-    const unsub = onSnapshot(
-      query(collection(db, "matches"), where("roundId", "==", roundId)),
-      (snap) => {
-        const ms = snap.docs
-          .map(d => ({ id: d.id, ...d.data() } as MatchDoc))
-          .sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0) || a.id.localeCompare(b.id));
-        setMatches(ms);
-        setMatchesLoaded(true);
-      },
-      (err) => {
-        console.error("Matches subscription error:", err);
-        setMatchesLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [roundId]);
-
-  // 5) Subscribe to players when matches change (onSnapshot for offline cache)
-  useEffect(() => {
-    if (matches.length === 0) {
-      setPlayers({});
-      return;
-    }
-
-    const playerIds = new Set<string>();
-    matches.forEach(m => {
-      m.teamAPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
-      m.teamBPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
-    });
-
-    if (playerIds.size === 0) {
-      setPlayers({});
-      return;
-    }
-
-    const pIds = Array.from(playerIds);
-    // Firestore 'in' limit is 30
-    const chunks: string[][] = [];
-    for (let i = 0; i < pIds.length; i += 30) {
-      chunks.push(pIds.slice(i, i + 30));
-    }
-
-    // Track players from all chunks
-    const playersByChunk: Record<number, Record<string, PlayerDoc>> = {};
-    const unsubscribers: (() => void)[] = [];
-
-    chunks.forEach((chunk, chunkIndex) => {
-      const unsub = onSnapshot(
-        query(collection(db, "players"), where(documentId(), "in", chunk)),
-        (snap) => {
-          const chunkPlayers: Record<string, PlayerDoc> = {};
-          snap.forEach(d => {
-            chunkPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-          });
-          playersByChunk[chunkIndex] = chunkPlayers;
-          
-          // Merge all chunks into players state
-          const merged: Record<string, PlayerDoc> = {};
-          Object.values(playersByChunk).forEach(chunkData => {
-            Object.assign(merged, chunkData);
-          });
-          setPlayers(merged);
-        },
-        (err) => {
-          console.error("Players subscription error:", err);
-        }
-      );
-      unsubscribers.push(unsub);
-    });
-
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
-  }, [matches]);
-
-  // Coordinated loading state
-  useEffect(() => {
-    if (roundLoaded && matchesLoaded) {
-      setLoading(false);
-    }
-  }, [roundLoaded, matchesLoaded]);
-
-  const stats = useMemo(() => {
-    let fA = 0, fB = 0, pA = 0, pB = 0;
-    const pv = round?.pointsValue ?? 1;
-    for (const m of matches) {
-      const w = m.result?.winner;
-      const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
-      const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
-      const isClosed = m.status?.closed === true;
-      const isStarted = (m.status?.thru ?? 0) > 0;
-
-      if (isClosed) { fA += ptsA; fB += ptsB; } 
-      else if (isStarted) { pA += ptsA; pB += ptsB; }
-    }
-    return { fA, fB, pA, pB };
-  }, [matches, round]);
+  // Alias stats for template compatibility
+  const stats = { fA, fB, pA, pB };
 
   // Use shared player helper - this returns short name format (F. LastName)
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);

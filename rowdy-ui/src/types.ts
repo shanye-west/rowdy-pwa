@@ -1,5 +1,102 @@
 export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
 
+// ============================================================================
+// HOLE INPUT TYPES - Format-specific score input structures
+// ============================================================================
+
+/** Singles: one gross score per player */
+export type SinglesHoleInput = {
+  teamAPlayerGross: number | null;
+  teamBPlayerGross: number | null;
+};
+
+/** Scramble: one team gross score + drive selection per team */
+export type ScrambleHoleInput = {
+  teamAGross: number | null;
+  teamBGross: number | null;
+  teamADrive: number | null;  // 0 or 1 = which player's drive was used
+  teamBDrive: number | null;
+};
+
+/** Best Ball: two individual gross scores per team (best net wins) */
+export type BestBallHoleInput = {
+  teamAPlayersGross: [number | null, number | null];
+  teamBPlayersGross: [number | null, number | null];
+};
+
+/** Shamble: two individual gross scores + drive selection per team */
+export type ShambleHoleInput = {
+  teamAPlayersGross: [number | null, number | null];
+  teamBPlayersGross: [number | null, number | null];
+  teamADrive: number | null;
+  teamBDrive: number | null;
+};
+
+/** Union of all format-specific inputs */
+export type HoleInput = SinglesHoleInput | ScrambleHoleInput | BestBallHoleInput | ShambleHoleInput;
+
+/**
+ * Loose HoleInput for backwards compatibility - all fields optional.
+ * Use format-specific types when format is known.
+ */
+export interface HoleInputLoose {
+  teamAGross?: number | null;
+  teamBGross?: number | null;
+  teamADrive?: number | null;
+  teamBDrive?: number | null;
+  teamAPlayerGross?: number | null;
+  teamBPlayerGross?: number | null;
+  teamAPlayersGross?: (number | null)[];
+  teamBPlayersGross?: (number | null)[];
+}
+
+/** Wrapper for hole data in match document */
+export type HoleData = {
+  /** 
+   * Use HoleInputLoose for backwards compatibility with existing code.
+   * When format is known, narrow with type guards (isSinglesInput, etc.)
+   */
+  input: HoleInputLoose;
+};
+
+// ============================================================================
+// TYPE GUARDS - Narrow HoleInput based on format
+// ============================================================================
+
+/** Check if format is singles (use to narrow HoleInputLoose to SinglesHoleInput) */
+export function isSinglesFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "singles";
+}
+
+/** Check if format is scramble (use to narrow HoleInputLoose to ScrambleHoleInput) */
+export function isScrambleFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "twoManScramble";
+}
+
+/** Check if format is best ball (use to narrow HoleInputLoose to BestBallHoleInput) */
+export function isBestBallFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "twoManBestBall";
+}
+
+/** Check if format is shamble (use to narrow HoleInputLoose to ShambleHoleInput) */
+export function isShambleFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "twoManShamble";
+}
+
+/** Check if format uses individual player scores (2 per team) */
+export function isFourPlayerFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "twoManBestBall" || format === "twoManShamble";
+}
+
+/** Check if format tracks drives */
+export function isDriveTrackingFormat(format: RoundFormat | null | undefined): boolean {
+  return format === "twoManScramble" || format === "twoManShamble";
+}
+
+// ============================================================================
+// DOCUMENT TYPES
+// ============================================================================
+
 export type PlayerDoc = { 
   id: string; 
   displayName?: string; 
@@ -94,7 +191,7 @@ export type MatchDoc = {
   roundId: string;
   tournamentId?: string;
   matchNumber?: number; // For ordering matches on Round page (like day for rounds)
-  holes?: Record<string, { input: any }>;
+  holes?: Record<string, HoleData>;
   result?: { 
     winner?: "teamA" | "teamB" | "AS";
     holesWonA?: number;
