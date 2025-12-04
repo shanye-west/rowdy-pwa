@@ -17,6 +17,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 // Import shared modules
 import type { RoundFormat } from "./types.js";
+import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { 
   playersPerSide, 
   ensureSideSize, 
@@ -253,7 +254,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let format: RoundFormat = "twoManBestBall";
   let points = 1;
   let courseId = "";
-  let coursePar = 72;
+  let coursePar = DEFAULT_COURSE_PAR;
   let day = 0;
   let playerTierLookup: Record<string, string> = {};
   let playerHandicapLookup: Record<string, number> = {};
@@ -753,12 +754,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       hamAndEggCount = team === "teamA" ? teamAHamAndEggCount : teamBHamAndEggCount;
     }
     
-    // Jekyll & Hyde: worst ball total - best ball total >= 24
+    // Jekyll & Hyde: worst ball total - best ball total >= JEKYLL_AND_HYDE_THRESHOLD
     let jekyllAndHyde: boolean | null = null;
     if (format === "twoManBestBall" || format === "twoManShamble") {
       const bestBallTotal = team === "teamA" ? teamABestBallTotal : teamBBestBallTotal;
       const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
-      jekyllAndHyde = (worstBallTotal - bestBallTotal) >= 24;
+      jekyllAndHyde = (worstBallTotal - bestBallTotal) >= JEKYLL_AND_HYDE_THRESHOLD;
     }
     
     // Scoring stats

@@ -3,6 +3,12 @@ import { useParams, Link } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundFormat } from "../types";
+import { 
+  SCORECARD_CELL_WIDTH, 
+  SCORECARD_LABEL_WIDTH, 
+  SCORECARD_TOTAL_COL_WIDTH,
+  MIN_DRIVES_PER_ROUND 
+} from "../constants";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
@@ -560,7 +566,7 @@ export default function Match() {
     if (!trackDrives || !drivesUsed) return null;
     
     const holesRemaining = 18 - matchThru;
-    const calc = (used: number) => Math.max(0, 6 - used - holesRemaining);
+    const calc = (used: number) => Math.max(0, MIN_DRIVES_PER_ROUND - used - holesRemaining);
     
     return {
       teamA: [calc(drivesUsed.teamA[0]), calc(drivesUsed.teamA[1])],
@@ -938,9 +944,9 @@ export default function Match() {
     );
   }
 
-  const cellWidth = 44;
-  const labelWidth = 120;
-  const totalColWidth = 48;
+  const cellWidth = SCORECARD_CELL_WIDTH;
+  const labelWidth = SCORECARD_LABEL_WIDTH;
+  const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
 
   // Match state variables
   const winner = match.result?.winner;
@@ -1173,7 +1179,7 @@ export default function Match() {
                   <div>
                     <span className="text-slate-500">{getPlayerShortName(match.teamAPlayers?.[0]?.playerId)}:</span>{" "}
                     <span className={`font-bold ${drivesNeeded.teamA[0] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamA[0]}/6
+                      {drivesUsed.teamA[0]}/{MIN_DRIVES_PER_ROUND}
                     </span>
                     {drivesNeeded.teamA[0] > 0 && (
                       <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[0]}</span>
@@ -1182,7 +1188,7 @@ export default function Match() {
                   <div>
                     <span className="text-slate-500">{getPlayerShortName(match.teamAPlayers?.[1]?.playerId)}:</span>{" "}
                     <span className={`font-bold ${drivesNeeded.teamA[1] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamA[1]}/6
+                      {drivesUsed.teamA[1]}/{MIN_DRIVES_PER_ROUND}
                     </span>
                     {drivesNeeded.teamA[1] > 0 && (
                       <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[1]}</span>
@@ -1197,7 +1203,7 @@ export default function Match() {
                   <div>
                     <span className="text-slate-500">{getPlayerShortName(match.teamBPlayers?.[0]?.playerId)}:</span>{" "}
                     <span className={`font-bold ${drivesNeeded.teamB[0] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamB[0]}/6
+                      {drivesUsed.teamB[0]}/{MIN_DRIVES_PER_ROUND}
                     </span>
                     {drivesNeeded.teamB[0] > 0 && (
                       <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[0]}</span>
@@ -1206,7 +1212,7 @@ export default function Match() {
                   <div>
                     <span className="text-slate-500">{getPlayerShortName(match.teamBPlayers?.[1]?.playerId)}:</span>{" "}
                     <span className={`font-bold ${drivesNeeded.teamB[1] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamB[1]}/6
+                      {drivesUsed.teamB[1]}/{MIN_DRIVES_PER_ROUND}
                     </span>
                     {drivesNeeded.teamB[1] > 0 && (
                       <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[1]}</span>

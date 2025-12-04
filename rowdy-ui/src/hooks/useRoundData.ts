@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, doc, query, where, documentId, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
+import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
 
 interface UseRoundDataResult {
   loading: boolean;
@@ -145,10 +146,10 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     }
 
     const pIds = Array.from(playerIds);
-    // Firestore 'in' limit is 30
+    // Firestore 'in' query limit
     const chunks: string[][] = [];
-    for (let i = 0; i < pIds.length; i += 30) {
-      chunks.push(pIds.slice(i, i + 30));
+    for (let i = 0; i < pIds.length; i += FIRESTORE_IN_QUERY_LIMIT) {
+      chunks.push(pIds.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
     }
 
     // Track players from all chunks
