@@ -967,7 +967,7 @@ export default function Match() {
             {editBlockReason && (editBlockReason === "historical" || (!roundLocked && !isMatchClosed)) && (
               <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs pr-2" style={{ color: "#94a3b8" }}>
                 {editBlockReason === "historical" && (
-                  <span>📜 View only</span>
+                  <span> View only</span>
                 )}
                 {editBlockReason === "login" && (
                   <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
