@@ -9,7 +9,7 @@ import {
   SCORECARD_TOTAL_COL_WIDTH,
   MIN_DRIVES_PER_ROUND 
 } from "../constants";
-import { formatMatchStatus, formatRoundType } from "../utils";
+import { formatRoundType } from "../utils";
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -18,6 +18,8 @@ import { MatchFlowGraph } from "../components/match/MatchFlowGraph";
 import { PostMatchStats } from "../components/match/PostMatchStats";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
+import { Modal, ModalActions } from "../components/Modal";
+import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 
 // --- MATCH CLOSING HELPERS ---
 
@@ -116,6 +118,7 @@ function wouldCloseMatch(
 /** Props for ScoreInputCell */
 interface ScoreInputCellProps {
   holeKey: string;
+  holeNum: number;
   value: number | "";
   par: number;
   locked: boolean;
@@ -129,6 +132,7 @@ interface ScoreInputCellProps {
 /** Memoized score input cell - prevents re-render unless props change */
 const ScoreInputCell = memo(function ScoreInputCell({
   holeKey,
+  holeNum,
   value,
   par,
   locked,
@@ -153,6 +157,7 @@ const ScoreInputCell = memo(function ScoreInputCell({
       <input
         type="number"
         inputMode="numeric"
+        aria-label={`Score for hole ${holeNum}`}
         className={`
           w-10 h-10 text-center text-base font-semibold rounded-md border
           focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
@@ -269,6 +274,7 @@ const PlayerScoreRow = memo(function PlayerScoreRow({
         <td key={h.k} className="p-0.5">
           <ScoreInputCell
             holeKey={h.k}
+            holeNum={h.num}
             value={getCellValue(h.k)}
             par={h.par}
             locked={isHoleLocked(h.num)}
@@ -289,6 +295,7 @@ const PlayerScoreRow = memo(function PlayerScoreRow({
         <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
           <ScoreInputCell
             holeKey={h.k}
+            holeNum={h.num}
             value={getCellValue(h.k)}
             par={h.par}
             locked={isHoleLocked(h.num)}
@@ -948,10 +955,6 @@ export default function Match() {
   const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
 
-  // Match state variables
-  const winner = match.result?.winner;
-  const leader = match.status?.leader;
-
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
@@ -985,48 +988,20 @@ export default function Match() {
             )}
           </div>
           
-          {/* Main status display - matches Round page tile styling */}
+          {/* Main status display - uses shared MatchStatusBadge component */}
           {(() => {
-            // Determine styling based on match state
-            let bgStyle: React.CSSProperties = {};
-            let borderStyle: React.CSSProperties = {};
-            
-            if (isMatchClosed && winner && winner !== "AS") {
-              // Completed match with a winner - full team color background
-              const winnerColor = winner === "teamA" 
-                ? (tournament?.teamA?.color || "var(--team-a-default)")
-                : (tournament?.teamB?.color || "var(--team-b-default)");
-              bgStyle = { backgroundColor: winnerColor };
-            } else if (isMatchClosed && winner === "AS") {
-              // Halved match - grey background with team color borders
-              bgStyle = { backgroundColor: "#cbd5e1" };
-              borderStyle = {
-                borderLeft: `4px solid ${tournament?.teamA?.color || 'var(--team-a-default)'}`,
-                borderRight: `4px solid ${tournament?.teamB?.color || 'var(--team-b-default)'}`
-              };
-            } else if (leader === 'teamA') {
-              const borderColor = tournament?.teamA?.color || "var(--team-a-default)";
-              bgStyle = { background: `linear-gradient(90deg, ${borderColor}11 0%, transparent 30%)` };
-              borderStyle = { borderLeft: `4px solid ${borderColor}`, borderRight: '4px solid transparent' };
-            } else if (leader === 'teamB') {
-              const borderColor = tournament?.teamB?.color || "var(--team-b-default)";
-              bgStyle = { background: `linear-gradient(-90deg, ${borderColor}11 0%, transparent 30%)` };
-              borderStyle = { borderRight: `4px solid ${borderColor}`, borderLeft: '4px solid transparent' };
-            }
-
-            // Get status color for in-progress matches
-            let statusColor: string;
-            if (leader === 'teamA') {
-              statusColor = tournament?.teamA?.color || "var(--team-a-default)";
-            } else if (leader === 'teamB') {
-              statusColor = tournament?.teamB?.color || "var(--team-b-default)";
-            } else {
-              statusColor = "#94a3b8";
-            }
+            const { bgStyle, borderStyle } = getMatchCardStyles(
+              match.status,
+              match.result,
+              tournament?.teamA?.color || "var(--team-a-default)",
+              tournament?.teamB?.color || "var(--team-b-default)"
+            );
 
             return (
               <div 
                 className="card"
+                role="status"
+                aria-label="Match status"
                 style={{ 
                   display: 'flex',
                   flexDirection: 'column',
@@ -1037,131 +1012,14 @@ export default function Match() {
                   ...borderStyle
                 }}
               >
-                {isMatchClosed ? (
-                  // Completed match
-                  winner === 'AS' ? (
-                    // Halved/Tied match
-                    <>
-                      <div style={{ 
-                        whiteSpace: 'nowrap',
-                        fontSize: '1rem',
-                        fontWeight: 700,
-                        color: '#334155'
-                      }}>
-                        TIED
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        FINAL
-                      </div>
-                    </>
-                  ) : (
-                    // Match with a winner
-                    <>
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: 'rgba(255,255,255,0.85)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        {winner === 'teamA' 
-                          ? (tournament?.teamA?.name || 'Team A')
-                          : (tournament?.teamB?.name || 'Team B')
-                        }
-                      </div>
-                      <div style={{ 
-                        whiteSpace: 'nowrap',
-                        fontSize: '1rem',
-                        fontWeight: 700,
-                        color: 'white'
-                      }}>
-                        {(() => {
-                          const statusText = formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name);
-                          return statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText;
-                        })()}
-                      </div>
-                      <div style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 600, 
-                        color: 'rgba(255,255,255,0.85)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        FINAL
-                      </div>
-                    </>
-                  )
-                ) : matchThru > 0 && leader ? (
-                  // In progress with leader
-                  <>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: statusColor,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      {leader === 'teamA' 
-                        ? (tournament?.teamA?.name || 'Team A')
-                        : (tournament?.teamB?.name || 'Team B')
-                      }
-                    </div>
-                    <div style={{ 
-                      whiteSpace: 'nowrap',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      color: statusColor
-                    }}>
-                      {match.status?.margin} UP
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: '#94a3b8',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      THRU {matchThru}
-                    </div>
-                  </>
-                ) : matchThru > 0 ? (
-                  // In progress, All Square
-                  <>
-                    <div style={{ 
-                      whiteSpace: 'nowrap',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      color: '#64748b'
-                    }}>
-                      ALL SQUARE
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      THRU {matchThru}
-                    </div>
-                  </>
-                ) : (
-                  // Not started
-                  <div style={{ 
-                    whiteSpace: 'nowrap',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#94a3b8'
-                  }}>
-                    Not Started
-                  </div>
-                )}
+                <MatchStatusBadge
+                  status={match.status}
+                  result={match.result}
+                  teamAColor={tournament?.teamA?.color || "var(--team-a-default)"}
+                  teamBColor={tournament?.teamB?.color || "var(--team-b-default)"}
+                  teamAName={tournament?.teamA?.name}
+                  teamBName={tournament?.teamB?.name}
+                />
               </div>
             );
           })()}
@@ -1716,19 +1574,14 @@ export default function Match() {
         <LastUpdated />
 
         {/* CONFIRM MATCH CLOSE MODAL */}
-        {confirmCloseModal && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={handleCancelClose}
-          >
-            <div 
-              className="bg-white rounded-xl shadow-xl p-6 mx-4 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-bold text-center text-slate-800 mb-4">
-                End Match?
-              </h3>
-              
+        <Modal
+          isOpen={!!confirmCloseModal}
+          onClose={handleCancelClose}
+          title="End Match?"
+          ariaLabel="Confirm match end"
+        >
+          {confirmCloseModal && (
+            <>
               {/* Match Score Tile - same format as scorecard */}
               <div 
                 className="rounded-lg mb-4"
@@ -1746,99 +1599,35 @@ export default function Match() {
                   border: confirmCloseModal.winner === "AS" ? '2px solid #cbd5e1' : 'none'
                 }}
               >
-                {confirmCloseModal.winner === "AS" ? (
-                  // Halved/Tied match
-                  <>
-                    <div style={{ 
-                      whiteSpace: 'nowrap',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      color: '#334155'
-                    }}>
-                      TIED
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      FINAL
-                    </div>
-                  </>
-                ) : (
-                  // Match with a winner
-                  <>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: 'rgba(255,255,255,0.85)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      {confirmCloseModal.winner === "teamA" 
-                        ? (tournament?.teamA?.name || 'Team A')
-                        : (tournament?.teamB?.name || 'Team B')
-                      }
-                    </div>
-                    <div style={{ 
-                      whiteSpace: 'nowrap',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      color: 'white'
-                    }}>
-                      {confirmCloseModal.thru === 18 
-                        ? `${confirmCloseModal.margin}UP`
-                        : `${confirmCloseModal.margin}&${18 - confirmCloseModal.thru}`
-                      }
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.65rem', 
-                      fontWeight: 600, 
-                      color: 'rgba(255,255,255,0.85)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      FINAL
-                    </div>
-                  </>
-                )}
+                <MatchStatusBadge
+                  status={{ closed: true, thru: confirmCloseModal.thru, margin: confirmCloseModal.margin }}
+                  result={{ winner: confirmCloseModal.winner }}
+                  teamAColor={teamAColor}
+                  teamBColor={teamBColor}
+                  teamAName={tournament?.teamA?.name}
+                  teamBName={tournament?.teamB?.name}
+                />
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCancelClose}
-                  className="flex-1 py-3 px-4 rounded-lg bg-slate-200 text-slate-700 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmClose}
-                  className="flex-1 py-3 px-4 rounded-lg bg-green-600 text-white font-semibold text-base transition-transform active:scale-95 hover:bg-green-700"
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              <ModalActions
+                primaryLabel="Confirm"
+                onPrimary={handleConfirmClose}
+                secondaryLabel="Cancel"
+                onSecondary={handleCancelClose}
+              />
+            </>
+          )}
+        </Modal>
 
         {/* DRIVE SELECTOR MODAL */}
-        {driveModal && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={() => setDriveModal(null)}
-          >
-            <div 
-              className="bg-white rounded-xl shadow-xl p-6 mx-4 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-bold text-center text-slate-800 mb-4">
-                Whose drive for Hole {driveModal.hole.num}?
-              </h3>
+        <Modal
+          isOpen={!!driveModal}
+          onClose={() => setDriveModal(null)}
+          title={driveModal ? `Whose drive for Hole ${driveModal.hole.num}?` : ""}
+          ariaLabel="Select drive player"
+        >
+          {driveModal && (
+            <>
               <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color: driveModal.team === "A" ? teamAColor : teamBColor }}>
                 {driveModal.team === "A" ? (tournament?.teamA?.name || "Team A") : (tournament?.teamB?.name || "Team B")}
               </div>
@@ -1847,6 +1636,7 @@ export default function Match() {
                 <button
                   type="button"
                   onClick={() => handleDriveSelect(0)}
+                  aria-label={`Select ${getPlayerName(driveModal.team === "A" ? match.teamAPlayers?.[0]?.playerId : match.teamBPlayers?.[0]?.playerId)}'s drive`}
                   className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
                   style={{ backgroundColor: driveModal.team === "A" ? teamAColor : teamBColor }}
                 >
@@ -1858,6 +1648,7 @@ export default function Match() {
                 <button
                   type="button"
                   onClick={() => handleDriveSelect(1)}
+                  aria-label={`Select ${getPlayerName(driveModal.team === "A" ? match.teamAPlayers?.[1]?.playerId : match.teamBPlayers?.[1]?.playerId)}'s drive`}
                   className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
                   style={{ backgroundColor: driveModal.team === "A" ? teamAColor : teamBColor }}
                 >
@@ -1869,6 +1660,7 @@ export default function Match() {
                 <button
                   type="button"
                   onClick={() => handleDriveSelect(null)}
+                  aria-label="Clear drive selection"
                   className="w-full py-3 px-4 rounded-lg bg-slate-200 text-slate-600 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
                 >
                   Clear
@@ -1882,9 +1674,9 @@ export default function Match() {
               >
                 Cancel
               </button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </Modal>
       </div>
     </Layout>
   );
