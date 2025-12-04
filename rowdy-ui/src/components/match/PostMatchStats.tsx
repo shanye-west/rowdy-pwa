@@ -391,21 +391,6 @@ export function PostMatchStats({
         </>
       )}
 
-      {/* Best Ball & Worst Ball totals (Best Ball & Shamble) */}
-      {(isBestBall || isShamble) && (factA?.worstBallTotal != null || factB?.worstBallTotal != null) && (
-        <>
-          <TeamNamesHeader teamAName={teamAName} teamBName={teamBName} {...colors} />
-          <TeamStatRow label="Worst Ball" {...colors} highlight
-            valueA={factA?.worstBallTotal}
-            valueB={factB?.worstBallTotal}
-          />
-          <TeamStatRow label="Best Ball" {...colors}
-            valueA={factA?.bestBallTotal}
-            valueB={factB?.bestBallTotal}
-          />
-        </>
-      )}
-
       {/* Team scoring (Shamble & Scramble) */}
       {showTeamScoring && (
         <>
@@ -498,6 +483,13 @@ export function PostMatchStats({
       {(showHamAndEgg || hasLeadChanges) && (
         <div className="mt-3 pt-3 border-t border-slate-200">
           <TeamNamesHeader teamAName={teamAName} teamBName={teamBName} {...colors} />
+          {/* Worst Ball total (Best Ball & Shamble) */}
+          {(isBestBall || isShamble) && (factA?.worstBallTotal != null || factB?.worstBallTotal != null) && (
+            <TeamStatRow label="Worst Ball" {...colors}
+              valueA={factA?.worstBallTotal}
+              valueB={factB?.worstBallTotal}
+            />
+          )}
           {showHamAndEgg && (
             <TeamStatRow label="🍳 Ham & Eggs" {...colors}
               valueA={factA?.hamAndEggCount ?? 0}
