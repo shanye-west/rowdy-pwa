@@ -1007,6 +1007,14 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (hamAndEggCount !== null) factData.hamAndEggCount = hamAndEggCount;
     if (jekyllAndHyde === true) factData.jekyllAndHyde = true;
     
+    // Best Ball & Worst Ball totals (for bestBall/shamble team comparison)
+    if (format === "twoManBestBall" || format === "twoManShamble") {
+      const bestBallTotal = team === "teamA" ? teamABestBallTotal : teamBBestBallTotal;
+      const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
+      factData.bestBallTotal = bestBallTotal;
+      factData.worstBallTotal = worstBallTotal;
+    }
+    
     factData.coursePar = coursePar;
     factData.playerCourseHandicap = playerCourseHandicap;
     if (totalGross !== null) factData.totalGross = totalGross;

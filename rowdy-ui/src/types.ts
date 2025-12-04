@@ -198,6 +198,10 @@ export type PlayerMatchFact = {
   birdies?: number;            // number of birdies in this match (gross-based)
   eagles?: number;             // number of eagles (2+ under par) in this match (gross-based)
 
+  // Team ball totals (twoManBestBall, twoManShamble only)
+  bestBallTotal?: number;      // Sum of team's best ball (lowest net/gross) per hole
+  worstBallTotal?: number;     // Sum of team's worst ball (highest net/gross) per hole
+
   // Course context
   coursePar?: number;         // Course par for reference
 
