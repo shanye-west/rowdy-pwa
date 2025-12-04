@@ -20,97 +20,26 @@ import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { Modal, ModalActions } from "../components/Modal";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
+import { predictClose, computeRunningStatus, type HoleData, type HoleInput } from "../utils/matchScoring";
 
 // --- MATCH CLOSING HELPERS ---
 
-/** Calculates if a score change would close the match */
+/**
+ * Wrapper for predictClose that adapts the Match.tsx holes format to HoleData[]
+ */
 function wouldCloseMatch(
   holes: Array<{ k: string; num: number; input: any; par: number }>,
   pendingHoleKey: string,
-  pendingInput: any,
+  pendingInput: HoleInput,
   format: RoundFormat,
   teamAPlayers?: any[],
   teamBPlayers?: any[]
 ): { wouldClose: boolean; winner: "teamA" | "teamB" | "AS" | null; margin: number; thru: number } {
-  let teamAUp = 0;
-  let thru = 0;
+  // Convert holes to HoleData format and find pending hole number
+  const holeData: HoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
+  const pendingHoleNum = holes.find(h => h.k === pendingHoleKey)?.num ?? 0;
   
-  for (let i = 0; i < 18; i++) {
-    const hole = holes[i];
-    // Use pending input if this is the hole being edited
-    const input = hole.k === pendingHoleKey ? pendingInput : hole.input;
-    
-    let teamAScore: number | null = null;
-    let teamBScore: number | null = null;
-    let holeComplete = false;
-    
-    if (format === "twoManScramble") {
-      const aGross = input?.teamAGross ?? null;
-      const bGross = input?.teamBGross ?? null;
-      holeComplete = aGross != null && bGross != null;
-      teamAScore = aGross;
-      teamBScore = bGross;
-    } else if (format === "singles") {
-      const aGross = input?.teamAPlayerGross ?? null;
-      const bGross = input?.teamBPlayerGross ?? null;
-      holeComplete = aGross != null && bGross != null;
-      if (holeComplete) {
-        const teamAStroke = (teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        const teamBStroke = (teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        teamAScore = aGross! - teamAStroke;
-        teamBScore = bGross! - teamBStroke;
-      }
-    } else if (format === "twoManShamble") {
-      const aArr = input?.teamAPlayersGross;
-      const bArr = input?.teamBPlayersGross;
-      const a0 = Array.isArray(aArr) ? aArr[0] : null;
-      const a1 = Array.isArray(aArr) ? aArr[1] : null;
-      const b0 = Array.isArray(bArr) ? bArr[0] : null;
-      const b1 = Array.isArray(bArr) ? bArr[1] : null;
-      holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
-      if (holeComplete) {
-        teamAScore = Math.min(a0!, a1!);
-        teamBScore = Math.min(b0!, b1!);
-      }
-    } else {
-      // Best Ball
-      const aArr = input?.teamAPlayersGross;
-      const bArr = input?.teamBPlayersGross;
-      const a0 = Array.isArray(aArr) ? aArr[0] : null;
-      const a1 = Array.isArray(aArr) ? aArr[1] : null;
-      const b0 = Array.isArray(bArr) ? bArr[0] : null;
-      const b1 = Array.isArray(bArr) ? bArr[1] : null;
-      holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
-      if (holeComplete) {
-        const a0Stroke = (teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        const a1Stroke = (teamAPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        const b0Stroke = (teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        const b1Stroke = (teamBPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-        const a0Net = a0! - a0Stroke;
-        const a1Net = a1! - a1Stroke;
-        const b0Net = b0! - b0Stroke;
-        const b1Net = b1! - b1Stroke;
-        teamAScore = Math.min(a0Net, a1Net);
-        teamBScore = Math.min(b0Net, b1Net);
-      }
-    }
-    
-    if (holeComplete && teamAScore != null && teamBScore != null) {
-      thru = hole.num;
-      if (teamAScore < teamBScore) teamAUp += 1;
-      else if (teamBScore < teamAScore) teamAUp -= 1;
-    }
-  }
-  
-  const margin = Math.abs(teamAUp);
-  const holesLeft = 18 - thru;
-  const leader = teamAUp > 0 ? "teamA" : teamAUp < 0 ? "teamB" : null;
-  
-  // Match closes when margin > holesLeft OR all 18 holes complete
-  const wouldClose = (leader !== null && margin > holesLeft) || thru === 18;
-  const winner = wouldClose ? (thru === 18 && teamAUp === 0 ? "AS" : leader) : null;
-  
-  return { wouldClose, winner, margin, thru };
+  return predictClose(holeData, pendingHoleNum, pendingInput, format, teamAPlayers, teamBPlayers);
 }
 
 // --- MEMOIZED COMPONENTS ---
@@ -324,7 +253,7 @@ export default function Match() {
   const { canEditMatch, player } = useAuth();
   
   // Use custom hook for all data fetching
-  const { match, round, course, tournament, players, matchFacts, loading } = useMatchData(matchId);
+  const { match, round, course, tournament, players, matchFacts, loading, error } = useMatchData(matchId);
   
   // DRIVE_TRACKING: Modal state for drive picker - using any for hole to avoid circular type reference
   const [driveModal, setDriveModal] = useState<{ hole: any; team: "A" | "B" } | null>(null);
@@ -775,123 +704,11 @@ export default function Match() {
   const cellChangeHandlerB0 = useMemo(() => createCellChangeHandler("B", 0), [createCellChangeHandler]);
   const cellChangeHandlerB1 = useMemo(() => createCellChangeHandler("B", 1), [createCellChangeHandler]);
 
-  // Calculate running match status after each hole
-  // Returns array of { status: string, leader: "A" | "B" | null } for each hole
+  // Calculate running match status after each hole using shared scoring module
   const runningMatchStatus = useMemo(() => {
-    const result: { status: string; leader: "A" | "B" | null }[] = [];
-    let teamAUp = 0; // Positive = Team A ahead, Negative = Team B ahead
-    
-    for (let i = 0; i < 18; i++) {
-      const hole = holes[i];
-      const input = hole.input;
-      
-      // Get the team scores for this hole based on format
-      let teamAScore: number | null = null;
-      let teamBScore: number | null = null;
-      let holeComplete = false;
-      
-      if (format === "twoManScramble") {
-        // Scramble: one gross score per team
-        const aGross = input?.teamAGross ?? null;
-        const bGross = input?.teamBGross ?? null;
-        holeComplete = aGross != null && bGross != null;
-        teamAScore = aGross;
-        teamBScore = bGross;
-      } else if (format === "singles") {
-        const aGross = input?.teamAPlayerGross ?? null;
-        const bGross = input?.teamBPlayerGross ?? null;
-        // Singles: hole complete when both player grosses are entered
-        holeComplete = aGross != null && bGross != null;
-        
-        if (holeComplete) {
-          // Apply strokes for singles
-          const teamAStroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          const teamBStroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          teamAScore = aGross! - teamAStroke;
-          teamBScore = bGross! - teamBStroke;
-        }
-      } else if (format === "twoManShamble") {
-        // Shamble: individual player scores, best GROSS (no strokes)
-        const aArr = input?.teamAPlayersGross;
-        const bArr = input?.teamBPlayersGross;
-        
-        const a0 = Array.isArray(aArr) ? aArr[0] : null;
-        const a1 = Array.isArray(aArr) ? aArr[1] : null;
-        const b0 = Array.isArray(bArr) ? bArr[0] : null;
-        const b1 = Array.isArray(bArr) ? bArr[1] : null;
-        
-        holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
-        
-        if (holeComplete) {
-          // Best GROSS for each team (no handicap strokes in shamble)
-          teamAScore = Math.min(a0!, a1!);
-          teamBScore = Math.min(b0!, b1!);
-        }
-      } else {
-        // Best Ball only - calculate net for each player, then take best
-        const aArr = input?.teamAPlayersGross;
-        const bArr = input?.teamBPlayersGross;
-        
-        // Check if all 4 players have entered scores
-        const a0 = Array.isArray(aArr) ? aArr[0] : null;
-        const a1 = Array.isArray(aArr) ? aArr[1] : null;
-        const b0 = Array.isArray(bArr) ? bArr[0] : null;
-        const b1 = Array.isArray(bArr) ? bArr[1] : null;
-        
-        holeComplete = a0 != null && a1 != null && b0 != null && b1 != null;
-        
-        if (holeComplete) {
-          // Calculate net for each player individually
-          const a0Stroke = (match?.teamAPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          const a1Stroke = (match?.teamAPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          const b0Stroke = (match?.teamBPlayers?.[0]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          const b1Stroke = (match?.teamBPlayers?.[1]?.strokesReceived?.[i] ?? 0) > 0 ? 1 : 0;
-          
-          const a0Net = a0! - a0Stroke;
-          const a1Net = a1! - a1Stroke;
-          const b0Net = b0! - b0Stroke;
-          const b1Net = b1! - b1Stroke;
-          
-          // Best (lowest) net for each team
-          teamAScore = Math.min(a0Net, a1Net);
-          teamBScore = Math.min(b0Net, b1Net);
-        }
-      }
-      
-      // Compare scores only if hole is complete (lower is better in golf)
-      if (holeComplete && teamAScore != null && teamBScore != null) {
-        if (teamAScore < teamBScore) {
-          teamAUp += 1; // Team A won the hole
-        } else if (teamBScore < teamAScore) {
-          teamAUp -= 1; // Team B won the hole
-        }
-        // If tied, no change
-      }
-      
-      // Format the status text
-      let status: string;
-      let leader: "A" | "B" | null;
-      
-      if (!holeComplete) {
-        // Hole not complete - leave blank
-        status = "";
-        leader = null;
-      } else if (teamAUp === 0) {
-        status = "AS";
-        leader = null;
-      } else if (teamAUp > 0) {
-        status = `${teamAUp}UP`;
-        leader = "A";
-      } else {
-        status = `${Math.abs(teamAUp)}UP`;
-        leader = "B";
-      }
-      
-      result.push({ status, leader });
-    }
-    
-    return result;
-  }, [holes, format, match]);
+    const holeData: HoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
+    return computeRunningStatus(holeData, format, match?.teamAPlayers, match?.teamBPlayers);
+  }, [holes, format, match?.teamAPlayers, match?.teamBPlayers]);
 
   // Get team colors
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
@@ -900,6 +717,14 @@ export default function Match() {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="spinner-lg"></div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="empty-state">
+      <div className="empty-state-icon">⚠️</div>
+      <div className="empty-state-text">Error loading match</div>
+      <div className="text-sm text-gray-500 mt-2">{error}</div>
     </div>
   );
   
