@@ -8,21 +8,11 @@ export interface ScoreNumberPickerProps {
 }
 
 /** Custom number picker for score entry - 3x3 grid (1-9) with expandable 10-15 */
-export interface ScoreNumberPickerProps {
-  value: number | "";
-  onSelect: (value: number) => void;
-  onClear: () => void;
-  onClose: () => void;
-  // when this increments, the picker will collapse the extended section
-  collapseSignal?: number;
-}
-
 export const ScoreNumberPicker = memo(function ScoreNumberPicker({
   value,
   onSelect,
   onClear,
   onClose,
-  collapseSignal,
 }: ScoreNumberPickerProps) {
   const [showExtended, setShowExtended] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -55,10 +45,6 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
   const handleNumberClick = useCallback((num: number) => {
     haptic();
     onSelect(num);
-    // If an extended number was clicked, collapse the extended view
-    if (num >= 10 && num <= 15) {
-      setShowExtended(false);
-    }
   }, [haptic, onSelect]);
 
   const handleClear = useCallback(() => {
@@ -71,12 +57,7 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
     setShowExtended((prev) => !prev);
   }, [haptic]);
 
-  // Collapse when parent sends a signal
-  useEffect(() => {
-    if (typeof collapseSignal === 'number') {
-      setShowExtended(false);
-    }
-  }, [collapseSignal]);
+  // No external collapse signal - parent controls closing picker now
 
   // Common button styles
   const buttonBase = "flex items-center justify-center text-lg font-semibold rounded-lg transition-all duration-100 active:scale-95 select-none";

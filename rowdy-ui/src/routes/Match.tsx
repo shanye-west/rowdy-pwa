@@ -716,10 +716,11 @@ export default function Match() {
           )}
           
           <div 
-            ref={scrollContainerRef}
-            className="overflow-x-auto"
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
+              ref={scrollContainerRef}
+              id="scorecard-container"
+              className="overflow-x-auto"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
             <table 
               className="w-max border-collapse text-center text-sm"
               style={{ minWidth: "100%" }}

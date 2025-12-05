@@ -31,7 +31,6 @@ export const ScoreInputCell = memo(function ScoreInputCell({
 }: ScoreInputCellProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
-  const [collapseSignal, setCollapseSignal] = useState(0);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   
   // Use team-specific colors for low score highlighting
@@ -54,13 +53,8 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   // Handle number selection from picker
   const handleSelect = useCallback((num: number) => {
     onChange(holeKey, num);
-    // If user selected a small number (1-9) close the picker for quick entry.
-    if (num >= 1 && num <= 9) {
-      setShowPicker(false);
-    } else {
-      // For 10-15: keep the picker open but collapse the extended view back to 1-9
-      setCollapseSignal((s) => s + 1);
-    }
+    // Always close picker after any selection
+    setShowPicker(false);
   }, [holeKey, onChange]);
   
   // Handle clear from picker
@@ -76,11 +70,13 @@ export const ScoreInputCell = memo(function ScoreInputCell({
 
   // When picker opens, compute its position relative to the viewport so we can portal it.
   useLayoutEffect(() => {
-    if (showPicker && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      // place picker below the cell, centered horizontally
-      const left = rect.left + rect.width / 2;
-      const top = rect.bottom + 8; // 8px gap
+    if (showPicker) {
+      const container = document.getElementById('scorecard-container');
+      const rect = container ? container.getBoundingClientRect() : null;
+      // center horizontally in viewport
+      const left = window.innerWidth / 2;
+      // position directly below the bottom of the scorecard (or fallback below button)
+      const top = rect ? rect.bottom + 8 : (buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 8 : window.innerHeight / 2);
       setPickerPos({ left, top });
     } else {
       setPickerPos(null);
@@ -118,7 +114,6 @@ export const ScoreInputCell = memo(function ScoreInputCell({
             onSelect={handleSelect}
             onClear={handleClear}
             onClose={handleClose}
-            collapseSignal={collapseSignal}
           />
         </div>,
         document.body
