@@ -204,26 +204,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
 
       {/* WRAP CONTENT IN PULL-TO-REFRESH */}
       <PullToRefresh>
-        {/* Offline Status Banner */}
-        {!isOnline && (
-          <div 
-            style={{
-              background: "#fbbf24",
-              color: "#78350f",
-              padding: "8px 16px",
-              textAlign: "center",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <span>📶</span>
-            <span>You're offline — changes will sync when connected</span>
-          </div>
-        )}
+        {/* Offline Status Banner removed: Match route handles offline banner now */}
         
         {/* Back Online Banner (auto-dismisses after 3s) */}
         {wasOffline && isOnline && (

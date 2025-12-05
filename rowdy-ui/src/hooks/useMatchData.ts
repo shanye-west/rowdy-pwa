@@ -13,6 +13,7 @@ export interface UseMatchDataResult {
   players: PlayerLookup;
   matchFacts: PlayerMatchFact[];
   loading: boolean;
+  error: string | null;
 }
 
 /**
@@ -34,53 +35,64 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [players, setPlayers] = useState<PlayerLookup>({});
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 1. Listen to MATCH and fetch players
   useEffect(() => {
     if (!matchId) return;
     setLoading(true);
+    setError(null);
 
-    const unsub = onSnapshot(doc(db, "matches", matchId), (mSnap) => {
-      if (!mSnap.exists()) { 
-        setMatch(null); 
-        setLoading(false); 
-        return; 
-      }
-      
-      const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
-      setMatch(mData);
-
-      // Extract unique player IDs from both teams
-      const ids = Array.from(new Set([
-        ...(mData.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
-        ...(mData.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
-      ]));
-      
-      if (ids.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Batch fetch players (Firestore 'in' query limited to 10 items)
-      const fetchPlayers = async () => {
-        const batches = [];
-        for (let i = 0; i < ids.length; i += 10) {
-          batches.push(ids.slice(i, i + 10));
+    const unsub = onSnapshot(
+      doc(db, "matches", matchId),
+      (mSnap) => {
+        if (!mSnap.exists()) { 
+          setMatch(null); 
+          setLoading(false); 
+          return; 
         }
         
-        const newPlayers: PlayerLookup = {};
-        for (const batch of batches) {
-          const q = query(collection(db, "players"), where(documentId(), "in", batch));
-          const snap = await getDocs(q);
-          snap.forEach(d => { 
-            newPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc; 
-          });
-        }
-        setPlayers(prev => ({ ...prev, ...newPlayers }));
-      };
+        const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
+        setMatch(mData);
 
-      fetchPlayers().finally(() => setLoading(false));
-    });
+        // Extract unique player IDs from both teams
+        const ids = Array.from(new Set([
+          ...(mData.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
+          ...(mData.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
+        ]));
+        
+        if (ids.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        // Batch fetch players (Firestore 'in' query limited to 10 items)
+        const fetchPlayers = async () => {
+          const batches = [];
+          for (let i = 0; i < ids.length; i += 10) {
+            batches.push(ids.slice(i, i + 10));
+          }
+          
+          const newPlayers: PlayerLookup = {};
+          for (const batch of batches) {
+            const q = query(collection(db, "players"), where(documentId(), "in", batch));
+            const snap = await getDocs(q);
+            snap.forEach(d => { 
+              newPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc; 
+            });
+          }
+          setPlayers(prev => ({ ...prev, ...newPlayers }));
+        };
+
+        fetchPlayers()
+          .catch((err) => setError(`Failed to load players: ${err.message}`))
+          .finally(() => setLoading(false));
+      },
+      (err) => {
+        setError(`Failed to load match: ${err.message}`);
+        setLoading(false);
+      }
+    );
 
     return () => unsub();
   }, [matchId]);
@@ -89,28 +101,38 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   useEffect(() => {
     if (!match?.roundId) return;
     
-    const unsub = onSnapshot(doc(db, "rounds", match.roundId), async (rSnap) => {
-      if (!rSnap.exists()) return;
-      
-      const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
-      setRound(rData);
-      
-      // Fetch tournament (one-time)
-      if (rData.tournamentId) {
-        const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
-        if (tSnap.exists()) {
-          setTournament({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc);
+    const unsub = onSnapshot(
+      doc(db, "rounds", match.roundId),
+      async (rSnap) => {
+        if (!rSnap.exists()) return;
+        
+        const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
+        setRound(rData);
+        
+        try {
+          // Fetch tournament (one-time)
+          if (rData.tournamentId) {
+            const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
+            if (tSnap.exists()) {
+              setTournament({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc);
+            }
+          }
+          
+          // Fetch course (one-time)
+          if (rData.courseId) {
+            const cSnap = await getDoc(doc(db, "courses", rData.courseId));
+            if (cSnap.exists()) {
+              setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
+            }
+          }
+        } catch (err: any) {
+          setError(`Failed to load round details: ${err.message}`);
         }
+      },
+      (err) => {
+        setError(`Failed to load round: ${err.message}`);
       }
-      
-      // Fetch course (one-time)
-      if (rData.courseId) {
-        const cSnap = await getDoc(doc(db, "courses", rData.courseId));
-        if (cSnap.exists()) {
-          setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
-        }
-      }
-    });
+    );
     
     return () => unsub();
   }, [match?.roundId]);
@@ -123,14 +145,18 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     }
     
     const fetchFacts = async () => {
-      const q = query(
-        collection(db, "playerMatchFacts"),
-        where("matchId", "==", matchId)
-      );
-      const snap = await getDocs(q);
-      const facts: PlayerMatchFact[] = [];
-      snap.forEach(d => facts.push({ ...d.data() } as PlayerMatchFact));
-      setMatchFacts(facts);
+      try {
+        const q = query(
+          collection(db, "playerMatchFacts"),
+          where("matchId", "==", matchId)
+        );
+        const snap = await getDocs(q);
+        const facts: PlayerMatchFact[] = [];
+        snap.forEach(d => facts.push({ ...d.data() } as PlayerMatchFact));
+        setMatchFacts(facts);
+      } catch (err: any) {
+        setError(`Failed to load match facts: ${err.message}`);
+      }
     };
     
     fetchFacts();
@@ -144,6 +170,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     players,
     matchFacts,
     loading,
+    error,
   };
 }
 

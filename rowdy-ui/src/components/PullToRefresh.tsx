@@ -1,6 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
-export default function PullToRefresh({ children }: { children: React.ReactNode }) {
+interface PullToRefreshProps {
+  children: React.ReactNode;
+  /** Optional callback when refresh is triggered. If not provided, just shows visual feedback. */
+  onRefresh?: () => void | Promise<void>;
+}
+
+/**
+ * Pull-to-refresh component.
+ * Since we use real-time Firestore listeners, this mostly provides visual feedback
+ * that data is "fresh" rather than actually reloading the page.
+ */
+export default function PullToRefresh({ children, onRefresh }: PullToRefreshProps) {
   const [startY, setStartY] = useState(0);
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -9,14 +20,14 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
   const THRESHOLD = 80;
   const MAX_PULL = 140;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     // Allow pull if we are at the top (or very close to it)
     if (window.scrollY <= 5) {
       setStartY(e.touches[0].clientY);
     }
-  };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (startY === 0) return;
 
     const currentY = e.touches[0].clientY;
@@ -28,28 +39,38 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
       const damped = Math.min(diff * 0.5, MAX_PULL); 
       setPullDistance(damped);
     }
-  };
+  }, [startY]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(async () => {
     if (pullDistance > THRESHOLD) {
-      // Attempt haptic feedback (Android only)
+      // Attempt haptic feedback
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(50); 
       }
 
       setRefreshing(true);
       
-      // Trigger the refresh
+      // Call the refresh callback if provided
+      if (onRefresh) {
+        try {
+          await onRefresh();
+        } catch (e) {
+          console.error("Refresh failed:", e);
+        }
+      }
+      
+      // Show refreshed state briefly, then reset
       setTimeout(() => {
-        // Force a hard reload
-        window.location.href = window.location.href;
-      }, 500);
+        setRefreshing(false);
+        setPullDistance(0);
+        setStartY(0);
+      }, 800);
     } else {
       // Snap back if not pulled far enough
       setPullDistance(0);
       setStartY(0);
     }
-  };
+  }, [pullDistance, onRefresh]);
 
   // Determine styling based on state
   const style = {

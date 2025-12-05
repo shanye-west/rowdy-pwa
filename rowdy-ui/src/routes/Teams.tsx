@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { collection, query, where, documentId, onSnapshot, limit } from "firebase/firestore";
 import { db } from "../firebase";
@@ -14,7 +14,7 @@ type TournamentStat = {
   halves: number;
 };
 
-export default function Teams() {
+function TeamsComponent() {
   const [searchParams] = useSearchParams();
   const teamParam = searchParams.get("team");
   
@@ -353,3 +353,5 @@ export default function Teams() {
     </Layout>
   );
 }
+
+export default memo(TeamsComponent);

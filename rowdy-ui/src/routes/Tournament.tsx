@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
 import Layout from "../components/Layout";
@@ -11,7 +12,7 @@ import { formatRoundType } from "../utils";
  * Tournament detail page for viewing historical (archived) tournaments.
  * This is a read-only view - no score editing allowed.
  */
-export default function Tournament() {
+function TournamentComponent() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
   
   const {
@@ -210,3 +211,5 @@ export default function Tournament() {
     </Layout>
   );
 }
+
+export default memo(TournamentComponent);
