@@ -55,6 +55,20 @@ function wouldCloseMatch(
   return predictClose(holeData, pendingHoleNum, pendingInput, format, teamAPlayers, teamBPlayers);
 }
 
+/**
+ * Formats the final match result for display (e.g., "3&2", "1UP", "AS")
+ */
+function formatFinalResult(margin: number, thru: number): string {
+  if (margin === 0) return "AS";
+  const holesRemaining = 18 - thru;
+  if (holesRemaining === 0) {
+    // Match went to 18 - show margin UP
+    return `${margin}UP`;
+  }
+  // Match ended early - show "margin & remaining" format
+  return `${margin}&${holesRemaining}`;
+}
+
 export default function Match() {
   const { matchId } = useParams();
   const { canEditMatch, player } = useAuth();
@@ -156,6 +170,13 @@ export default function Match() {
   // Determine if post-match stats should be shown
   // Show when: match is closed AND (all 18 holes scored OR round is locked)
   const showPostMatchStats = isMatchClosed && matchFacts.length > 0 && (completedHolesCount === 18 || roundLocked);
+  
+  // Format the final result text for the divider column
+  const finalResultText = useMemo(() => {
+    if (!isMatchClosed || closingHole === null) return null;
+    const margin = match?.status?.margin ?? 0;
+    return formatFinalResult(margin, matchThru);
+  }, [isMatchClosed, closingHole, match?.status?.margin, matchThru]);
   
   // --- AUTH / PERMISSIONS ---
   // Get player IDs from match rosters
@@ -845,6 +866,7 @@ export default function Match() {
                         {isClosingHole && (
                           <th 
                             key="match-divider-header"
+                            className="py-2"
                             style={{ 
                               width: dividerWidth, 
                               minWidth: dividerWidth,
@@ -1031,16 +1053,22 @@ export default function Match() {
                             {status}
                           </div>
                         </td>
-                        {/* Divider column after closing hole - clean vertical stripe */}
+                        {/* Divider column after closing hole - shows final result */}
                         {isClosingHole && (
                           <td 
                             key="match-divider-status"
+                            className="py-1 px-0.5 border-l-2 border-r-2"
                             style={{ 
                               width: dividerWidth, 
                               minWidth: dividerWidth,
+                              borderColor: winnerColor,
                               backgroundColor: winnerColor,
                             }}
-                          />
+                          >
+                            <div className="text-xs font-bold text-white text-center whitespace-nowrap">
+                              {finalResultText}
+                            </div>
+                          </td>
                         )}
                       </>
                     );
