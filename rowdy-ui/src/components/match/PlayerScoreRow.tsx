@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { memo } from "react";
 import { ScoreInputCell } from "./ScoreInputCell";
 import type { HoleInputLoose } from "../../types";
 
@@ -95,30 +95,36 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
       <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
         {outTotal ?? "–"}
       </td>
-      {/* Back 9 holes - with divider after closing hole */}
+      {/* Back 9 holes - post-match cells have border and tint */}
       {holes.slice(9, 18).map((h, i) => {
         const holeIdx = 9 + i;
-        const isClosingHole = closingHole != null && holeIdx === closingHole;
+        const isPostMatch = closingHole != null && holeIdx > closingHole;
+        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
+        
+        // Build class: first hole of back 9 gets border, first post-match gets thick colored border
+        let cellClass = "p-0.5";
+        if (i === 0) cellClass += " border-l-2 border-slate-200";
+        if (isPostMatch) cellClass += " bg-slate-50/60";
+        
         return (
-          <Fragment key={h.k}>
-            <td className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-              <ScoreInputCell
-                holeKey={h.k}
-                holeNum={h.num}
-                value={getCellValue(h.k)}
-                par={h.par}
-                locked={isHoleLocked(h.num)}
-                hasStroke={hasStroke(h.num - 1)}
-                hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
-                lowScoreStatus={getLowScoreStatus(h.k)}
-                teamColor={team}
-                onChange={onCellChange}
-              />
-            </td>
-            {isClosingHole && (
-              <td style={{ backgroundColor: dividerColor }} />
-            )}
-          </Fragment>
+          <td 
+            key={h.k} 
+            className={cellClass}
+            style={isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : undefined}
+          >
+            <ScoreInputCell
+              holeKey={h.k}
+              holeNum={h.num}
+              value={getCellValue(h.k)}
+              par={h.par}
+              locked={isHoleLocked(h.num)}
+              hasStroke={hasStroke(h.num - 1)}
+              hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
+              lowScoreStatus={getLowScoreStatus(h.k)}
+              teamColor={team}
+              onChange={onCellChange}
+            />
+          </td>
         );
       })}
       {/* IN total */}

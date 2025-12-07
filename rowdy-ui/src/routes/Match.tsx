@@ -7,7 +7,6 @@ import {
   SCORECARD_CELL_WIDTH, 
   SCORECARD_LABEL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
-  SCORECARD_DIVIDER_WIDTH,
   MIN_DRIVES_PER_ROUND,
 } from "../constants";
 import { formatRoundType } from "../utils";
@@ -686,9 +685,8 @@ export default function Match() {
   const cellWidth = SCORECARD_CELL_WIDTH;
   const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
-  const dividerWidth = SCORECARD_DIVIDER_WIDTH;
   
-  // Winner color for divider column
+  // Winner color for border on first post-match cell
   const winnerColor = match?.result?.winner === "teamA" ? teamAColor : 
                       match?.result?.winner === "teamB" ? teamBColor : 
                       "#94a3b8"; // Gray for AS
@@ -846,35 +844,25 @@ export default function Match() {
                       borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
                     }}
                   >OUT</th>
-                  {/* Back 9 - with divider column after closing hole */}
+                  {/* Back 9 - post-match cells have border and tint */}
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
-                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
                     return (
-                      <>
-                        <th 
-                          key={h.k} 
-                          className="font-bold py-2 border-l-2"
-                          style={{ 
-                            width: cellWidth, 
-                            minWidth: cellWidth,
-                            borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
-                          }}
-                        >
-                          {h.num}
-                        </th>
-                        {isClosingHole && (
-                          <th 
-                            key="match-divider-header"
-                            className="py-2"
-                            style={{ 
-                              width: dividerWidth, 
-                              minWidth: dividerWidth,
-                              backgroundColor: winnerColor,
-                            }}
-                          />
-                        )}
-                      </>
+                      <th 
+                        key={h.k} 
+                        className="font-bold py-2 border-l-2"
+                        style={{ 
+                          width: cellWidth, 
+                          minWidth: cellWidth,
+                          borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569",
+                          ...(isPostMatch ? { opacity: 0.7 } : {}),
+                          ...(isFirstPostMatch ? { borderLeftWidth: 3, borderLeftColor: winnerColor } : {}),
+                        }}
+                      >
+                        {h.num}
+                      </th>
                     );
                   })}
                   <th 
@@ -906,12 +894,16 @@ export default function Match() {
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
-                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
                     return (
-                      <>
-                        <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
-                        {isClosingHole && <td key="match-divider-hcp" style={{ backgroundColor: winnerColor }} />}
-                      </>
+                      <td 
+                        key={h.k} 
+                        className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
+                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                      >
+                        {h.hcpIndex || ""}
+                      </td>
                     );
                   })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
@@ -929,12 +921,16 @@ export default function Match() {
                   </td>
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
-                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
                     return (
-                      <>
-                        <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
-                        {isClosingHole && <td key="match-divider-yards" style={{ backgroundColor: winnerColor }} />}
-                      </>
+                      <td 
+                        key={h.k} 
+                        className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
+                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                      >
+                        {h.yards || ""}
+                      </td>
                     );
                   })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
@@ -954,12 +950,16 @@ export default function Match() {
                   <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
-                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
                     return (
-                      <>
-                        <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
-                        {isClosingHole && <td key="match-divider-par" style={{ backgroundColor: winnerColor }} />}
-                      </>
+                      <td 
+                        key={h.k} 
+                        className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-200/60" : ""}`}
+                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                      >
+                        {h.par}
+                      </td>
                     );
                   })}
                   <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
@@ -1030,47 +1030,37 @@ export default function Match() {
                   })}
                   {/* OUT status - always blank */}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
-                  {/* Back 9 match status - with divider column after closing hole */}
+                  {/* Back 9 match status - post-match cells have border and tint */}
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i; // 0-indexed hole position
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
                     
-                    // For post-match holes, show empty status
+                    // For post-match holes, show the final result in first cell, empty in rest
                     const { status, leader } = isPostMatch 
                       ? { status: "", leader: null as "A" | "B" | null }
                       : runningMatchStatus[holeIdx];
                     const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
                     const textColor = leader ? "#fff" : "#94a3b8";
                     
+                    // First post-match cell shows the final result
+                    const displayText = isFirstPostMatch ? finalResultText : status;
+                    const displayBgColor = isFirstPostMatch ? winnerColor : bgColor;
+                    const displayTextColor = isFirstPostMatch ? "#fff" : textColor;
+                    
                     return (
-                      <>
-                        <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>
-                          <div 
-                            className="text-xs font-bold rounded px-1 py-0.5 text-center"
-                            style={{ color: textColor, backgroundColor: bgColor }}
-                          >
-                            {status}
-                          </div>
-                        </td>
-                        {/* Divider column after closing hole - shows final result */}
-                        {isClosingHole && (
-                          <td 
-                            key="match-divider-status"
-                            className="py-1 px-0.5 border-l-2 border-r-2"
-                            style={{ 
-                              width: dividerWidth, 
-                              minWidth: dividerWidth,
-                              borderColor: winnerColor,
-                              backgroundColor: winnerColor,
-                            }}
-                          >
-                            <div className="text-xs font-bold text-white text-center whitespace-nowrap">
-                              {finalResultText}
-                            </div>
-                          </td>
-                        )}
-                      </>
+                      <td 
+                        key={`status-${h.k}`} 
+                        className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-50/60" : ""}`}
+                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                      >
+                        <div 
+                          className="text-xs font-bold rounded px-1 py-0.5 text-center whitespace-nowrap"
+                          style={{ color: displayTextColor, backgroundColor: displayBgColor }}
+                        >
+                          {displayText}
+                        </div>
+                      </td>
                     );
                   })}
                   {/* IN status - always blank */}

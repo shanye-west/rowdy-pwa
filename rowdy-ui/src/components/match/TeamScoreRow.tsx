@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { memo } from "react";
 import type { HoleData } from "./PlayerScoreRow";
 
 /** Props for TeamScoreRow */
@@ -57,22 +57,28 @@ export const TeamScoreRow = memo(function TeamScoreRow({
       >
         {outTotal ?? "–"}
       </td>
-      {/* Back 9 low score - with divider after closing hole */}
+      {/* Back 9 low score - post-match cells have border and tint */}
       {holes.slice(9, 18).map((h, i) => {
         const holeIdx = 9 + i;
-        const isClosingHole = closingHole != null && holeIdx === closingHole;
+        const isPostMatch = closingHole != null && holeIdx > closingHole;
+        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
         const lowScore = getTeamLowScore(h, team);
+        
+        // Build class: first hole gets border, post-match gets slight darkening
+        let cellClass = "py-1 text-center text-white font-bold text-sm";
+        if (i === 0) cellClass += " border-l-2 border-white/30";
+        
         return (
-          <Fragment key={`team${team}-${h.k}`}>
-            <td 
-              className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}
-            >
-              {lowScore ?? ""}
-            </td>
-            {isClosingHole && (
-              <td style={{ backgroundColor: dividerColor }} />
-            )}
-          </Fragment>
+          <td 
+            key={`team${team}-${h.k}`}
+            className={cellClass}
+            style={{
+              ...(isPostMatch ? { backgroundColor: "rgba(0,0,0,0.1)" } : {}),
+              ...(isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : {}),
+            }}
+          >
+            {lowScore ?? ""}
+          </td>
         );
       })}
       {/* IN total */}
