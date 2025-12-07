@@ -1,4 +1,5 @@
 import { Fragment, memo } from "react";
+import { MatchDivider } from "./MatchDivider";
 import type { HoleData } from "./PlayerScoreRow";
 
 /** Props for DriveSelectorsSection */
@@ -114,7 +115,9 @@ const DriveRow = memo(function DriveRow({
           <Fragment key={`drive${team}-back-${h.k}`}>
             {renderDriveButton(h, i === 0)}
             {isClosingHole && (
-              <td style={{ backgroundColor: dividerColor }} />
+              <td key={`match-divider-drive-${h.k}`} className="p-0">
+                <MatchDivider color={dividerColor ?? undefined} />
+              </td>
             )}
           </Fragment>
         );

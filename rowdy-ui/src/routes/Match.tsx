@@ -27,6 +27,7 @@ import {
   DrivesTrackerBanner,
   type HoleData,
 } from "../components/match";
+import { MatchDivider } from "../components/match/MatchDivider";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
@@ -864,15 +865,9 @@ export default function Match() {
                           {h.num}
                         </th>
                         {isClosingHole && (
-                          <th 
-                            key="match-divider-header"
-                            className="py-2"
-                            style={{ 
-                              width: dividerWidth, 
-                              minWidth: dividerWidth,
-                              backgroundColor: winnerColor,
-                            }}
-                          />
+                          <th key="match-divider-header" className="p-0">
+                            <MatchDivider color={winnerColor} />
+                          </th>
                         )}
                       </>
                     );
@@ -910,7 +905,11 @@ export default function Match() {
                     return (
                       <>
                         <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
-                        {isClosingHole && <td key="match-divider-hcp" style={{ backgroundColor: winnerColor }} />}
+                        {isClosingHole && (
+                          <td key="match-divider-hcp" className="p-0">
+                            <MatchDivider color={winnerColor} />
+                          </td>
+                        )}
                       </>
                     );
                   })}
@@ -933,7 +932,11 @@ export default function Match() {
                     return (
                       <>
                         <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
-                        {isClosingHole && <td key="match-divider-yards" style={{ backgroundColor: winnerColor }} />}
+                        {isClosingHole && (
+                          <td key="match-divider-yards" className="p-0">
+                            <MatchDivider color={winnerColor} />
+                          </td>
+                        )}
                       </>
                     );
                   })}
@@ -958,7 +961,11 @@ export default function Match() {
                     return (
                       <>
                         <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
-                        {isClosingHole && <td key="match-divider-par" style={{ backgroundColor: winnerColor }} />}
+                        {isClosingHole && (
+                          <td key="match-divider-par" className="p-0">
+                            <MatchDivider color={winnerColor} />
+                          </td>
+                        )}
                       </>
                     );
                   })}
@@ -1055,18 +1062,14 @@ export default function Match() {
                         </td>
                         {/* Divider column after closing hole - shows final result */}
                         {isClosingHole && (
-                          <td 
-                            key="match-divider-status"
-                            className="py-1 px-0.5 border-l-2 border-r-2"
-                            style={{ 
-                              width: dividerWidth, 
-                              minWidth: dividerWidth,
-                              borderColor: winnerColor,
-                              backgroundColor: winnerColor,
-                            }}
-                          >
-                            <div className="text-xs font-bold text-white text-center whitespace-nowrap">
-                              {finalResultText}
+                          <td key="match-divider-status" className="p-0">
+                            <div style={{ position: "relative" }}>
+                              <MatchDivider color={winnerColor} width={dividerWidth} />
+                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div className="text-xs font-bold text-white text-center whitespace-nowrap">
+                                  {finalResultText}
+                                </div>
+                              </div>
                             </div>
                           </td>
                         )}
