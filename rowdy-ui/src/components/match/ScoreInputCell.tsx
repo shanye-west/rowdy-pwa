@@ -38,7 +38,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   
   // Create a subtle tint using the passed teamColor. Use a darker tint for solo and lighter for tied.
-  const tintPercent = lowScoreStatus === 'solo' ? '18%' : lowScoreStatus === 'tied' ? '10%' : null;
+  const tintPercent = lowScoreStatus === 'solo' ? '15%' : lowScoreStatus === 'tied' ? '5%' : null;
   const lowScoreStyle: CSSProperties | undefined = tintPercent && teamColor
     ? (() => {
         const tint = `color-mix(in srgb, ${teamColor} ${tintPercent}, white)`;
