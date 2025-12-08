@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useRef, useLayoutEffect } from "react";
+import { memo, useCallback, useState, useRef, useLayoutEffect, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ScoreNumberPicker } from "./ScoreNumberPicker";
 
@@ -12,7 +12,8 @@ export interface ScoreInputCellProps {
   hasStroke: boolean;
   hasDrive: boolean;
   lowScoreStatus: 'solo' | 'tied' | null;
-  teamColor: 'A' | 'B';
+  /** CSS color string for the team (e.g. '#1e40af' or 'var(--team-a-default)') */
+  teamColor: string;
   onChange: (holeKey: string, value: number | null) => void;
   /** When true, cell is for a post-match hole (after match was decided) - uses muted styling */
   isPostMatch?: boolean;
@@ -36,10 +37,17 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   
-  // Use team-specific colors for low score highlighting
-  const lowScoreBg = teamColor === 'A'
-    ? (lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '')
-    : (lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '');
+  // Create a subtle tint using the passed teamColor. Use a darker tint for solo and lighter for tied.
+  const tintPercent = lowScoreStatus === 'solo' ? '18%' : lowScoreStatus === 'tied' ? '10%' : null;
+  const lowScoreStyle: CSSProperties | undefined = tintPercent && teamColor
+    ? (() => {
+        const tint = `color-mix(in srgb, ${teamColor} ${tintPercent}, white)`;
+        return {
+          background: tint,
+          borderColor: tint,
+        } as CSSProperties;
+      })()
+    : undefined;
 
   // Calculate how many under par (only for birdies or better)
   const underPar = typeof value === 'number' && par ? par - value : 0;
@@ -99,14 +107,13 @@ export const ScoreInputCell = memo(function ScoreInputCell({
             ? "bg-slate-50 text-slate-400 border-slate-200"
             : locked 
               ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-              : lowScoreBg 
-                ? `${lowScoreBg} border-slate-200 hover:border-slate-300 active:bg-slate-100` 
-                : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
+              : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
           }
           ${showPicker ? 'ring-2 ring-blue-400 shadow-lg z-30 scale-[1.02]' : ''}
         `}
         disabled={locked}
         onClick={handleCellClick}
+        style={lowScoreStyle}
       >
         {value !== "" ? value : ""}
       </button>
@@ -128,27 +135,27 @@ export const ScoreInputCell = memo(function ScoreInputCell({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {/* Outer circles for eagle+ (2+ under par) */}
           {circleCount >= 2 && (
-            <div 
-              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
-              style={{ width: '38px', height: '38px' }}
+            <div
+              className="absolute rounded-full"
+              style={{ width: '38px', height: '38px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 3 && (
-            <div 
-              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
-              style={{ width: '42px', height: '42px' }}
+            <div
+              className="absolute rounded-full"
+              style={{ width: '42px', height: '42px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 4 && (
-            <div 
-              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
-              style={{ width: '46px', height: '46px' }}
+            <div
+              className="absolute rounded-full"
+              style={{ width: '46px', height: '46px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
-          <div 
-            className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
-            style={{ width: '34px', height: '34px' }}
+          <div
+            className="absolute rounded-full"
+            style={{ width: '34px', height: '34px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
           />
         </div>
       )}

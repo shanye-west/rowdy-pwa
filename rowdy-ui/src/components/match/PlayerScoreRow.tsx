@@ -39,7 +39,6 @@ export interface PlayerScoreRowProps {
 
 /** Memoized player score row - renders 18 ScoreInputCells + totals */
 export const PlayerScoreRow = memo(function PlayerScoreRow({
-  team,
   pIdx,
   label,
   color,
@@ -98,7 +97,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               hasStroke={hasStroke(h.num - 1)}
               hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
               lowScoreStatus={getLowScoreStatus(h.k)}
-              teamColor={team}
+              teamColor={color}
               onChange={onCellChange}
               isPostMatch={isPostMatch}
             />
@@ -135,7 +134,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               hasStroke={hasStroke(h.num - 1)}
               hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
               lowScoreStatus={getLowScoreStatus(h.k)}
-              teamColor={team}
+              teamColor={color}
               onChange={onCellChange}
               isPostMatch={isPostMatch}
             />
