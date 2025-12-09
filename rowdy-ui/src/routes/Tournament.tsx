@@ -101,7 +101,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                <TeamName name={tournament.teamA?.name || "Team A"} variant="inline" style={{ color: tournament.teamA?.color || "var(--team-a-default)", fontSize: '1.1rem', marginBottom: 4 }} />
+                <TeamName name={tournament.teamA?.name || "Team A"} variant="inline" maxFontPx={14} minFontPx={10} style={{ color: tournament.teamA?.color || "var(--team-a-default)", marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.teamAConfirmed}</span>
@@ -125,7 +125,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" style={{ color: tournament.teamB?.color || "var(--team-b-default)", fontSize: '1.1rem', marginBottom: 4 }} />
+                <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" maxFontPx={14} minFontPx={10} style={{ color: tournament.teamB?.color || "var(--team-b-default)", marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.teamBConfirmed}</span>
