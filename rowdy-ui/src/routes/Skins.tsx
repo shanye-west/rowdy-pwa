@@ -294,39 +294,51 @@ function SkinsComponent() {
                         All Scores (Par {hole.par})
                       </div>
                       <div style={{ display: "grid", gap: 6 }}>
-                        {hole.allScores.map(score => {
-                          const displayScore = selectedTab === "gross" ? score.gross : score.net;
-                          const isWinner = score.playerId === winner;
+                        {(() => {
+                          const sorted = [...hole.allScores].sort((a, b) => {
+                            const aVal = selectedTab === "gross" ? a.gross : a.net;
+                            const bVal = selectedTab === "gross" ? b.gross : b.net;
+                            // Nulls (not yet played) go to the bottom
+                            if (aVal === null && bVal === null) return a.playerName.localeCompare(b.playerName);
+                            if (aVal === null) return 1;
+                            if (bVal === null) return -1;
+                            return aVal - bVal;
+                          });
 
-                          return (
-                            <div
-                              key={score.playerId}
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr auto",
-                                gap: 8,
-                                padding: "6px 12px",
-                                backgroundColor: isWinner ? "#dcfce7" : "#f8fafc",
-                                borderRadius: 4,
-                                border: isWinner ? "1px solid #86efac" : "1px solid #e2e8f0",
-                              }}
-                            >
-                              <div style={{ fontSize: "0.85rem", color: "#1e293b" }}>
-                                {score.playerName}
-                                {selectedTab === "net" && score.hasStroke && (
-                                  <span style={{ marginLeft: 4, fontSize: "0.7rem", color: "#3b82f6" }}>●</span>
-                                )}
+                          return sorted.map(score => {
+                            const displayScore = selectedTab === "gross" ? score.gross : score.net;
+                            const isWinner = score.playerId === winner;
+
+                            return (
+                              <div
+                                key={score.playerId}
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr auto",
+                                  gap: 8,
+                                  padding: "6px 12px",
+                                  backgroundColor: isWinner ? "#dcfce7" : "#f8fafc",
+                                  borderRadius: 4,
+                                  border: isWinner ? "1px solid #86efac" : "1px solid #e2e8f0",
+                                }}
+                              >
+                                <div style={{ fontSize: "0.85rem", color: "#1e293b" }}>
+                                  {score.playerName}
+                                  {selectedTab === "net" && score.hasStroke && (
+                                    <span style={{ marginLeft: 4, fontSize: "0.7rem", color: "#3b82f6" }}>●</span>
+                                  )}
+                                </div>
+                                <div style={{ 
+                                  fontSize: "0.85rem", 
+                                  fontWeight: 600,
+                                  color: displayScore === null ? "#cbd5e1" : "#1e293b"
+                                }}>
+                                  {displayScore ?? "—"}
+                                </div>
                               </div>
-                              <div style={{ 
-                                fontSize: "0.85rem", 
-                                fontWeight: 600,
-                                color: displayScore === null ? "#cbd5e1" : "#1e293b"
-                              }}>
-                                {displayScore ?? "—"}
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}

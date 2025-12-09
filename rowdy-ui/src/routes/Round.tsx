@@ -86,7 +86,7 @@ function RoundComponent() {
               }}
               className="hover:bg-amber-600 transition-colors"
             >
-              🎯 Skins
+              Skins
             </Link>
           )}
           
