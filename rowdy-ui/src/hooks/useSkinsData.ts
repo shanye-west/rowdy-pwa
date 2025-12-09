@@ -12,6 +12,7 @@ export interface PlayerHoleScore {
   net: number | null;
   hasStroke: boolean;
   playerThru: number; // Number of holes completed by this player
+  playerTeeTime?: any; // Firestore Timestamp or Date when available
 }
 
 export interface HoleSkinData {
@@ -188,7 +189,8 @@ export function useSkinsData(roundId: string | undefined) {
               gross,
               net,
               hasStroke,
-              playerThru,
+                playerThru,
+                playerTeeTime: match.teeTime ?? null,
             });
           }
 
@@ -203,7 +205,8 @@ export function useSkinsData(roundId: string | undefined) {
               gross,
               net,
               hasStroke,
-              playerThru,
+                playerThru,
+                playerTeeTime: match.teeTime ?? null,
             });
           }
         } else if (format === "twoManBestBall") {
@@ -226,6 +229,7 @@ export function useSkinsData(roundId: string | undefined) {
                 net,
                 hasStroke,
                 playerThru,
+                playerTeeTime: match.teeTime ?? null,
               });
             });
           });

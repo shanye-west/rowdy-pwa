@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
+import { formatTeeTime } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
@@ -349,7 +350,14 @@ function SkinsComponent() {
                                   fontWeight: 600,
                                   color: displayScore === null ? "#cbd5e1" : "#1e293b"
                                 }}>
-                                  {displayScore !== null ? displayScore : `Thru ${score.playerThru}`}
+                                  {displayScore !== null ? (
+                                    displayScore
+                                  ) : (
+                                    // If player hasn't started (thru === 0), show tee time when available
+                                    score.playerThru === 0 && score.playerTeeTime
+                                      ? formatTeeTime(score.playerTeeTime)
+                                      : `Thru ${score.playerThru}`
+                                  )}
                                 </div>
                               </div>
                             );
