@@ -155,7 +155,6 @@ function SkinsComponent() {
           
           {leaderboard.length === 0 ? (
             <div className="empty-state" style={{ padding: "20px 0" }}>
-              <div className="empty-state-icon" style={{ fontSize: "2rem" }}>🎯</div>
               <div className="empty-state-text" style={{ fontSize: "0.9rem" }}>
                 No skins won yet
               </div>
