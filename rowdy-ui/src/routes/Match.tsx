@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+// RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundFormat, HoleInputLoose } from "../types";
@@ -12,6 +13,7 @@ import {
 import { formatRoundType } from "../utils";
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
+import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { ConnectionBanner } from "../components/ConnectionBanner";
@@ -634,12 +636,17 @@ export default function Match() {
     </div>
   );
   
-  if (!match) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">🔍</div>
-      <div className="empty-state-text">Match not found.</div>
-    </div>
-  );
+  if (!match) {
+    return (
+      <Layout title="Match Scoring" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <div className="empty-state-text">Match not found.</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   const tName = tournament?.name || "Match Scoring";
   const tSeries = tournament?.series;
@@ -1228,7 +1235,11 @@ export default function Match() {
           {driveModal && (
             <>
               <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color: driveModal.team === "A" ? teamAColor : teamBColor }}>
-                {driveModal.team === "A" ? (tournament?.teamA?.name || "Team A") : (tournament?.teamB?.name || "Team B")}
+                {driveModal.team === "A" ? (
+                  <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: teamAColor }} />
+                ) : (
+                  <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" style={{ color: teamBColor }} />
+                )}
               </div>
               <div className="space-y-2">
                 {/* Player 1 */}

@@ -39,6 +39,17 @@ npx ts-node seed-round.ts --input data/round.json
 npx ts-node seed-round.ts --input data/round.json --force  # overwrite existing
 ```
 
+**Skins Game Configuration**: Rounds can include optional `skinsGrossPot` and `skinsNetPot` fields to enable skins games. Only available for `singles` and `twoManBestBall` formats. If either pot value is > 0, that skins game will be active for the round and accessible via a "Skins" link on the Round page.
+
+Example:
+```json
+{
+  "format": "singles",
+  "skinsGrossPot": 240,
+  "skinsNetPot": 240
+}
+```
+
 ### Seed Match
 ```bash
 npx ts-node seed-match.ts --input data/match-singles.json

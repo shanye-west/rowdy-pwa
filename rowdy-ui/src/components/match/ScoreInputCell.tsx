@@ -137,25 +137,25 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           {circleCount >= 2 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '38px', height: '38px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
+              style={{ width: '38px', height: '38px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 3 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '42px', height: '42px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
+              style={{ width: '42px', height: '42px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 4 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '46px', height: '46px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
+              style={{ width: '46px', height: '46px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
           <div
             className="absolute rounded-full"
-            style={{ width: '34px', height: '34px', borderColor: isPostMatch ? undefined : teamColor, borderStyle: 'solid' }}
+            style={{ width: '34px', height: '34px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
           />
         </div>
       )}

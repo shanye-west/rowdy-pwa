@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
+import TeamName from "../components/TeamName";
 import type { TournamentDoc, PlayerDoc, PlayerMatchFact, TierMap } from "../types";
 
 // We define a local type for the aggregated tournament stats
@@ -281,15 +282,17 @@ function TeamsComponent() {
               fallbackIcon="🔵"
               style={{ width: 28, height: 28, objectFit: "contain" }}
             />
-            <span style={{ 
-              fontWeight: 700, 
-              fontSize: "0.95rem",
-              color: selectedTeam === "A" ? teamAColor : "var(--text-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.03em",
-            }}>
-              {teamAName}
-            </span>
+            <TeamName
+              name={teamAName}
+              variant="inline"
+              style={{
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                color: selectedTeam === 'A' ? teamAColor : 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+              }}
+            />
           </button>
 
           {/* Team B Tab */}
@@ -317,15 +320,17 @@ function TeamsComponent() {
               fallbackIcon="🔴"
               style={{ width: 28, height: 28, objectFit: "contain" }}
             />
-            <span style={{ 
-              fontWeight: 700, 
-              fontSize: "0.95rem",
-              color: selectedTeam === "B" ? teamBColor : "var(--text-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.03em",
-            }}>
-              {teamBName}
-            </span>
+            <TeamName
+              name={teamBName}
+              variant="inline"
+              style={{
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                color: selectedTeam === 'B' ? teamBColor : 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+              }}
+            />
           </button>
         </div>
 

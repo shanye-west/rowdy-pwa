@@ -2,11 +2,13 @@ import { memo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
 import Layout from "../components/Layout";
+import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
 import OfflineImage from "../components/OfflineImage";
 import { formatRoundType } from "../utils";
+// RedirectCountdown removed; show Go Home button instead
 
 /**
  * Tournament detail page for viewing historical (archived) tournaments.
@@ -39,15 +41,14 @@ function TournamentComponent() {
         <div className="empty-state">
           <div className="empty-state-icon">🔍</div>
           <div className="empty-state-text">Tournament not found.</div>
-          <Link to="/history" className="btn btn-primary mt-4">Back to History</Link>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
         </div>
       </Layout>
     );
   }
-
-  const tName = tournament.name || "Tournament";
-  const tSeries = tournament.series;
-  const tLogo = tournament.tournamentLogo;
+  const tName = tournament?.name || "Tournament";
+  const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
@@ -100,7 +101,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                {tournament.teamA?.name || "Team A"}
+                <TeamName name={tournament.teamA?.name || "Team A"} variant="inline" maxFontPx={14} minFontPx={10} style={{ color: tournament.teamA?.color || "var(--team-a-default)", marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.teamAConfirmed}</span>
@@ -124,7 +125,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                {tournament.teamB?.name || "Team B"}
+                <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" maxFontPx={14} minFontPx={10} style={{ color: tournament.teamB?.color || "var(--team-b-default)", marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.teamBConfirmed}</span>

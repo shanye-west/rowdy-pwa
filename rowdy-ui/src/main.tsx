@@ -10,6 +10,7 @@ import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazy(() => import("./routes/Match"));
 const Round = lazy(() => import("./routes/Round"));
+const Skins = lazy(() => import("./routes/Skins"));
 const Teams = lazy(() => import("./routes/Teams"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
@@ -25,6 +26,7 @@ const RouteLoader = () => (
 const router = createBrowserRouter([
   { path: "/", element: <App />, errorElement: <ErrorBoundary /> },
   { path: "/round/:roundId", element: <Suspense fallback={<RouteLoader />}><Round /></Suspense>, errorElement: <ErrorBoundary /> },
+  { path: "/round/:roundId/skins", element: <Suspense fallback={<RouteLoader />}><Skins /></Suspense>, errorElement: <ErrorBoundary /> },
   { path: "/match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense>, errorElement: <ErrorBoundary /> },
   { path: "/teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense>, errorElement: <ErrorBoundary /> },
   { path: "/history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense>, errorElement: <ErrorBoundary /> },

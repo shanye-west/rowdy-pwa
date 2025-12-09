@@ -4,6 +4,7 @@ import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
+import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
@@ -40,23 +41,61 @@ function RoundComponent() {
       <div>{error}</div>
     </div>
   );
-  if (!round) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">🔍</div>
-      <div className="empty-state-text">Round not found.</div>
-    </div>
-  );
+  if (!round) {
+    return (
+      <Layout title="Round" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <div className="empty-state-text">Round not found.</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   const tName = tournament?.name || "Round Detail";
   const tSeries = tournament?.series;
   const tLogo = tournament?.tournamentLogo;
+
+  // Check if skins are enabled for this round
+  const hasGross = (round.skinsGrossPot ?? 0) > 0;
+  const hasNet = (round.skinsNetPot ?? 0) > 0;
+  const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
         {/* ROUND HEADER / SCOREBOARD */}
-        <section className="card" style={{ padding: 20, textAlign: 'center' }}>
+        <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
+          {/* Skins Link (top-right corner) */}
+          {skinsEnabled && (
+            <Link
+              to={`/round/${round.id}/skins`}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                padding: '8px 12px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                borderRadius: 6,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+              className="hover:bg-amber-600 transition-colors"
+            >
+              Skins
+            </Link>
+          )}
+          
           <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
             Round {round.day ?? ""}
           </h1>
@@ -78,9 +117,7 @@ function RoundComponent() {
                   fallbackIcon="🔵"
                   style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
                 />
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }}>
-                  {tournament?.teamA?.name}
-                </div>
+                <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   <span style={{ color: tournament?.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
                   {stats.pA > 0 && (
@@ -112,9 +149,7 @@ function RoundComponent() {
                   fallbackIcon="🔴"
                   style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
                 />
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }}>
-                  {tournament?.teamB?.name}
-                </div>
+                <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   {stats.pB > 0 && (
                     <span

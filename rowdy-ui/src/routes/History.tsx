@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
+import TeamName from "../components/TeamName";
 import type { TournamentDoc } from "../types";
 
 type TournamentSeries = "rowdyCup" | "christmasClassic";
@@ -192,13 +193,15 @@ export default function History() {
                     fallbackIcon="🔵"
                     style={{ width: 32, height: 32, objectFit: "contain" }}
                   />
-                  <span style={{ 
-                    fontWeight: 700, 
-                    color: t.teamA?.color || "var(--team-a-default)",
-                    fontSize: "0.95rem",
-                  }}>
-                    {t.teamA?.name || "Team A"}
-                  </span>
+                  <TeamName
+                    name={t.teamA?.name || "Team A"}
+                    variant="inline"
+                    style={{
+                      fontWeight: 700,
+                      color: t.teamA?.color || "var(--team-a-default)",
+                      fontSize: '0.95rem',
+                    }}
+                  />
                 </div>
 
                 {/* Year / Name */}
@@ -215,13 +218,15 @@ export default function History() {
 
                 {/* Team B */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-                  <span style={{ 
-                    fontWeight: 700, 
-                    color: t.teamB?.color || "var(--team-b-default)",
-                    fontSize: "0.95rem",
-                  }}>
-                    {t.teamB?.name || "Team B"}
-                  </span>
+                  <TeamName
+                    name={t.teamB?.name || "Team B"}
+                    variant="inline"
+                    style={{
+                      fontWeight: 700,
+                      color: t.teamB?.color || "var(--team-b-default)",
+                      fontSize: '0.95rem',
+                    }}
+                  />
                   <OfflineImage 
                     src={t.teamB?.logo} 
                     alt={t.teamB?.name || "Team B"}
