@@ -323,22 +323,27 @@ function SkinsComponent() {
                       <div style={{ display: "grid", gap: 6 }}>
                         {(() => {
                           const sorted = [...hole.allScores].sort((a, b) => {
-                            const aStarted = a.playerThru > 0 || (selectedTab === "gross" ? a.gross !== null : a.net !== null);
-                            const bStarted = b.playerThru > 0 || (selectedTab === "gross" ? b.gross !== null : b.net !== null);
+                            const aVal = selectedTab === "gross" ? a.gross : a.net;
+                            const bVal = selectedTab === "gross" ? b.gross : b.net;
 
-                            // If one started and the other not, the started player comes first
-                            if (aStarted && !bStarted) return -1;
-                            if (!aStarted && bStarted) return 1;
+                            const aCompleted = aVal !== null && aVal !== undefined;
+                            const bCompleted = bVal !== null && bVal !== undefined;
 
-                            // Both started: sort by score (lowest first)
-                            if (aStarted && bStarted) {
-                              const aVal = selectedTab === "gross" ? a.gross ?? Number.POSITIVE_INFINITY : a.net ?? Number.POSITIVE_INFINITY;
-                              const bVal = selectedTab === "gross" ? b.gross ?? Number.POSITIVE_INFINITY : b.net ?? Number.POSITIVE_INFINITY;
-                              if (aVal !== bVal) return aVal - bVal;
+                            // If one completed and the other didn't, completed comes first
+                            if (aCompleted && !bCompleted) return -1;
+                            if (!aCompleted && bCompleted) return 1;
+
+                            // Both completed: sort by score (lowest first), then name
+                            if (aCompleted && bCompleted) {
+                              if (aVal !== bVal) return (aVal as number) - (bVal as number);
                               return a.playerName.localeCompare(b.playerName);
                             }
 
-                            // Both not started: sort by tee time (earliest first)
+                            // Neither completed: order by playerThru (higher first), then by tee time (earliest first), then name
+                            const aThru = a.playerThru ?? 0;
+                            const bThru = b.playerThru ?? 0;
+                            if (aThru !== bThru) return bThru - aThru; // higher 'thru' first
+
                             const aT = a.playerTeeTime ? (a.playerTeeTime.toDate ? a.playerTeeTime.toDate().getTime() : new Date(a.playerTeeTime).getTime()) : null;
                             const bT = b.playerTeeTime ? (b.playerTeeTime.toDate ? b.playerTeeTime.toDate().getTime() : new Date(b.playerTeeTime).getTime()) : null;
 
@@ -346,7 +351,6 @@ function SkinsComponent() {
                             if (aT !== null && bT === null) return -1;
                             if (aT === null && bT !== null) return 1;
 
-                            // Fallback to name
                             return a.playerName.localeCompare(b.playerName);
                           });
 
