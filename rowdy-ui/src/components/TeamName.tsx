@@ -23,7 +23,7 @@ const TeamName: React.FC<TeamNameProps> = ({
   className = "",
   title,
   minFontPx = 12,
-  maxFontPx = 22,
+  maxFontPx = 36,
   variant = "inline",
   style,
 }: TeamNameProps) => {
