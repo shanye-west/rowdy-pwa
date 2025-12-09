@@ -215,6 +215,20 @@ function SkinsComponent() {
               const isExpanded = expandedHole === hole.holeNumber;
               const winner = selectedTab === "gross" ? hole.grossWinner : hole.netWinner;
               const lowScore = selectedTab === "gross" ? hole.grossLowScore : hole.netLowScore;
+              const par = hole.par;
+              const scoreLabel = (score: number | null, parVal: number) => {
+                if (score === null) return "";
+                const diff = score - parVal;
+                if (diff === 0) return "Par";
+                if (diff === -1) return "Birdie";
+                if (diff === -2) return "Eagle";
+                if (diff === -3) return "Albatross";
+                if (diff === 1) return "Bogey";
+                if (diff === 2) return "Double Bogey";
+                if (diff === 3) return "Triple Bogey";
+                if (diff < -3) return `${Math.abs(diff)} under par`;
+                return `${diff} over par`;
+              };
               const tiedCount = selectedTab === "gross" ? hole.grossTiedCount : hole.netTiedCount;
               
               let winnerText = "—";
@@ -277,7 +291,7 @@ function SkinsComponent() {
                         fontWeight: 700, 
                         color: allPlayersCompleted ? "#16a34a" : "#64748b"
                       }}>
-                        {lowScore}
+                        {scoreLabel(lowScore, par)}
                       </div>
                     )}
 
