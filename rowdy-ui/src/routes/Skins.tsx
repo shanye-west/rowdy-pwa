@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
 import { formatTeeTime } from "../utils";
@@ -41,13 +41,23 @@ function SkinsComponent() {
   }
 
   if (!round || !skinsEnabled) {
+    if (!round) {
+      return (
+        <Layout title="Skins" showBack>
+          <div className="empty-state">
+            <div className="empty-state-icon">🎯</div>
+            <div className="empty-state-text">Round not found</div>
+            <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+          </div>
+        </Layout>
+      );
+    }
+
     return (
       <Layout title="Skins" showBack>
         <div className="empty-state">
           <div className="empty-state-icon">🎯</div>
-          <div className="empty-state-text">
-            {!round ? "Round not found" : "No skins game configured for this round"}
-          </div>
+          <div className="empty-state-text">No skins game configured for this round</div>
         </div>
       </Layout>
     );

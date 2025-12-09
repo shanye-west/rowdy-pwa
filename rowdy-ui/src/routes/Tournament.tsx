@@ -7,6 +7,7 @@ import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
 import OfflineImage from "../components/OfflineImage";
 import { formatRoundType } from "../utils";
+// RedirectCountdown removed; show Go Home button instead
 
 /**
  * Tournament detail page for viewing historical (archived) tournaments.
@@ -39,7 +40,7 @@ function TournamentComponent() {
         <div className="empty-state">
           <div className="empty-state-icon">🔍</div>
           <div className="empty-state-text">Tournament not found.</div>
-          <Link to="/history" className="btn btn-primary mt-4">Back to History</Link>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
         </div>
       </Layout>
     );

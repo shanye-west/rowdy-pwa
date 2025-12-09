@@ -40,12 +40,17 @@ function RoundComponent() {
       <div>{error}</div>
     </div>
   );
-  if (!round) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">🔍</div>
-      <div className="empty-state-text">Round not found.</div>
-    </div>
-  );
+  if (!round) {
+    return (
+      <Layout title="Round" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <div className="empty-state-text">Round not found.</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   const tName = tournament?.name || "Round Detail";
   const tSeries = tournament?.series;

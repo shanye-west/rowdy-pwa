@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+// RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundFormat, HoleInputLoose } from "../types";
@@ -634,12 +635,17 @@ export default function Match() {
     </div>
   );
   
-  if (!match) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">🔍</div>
-      <div className="empty-state-text">Match not found.</div>
-    </div>
-  );
+  if (!match) {
+    return (
+      <Layout title="Match Scoring" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <div className="empty-state-text">Match not found.</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   const tName = tournament?.name || "Match Scoring";
   const tSeries = tournament?.series;
