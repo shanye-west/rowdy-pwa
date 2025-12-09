@@ -5,6 +5,8 @@
   "format": "singles",
   "courseId": "journeyAtPechanga-Black",
   "pointsValue": 0.5,
+  "skinsGrossPot": 0,
+  "skinsNetPot": 0,
   "trackDrives": false,
   "locked": false,
   "matchIds": []

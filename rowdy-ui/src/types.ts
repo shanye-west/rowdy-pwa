@@ -164,6 +164,10 @@ export type RoundDoc = {
   pointsValue?: number; // Points value for all matches in this round
   matchIds?: string[]; // Auto-populated when matches are linked
   
+  // SKINS: Optional skins game pots (only for singles/bestBall formats)
+  skinsGrossPot?: number; // Total $ for gross skins; if > 0, gross skins active
+  skinsNetPot?: number;   // Total $ for net skins; if > 0, net skins active
+  
   // DRIVE_TRACKING: Feature toggle for scramble/shamble drive tracking
   trackDrives?: boolean;
   

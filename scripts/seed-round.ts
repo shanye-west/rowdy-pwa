@@ -13,6 +13,8 @@
  *   "format": "twoManBestBall",
  *   "courseId": "courseName",
  *   "pointsValue": 1,
+ *   "skinsGrossPot": 240,  // Optional: total $ for gross skins (only singles/bestBall)
+ *   "skinsNetPot": 240,    // Optional: total $ for net skins (only singles/bestBall)
  *   "trackDrives": false,
  *   "locked": false,
  *   "matchIds": []

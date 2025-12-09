@@ -51,12 +51,45 @@ function RoundComponent() {
   const tSeries = tournament?.series;
   const tLogo = tournament?.tournamentLogo;
 
+  // Check if skins are enabled for this round
+  const hasGross = (round.skinsGrossPot ?? 0) > 0;
+  const hasNet = (round.skinsNetPot ?? 0) > 0;
+  const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
+
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
         {/* ROUND HEADER / SCOREBOARD */}
-        <section className="card" style={{ padding: 20, textAlign: 'center' }}>
+        <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
+          {/* Skins Link (top-right corner) */}
+          {skinsEnabled && (
+            <Link
+              to={`/round/${round.id}/skins`}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                padding: '8px 12px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                borderRadius: 6,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}
+              className="hover:bg-amber-600 transition-colors"
+            >
+              🎯 Skins
+            </Link>
+          )}
+          
           <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
             Round {round.day ?? ""}
           </h1>
