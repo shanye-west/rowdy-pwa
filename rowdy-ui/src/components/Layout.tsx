@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, matchPath } from "react-router-dom";
 import PullToRefresh from "./PullToRefresh";
 import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
@@ -45,6 +45,14 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, [menuOpen]);
+
+  // Compute dynamic Team Rosters link: if current route is a specific tournament,
+  // point the Team Rosters menu entry at that tournament's rosters.
+  const location = useLocation();
+  const tournamentMatch = matchPath({ path: "/tournament/:tournamentId" }, location.pathname);
+  const teamLink = tournamentMatch && (tournamentMatch.params as any)?.tournamentId
+    ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
+    : "/teams";
 
   return (
     <>
@@ -143,13 +151,14 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               >
                 Home
               </Link>
-              <Link 
-                to="/teams" 
-                style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                onClick={() => setMenuOpen(false)}
-              >
-                Team Rosters
-              </Link>
+                  {/* Team Rosters: if viewing a specific tournament page, link to that tournament's rosters */}
+                  <Link
+                    to={teamLink}
+                    style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Team Rosters
+                  </Link>
               <Link 
                 to="/history" 
                 style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}

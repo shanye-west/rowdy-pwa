@@ -1,6 +1,6 @@
 import { useEffect, useState, memo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, query, where, documentId, onSnapshot, limit } from "firebase/firestore";
+import { collection, query, where, documentId, onSnapshot, limit, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -30,27 +30,54 @@ function TeamsComponent() {
   const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const [factsLoaded, setFactsLoaded] = useState(false);
 
-  // 1) Subscribe to active tournament
+  // 1) Subscribe to tournament: use `tournamentId` search param when provided,
+  // otherwise fall back to the active tournament.
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, "tournaments"), where("active", "==", true), limit(1)),
-      (snap) => {
-        if (snap.empty) {
-          setTournament(null);
-        } else {
-          const doc = snap.docs[0];
-          setTournament({ id: doc.id, ...doc.data() } as TournamentDoc);
+    let unsub = () => {};
+
+    if (searchParams.get("tournamentId")) {
+      const tid = searchParams.get("tournamentId") as string;
+      const docRef = doc(db, "tournaments", tid);
+      const listener = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+          else {
+            setTournament(null);
+            setError("Tournament not found.");
+          }
+          setTournamentLoaded(true);
+        },
+        (err) => {
+          console.error("Tournament subscription error:", err);
+          setError("Failed to load tournament");
+          setTournamentLoaded(true);
         }
-        setTournamentLoaded(true);
-      },
-      (err) => {
-        console.error("Tournament subscription error:", err);
-        setError("Failed to load tournament");
-        setTournamentLoaded(true);
-      }
-    );
+      );
+      unsub = listener;
+    } else {
+      const listener = onSnapshot(
+        query(collection(db, "tournaments"), where("active", "==", true), limit(1)),
+        (snap) => {
+          if (snap.empty) {
+            setTournament(null);
+          } else {
+            const doc = snap.docs[0];
+            setTournament({ id: doc.id, ...doc.data() } as TournamentDoc);
+          }
+          setTournamentLoaded(true);
+        },
+        (err) => {
+          console.error("Tournament subscription error:", err);
+          setError("Failed to load tournament");
+          setTournamentLoaded(true);
+        }
+      );
+      unsub = listener;
+    }
+
     return () => unsub();
-  }, []);
+  }, [searchParams]);
 
   // 2) Subscribe to players when tournament loads (using onSnapshot for offline cache)
   useEffect(() => {
