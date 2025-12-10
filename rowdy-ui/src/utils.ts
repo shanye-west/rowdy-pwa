@@ -6,6 +6,7 @@ export function formatRoundType(format: string | null | undefined): string {
     twoManBestBall: "2-Man Best Ball",
     twoManShamble: "2-Man Shamble",
     twoManScramble: "2-Man Scramble",
+    fourManScramble: "4-Man Scramble",
     singles: "Singles",
   };
   return formatMap[format] || format;

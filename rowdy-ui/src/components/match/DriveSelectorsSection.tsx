@@ -14,7 +14,7 @@ export interface DriveSelectorsSectionProps {
   totalColWidth: number;
   isMatchClosed: boolean;
   isHoleLocked: (holeNum: number) => boolean;
-  getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
+  getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | 2 | 3 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
   /** 0-indexed hole where match closed (null if went to 18) */
@@ -32,7 +32,7 @@ interface DriveRowProps {
   totalColWidth: number;
   isMatchClosed: boolean;
   isHoleLocked: (holeNum: number) => boolean;
-  getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
+  getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | 2 | 3 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
   closingHole?: number | null;
@@ -58,11 +58,10 @@ const DriveRow = memo(function DriveRow({
     const { isFirstBack9, isPostMatch } = options || {};
     const locked = isHoleLocked(hole.num);
     const currentDrive = getDriveValue(hole, team);
-    const initials = currentDrive === 0 
-      ? getPlayerInitials(teamPlayers[0]?.playerId)
-      : currentDrive === 1 
-        ? getPlayerInitials(teamPlayers[1]?.playerId)
-        : null;
+    // Support 2-player (twoManScramble) and 4-player (fourManScramble) teams
+    const initials = currentDrive != null && currentDrive >= 0 && currentDrive < teamPlayers.length
+      ? getPlayerInitials(teamPlayers[currentDrive]?.playerId)
+      : null;
     
     // Build class and style
     let cellClass = "p-0.5";

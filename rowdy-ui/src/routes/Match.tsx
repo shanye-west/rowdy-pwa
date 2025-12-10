@@ -120,10 +120,10 @@ export default function Match() {
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
   // Only scramble uses team-level scoring (one score per team per hole)
-  const isTeamFormat = format === "twoManScramble";
+  const isTeamFormat = format === "twoManScramble" || format === "fourManScramble";
   
   // DRIVE_TRACKING: Check if drive tracking is enabled for this round (scramble or shamble)
-  const trackDrives = !!round?.trackDrives && (format === "twoManScramble" || format === "twoManShamble");
+  const trackDrives = !!round?.trackDrives && (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble");
   
   // --- LOCKING LOGIC ---
   const roundLocked = !!round?.locked;
@@ -150,7 +150,7 @@ export default function Match() {
       const h = match.holes[String(i)]?.input;
       if (!h) continue;
       // Check if hole has complete data based on format
-      if (format === "twoManScramble") {
+      if (format === "twoManScramble" || format === "fourManScramble") {
         if (typeof h.teamAGross === "number" && typeof h.teamBGross === "number") count++;
       } else if (format === "singles") {
         if (typeof h.teamAPlayerGross === "number" && typeof h.teamBPlayerGross === "number") count++;
@@ -226,7 +226,7 @@ export default function Match() {
     const sumPar = (arr: typeof holes) => arr.reduce((s, h) => s + (h.par || 0), 0);
     
     const getScore = (h: typeof holes[0], team: "A" | "B", pIdx: number) => {
-      if (format === "twoManScramble") {
+      if (format === "twoManScramble" || format === "fourManScramble") {
         // Scramble: one score per team
         return team === "A" ? h.input?.teamAGross : h.input?.teamBGross;
       }
@@ -343,17 +343,26 @@ export default function Match() {
   useVisibilityFlush(flushAll);
 
   // DRIVE_TRACKING: Get current drive selection for a hole
-  function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
+  function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | 2 | 3 | null {
     const { input } = hole;
     const v = team === "A" ? input?.teamADrive : input?.teamBDrive;
-    return v === 0 || v === 1 ? v : null;
+    // Support 0-3 for fourManScramble (4 players), 0-1 for twoManScramble (2 players)
+    return (typeof v === "number" && v >= 0 && v <= 3 ? v : null) as 0 | 1 | 2 | 3 | null;
   }
 
   // DRIVE_TRACKING: Update drive selection for a hole (playerIdx can be null to clear)
-  const updateDrive = useCallback((hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1 | null) => {
+  const updateDrive = useCallback((hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1 | 2 | 3 | null) => {
     const { k, input } = hole;
     
     if (format === "twoManScramble") {
+      const newInput = {
+        teamAGross: input?.teamAGross ?? null,
+        teamBGross: input?.teamBGross ?? null,
+        teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
+        teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
+      };
+      saveHole(k, newInput);
+    } else if (format === "fourManScramble") {
       const newInput = {
         teamAGross: input?.teamAGross ?? null,
         teamBGross: input?.teamBGross ?? null,
@@ -373,7 +382,7 @@ export default function Match() {
   }, [format, saveHole]);
 
   // DRIVE_TRACKING: Handle modal selection
-  const handleDriveSelect = useCallback((playerIdx: 0 | 1 | null) => {
+  const handleDriveSelect = useCallback((playerIdx: 0 | 1 | 2 | 3 | null) => {
     if (driveModal) {
       updateDrive(driveModal.hole, driveModal.team, playerIdx);
       setDriveModal(null);
@@ -389,20 +398,20 @@ export default function Match() {
   const drivesUsed = useMemo(() => {
     if (!trackDrives) return null;
     
-    const teamA = [0, 0]; // [player0, player1]
-    const teamB = [0, 0];
+    // Support 2-player (twoManScramble) and 4-player (fourManScramble) teams
+    const numPlayers = match?.teamAPlayers?.length || 2;
+    const teamA = Array(numPlayers).fill(0);
+    const teamB = Array(numPlayers).fill(0);
     
     holes.forEach(h => {
       const aDrive = h.input?.teamADrive;
       const bDrive = h.input?.teamBDrive;
-      if (aDrive === 0) teamA[0]++;
-      else if (aDrive === 1) teamA[1]++;
-      if (bDrive === 0) teamB[0]++;
-      else if (bDrive === 1) teamB[1]++;
+      if (typeof aDrive === "number" && aDrive >= 0 && aDrive < numPlayers) teamA[aDrive]++;
+      if (typeof bDrive === "number" && bDrive >= 0 && bDrive < numPlayers) teamB[bDrive]++;
     });
     
     return { teamA, teamB };
-  }, [holes, trackDrives]);
+  }, [holes, trackDrives, match?.teamAPlayers]);
 
   // DRIVE_TRACKING: Calculate drives still needed (6 min per player, minus holes remaining)
   const drivesNeeded = useMemo(() => {
@@ -412,8 +421,8 @@ export default function Match() {
     const calc = (used: number) => Math.max(0, MIN_DRIVES_PER_ROUND - used - holesRemaining);
     
     return {
-      teamA: [calc(drivesUsed.teamA[0]), calc(drivesUsed.teamA[1])],
-      teamB: [calc(drivesUsed.teamB[0]), calc(drivesUsed.teamB[1])],
+      teamA: drivesUsed.teamA.map(used => calc(used)),
+      teamB: drivesUsed.teamB.map(used => calc(used)),
     };
   }, [drivesUsed, matchThru, trackDrives]);
 
@@ -444,11 +453,12 @@ export default function Match() {
   }, [match?.teamAPlayers, match?.teamBPlayers]);
 
   const createGetDriveValue = useCallback((team: "A" | "B") => {
-    return (holeKey: string): 0 | 1 | null => {
+    return (holeKey: string): 0 | 1 | 2 | 3 | null => {
       const hole = holes.find(h => h.k === holeKey);
       if (!hole) return null;
       const v = team === "A" ? hole.input?.teamADrive : hole.input?.teamBDrive;
-      return v === 0 || v === 1 ? v : null;
+      // Support 0-3 for fourManScramble (4 players), 0-1 for twoManScramble (2 players)
+      return (typeof v === "number" && v >= 0 && v <= 3 ? v : null) as 0 | 1 | 2 | 3 | null;
     };
   }, [holes]);
 
@@ -662,7 +672,7 @@ export default function Match() {
     onCellChange: (holeKey: string, value: number | null) => void;
     getCellValue: (holeKey: string) => number | "";
     hasStroke: (holeIdx: number) => boolean;
-    getDriveValue: (holeKey: string) => 0 | 1 | null;
+    getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
     getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
   };
   const playerRows: PlayerRowConfig[] = [];
@@ -1232,60 +1242,58 @@ export default function Match() {
           title={driveModal ? `Whose drive for Hole ${driveModal.hole.num}?` : ""}
           ariaLabel="Select drive player"
         >
-          {driveModal && (
-            <>
-              <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color: driveModal.team === "A" ? teamAColor : teamBColor }}>
-                {driveModal.team === "A" ? (
-                  <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: teamAColor }} />
-                ) : (
-                  <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" style={{ color: teamBColor }} />
-                )}
-              </div>
-              <div className="space-y-2">
-                {/* Player 1 */}
+          {driveModal && (() => {
+            const teamPlayers = driveModal.team === "A" ? match.teamAPlayers : match.teamBPlayers;
+            const numPlayers = teamPlayers?.length || 2;
+            const color = driveModal.team === "A" ? teamAColor : teamBColor;
+            
+            return (
+              <>
+                <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color }}>
+                  {driveModal.team === "A" ? (
+                    <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: teamAColor }} />
+                  ) : (
+                    <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" style={{ color: teamBColor }} />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {/* Player buttons (2 or 4 depending on format) */}
+                  {Array.from({ length: numPlayers }, (_, i) => {
+                    const playerId = teamPlayers?.[i]?.playerId;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleDriveSelect(i as 0 | 1 | 2 | 3)}
+                        aria-label={`Select ${getPlayerName(playerId)}'s drive`}
+                        className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
+                        style={{ backgroundColor: color }}
+                      >
+                        {getPlayerName(playerId)}
+                      </button>
+                    );
+                  })}
+                  {/* Clear button */}
+                  <button
+                    type="button"
+                    onClick={() => handleDriveSelect(null)}
+                    aria-label="Clear drive selection"
+                    className="w-full py-3 px-4 rounded-lg bg-slate-200 text-slate-600 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {/* Cancel */}
                 <button
                   type="button"
-                  onClick={() => handleDriveSelect(0)}
-                  aria-label={`Select ${getPlayerName(driveModal.team === "A" ? match.teamAPlayers?.[0]?.playerId : match.teamBPlayers?.[0]?.playerId)}'s drive`}
-                  className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
-                  style={{ backgroundColor: driveModal.team === "A" ? teamAColor : teamBColor }}
+                  onClick={() => setDriveModal(null)}
+                  className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-700"
                 >
-                  {getPlayerName(driveModal.team === "A" 
-                    ? match.teamAPlayers?.[0]?.playerId 
-                    : match.teamBPlayers?.[0]?.playerId)}
+                  Cancel
                 </button>
-                {/* Player 2 */}
-                <button
-                  type="button"
-                  onClick={() => handleDriveSelect(1)}
-                  aria-label={`Select ${getPlayerName(driveModal.team === "A" ? match.teamAPlayers?.[1]?.playerId : match.teamBPlayers?.[1]?.playerId)}'s drive`}
-                  className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
-                  style={{ backgroundColor: driveModal.team === "A" ? teamAColor : teamBColor }}
-                >
-                  {getPlayerName(driveModal.team === "A" 
-                    ? match.teamAPlayers?.[1]?.playerId 
-                    : match.teamBPlayers?.[1]?.playerId)}
-                </button>
-                {/* Clear button */}
-                <button
-                  type="button"
-                  onClick={() => handleDriveSelect(null)}
-                  aria-label="Clear drive selection"
-                  className="w-full py-3 px-4 rounded-lg bg-slate-200 text-slate-600 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
-                >
-                  Clear
-                </button>
-              </div>
-              {/* Cancel */}
-              <button
-                type="button"
-                onClick={() => setDriveModal(null)}
-                className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-700"
-              >
-                Cancel
-              </button>
-            </>
-          )}
+              </>
+            );
+          })()}
         </Modal>
       </div>
     </Layout>

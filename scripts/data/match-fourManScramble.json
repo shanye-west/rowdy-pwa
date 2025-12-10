@@ -1,0 +1,53 @@
+{
+  "id": "2024RC-R01M07-fourManScramble",
+  "roundId": "2024RC-R01-fourManScramble",
+  "tournamentId": "2024RowdyCup",
+  "matchNumber": 7,
+  "teeTime": "",
+  "courseHandicaps": [0, 0, 0, 0, 0, 0, 0, 0],
+  "teamAPlayers": [
+    {
+      "playerId": "pRyanBenko",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pDavidMower",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pBrianLevy",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pSeanCain",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "teamBPlayers": [
+    {
+      "playerId": "pJPSaar",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pLukeDavie",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pMattFisher",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "pShanePeterson",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "holes": {},
+  "status": {
+    "leader": null,
+    "margin": 0,
+    "thru": 0,
+    "dormie": false,
+    "closed": false
+  },
+  "result": {}
+}

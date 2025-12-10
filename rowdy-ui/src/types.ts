@@ -1,4 +1,4 @@
-export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
+export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "fourManScramble" | "singles";
 
 // ============================================================================
 // HOLE INPUT TYPES - Format-specific score input structures
@@ -70,7 +70,7 @@ export function isSinglesFormat(format: RoundFormat | null | undefined): boolean
 
 /** Check if format is scramble (use to narrow HoleInputLoose to ScrambleHoleInput) */
 export function isScrambleFormat(format: RoundFormat | null | undefined): boolean {
-  return format === "twoManScramble";
+  return format === "twoManScramble" || format === "fourManScramble";
 }
 
 /** Check if format is best ball (use to narrow HoleInputLoose to BestBallHoleInput) */
@@ -90,7 +90,7 @@ export function isFourPlayerFormat(format: RoundFormat | null | undefined): bool
 
 /** Check if format tracks drives */
 export function isDriveTrackingFormat(format: RoundFormat | null | undefined): boolean {
-  return format === "twoManScramble" || format === "twoManShamble";
+  return format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble";
 }
 
 // ============================================================================

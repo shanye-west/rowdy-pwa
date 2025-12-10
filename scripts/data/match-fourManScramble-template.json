@@ -1,0 +1,53 @@
+{
+  "id": "TOURNAMENT_ID-ROUND_ID-fourManScramble",
+  "roundId": "ROUND_ID",
+  "tournamentId": "TOURNAMENT_ID",
+  "matchNumber": 1,
+  "teeTime": "",
+  "courseHandicaps": [0, 0, 0, 0, 0, 0, 0, 0],
+  "teamAPlayers": [
+    {
+      "playerId": "PLAYER_1_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_2_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_3_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_4_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "teamBPlayers": [
+    {
+      "playerId": "PLAYER_5_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_6_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_7_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "playerId": "PLAYER_8_ID",
+      "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "holes": {},
+  "status": {
+    "leader": null,
+    "margin": 0,
+    "thru": 0,
+    "dormie": false,
+    "closed": false
+  },
+  "result": {}
+}

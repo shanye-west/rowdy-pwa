@@ -26,7 +26,7 @@ export interface PlayerScoreRowProps {
   getCellValue: (holeKey: string) => number | "";
   isHoleLocked: (holeNum: number) => boolean;
   hasStroke: (holeIdx: number) => boolean;
-  getDriveValue: (holeKey: string) => 0 | 1 | null;
+  getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
   getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
   onCellChange: (holeKey: string, value: number | null) => void;
   outTotal: number | null;
