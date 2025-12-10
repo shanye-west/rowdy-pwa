@@ -5,7 +5,7 @@ import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
-import TeamName from "../components/TeamName";
+// TeamName removed from history list (only logos shown)
 import type { TournamentDoc } from "../types";
 
 type TournamentSeries = "rowdyCup" | "christmasClassic";
@@ -179,28 +179,19 @@ export default function History() {
                 className="card card-hover"
                 style={{ 
                   display: "grid", 
-                  gridTemplateColumns: "1fr auto 1fr", 
+                  gridTemplateColumns: "auto 1fr auto", 
                   alignItems: "center", 
                   gap: 12,
                   padding: "16px 20px",
                 }}
               >
-                {/* Team A */}
+                {/* Team A - show only logo (bigger) */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <OfflineImage 
                     src={t.teamA?.logo} 
                     alt={t.teamA?.name || "Team A"}
                     fallbackIcon="🔵"
-                    style={{ width: 32, height: 32, objectFit: "contain" }}
-                  />
-                  <TeamName
-                    name={t.teamA?.name || "Team A"}
-                    variant="inline"
-                    style={{
-                      fontWeight: 700,
-                      color: t.teamA?.color || "var(--team-a-default)",
-                      fontSize: '0.95rem',
-                    }}
+                    style={{ width: 56, height: 56, objectFit: "contain" }}
                   />
                 </div>
 
@@ -216,22 +207,13 @@ export default function History() {
                   )}
                 </div>
 
-                {/* Team B */}
+                {/* Team B - show only logo (bigger) */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-                  <TeamName
-                    name={t.teamB?.name || "Team B"}
-                    variant="inline"
-                    style={{
-                      fontWeight: 700,
-                      color: t.teamB?.color || "var(--team-b-default)",
-                      fontSize: '0.95rem',
-                    }}
-                  />
                   <OfflineImage 
                     src={t.teamB?.logo} 
                     alt={t.teamB?.name || "Team B"}
                     fallbackIcon="🔴"
-                    style={{ width: 32, height: 32, objectFit: "contain" }}
+                    style={{ width: 56, height: 56, objectFit: "contain" }}
                   />
                 </div>
               </Link>
