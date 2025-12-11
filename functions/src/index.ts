@@ -266,7 +266,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       let hasScore = false;
       if (format === "singles") {
         hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
-      } else if (format === "twoManScramble") {
+      } else if (format === "twoManScramble" || format === "fourManScramble") {
         hasScore = input?.teamAGross != null || input?.teamBGross != null;
       } else if (format === "twoManBestBall" || format === "twoManShamble") {
         const aArr = input?.teamAPlayersGross;
@@ -410,11 +410,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
   
-  // Check if there's post-match data (scores entered after match closed)
+  // Check if there's post-match data (actual scores entered after winningHole)
   let hasPostMatchData = false;
   if (winningHole !== null) {
     for (const i of holesRange(holesData)) {
-      if (i > winningHole) {
+      if (i <= winningHole) continue;
+      const input = holesData[String(i)]?.input;
+      let hasScore = false;
+      if (format === "singles") {
+        hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
+      } else if (format === "twoManScramble" || format === "fourManScramble") {
+        hasScore = input?.teamAGross != null || input?.teamBGross != null;
+      } else if (format === "twoManBestBall" || format === "twoManShamble") {
+        const aArr = input?.teamAPlayersGross;
+        const bArr = input?.teamBPlayersGross;
+        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+      }
+      if (hasScore) {
         hasPostMatchData = true;
         break;
       }
@@ -902,7 +915,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
 
-    // Build holePerformance array
+    // Build holePerformance array (tracks ALL holes with any scores, including post-match)
     const holePerformance: any[] = [];
     // per-player scoring counters
     let birdies = 0;
@@ -1000,6 +1013,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
 
     // After building holePerformance (which includes post-match holes), compute per-player totals
+    // and how many holes this player actually has a score for
+    const holesPlayedForPlayer = holePerformance.reduce(
+      (sum, hh) => sum + (typeof hh.gross === "number" ? 1 : 0),
+      0
+    );
+
     if (format === "twoManBestBall" || format === "singles") {
       const grossSum = holePerformance.reduce((s, hh) => s + (typeof hh.gross === "number" ? hh.gross : 0), 0);
       const netSum = holePerformance.reduce((s, hh) => s + (typeof hh.net === "number" ? hh.net : 0), 0);
@@ -1063,6 +1082,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       wasNeverBehind,
       winningHole,
       hasPostMatchData,
+      holesPlayed: holesPlayedForPlayer,
       decidedOn18,
       won18thHole,
       courseId,
@@ -1195,7 +1215,20 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       if (typeof f.totalNet === "number") totalNet += f.totalNet;
       if (typeof f.strokesVsParGross === "number") strokesVsParGross += f.strokesVsParGross;
       if (typeof f.strokesVsParNet === "number") strokesVsParNet += f.strokesVsParNet;
-      holesPlayed += (f.finalThru || 18);
+      // Prefer explicit holesPlayed from fact when present; otherwise
+      // fall back to counting gross scores in holePerformance or finalThru.
+      let factHolesPlayed = 0;
+      if (typeof f.holesPlayed === "number") {
+        factHolesPlayed = f.holesPlayed;
+      } else if (Array.isArray(f.holePerformance)) {
+        factHolesPlayed = f.holePerformance.reduce(
+          (sum: number, hp: any) => sum + (typeof hp.gross === "number" ? 1 : 0),
+          0
+        );
+      } else {
+        factHolesPlayed = f.finalThru || 18;
+      }
+      holesPlayed += factHolesPlayed;
       
       // Count birdies and eagles from holePerformance
       if (Array.isArray(f.holePerformance)) {

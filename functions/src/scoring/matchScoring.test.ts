@@ -952,7 +952,10 @@ describe("buildStatusAndResult", () => {
 describe("integration: full match flow", () => {
   it("calculates correct status for 2&1 victory", () => {
     // Team A wins holes 1, 2, 3 (3 up after 3)
-    // Holes 4-17 halved (3 up after 17 = 3 up with 1 to play = closed)
+    // Holes 4-17 halved.
+    // With our summarize semantics, the match is considered decided
+    // on the first hole where margin > holesLeft. In this scenario
+    // that happens on hole 16 (3 up with 2 to play).
     const holes: Record<string, { input: { teamAPlayerGross: number; teamBPlayerGross: number } }> = {};
     for (let i = 1; i <= 17; i++) {
       if (i <= 3) {
@@ -969,7 +972,7 @@ describe("integration: full match flow", () => {
     expect(status.closed).toBe(true);
     expect(status.leader).toBe("teamA");
     expect(status.margin).toBe(3);
-    expect(status.thru).toBe(17);
+    expect(status.thru).toBe(16);
     expect(result.winner).toBe("teamA");
     expect(result.holesWonA).toBe(3);
     expect(result.holesWonB).toBe(0);
