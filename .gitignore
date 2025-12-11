@@ -90,3 +90,6 @@ scripts/data/update-handicaps.json
 
 # Lighthouse reports
 rowdy-pwa.web.app-lighthouse-report.json
+
+# Random plans
+UI-Stats-Plan.md
