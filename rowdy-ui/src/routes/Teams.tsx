@@ -7,6 +7,7 @@ import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import TeamName from "../components/TeamName";
 import type { TournamentDoc, PlayerDoc, PlayerMatchFact, TierMap } from "../types";
+import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 // We define a local type for the aggregated tournament stats
 type TournamentStat = {
@@ -41,7 +42,7 @@ function TeamsComponent() {
       const listener = onSnapshot(
         docRef,
         (snap) => {
-          if (snap.exists()) setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+          if (snap.exists()) setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
           else {
             setTournament(null);
             setError("Tournament not found.");
@@ -63,7 +64,7 @@ function TeamsComponent() {
             setTournament(null);
           } else {
             const doc = snap.docs[0];
-            setTournament({ id: doc.id, ...doc.data() } as TournamentDoc);
+            setTournament(ensureTournamentTeamColors({ id: doc.id, ...doc.data() } as TournamentDoc));
           }
           setTournamentLoaded(true);
         },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, doc, query, where, documentId, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
+import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
 
 interface UseRoundDataResult {
@@ -79,7 +80,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
       doc(db, "tournaments", round.tournamentId),
       (snap) => {
         if (snap.exists()) {
-          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+          setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
         }
       },
       (err) => console.error("Tournament subscription error:", err)

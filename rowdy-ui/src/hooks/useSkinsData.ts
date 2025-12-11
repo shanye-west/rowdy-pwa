@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, MatchDoc, CourseDoc, PlayerDoc, TournamentDoc } from "../types";
+import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 export type SkinType = "gross" | "net";
 
@@ -84,7 +85,7 @@ export function useSkinsData(roundId: string | undefined) {
       doc(db, "tournaments", round.tournamentId),
       (snap) => {
         if (snap.exists()) {
-          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+          setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
         }
       }
     );

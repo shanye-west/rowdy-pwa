@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, doc, query, where, onSnapshot, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
+import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 // ============================================================================
 // TYPES
@@ -110,7 +111,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
             setTournament(null);
           } else {
             const d = snap.docs[0];
-            setTournament({ id: d.id, ...d.data() } as TournamentDoc);
+            setTournament(ensureTournamentTeamColors({ id: d.id, ...d.data() } as TournamentDoc));
           }
           setTournamentLoaded(true);
         },
@@ -126,8 +127,8 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       const unsub = onSnapshot(
         doc(db, "tournaments", tournamentId),
         (snap) => {
-          if (snap.exists()) {
-            setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+            if (snap.exists()) {
+            setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
           } else {
             setTournament(null);
             setError("Tournament not found.");

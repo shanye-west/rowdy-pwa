@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot, getDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
+import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
@@ -111,10 +112,10 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         
         try {
           // Fetch tournament (one-time)
-          if (rData.tournamentId) {
+            if (rData.tournamentId) {
             const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
             if (tSnap.exists()) {
-              setTournament({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc);
+              setTournament(ensureTournamentTeamColors({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc));
             }
           }
           
