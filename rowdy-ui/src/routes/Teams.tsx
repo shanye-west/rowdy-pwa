@@ -195,6 +195,17 @@ function TeamsComponent() {
             const pIds = roster[tier as keyof TierMap] || [];
             if (pIds.length === 0) return null;
 
+            // Sort player IDs by handicap (lowest to highest). Players without a handicap
+            // are placed after those with defined handicaps.
+            const sortedPIds = [...pIds].sort((a, b) => {
+              const ha = handicaps?.[a];
+              const hb = handicaps?.[b];
+              if (ha == null && hb == null) return 0;
+              if (ha == null) return 1;
+              if (hb == null) return -1;
+              return Number(ha) - Number(hb);
+            });
+
             return (
               <div key={tier}>
                 {/* Tier header (single letter) - keep font size, reduce vertical padding */}
@@ -203,7 +214,7 @@ function TeamsComponent() {
                 </div>
 
                 {/* Player Rows */}
-                {pIds.map(pid => {
+                {sortedPIds.map(pid => {
                   const p = players[pid];
                   const s = stats[pid];
                   const name = p?.displayName || "Unknown";
