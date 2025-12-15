@@ -127,10 +127,10 @@ export default function AddMatch() {
         throw new Error("All fields are required");
       }
 
-      // Parse tee time (format: "Dec 15, 2025 09:10:00 AM")
+      // Parse tee time (format: "YYYY-MM-DDTHH:mm" from datetime-local input)
       const parsedDate = new Date(teeTime);
       if (isNaN(parsedDate.getTime())) {
-        throw new Error("Invalid tee time format. Use: Dec 15, 2025 09:10:00 AM");
+        throw new Error("Invalid tee time. Please select a valid date and time.");
       }
 
       // Validate players
@@ -252,15 +252,14 @@ export default function AddMatch() {
             <div>
               <label className="block text-sm font-semibold mb-2">Tee Time</label>
               <input
-                type="text"
+                type="datetime-local"
                 value={teeTime}
                 onChange={(e) => setTeeTime(e.target.value)}
-                placeholder="Dec 15, 2025 09:10:00 AM"
-                className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm"
+                className="w-full p-3 border border-gray-300 rounded-lg"
                 required
               />
               <div className="text-xs text-gray-500 mt-1">
-                Format: MON DD, YYYY HH:MM:SS AM/PM
+                Select date and time for match start
               </div>
             </div>
           </div>
