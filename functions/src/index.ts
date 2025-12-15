@@ -1381,7 +1381,7 @@ export const seedMatch = onCall(async (request) => {
   const { id, tournamentId, roundId, teeTime, teamAPlayers, teamBPlayers } = request.data;
 
   // Validate required fields
-  if (!id || !tournamentId || !roundId || !teeTime || !teamAPlayers || !teamBPlayers) {
+  if (!id || !tournamentId || !roundId || !teamAPlayers || !teamBPlayers) {
     throw new HttpsError("invalid-argument", "Missing required fields");
   }
 
@@ -1445,14 +1445,14 @@ export const seedMatch = onCall(async (request) => {
   ];
 
   // Create match document
-  // Convert teeTime to Timestamp (it comes as {_seconds, _nanoseconds} from client)
-  let teeTimeTimestamp: Timestamp;
-  if (teeTime && typeof teeTime === 'object' && '_seconds' in teeTime) {
-    teeTimeTimestamp = Timestamp.fromMillis(teeTime._seconds * 1000 + (teeTime._nanoseconds || 0) / 1000000);
-  } else if (teeTime instanceof Timestamp) {
-    teeTimeTimestamp = teeTime;
-  } else {
-    throw new HttpsError("invalid-argument", "Invalid teeTime format");
+  // teeTime is optional - can be set later in Firestore
+  let teeTimeTimestamp: Timestamp | null = null;
+  if (teeTime) {
+    if (typeof teeTime === 'object' && '_seconds' in teeTime) {
+      teeTimeTimestamp = Timestamp.fromMillis(teeTime._seconds * 1000 + (teeTime._nanoseconds || 0) / 1000000);
+    } else if (teeTime instanceof Timestamp) {
+      teeTimeTimestamp = teeTime;
+    }
   }
 
   const matchDoc = {

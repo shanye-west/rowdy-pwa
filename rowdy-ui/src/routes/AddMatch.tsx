@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import Layout from "../components/Layout";
@@ -29,7 +29,6 @@ export default function AddMatch() {
   const [tournamentId, setTournamentId] = useState("");
   const [roundId, setRoundId] = useState("");
   const [matchId, setMatchId] = useState("");
-  const [teeTime, setTeeTime] = useState("");
   const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
   const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
 
@@ -109,14 +108,8 @@ export default function AddMatch() {
 
     try {
       // Validate
-      if (!tournamentId || !roundId || !matchId || !teeTime) {
+      if (!tournamentId || !roundId || !matchId) {
         throw new Error("All fields are required");
-      }
-
-      // Parse tee time (format: "YYYY-MM-DDTHH:mm" from datetime-local input)
-      const parsedDate = new Date(teeTime);
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error("Invalid tee time. Please select a valid date and time.");
       }
 
       // Validate players
@@ -133,7 +126,6 @@ export default function AddMatch() {
         id: matchId,
         tournamentId,
         roundId,
-        teeTime: Timestamp.fromDate(parsedDate),
         teamAPlayers: validTeamA,
         teamBPlayers: validTeamB,
       });
@@ -246,20 +238,8 @@ export default function AddMatch() {
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 required
               />
-            </div>
-
-            {/* Tee Time */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">Tee Time</label>
-              <input
-                type="datetime-local"
-                value={teeTime}
-                onChange={(e) => setTeeTime(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg"
-                required
-              />
               <div className="text-xs text-gray-500 mt-1">
-                Select date and time for match start
+                Tee time can be set later in Firestore
               </div>
             </div>
           </div>
@@ -409,7 +389,7 @@ export default function AddMatch() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={submitting || !tournamentId || !roundId || !matchId || !teeTime}
+            disabled={submitting || !tournamentId || !roundId || !matchId}
             className="btn btn-primary w-full"
           >
             {submitting ? "Creating Match..." : "Create Match"}
