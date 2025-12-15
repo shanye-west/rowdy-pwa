@@ -65,7 +65,7 @@ export default defineConfig({
       },
       manifest: {
         name: 'Rowdy Cup',
-        short_name: 'RowdyCup',
+        short_name: 'Rowdy Cup',
         description: 'Live scoring for the Rowdy Cup tournament',
         theme_color: '#ffffff',
         background_color: '#ffffff',
