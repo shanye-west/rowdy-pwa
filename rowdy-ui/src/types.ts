@@ -102,6 +102,7 @@ export type PlayerDoc = {
   displayName?: string; 
   authUid?: string;       // Firebase Auth UID (set after account setup)
   email?: string;         // Email for login (set after account setup)
+  isAdmin?: boolean;      // Admin access flag
 };
 
 // NEW: Helper for the Tier Arrays

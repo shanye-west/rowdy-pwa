@@ -166,6 +166,17 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
               >
                 History
               </Link>
+
+              {/* Admin - only visible to admins */}
+              {player?.isAdmin && (
+                <Link 
+                  to="/admin" 
+                  style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               
               {/* Auth Actions */}
               {!authLoading && (

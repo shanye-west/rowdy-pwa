@@ -230,6 +230,7 @@ function RoundComponent() {
                     teamBName={tournament?.teamB?.name}
                     matchNumber={m.matchNumber}
                     teeTime={m.teeTime}
+                    showTeeLabel={false}
                   />
 
                   {/* Right: Team B Players */}

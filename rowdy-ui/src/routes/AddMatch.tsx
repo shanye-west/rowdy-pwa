@@ -1,0 +1,401 @@
+import { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
+import Layout from "../components/Layout";
+import { useAuth } from "../contexts/AuthContext";
+import type { TournamentDoc, RoundDoc, PlayerDoc } from "../types";
+
+type PlayerInput = {
+  playerId: string;
+  courseHandicap: number;
+};
+
+export default function AddMatch() {
+  const { player } = useAuth();
+  const navigate = useNavigate();
+
+  // State - must declare all hooks before any conditional returns
+  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
+  const [rounds, setRounds] = useState<RoundDoc[]>([]);
+  const [players, setPlayers] = useState<PlayerDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  // Form fields
+  const [tournamentId, setTournamentId] = useState("");
+  const [roundId, setRoundId] = useState("");
+  const [matchId, setMatchId] = useState("");
+  const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
+  const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
+
+  // Fetch tournaments and players on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch tournaments (active only)
+        const tournamentsSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
+        const tournamentsData = tournamentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentDoc));
+        setTournaments(tournamentsData);
+
+        // Fetch all players
+        const playersSnap = await getDocs(collection(db, "players"));
+        const playersData = playersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PlayerDoc));
+        setPlayers(playersData);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load data");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch rounds when tournament changes
+  useEffect(() => {
+    if (!tournamentId) {
+      setRounds([]);
+      setRoundId("");
+      return;
+    }
+
+    const fetchRounds = async () => {
+      try {
+        const roundsSnap = await getDocs(query(collection(db, "rounds"), where("tournamentId", "==", tournamentId)));
+        const roundsData = roundsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as RoundDoc));
+        setRounds(roundsData.sort((a, b) => (a.day || 0) - (b.day || 0)));
+      } catch (err) {
+        console.error("Error fetching rounds:", err);
+        setError("Failed to load rounds");
+      }
+    };
+
+    fetchRounds();
+  }, [tournamentId]);
+
+  // Get selected tournament data
+  const selectedTournament = useMemo(() => 
+    tournaments.find(t => t.id === tournamentId), 
+    [tournaments, tournamentId]
+  );
+
+  // Get available players for each team
+  const teamAAvailablePlayers = useMemo(() => {
+    if (!selectedTournament) return [];
+    const rosterByTier = selectedTournament.teamA?.rosterByTier || {};
+    const allIds = [...(rosterByTier.A || []), ...(rosterByTier.B || []), ...(rosterByTier.C || []), ...(rosterByTier.D || [])];
+    return players.filter(p => allIds.includes(p.id));
+  }, [selectedTournament, players]);
+
+  const teamBAvailablePlayers = useMemo(() => {
+    if (!selectedTournament) return [];
+    const rosterByTier = selectedTournament.teamB?.rosterByTier || {};
+    const allIds = [...(rosterByTier.A || []), ...(rosterByTier.B || []), ...(rosterByTier.C || []), ...(rosterByTier.D || [])];
+    return players.filter(p => allIds.includes(p.id));
+  }, [selectedTournament, players]);
+
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      // Validate
+      if (!tournamentId || !roundId || !matchId) {
+        throw new Error("All fields are required");
+      }
+
+      // Validate players
+      const validTeamA = teamAPlayers.filter(p => p.playerId);
+      const validTeamB = teamBPlayers.filter(p => p.playerId);
+
+      if (validTeamA.length === 0 || validTeamB.length === 0) {
+        throw new Error("Each team must have at least one player");
+      }
+
+      // Call Cloud Function
+      const seedMatchFn = httpsCallable(functions, "seedMatch");
+      const result = await seedMatchFn({
+        id: matchId,
+        tournamentId,
+        roundId,
+        teamAPlayers: validTeamA,
+        teamBPlayers: validTeamB,
+      });
+
+      console.log("Match created:", result.data);
+      setSuccess(true);
+
+      // Navigate to match after short delay
+      setTimeout(() => {
+        navigate(`/match/${matchId}`);
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Error creating match:", err);
+      setError(err.message || "Failed to create match");
+      setSubmitting(false);
+    }
+  };
+
+  // Access control - check after all hooks are declared
+  if (!player?.isAdmin) {
+    return (
+      <Layout title="Add Match" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <div className="empty-state-text">Access Denied</div>
+          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Layout title="Add Match" showBack>
+        <div className="flex items-center justify-center py-20">
+          <div className="spinner-lg"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (success) {
+    return (
+      <Layout title="Add Match" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">✅</div>
+          <div className="empty-state-text">Match Created!</div>
+          <div className="text-sm text-gray-500 mt-2">Redirecting to match...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout title="Add Match" showBack>
+      <div className="p-4 max-w-2xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Tournament Selection */}
+          <div className="card p-6 space-y-4">
+            <h3 className="font-bold text-lg">Match Details</h3>
+
+            {/* Tournament Dropdown */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">Tournament</label>
+              <select
+                value={tournamentId}
+                onChange={(e) => setTournamentId(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                required
+              >
+                <option value="">Select Tournament</option>
+                {tournaments.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.year})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Round Dropdown */}
+            {tournamentId && (
+              <div>
+                <label className="block text-sm font-semibold mb-2">Round</label>
+                <select
+                  value={roundId}
+                  onChange={(e) => setRoundId(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  required
+                >
+                  <option value="">Select Round</option>
+                  {rounds.map(r => (
+                    <option key={r.id} value={r.id}>
+                      Day {r.day} - {r.format || "No format set"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Match ID */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">Match ID</label>
+              <input
+                type="text"
+                value={matchId}
+                onChange={(e) => setMatchId(e.target.value)}
+                placeholder="e.g., rowdyCup2025-R01M01-twoManBestBall"
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                required
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                Tee time can be set later in Firestore
+              </div>
+            </div>
+          </div>
+
+          {/* Team A Players */}
+          {selectedTournament && (
+            <div className="card p-6 space-y-4">
+              <h3 className="font-bold text-lg" style={{ color: selectedTournament.teamA?.color || "var(--team-a-default)" }}>
+                {selectedTournament.teamA?.name || "Team A"} Players
+              </h3>
+
+              {teamAPlayers.map((playerInput, idx) => (
+                <div key={idx} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold mb-2">Player {idx + 1}</label>
+                    <select
+                      value={playerInput.playerId}
+                      onChange={(e) => {
+                        const updated = [...teamAPlayers];
+                        updated[idx].playerId = e.target.value;
+                        setTeamAPlayers(updated);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      required
+                    >
+                      <option value="">Select Player</option>
+                      {teamAAvailablePlayers.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.displayName || p.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="w-32">
+                    <label className="block text-sm font-semibold mb-2">Course Hdcp</label>
+                    <input
+                      type="number"
+                      value={playerInput.courseHandicap}
+                      onChange={(e) => {
+                        const updated = [...teamAPlayers];
+                        updated[idx].courseHandicap = parseInt(e.target.value) || 0;
+                        setTeamAPlayers(updated);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      required
+                    />
+                  </div>
+
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTeamAPlayers(teamAPlayers.filter((_, i) => i !== idx))}
+                      className="p-3 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setTeamAPlayers([...teamAPlayers, { playerId: "", courseHandicap: 0 }])}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                + Add another {selectedTournament.teamA?.name || "Team A"} player
+              </button>
+            </div>
+          )}
+
+          {/* Team B Players */}
+          {selectedTournament && (
+            <div className="card p-6 space-y-4">
+              <h3 className="font-bold text-lg" style={{ color: selectedTournament.teamB?.color || "var(--team-b-default)" }}>
+                {selectedTournament.teamB?.name || "Team B"} Players
+              </h3>
+
+              {teamBPlayers.map((playerInput, idx) => (
+                <div key={idx} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold mb-2">Player {idx + 1}</label>
+                    <select
+                      value={playerInput.playerId}
+                      onChange={(e) => {
+                        const updated = [...teamBPlayers];
+                        updated[idx].playerId = e.target.value;
+                        setTeamBPlayers(updated);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      required
+                    >
+                      <option value="">Select Player</option>
+                      {teamBAvailablePlayers.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.displayName || p.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="w-32">
+                    <label className="block text-sm font-semibold mb-2">Course Hdcp</label>
+                    <input
+                      type="number"
+                      value={playerInput.courseHandicap}
+                      onChange={(e) => {
+                        const updated = [...teamBPlayers];
+                        updated[idx].courseHandicap = parseInt(e.target.value) || 0;
+                        setTeamBPlayers(updated);
+                      }}
+                      className="w-full p-3 border border-gray-300 rounded-lg"
+                      required
+                    />
+                  </div>
+
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTeamBPlayers(teamBPlayers.filter((_, i) => i !== idx))}
+                      className="p-3 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setTeamBPlayers([...teamBPlayers, { playerId: "", courseHandicap: 0 }])}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                + Add another {selectedTournament.teamB?.name || "Team B"} player
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="card p-4 bg-red-50 border-red-200">
+              <div className="text-red-800 font-semibold">Error</div>
+              <div className="text-red-600 text-sm mt-1">{error}</div>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={submitting || !tournamentId || !roundId || !matchId}
+            className="btn btn-primary w-full"
+          >
+            {submitting ? "Creating Match..." : "Create Match"}
+          </button>
+        </form>
+      </div>
+    </Layout>
+  );
+}

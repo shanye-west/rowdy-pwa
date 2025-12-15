@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 import { 
   getAuth, 
   setPersistence, 
@@ -25,6 +26,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // Initialize Firestore with modern persistence API
 // - persistentLocalCache: Enables IndexedDB persistence for offline support

@@ -26,6 +26,8 @@ export interface MatchStatusBadgeProps {
   matchNumber?: number;
   /** Tee time (Firestore Timestamp) for display on unstarted matches */
   teeTime?: any;
+  /** Whether to render the "Tee Time" label above the formatted time (default: true) */
+  showTeeLabel?: boolean;
 }
 
 /**
@@ -49,6 +51,7 @@ export function MatchStatusBadge({
   variant = "default",
   matchNumber,
   teeTime,
+  showTeeLabel = true,
 }: MatchStatusBadgeProps) {
   const isClosed = status?.closed === true;
   const thru = status?.thru ?? 0;
@@ -169,19 +172,39 @@ export function MatchStatusBadge({
     teeTimeStr = `${hours}:${minutesStr}${ampm}`;
   }
 
+  // If tee time available, render it (with optional label)
+  if (teeTimeStr) {
+    if (showTeeLabel) {
+      return (
+        <div style={containerStyle}>
+          {matchNumber && (
+            <div style={{ ...mainTextStyle, color: "#64748b" }}>
+              Match {matchNumber}
+            </div>
+          )}
+          <div style={{ ...labelStyle, color: "#94a3b8" }}>Tee Time</div>
+          <div style={{ ...mainTextStyle, color: "#64748b" }}>{teeTimeStr}</div>
+        </div>
+      );
+    }
+
+    // Compact legacy display: only the time (no label)
+    return (
+      <div style={containerStyle}>
+        {matchNumber && (
+          <div style={{ ...mainTextStyle, color: "#64748b" }}>
+            Match {matchNumber}
+          </div>
+        )}
+        <div style={{ ...labelStyle, color: "#94a3b8" }}>{teeTimeStr}</div>
+      </div>
+    );
+  }
+
+  // No tee time and not started
   return (
     <div style={containerStyle}>
-      {matchNumber && (
-        <div style={{ ...mainTextStyle, color: "#64748b" }}>
-          Match {matchNumber}
-        </div>
-      )}
-      {teeTimeStr && (
-        <div style={{ ...labelStyle, color: "#94a3b8" }}>
-          {teeTimeStr}
-        </div>
-      )}
-      {!matchNumber && !teeTimeStr && (
+      {!matchNumber && (
         <div
           style={{
             whiteSpace: "nowrap",
@@ -191,6 +214,11 @@ export function MatchStatusBadge({
           }}
         >
           Not Started
+        </div>
+      )}
+      {matchNumber && (
+        <div style={{ ...mainTextStyle, color: "#64748b" }}>
+          Match {matchNumber}
         </div>
       )}
     </div>
