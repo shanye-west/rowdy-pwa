@@ -177,9 +177,10 @@ export function MatchStatusBadge({
         </div>
       )}
       {teeTimeStr && (
-        <div style={{ ...labelStyle, color: "#94a3b8" }}>
-          {teeTimeStr}
-        </div>
+        <>
+          <div style={{ ...labelStyle, color: "#94a3b8" }}>Tee Time</div>
+          <div style={{ ...mainTextStyle, color: "#64748b" }}>{teeTimeStr}</div>
+        </>
       )}
       {!matchNumber && !teeTimeStr && (
         <div
