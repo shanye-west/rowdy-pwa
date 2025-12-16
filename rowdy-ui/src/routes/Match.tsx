@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
@@ -119,8 +119,19 @@ export default function Match() {
   
   // STROKES INFO: Modal state for showing handicap info
   const [strokesInfoModal, setStrokesInfoModal] = useState(false);
-  // Definition modal for abbreviation explanations ("HI" | "CH" | "SO" | "SH")
-  const [defModal, setDefModal] = useState<string | null>(null);
+  // Tooltip state for small abbreviation definitions (key and screen coords)
+  const [defTooltip, setDefTooltip] = useState<{ key: string; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!strokesInfoModal) setDefTooltip(null);
+  }, [strokesInfoModal]);
+
+  const openDefTooltip = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    setDefTooltip({ key, x: rect.right, y: rect.top });
+  };
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -1290,32 +1301,7 @@ export default function Match() {
           )}
         </Modal>
 
-        {/* ABBREVIATION DEFINITION MODAL */}
-        <Modal
-          isOpen={!!defModal}
-          onClose={() => setDefModal(null)}
-          title={defModal ? defModal : "Definition"}
-          ariaLabel="Abbreviation definition"
-        >
-          {(() => {
-            if (!defModal) return null;
-            const defs: Record<string, string> = {
-              HI: "Handicap Index",
-              CH: "Course Handicap",
-              SO: "Matchplay Strokes",
-              SH: "Skins Strokes",
-            };
-            return (
-              <div className="py-2 text-sm text-slate-700">
-                <div className="font-semibold mb-2">{defModal}</div>
-                <div>{defs[defModal] ?? ""}</div>
-                <div className="mt-4">
-                  <button onClick={() => setDefModal(null)} className="py-2 px-3 bg-slate-100 rounded text-slate-700">Close</button>
-                </div>
-              </div>
-            );
-          })()}
-        </Modal>
+        {/* ABBREVIATION DEFINITION MODAL removed in favor of inline tooltip */}
 
         {/* DRIVE SELECTOR MODAL */}
         <Modal
@@ -1456,7 +1442,7 @@ export default function Match() {
                         <div className="flex items-center justify-center">
                           <span>H.I.</span>
                           <button
-                            onClick={() => setDefModal("HI")}
+                            onClick={(e) => openDefTooltip(e, "HI")}
                             aria-label="Define H.I."
                             className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
                           >
@@ -1472,7 +1458,7 @@ export default function Match() {
                         <div className="flex items-center justify-center">
                           <span>C.H.</span>
                           <button
-                            onClick={() => setDefModal("CH")}
+                            onClick={(e) => openDefTooltip(e, "CH")}
                             aria-label="Define C.H."
                             className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
                           >
@@ -1488,7 +1474,7 @@ export default function Match() {
                         <div className="flex items-center justify-center">
                           <span>S.O.</span>
                           <button
-                            onClick={() => setDefModal("SO")}
+                            onClick={(e) => openDefTooltip(e, "SO")}
                             aria-label="Define S.O."
                             className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
                           >
@@ -1504,7 +1490,7 @@ export default function Match() {
                         <div className="flex items-center justify-center">
                           <span>S.H.</span>
                           <button
-                            onClick={() => setDefModal("SH")}
+                            onClick={(e) => openDefTooltip(e, "SH")}
                             aria-label="Define S.H."
                             className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
                           >
@@ -1530,6 +1516,24 @@ export default function Match() {
                     ))}
                   </tbody>
                 </table>
+                {defTooltip && (() => {
+                  const defs: Record<string,string> = {
+                    HI: "Handicap Index",
+                    CH: "Course Handicap",
+                    SO: "Matchplay Strokes",
+                    SH: "Skins Strokes",
+                  };
+                  const text = defs[defTooltip.key] ?? "";
+                  const left = defTooltip.x + 8;
+                  const top = Math.max(8, defTooltip.y - 28);
+                  return (
+                    <div style={{ position: 'fixed', left, top, zIndex: 1200 }}>
+                      <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow">
+                        {text}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
