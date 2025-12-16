@@ -1348,11 +1348,14 @@ function calculateCourseHandicap(
   courseRating?: number,
   par: number = DEFAULT_COURSE_PAR
 ): number {
-  const slope = slopeRating || 113;
-  const rating = courseRating ?? par;
-  
-  const unrounded = (handicapIndex * (slope / 113)) + (rating - par);
-  return Math.round(unrounded);
+  const hiNum = (typeof handicapIndex === 'number') ? handicapIndex : Number(handicapIndex) || 0;
+  const slope = Number(slopeRating) || 113;
+  const parNum = Number(par) || DEFAULT_COURSE_PAR;
+  const rating = (typeof courseRating === 'number') ? courseRating : (Number(courseRating) || parNum);
+
+  const unrounded = (hiNum * (slope / 113)) + (rating - parNum);
+  const rounded = Math.round(unrounded);
+  return Number.isNaN(rounded) ? 0 : rounded;
 }
 
 /**
@@ -1437,7 +1440,7 @@ export const seedMatch = onCall(async (request) => {
 
   // Get course parameters for GHIN calculation
   const slopeRating = course.slope ?? 113;
-  const courseRating = course.rating;
+  const courseRating = (typeof course.rating === 'number') ? course.rating : (course.par ?? DEFAULT_COURSE_PAR);
   const coursePar = course.par ?? DEFAULT_COURSE_PAR;
 
   // Fetch tournament to get handicap indexes (fallback when caller doesn't provide them)
@@ -1592,7 +1595,7 @@ export const editMatch = onCall(async (request) => {
 
   // Get course parameters for GHIN calculation
   const slopeRating = course.slope ?? 113;
-  const courseRating = course.rating;
+  const courseRating = (typeof course.rating === 'number') ? course.rating : (course.par ?? DEFAULT_COURSE_PAR);
   const coursePar = course.par ?? DEFAULT_COURSE_PAR;
 
   // Fetch tournament to get handicap indexes (fallback when caller doesn't provide them)
@@ -1755,7 +1758,7 @@ export const recalculateMatchStrokes = onCall(async (request) => {
 
   // Get course parameters for GHIN calculation
   const slopeRating = course.slope ?? 113;
-  const courseRating = course.rating;
+  const courseRating = (typeof course.rating === 'number') ? course.rating : (course.par ?? DEFAULT_COURSE_PAR);
   const coursePar = course.par ?? DEFAULT_COURSE_PAR;
 
   // Get player IDs from match
