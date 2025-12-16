@@ -667,7 +667,7 @@ export default function Match() {
   type PlayerRowConfig = { 
     team: "A" | "B"; 
     pIdx: number; 
-    label: string; 
+    label: React.ReactNode; 
     color: string;
     onCellChange: (holeKey: string, value: number | null) => void;
     getCellValue: (holeKey: string) => number | "";
@@ -676,14 +676,50 @@ export default function Match() {
     getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
   };
   const playerRows: PlayerRowConfig[] = [];
+
+  // Helper to read full courseHandicap for a player from match.courseHandicaps
+  const getCourseHandicapFor = (team: "A" | "B", pIdx: number) => {
+    const aLen = match?.teamAPlayers?.length || 0;
+    if (!match?.courseHandicaps) return null;
+    if (team === "A") return match.courseHandicaps[pIdx];
+    return match.courseHandicaps[aLen + pIdx];
+  };
   
   if (isFourPlayerRows) {
     // 4 players: A1, A2, B1, B2 (Best Ball & Shamble)
     playerRows.push(
-      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
-      { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1 },
-      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
-      { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1 },
+      { team: "A", pIdx: 0, label: (
+          <>
+            <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
+            {getCourseHandicapFor("A", 0) != null && (
+              <span className="ml-1 text-[0.55rem] text-slate-400 font-normal">CH: {getCourseHandicapFor("A", 0)}</span>
+            )}
+          </>
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+      { team: "A", pIdx: 1, label: (
+          <>
+            <span>{getPlayerName(match.teamAPlayers?.[1]?.playerId)}</span>
+            {getCourseHandicapFor("A", 1) != null && (
+              <span className="ml-1 text-[0.55rem] text-slate-400 font-normal">CH: {getCourseHandicapFor("A", 1)}</span>
+            )}
+          </>
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1 },
+      { team: "B", pIdx: 0, label: (
+          <>
+            <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
+            {getCourseHandicapFor("B", 0) != null && (
+              <span className="ml-1 text-[0.55rem] text-slate-400 font-normal">CH: {getCourseHandicapFor("B", 0)}</span>
+            )}
+          </>
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+      { team: "B", pIdx: 1, label: (
+          <>
+            <span>{getPlayerName(match.teamBPlayers?.[1]?.playerId)}</span>
+            {getCourseHandicapFor("B", 1) != null && (
+              <span className="ml-1 text-[0.55rem] text-slate-400 font-normal">CH: {getCourseHandicapFor("B", 1)}</span>
+            )}
+          </>
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1 },
     );
   } else if (isTeamFormat) {
     // 2 rows with TEAM NAMES for scramble only
@@ -694,8 +730,22 @@ export default function Match() {
   } else {
     // 2 rows: Player A, Player B (singles)
     playerRows.push(
-      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
-      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+      { team: "A", pIdx: 0, label: (
+          <>
+            <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
+            {getCourseHandicapFor("A", 0) != null && (
+              <span className="ml-2 text-xs text-slate-500 font-normal">{getCourseHandicapFor("A", 0)}</span>
+            )}
+          </>
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+      { team: "B", pIdx: 0, label: (
+          <>
+            <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
+            {getCourseHandicapFor("B", 0) != null && (
+              <span className="ml-2 text-xs text-slate-500 font-normal">{getCourseHandicapFor("B", 0)}</span>
+            )}
+          </>
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
     );
   }
 

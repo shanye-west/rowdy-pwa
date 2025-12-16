@@ -1,4 +1,4 @@
-import { memo } from "react";
+import React, { memo } from "react";
 import { ScoreInputCell } from "./ScoreInputCell";
 import type { HoleInputLoose } from "../../types";
 
@@ -17,7 +17,7 @@ export interface PlayerScoreRowProps {
   /** Team key, kept for compatibility with callers */
   team?: "A" | "B";
   pIdx: number;
-  label: string;
+  label: React.ReactNode;
   color: string;
   holes: HoleData[];
   isLastOfTeam: boolean;
