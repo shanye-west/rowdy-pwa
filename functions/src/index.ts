@@ -1440,10 +1440,27 @@ export const seedMatch = onCall(async (request) => {
   const courseRating = course.rating;
   const coursePar = course.par ?? DEFAULT_COURSE_PAR;
 
-  // Calculate course handicap for each player using GHIN formula
+  // Fetch tournament to get handicap indexes (fallback when caller doesn't provide them)
+  const tournamentDoc = await db.collection("tournaments").doc(tournamentId).get();
+  const teamAHandicaps: Record<string, number> = {};
+  const teamBHandicaps: Record<string, number> = {};
+  if (tournamentDoc.exists) {
+    const t = ensureTournamentTeamColors(tournamentDoc.data()! as any) as any;
+    if (t.teamA?.handicapByPlayer) Object.assign(teamAHandicaps, t.teamA.handicapByPlayer);
+    if (t.teamB?.handicapByPlayer) Object.assign(teamBHandicaps, t.teamB.handicapByPlayer);
+  }
+
+  // Calculate course handicap for each player using GHIN formula. If the caller
+  // didn't provide a `handicapIndex`, fall back to the tournament's map.
   const allCourseHandicaps = [
-    ...teamAPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
-    ...teamBPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
+    ...teamAPlayers.map((p: any) => {
+      const hi = (p && typeof p.handicapIndex === 'number') ? p.handicapIndex : (teamAHandicaps[p.playerId] ?? teamBHandicaps[p.playerId] ?? 0);
+      return calculateCourseHandicap(hi, slopeRating, courseRating, coursePar);
+    }),
+    ...teamBPlayers.map((p: any) => {
+      const hi = (p && typeof p.handicapIndex === 'number') ? p.handicapIndex : (teamAHandicaps[p.playerId] ?? teamBHandicaps[p.playerId] ?? 0);
+      return calculateCourseHandicap(hi, slopeRating, courseRating, coursePar);
+    }),
   ];
 
   // "Spin down" from the lowest course handicap
@@ -1578,10 +1595,27 @@ export const editMatch = onCall(async (request) => {
   const courseRating = course.rating;
   const coursePar = course.par ?? DEFAULT_COURSE_PAR;
 
-  // Calculate course handicap for each player using GHIN formula
+  // Fetch tournament to get handicap indexes (fallback when caller doesn't provide them)
+  const tournamentDocEdit = await db.collection("tournaments").doc(tournamentId).get();
+  const teamAHandicapsEdit: Record<string, number> = {};
+  const teamBHandicapsEdit: Record<string, number> = {};
+  if (tournamentDocEdit.exists) {
+    const t = ensureTournamentTeamColors(tournamentDocEdit.data()! as any) as any;
+    if (t.teamA?.handicapByPlayer) Object.assign(teamAHandicapsEdit, t.teamA.handicapByPlayer);
+    if (t.teamB?.handicapByPlayer) Object.assign(teamBHandicapsEdit, t.teamB.handicapByPlayer);
+  }
+
+  // Calculate course handicap for each player using GHIN formula. If the caller
+  // didn't provide a `handicapIndex`, fall back to the tournament's map.
   const allCourseHandicaps = [
-    ...teamAPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
-    ...teamBPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
+    ...teamAPlayers.map((p: any) => {
+      const hi = (p && typeof p.handicapIndex === 'number') ? p.handicapIndex : (teamAHandicapsEdit[p.playerId] ?? teamBHandicapsEdit[p.playerId] ?? 0);
+      return calculateCourseHandicap(hi, slopeRating, courseRating, coursePar);
+    }),
+    ...teamBPlayers.map((p: any) => {
+      const hi = (p && typeof p.handicapIndex === 'number') ? p.handicapIndex : (teamAHandicapsEdit[p.playerId] ?? teamBHandicapsEdit[p.playerId] ?? 0);
+      return calculateCourseHandicap(hi, slopeRating, courseRating, coursePar);
+    }),
   ];
 
   // "Spin down" from the lowest course handicap

@@ -9,7 +9,6 @@ import type { TournamentDoc, RoundDoc, PlayerDoc } from "../types";
 
 type PlayerInput = {
   playerId: string;
-  handicapIndex: number;
 };
 
 export default function AddMatch() {
@@ -29,8 +28,8 @@ export default function AddMatch() {
   const [tournamentId, setTournamentId] = useState("");
   const [roundId, setRoundId] = useState("");
   const [matchId, setMatchId] = useState("");
-  const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
-  const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
+  const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
+  const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
 
   // Fetch tournaments and players on mount
   useEffect(() => {
@@ -274,21 +273,7 @@ export default function AddMatch() {
                     </select>
                   </div>
 
-                  <div className="w-32">
-                    <label className="block text-sm font-semibold mb-2">Handicap Index</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={playerInput.handicapIndex}
-                      onChange={(e) => {
-                        const updated = [...teamAPlayers];
-                        updated[idx].handicapIndex = parseFloat(e.target.value) || 0;
-                        setTeamAPlayers(updated);
-                      }}
-                      className="w-full p-3 border border-gray-300 rounded-lg"
-                      required
-                    />
-                  </div>
+                  {/* handicapIndex is now derived from tournament.handicapByPlayer */}
 
                   {idx > 0 && (
                     <button
@@ -304,7 +289,7 @@ export default function AddMatch() {
 
               <button
                 type="button"
-                onClick={() => setTeamAPlayers([...teamAPlayers, { playerId: "", handicapIndex: 0 }])}
+                onClick={() => setTeamAPlayers([...teamAPlayers, { playerId: "" }])}
                 className="text-sm text-blue-600 hover:underline"
               >
                 + Add another {selectedTournament.teamA?.name || "Team A"} player
@@ -342,21 +327,7 @@ export default function AddMatch() {
                     </select>
                   </div>
 
-                  <div className="w-32">
-                    <label className="block text-sm font-semibold mb-2">Handicap Index</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={playerInput.handicapIndex}
-                      onChange={(e) => {
-                        const updated = [...teamBPlayers];
-                        updated[idx].handicapIndex = parseFloat(e.target.value) || 0;
-                        setTeamBPlayers(updated);
-                      }}
-                      className="w-full p-3 border border-gray-300 rounded-lg"
-                      required
-                    />
-                  </div>
+                  {/* handicapIndex is now derived from tournament.handicapByPlayer */}
 
                   {idx > 0 && (
                     <button
@@ -372,7 +343,7 @@ export default function AddMatch() {
 
               <button
                 type="button"
-                onClick={() => setTeamBPlayers([...teamBPlayers, { playerId: "", handicapIndex: 0 }])}
+                onClick={() => setTeamBPlayers([...teamBPlayers, { playerId: "" }])}
                 className="text-sm text-blue-600 hover:underline"
               >
                 + Add another {selectedTournament.teamB?.name || "Team B"} player
