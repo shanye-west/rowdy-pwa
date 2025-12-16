@@ -116,6 +116,9 @@ export default function Match() {
     margin: number;
     thru: number;
   } | null>(null);
+  
+  // STROKES INFO: Modal state for showing handicap info
+  const [strokesInfoModal, setStrokesInfoModal] = useState(false);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -766,6 +769,15 @@ export default function Match() {
         <div className="space-y-3">
           {/* Top row: centered format pill with auth status on the right */}
           <div className="relative">
+            {/* Strokes Info button - positioned to the left */}
+            <button
+              onClick={() => setStrokesInfoModal(true)}
+              className="absolute left-0 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
+            >
+              Strokes Info
+            </button>
+            
             <div className="flex justify-center">
               <div 
                 className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
@@ -1344,6 +1356,103 @@ export default function Match() {
                   Cancel
                 </button>
               </>
+            );
+          })()}
+        </Modal>
+
+        {/* STROKES INFO MODAL */}
+        <Modal
+          isOpen={strokesInfoModal}
+          onClose={() => setStrokesInfoModal(false)}
+          title="Handicap Information"
+          ariaLabel="Handicap information for match players"
+        >
+          {(() => {
+            // Helper to get handicap index for a player
+            const getHandicapIndex = (playerId: string): number | null => {
+              return tournament?.teamA?.handicapByPlayer?.[playerId] ?? 
+                     tournament?.teamB?.handicapByPlayer?.[playerId] ?? 
+                     null;
+            };
+
+            // Helper to calculate skins strokes for a player
+            const calculateSkinsStrokesCount = (playerId: string): number => {
+              if (!course || !round) return 0;
+              const handicapIndex = getHandicapIndex(playerId);
+              if (handicapIndex == null) return 0;
+              
+              const skinsPercent = round.skinsHandicapPercent ?? 100;
+              const courseHandicap = (handicapIndex * ((course.slope || 113) / 113)) + ((course.rating || 72) - (course.par || 72));
+              const adjustedHandicap = courseHandicap * (skinsPercent / 100);
+              return Math.round(adjustedHandicap);
+            };
+
+            // Build player rows
+            const playerRows: Array<{
+              name: string;
+              hi: number | null;
+              ch: number | null;
+              so: number;
+              sh: number;
+            }> = [];
+
+            // Team A players
+            match.teamAPlayers?.forEach((p, idx) => {
+              const handicapIndex = getHandicapIndex(p.playerId);
+              const courseHandicap = getCourseHandicapFor("A", idx);
+              const strokesOff = p.strokesReceived?.reduce((sum, s) => sum + s, 0) ?? 0;
+              const skinsHandicap = calculateSkinsStrokesCount(p.playerId);
+              
+              playerRows.push({
+                name: getPlayerName(p.playerId),
+                hi: handicapIndex,
+                ch: courseHandicap,
+                so: strokesOff,
+                sh: skinsHandicap,
+              });
+            });
+
+            // Team B players
+            match.teamBPlayers?.forEach((p, idx) => {
+              const handicapIndex = getHandicapIndex(p.playerId);
+              const courseHandicap = getCourseHandicapFor("B", idx);
+              const strokesOff = p.strokesReceived?.reduce((sum, s) => sum + s, 0) ?? 0;
+              const skinsHandicap = calculateSkinsStrokesCount(p.playerId);
+              
+              playerRows.push({
+                name: getPlayerName(p.playerId),
+                hi: handicapIndex,
+                ch: courseHandicap,
+                so: strokesOff,
+                sh: skinsHandicap,
+              });
+            });
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">H.I.</th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">C.H.</th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">S.O.</th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">S.H.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playerRows.map((row, i) => (
+                      <tr key={i} className="border-b border-slate-100">
+                        <td className="py-2 px-2 text-slate-800">{row.name}</td>
+                        <td className="py-2 px-2 text-center text-slate-600">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
+                        <td className="py-2 px-2 text-center text-slate-600">{row.ch != null ? row.ch : "—"}</td>
+                        <td className="py-2 px-2 text-center text-slate-600">{row.so}</td>
+                        <td className="py-2 px-2 text-center text-slate-600">{row.sh}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             );
           })()}
         </Modal>
