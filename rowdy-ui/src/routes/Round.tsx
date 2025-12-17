@@ -8,6 +8,7 @@ import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
+import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
 import { RoundPageSkeleton } from "../components/Skeleton";
 
 function RoundComponent() {
@@ -203,44 +204,58 @@ function RoundComponent() {
                   role="listitem"
                   aria-label={`Match: ${teamANames} vs ${teamBNames}`}
                   style={{ 
-                    display: "grid", 
-                    gridTemplateColumns: "1fr auto 1fr",
-                    gap: 12,
-                    alignItems: "center",
+                    display: "flex",
+                    flexDirection: "column",
                     ...bgStyle,
                     ...borderStyle,
                   }}
                 >
-                  {/* Left: Team A Players */}
-                  <div className={`text-left text-sm leading-tight ${textColor}`}>
-                    {(m.teamAPlayers || []).map((p, i) => (
-                        <div key={i} className="font-semibold">
-                            {getPlayerShortName(p.playerId)}
-                        </div>
-                    ))}
+                  {/* Top Row: Players and Status */}
+                  <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "1fr auto 1fr",
+                    gap: 12,
+                    alignItems: "center",
+                  }}>
+                    {/* Left: Team A Players */}
+                    <div className={`text-left text-sm leading-tight ${textColor}`}>
+                      {(m.teamAPlayers || []).map((p, i) => (
+                          <div key={i} className="font-semibold">
+                              {getPlayerShortName(p.playerId)}
+                          </div>
+                      ))}
+                    </div>
+
+                    {/* Center: Status */}
+                    <MatchStatusBadge
+                      status={m.status}
+                      result={m.result}
+                      teamAColor={teamAColor}
+                      teamBColor={teamBColor}
+                      teamAName={tournament?.teamA?.name}
+                      teamBName={tournament?.teamB?.name}
+                      matchNumber={m.matchNumber}
+                      teeTime={m.teeTimeLocalIso ?? m.teeTime}
+                      showTeeLabel={false}
+                    />
+
+                    {/* Right: Team B Players */}
+                    <div className={`text-right text-sm leading-tight ${textColor}`}>
+                      {(m.teamBPlayers || []).map((p, i) => (
+                          <div key={i} className="font-semibold">
+                              {getPlayerShortName(p.playerId)}
+                          </div>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Center: Status */}
-                  <MatchStatusBadge
-                    status={m.status}
-                    result={m.result}
+                  {/* Bottom Row: Hole-by-Hole Tracker */}
+                  <HoleByHoleTracker
+                    match={m}
+                    format={round?.format || null}
                     teamAColor={teamAColor}
                     teamBColor={teamBColor}
-                    teamAName={tournament?.teamA?.name}
-                    teamBName={tournament?.teamB?.name}
-                    matchNumber={m.matchNumber}
-                    teeTime={m.teeTimeLocalIso ?? m.teeTime}
-                    showTeeLabel={false}
                   />
-
-                  {/* Right: Team B Players */}
-                  <div className={`text-right text-sm leading-tight ${textColor}`}>
-                    {(m.teamBPlayers || []).map((p, i) => (
-                        <div key={i} className="font-semibold">
-                            {getPlayerShortName(p.playerId)}
-                        </div>
-                    ))}
-                  </div>
                 </Link>
               );
             })
