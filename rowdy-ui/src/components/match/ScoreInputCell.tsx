@@ -54,6 +54,11 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   // Number of circles: 1 for birdie (1 under), 2 for eagle (2 under), etc.
   const circleCount = underPar > 0 ? underPar : 0;
   
+  // Calculate how many over par (for bogeys and worse)
+  const overPar = typeof value === 'number' && par ? value - par : 0;
+  // Number of squares: 1 for bogey (1 over), 2 for double bogey (2 over), etc.
+  const squareCount = overPar > 0 ? overPar : 0;
+  
   // Handle cell tap to open picker
   const handleCellClick = useCallback(() => {
     if (!locked) {
@@ -137,28 +142,59 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           {circleCount >= 2 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '38px', height: '38px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 3 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '42px', height: '42px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 4 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '46px', height: '46px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
           <div
             className="absolute rounded-full"
-            style={{ width: '34px', height: '34px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
           />
         </div>
       )}
+      
+      {/* Bogey/Double Bogey squares - centered over input */}
+      {squareCount > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Outer squares for double bogey+ (2+ over par) */}
+          {squareCount >= 2 && (
+            <div
+              className="absolute"
+              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+            />
+          )}
+          {squareCount >= 3 && (
+            <div
+              className="absolute"
+              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+            />
+          )}
+          {squareCount >= 4 && (
+            <div
+              className="absolute"
+              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+            />
+          )}
+          {/* Inner square for bogey (always shown when over par) */}
+          <div
+            className="absolute"
+            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+          />
+        </div>
+      )}
+      
       {hasStroke && (
         <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
       )}
