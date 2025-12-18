@@ -192,9 +192,8 @@ function RoundComponent() {
                 teamBColor
               );
 
-              // Build player names for aria-label
-              const teamANames = (m.teamAPlayers || []).map(p => getPlayerShortName(p.playerId)).join(", ");
-              const teamBNames = (m.teamBPlayers || []).map(p => getPlayerShortName(p.playerId)).join(", ");
+              const teamANames = (m.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
+              const teamBNames = (m.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
 
               return (
                 <div key={m.id} role="listitem" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -209,23 +208,13 @@ function RoundComponent() {
                       ...borderStyle,
                     }}
                   >
-                    {/* Top Row: Players and Status */}
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto 1fr",
-                      gap: 12,
-                      alignItems: "center",
-                    }}>
-                      {/* Left: Team A Players */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center" }}>
                       <div className={`text-left text-sm leading-tight ${textColor}`}>
                         {(m.teamAPlayers || []).map((p, i) => (
-                          <div key={i} className="font-semibold">
-                            {getPlayerShortName(p.playerId)}
-                          </div>
+                          <div key={i} className="font-semibold">{getPlayerShortName(p.playerId)}</div>
                         ))}
                       </div>
 
-                      {/* Center: Status */}
                       <MatchStatusBadge
                         status={m.status}
                         result={m.result}
@@ -238,18 +227,15 @@ function RoundComponent() {
                         showTeeLabel={false}
                       />
 
-                      {/* Right: Team B Players */}
                       <div className={`text-right text-sm leading-tight ${textColor}`}>
                         {(m.teamBPlayers || []).map((p, i) => (
-                          <div key={i} className="font-semibold">
-                            {getPlayerShortName(p.playerId)}
-                          </div>
+                          <div key={i} className="font-semibold">{getPlayerShortName(p.playerId)}</div>
                         ))}
                       </div>
                     </div>
                   </Link>
 
-                  {/* Hole-by-Hole Tracker rendered below the card to avoid being filled by card background */}
+                  {/* Hole-by-Hole Tracker always rendered below the card */}
                   <div style={{ paddingLeft: 2, paddingRight: 2, marginTop: -10 }}>
                     <HoleByHoleTracker
                       match={m}
