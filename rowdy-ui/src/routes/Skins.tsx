@@ -97,6 +97,21 @@ function SkinsComponent() {
   ).length;
   const valuePerSkin = skinsWon > 0 ? (totalPot ?? 0) / skinsWon : 0;
 
+  // Helper to convert numeric score to label (Eagle/Birdie/Par/Bogey/etc.)
+  const scoreLabel = (score: number | null, parVal: number) => {
+    if (score === null) return "";
+    const diff = score - parVal;
+    if (diff === 0) return "Par";
+    if (diff === -1) return "Birdie";
+    if (diff === -2) return "Eagle";
+    if (diff === -3) return "Albatross";
+    if (diff === 1) return "Bogey";
+    if (diff === 2) return "Double Bogey";
+    if (diff === 3) return "Triple Bogey";
+    if (diff < -3) return `${Math.abs(diff)} under par`;
+    return `${diff} over par`;
+  };
+
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div style={{ padding: 16, display: "grid", gap: 20 }}>
@@ -231,24 +246,13 @@ function SkinsComponent() {
           </h2>
 
           <div style={{ display: "grid", gap: 10 }}>
+            {/* Helper to convert numeric score to label (Eagle/Birdie/Par/Bogey/etc.) */}
+            {false && null}
             {holeSkinsData.map(hole => {
               const isExpanded = expandedHole === hole.holeNumber;
               const winner = selectedTab === "gross" ? hole.grossWinner : hole.netWinner;
               const lowScore = selectedTab === "gross" ? hole.grossLowScore : hole.netLowScore;
               const par = hole.par;
-              const scoreLabel = (score: number | null, parVal: number) => {
-                if (score === null) return "";
-                const diff = score - parVal;
-                if (diff === 0) return "Par";
-                if (diff === -1) return "Birdie";
-                if (diff === -2) return "Eagle";
-                if (diff === -3) return "Albatross";
-                if (diff === 1) return "Bogey";
-                if (diff === 2) return "Double Bogey";
-                if (diff === 3) return "Triple Bogey";
-                if (diff < -3) return `${Math.abs(diff)} under par`;
-                return `${diff} over par`;
-              };
               const tiedCount = selectedTab === "gross" ? hole.grossTiedCount : hole.netTiedCount;
               
               let winnerText = "—";
@@ -392,7 +396,7 @@ function SkinsComponent() {
                                   color: displayScore === null ? "#cbd5e1" : "#1e293b"
                                 }}>
                                   {displayScore !== null ? (
-                                    displayScore
+                                    scoreLabel(displayScore, hole.par)
                                   ) : (
                                     // If player hasn't started (thru === 0), show tee time when available
                                     score.playerThru === 0 && score.playerTeeTime
