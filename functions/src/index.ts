@@ -20,6 +20,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import type { RoundFormat } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateCourseHandicap, calculateStrokesReceived } from "./ghin.js";
+import { checkRateLimit } from "./rateLimit.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
   playersPerSide, 
@@ -209,7 +210,11 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
     ...Object.keys(after).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k])),
     ...Object.keys(before).filter(k => after[k] === undefined)
   ];
-  if (changed.every(k => ["status", "result", "_computeSig"].includes(k))) return;
+  if (changed.every(k => ["status", "result", "_computeSig", "_lastComputed"].includes(k))) return;
+  
+  // Compute signature from holes data to detect actual changes
+  const holesSig = JSON.stringify(after.holes || {});
+  if (after._computeSig === holesSig) return;
 
   const roundId = after.roundId;
   if (!roundId) return;
@@ -223,7 +228,14 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   if (JSON.stringify(before.status) === JSON.stringify(status) && 
       JSON.stringify(before.result) === JSON.stringify(result)) return;
 
-  await event.data!.after.ref.set({ status, result }, { merge: true });
+  // Store computation signature and context for updateMatchFacts to avoid re-fetching
+  const roundData = rSnap.data();
+  await event.data!.after.ref.set({ 
+    status, 
+    result, 
+    _computeSig: holesSig,
+    _lastComputed: { format, roundId, courseId: roundData?.courseId },
+  }, { merge: true });
 });
 
 // ============================================================================
@@ -238,21 +250,27 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const tId = after?.tournamentId || "";
   const rId = after?.roundId || "";
   
-  // Fetch round to check if locked and to get other context
+  // Try to reuse context from computeMatchOnWrite to avoid redundant fetch
   let roundLocked = false;
-  let format: RoundFormat = "twoManBestBall";
+  let format: RoundFormat = (after?._lastComputed?.format as RoundFormat) || "twoManBestBall";
   let points = 1;
-  let courseId = "";
+  let courseId = after?._lastComputed?.courseId || "";
   let day = 0;
   
+  // Only fetch round if we don't have cached context or need to check locked status
   if (rId) {
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) {
       const rData = rSnap.data();
       roundLocked = rData?.locked === true;
-      format = (rData?.format as RoundFormat) || "twoManBestBall";
+      // Use cached format if available, otherwise fetch
+      if (!after?._lastComputed?.format) {
+        format = (rData?.format as RoundFormat) || "twoManBestBall";
+      }
       points = rData?.pointsValue ?? 1;
-      courseId = rData?.courseId || "";
+      if (!courseId) {
+        courseId = rData?.courseId || "";
+      }
       day = rData?.day ?? 0;
     }
   }
@@ -315,22 +333,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let teamBCaptainId: string | null = null;
   let teamBCoCaptainId: string | null = null;
 
-  // Re-fetch Round context for remaining fields (we already have format, points, courseId, day)
-  if (rId) {
-    const rSnap = await db.collection("rounds").doc(rId).get();
-    if (rSnap.exists) {
-      const rData = rSnap.data();
-      
-      if (rData?.course?.holes && Array.isArray(rData.course.holes)) {
-        coursePar = rData.course.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
-      }
-    }
-  }
-  
-  // Re-compute status/result to ensure we have latest calculations
-  // (avoids race condition with computeMatchOnWrite)
-  const matchSummary = summarize(format, after);
-  const { status, result } = buildStatusAndResult(matchSummary);
+  // Use pre-computed status/result from match document (computed by computeMatchOnWrite)
+  // This avoids redundant computation and race conditions
+  const status = after?.status || { leader: null, margin: 0, thru: 0, dormie: false, closed: false };
+  const result = after?.result || {};
   
   if (courseId) {
     const cSnap = await db.collection("courses").doc(courseId).get();
@@ -1354,6 +1360,15 @@ export const seedMatch = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Must be logged in");
   }
 
+  // Rate limiting check
+  const rateLimit = checkRateLimit(uid, "seedMatch", { maxCalls: 20, windowSeconds: 60 });
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
+  }
+
   // Verify admin status
   const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
   if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
@@ -1475,6 +1490,17 @@ export const seedMatch = onCall(async (request) => {
     matchNumberToUse = candidate;
   }
 
+  // Fetch player auth UIDs for security rules optimization
+  const allPlayerIds = [...teamAPlayers, ...teamBPlayers].map((p: any) => p.playerId);
+  const authorizedUids: string[] = [];
+  for (const playerId of allPlayerIds) {
+    const pSnap = await db.collection("players").doc(playerId).get();
+    if (pSnap.exists) {
+      const authUid = pSnap.data()?.authUid;
+      if (authUid) authorizedUids.push(authUid);
+    }
+  }
+
   const matchDoc: any = {
     id,
     tournamentId,
@@ -1485,6 +1511,7 @@ export const seedMatch = onCall(async (request) => {
     teamAPlayers: teamAPlayersWithStrokes,
     teamBPlayers: teamBPlayersWithStrokes,
     courseHandicaps,
+    authorizedUids,  // Store UIDs directly for efficient security rules
     holes: {},
     status: {
       leader: null,
@@ -1518,6 +1545,15 @@ export const editMatch = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Rate limiting check
+  const rateLimit = checkRateLimit(uid, "editMatch", { maxCalls: 30, windowSeconds: 60 });
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
   }
 
   // Verify admin status
@@ -1668,6 +1704,15 @@ export const recalculateMatchStrokes = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Rate limiting check
+  const rateLimit = checkRateLimit(uid, "recalculateMatchStrokes", { maxCalls: 10, windowSeconds: 60 });
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
   }
 
   // Verify admin status

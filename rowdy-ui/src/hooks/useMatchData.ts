@@ -98,7 +98,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => unsub();
   }, [matchId]);
 
-  // 2. Listen to ROUND and fetch Tournament/Course
+  // 2. Listen to ROUND and fetch Tournament/Course in parallel
   useEffect(() => {
     if (!match?.roundId) return;
     
@@ -111,21 +111,40 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         setRound(rData);
         
         try {
-          // Fetch tournament (one-time)
-            if (rData.tournamentId) {
-            const tSnap = await getDoc(doc(db, "tournaments", rData.tournamentId));
-            if (tSnap.exists()) {
-              setTournament(ensureTournamentTeamColors({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc));
-            }
+          // Fetch tournament and course in parallel to avoid N+1 pattern
+          const promises: Promise<any>[] = [];
+          
+          if (rData.tournamentId) {
+            promises.push(
+              getDoc(doc(db, "tournaments", rData.tournamentId)).then(tSnap => {
+                if (tSnap.exists()) {
+                  setTournament(ensureTournamentTeamColors({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc));
+                }
+              })
+            );
           }
           
-          // Fetch course (one-time)
           if (rData.courseId) {
-            const cSnap = await getDoc(doc(db, "courses", rData.courseId));
-            if (cSnap.exists()) {
-              setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
-            }
+            promises.push(
+              getDoc(doc(db, "courses", rData.courseId)).then(cSnap => {
+                if (cSnap.exists()) {
+                  setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
+                }
+              })
+            );
           }
+          
+          // Also fetch match facts in parallel if match is closed
+          if (match?.status?.closed) {
+            promises.push(
+              getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", match.id))).then(snap => {
+                const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
+                setMatchFacts(facts);
+              })
+            );
+          }
+          
+          await Promise.all(promises);
         } catch (err: any) {
           setError(`Failed to load round details: ${err.message}`);
         }
@@ -136,32 +155,15 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     );
     
     return () => unsub();
-  }, [match?.roundId]);
+  }, [match?.roundId, match?.status?.closed]);
 
-  // 3. Fetch playerMatchFacts when match is closed
+  // 3. Match facts now fetched in parallel with tournament/course above
+  // This effect clears facts when match is not closed
   useEffect(() => {
-    if (!matchId || !match?.status?.closed) {
+    if (!match?.status?.closed) {
       setMatchFacts([]);
-      return;
     }
-    
-    const fetchFacts = async () => {
-      try {
-        const q = query(
-          collection(db, "playerMatchFacts"),
-          where("matchId", "==", matchId)
-        );
-        const snap = await getDocs(q);
-        const facts: PlayerMatchFact[] = [];
-        snap.forEach(d => facts.push({ ...d.data() } as PlayerMatchFact));
-        setMatchFacts(facts);
-      } catch (err: any) {
-        setError(`Failed to load match facts: ${err.message}`);
-      }
-    };
-    
-    fetchFacts();
-  }, [matchId, match?.status?.closed]);
+  }, [match?.status?.closed]);
 
   return {
     match,

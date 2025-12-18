@@ -15,7 +15,7 @@ export default defineConfig({
         "images/rowdycup-logo.svg",
         "images/stocking-stuffers.svg",
       ],
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       devOptions: {
         enabled: true // Enables PWA in local dev (npm run dev)
       },

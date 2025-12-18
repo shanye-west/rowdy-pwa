@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, MatchDoc, CourseDoc, PlayerDoc, TournamentDoc, HoleInfo } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
@@ -129,22 +129,51 @@ export function useSkinsData(roundId: string | undefined) {
     return () => unsub();
   }, [roundId]);
 
-  // Subscribe to all players (simplified: subscribe to entire collection)
+  // Subscribe only to players in this round's matches (not entire collection)
   useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "players"),
-      (snap) => {
-        const pMap: Record<string, PlayerDoc> = {};
-        snap.docs.forEach(d => {
+    if (matches.length === 0) {
+      setPlayers({});
+      setLoading(false);
+      return;
+    }
+
+    // Extract unique player IDs from all matches
+    const playerIds = Array.from(new Set(
+      matches.flatMap(m => [
+        ...(m.teamAPlayers || []).map(p => p.playerId),
+        ...(m.teamBPlayers || []).map(p => p.playerId),
+      ]).filter(Boolean)
+    ));
+
+    if (playerIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // Firestore 'in' queries limited to 30 items, so batch if needed
+    const fetchPlayers = async () => {
+      const batches: string[][] = [];
+      for (let i = 0; i < playerIds.length; i += 30) {
+        batches.push(playerIds.slice(i, i + 30));
+      }
+
+      const pMap: Record<string, PlayerDoc> = {};
+      for (const batch of batches) {
+        const q = query(collection(db, "players"), where("__name__", "in", batch));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
           pMap[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
         });
-        setPlayers(pMap);
-        setLoading(false);
       }
-    );
+      setPlayers(pMap);
+      setLoading(false);
+    };
 
-    return () => unsub();
-  }, []);
+    fetchPlayers().catch(err => {
+      console.error("Error loading players:", err);
+      setLoading(false);
+    });
+  }, [matches]);
 
   // Check if skins are enabled and format is valid
   const skinsEnabled = useMemo(() => {
