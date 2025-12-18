@@ -75,11 +75,11 @@ export function HoleByHoleTracker({
     if (afterClose) {
       return {
         ...baseStyle,
-        backgroundColor: "#eef2f7",
+        backgroundColor: "transparent",
         color: "#64748b",
-        border: "1px solid #cbd5e1",
+        border: "1px dashed #cbd5e1",
         backgroundImage:
-          "repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0 4px, transparent 4px 8px)",
+          "repeating-linear-gradient(135deg, rgba(0,0,0,0.06) 0 6px, transparent 6px 12px)",
       };
     }
 
@@ -130,9 +130,25 @@ export function HoleByHoleTracker({
     padding: "2px 0",
     width: "100%",
   };
+  // Determine which holes to display:
+  // - If match is closed: show holes 1..closingThru as played (or as existing), then render remaining holes (closingThru+1..18)
+  //   as the dotted/diagonal placeholder.
+  // - If match is not closed: only show holes that have been played.
+  const isClosed = !!match?.status?.closed;
+  let displayHoles = [] as Array<{ holeNum: number; winner: "teamA" | "teamB" | "AS" | null; played: boolean; afterClose: boolean }>;
+
+  if (isClosed) {
+    const closing = closingThru ?? Math.max(0, ...holesArray.filter((h) => h.played).map((h) => h.holeNum));
+    const played = holesArray.slice(0, closing);
+    const remaining = holesArray.slice(closing).map((h) => ({ ...h, afterClose: true, played: false }));
+    displayHoles = [...played, ...remaining];
+  } else {
+    displayHoles = holesArray.filter((h) => h.played);
+  }
+
   return (
     <div style={containerStyle} aria-label="Hole-by-hole results">
-      {holesArray.map((r) => (
+      {displayHoles.map((r) => (
         <div
           key={r.holeNum}
           style={holeStyle(r.winner, r.afterClose)}
