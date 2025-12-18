@@ -11,7 +11,8 @@ interface HoleByHoleTrackerProps {
 /**
  * Visual tracker showing hole-by-hole results for a match.
  * Renders 18 holes with circles indicating winner (team color) or halved (grey).
- * Only shows on Round page match tiles.
+ * After a match closes early, holes beyond the closing hole are shown shaded with a
+ * diagonal pattern and are not considered for wins/losses.
  */
 export function HoleByHoleTracker({
   match,
@@ -19,48 +20,44 @@ export function HoleByHoleTracker({
   teamAColor,
   teamBColor,
 }: HoleByHoleTrackerProps) {
-  // Get hole results for all 18 holes
-  const holeResults = Array.from({ length: 18 }, (_, idx) => {
+  // If a match closed early, `status.thru` tells how many holes were completed.
+  // Ignore any inputs beyond that hole so tiles don't change after close.
+  const closingThru: number | null = match?.status?.closed ? (match.status.thru || null) : null;
+
+  // Build metadata for all 18 holes.
+  const holesArray = Array.from({ length: 18 }, (_, idx) => {
     const holeNum = idx + 1;
     const holeData = match.holes?.[String(holeNum)];
-    
-    if (!holeData?.input) return null;
-    
-    // Check if hole has been played (has any input)
-    const input = holeData.input;
+
+    const afterClose = closingThru != null && holeNum > closingThru;
+
+    // Consider a hole played only if it's not after close and input exists.
     let hasScore = false;
-    
-    if (format === "singles") {
-      hasScore = input.teamAPlayerGross != null || input.teamBPlayerGross != null;
-    } else if (format === "twoManScramble" || format === "fourManScramble") {
-      hasScore = input.teamAGross != null || input.teamBGross != null;
-    } else if (format === "twoManBestBall" || format === "twoManShamble") {
-      const aArr = input.teamAPlayersGross;
-      const bArr = input.teamBPlayersGross;
-      hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
-                 (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+    if (!afterClose && holeData?.input) {
+      const input = holeData.input;
+      if (format === "singles") {
+        hasScore = input.teamAPlayerGross != null || input.teamBPlayerGross != null;
+      } else if (format === "twoManScramble" || format === "fourManScramble") {
+        hasScore = input.teamAGross != null || input.teamBGross != null;
+      } else if (format === "twoManBestBall" || format === "twoManShamble") {
+        const aArr = input.teamAPlayersGross;
+        const bArr = input.teamBPlayersGross;
+        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+      }
     }
-    
-    if (!hasScore) return null;
-    
-    // Determine hole winner (simplified - could import full logic from match scoring)
-    return { holeNum, winner: getHoleWinner(match, format, holeNum) };
+
+    const winner = hasScore ? getHoleWinner(match, format, holeNum) : null;
+    return { holeNum, winner, played: hasScore, afterClose };
   });
 
-  
-
-  // Only render holes that have been completed
-  const played = holeResults.filter(Boolean) as { holeNum: number; winner: "teamA" | "teamB" | "AS" | null }[];
-
-  if (played.length === 0) return null;
-
-  // If all 18 holes are shown, size them to fit the container; otherwise use a compact fixed size
-  const showAll = played.length === 18;
+  // Always render all 18 holes on the round page tiles.
+  const showAll = true;
   const totalGap = 17 * 2; // 2px gap
   const perHoleCalc = `calc((100% - ${totalGap}px) / 18)`;
   const fixedSize = "22px";
 
-  const holeStyle = (result: "teamA" | "teamB" | "AS" | null): CSSProperties => {
+  const holeStyle = (winner: "teamA" | "teamB" | "AS" | null, afterClose: boolean): CSSProperties => {
     const baseStyle: CSSProperties = {
       width: showAll ? perHoleCalc : fixedSize,
       height: showAll ? perHoleCalc : fixedSize,
@@ -75,21 +72,36 @@ export function HoleByHoleTracker({
       transition: "all 0.12s ease",
     };
 
-    if (result === "teamA") {
+    if (afterClose) {
+      return {
+        ...baseStyle,
+        backgroundColor: "#eef2f7",
+        color: "#64748b",
+        border: "1px solid #cbd5e1",
+        backgroundImage:
+          "repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0 4px, transparent 4px 8px)",
+      };
+    }
+
+    if (winner === "teamA") {
       return {
         ...baseStyle,
         backgroundColor: teamAColor,
         color: "white",
         border: `2px solid ${teamAColor}`,
       };
-    } else if (result === "teamB") {
+    }
+
+    if (winner === "teamB") {
       return {
         ...baseStyle,
         backgroundColor: teamBColor,
         color: "white",
         border: `2px solid ${teamBColor}`,
       };
-    } else if (result === "AS") {
+    }
+
+    if (winner === "AS") {
       return {
         ...baseStyle,
         backgroundColor: "#94a3b8",
@@ -98,12 +110,12 @@ export function HoleByHoleTracker({
       };
     }
 
-    // Fallback
+    // Not played yet
     return {
       ...baseStyle,
       backgroundColor: "transparent",
       color: "#94a3b8",
-      border: "none",
+      border: "1px dashed #cbd5e1",
     };
   };
 
@@ -118,14 +130,19 @@ export function HoleByHoleTracker({
     padding: "2px 0",
     width: "100%",
   };
-
   return (
     <div style={containerStyle} aria-label="Hole-by-hole results">
-      {played.map((r) => (
+      {holesArray.map((r) => (
         <div
           key={r.holeNum}
-          style={holeStyle(r.winner)}
-          aria-label={r.winner ? `Hole ${r.holeNum}: ${r.winner === "AS" ? "Halved" : r.winner === "teamA" ? "Team A" : "Team B"}` : `Hole ${r.holeNum}: Not played`}
+          style={holeStyle(r.winner, r.afterClose)}
+          aria-label={
+            r.afterClose
+              ? `Hole ${r.holeNum}: Not played (match closed)`
+              : r.winner
+              ? `Hole ${r.holeNum}: ${r.winner === "AS" ? "Halved" : r.winner === "teamA" ? "Team A" : "Team B"}`
+              : `Hole ${r.holeNum}: Not played`
+          }
         >
           {r.holeNum}
         </div>
