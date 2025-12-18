@@ -175,7 +175,7 @@ function RoundComponent() {
         </section>
 
         {/* MATCH CARDS */}
-        <section style={{ display: "grid", gap: 12 }} role="list" aria-label="Matches">
+        <section style={{ display: "grid", gap: 20 }} role="list" aria-label="Matches">
           {matches.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">📋</div>
@@ -197,66 +197,68 @@ function RoundComponent() {
               const teamBNames = (m.teamBPlayers || []).map(p => getPlayerShortName(p.playerId)).join(", ");
 
               return (
-                <Link 
-                  key={m.id} 
-                  to={`/match/${m.id}`} 
-                  className="card card-hover"
-                  role="listitem"
-                  aria-label={`Match: ${teamANames} vs ${teamBNames}`}
-                  style={{ 
-                    display: "flex",
-                    flexDirection: "column",
-                    ...bgStyle,
-                    ...borderStyle,
-                  }}
-                >
-                  {/* Top Row: Players and Status */}
-                  <div style={{ 
-                    display: "grid", 
-                    gridTemplateColumns: "1fr auto 1fr",
-                    gap: 12,
-                    alignItems: "center",
-                  }}>
-                    {/* Left: Team A Players */}
-                    <div className={`text-left text-sm leading-tight ${textColor}`}>
-                      {(m.teamAPlayers || []).map((p, i) => (
+                <div key={m.id} role="listitem" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  <Link
+                    to={`/match/${m.id}`}
+                    className="card card-hover"
+                    aria-label={`Match: ${teamANames} vs ${teamBNames}`}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      ...bgStyle,
+                      ...borderStyle,
+                    }}
+                  >
+                    {/* Top Row: Players and Status */}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto 1fr",
+                      gap: 12,
+                      alignItems: "center",
+                    }}>
+                      {/* Left: Team A Players */}
+                      <div className={`text-left text-sm leading-tight ${textColor}`}>
+                        {(m.teamAPlayers || []).map((p, i) => (
                           <div key={i} className="font-semibold">
-                              {getPlayerShortName(p.playerId)}
+                            {getPlayerShortName(p.playerId)}
                           </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
 
-                    {/* Center: Status */}
-                    <MatchStatusBadge
-                      status={m.status}
-                      result={m.result}
+                      {/* Center: Status */}
+                      <MatchStatusBadge
+                        status={m.status}
+                        result={m.result}
+                        teamAColor={teamAColor}
+                        teamBColor={teamBColor}
+                        teamAName={tournament?.teamA?.name}
+                        teamBName={tournament?.teamB?.name}
+                        matchNumber={m.matchNumber}
+                        teeTime={m.teeTimeLocalIso ?? m.teeTime}
+                        showTeeLabel={false}
+                      />
+
+                      {/* Right: Team B Players */}
+                      <div className={`text-right text-sm leading-tight ${textColor}`}>
+                        {(m.teamBPlayers || []).map((p, i) => (
+                          <div key={i} className="font-semibold">
+                            {getPlayerShortName(p.playerId)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Hole-by-Hole Tracker rendered below the card to avoid being filled by card background */}
+                  <div style={{ paddingLeft: 2, paddingRight: 2, marginTop: -10 }}>
+                    <HoleByHoleTracker
+                      match={m}
+                      format={round?.format || null}
                       teamAColor={teamAColor}
                       teamBColor={teamBColor}
-                      teamAName={tournament?.teamA?.name}
-                      teamBName={tournament?.teamB?.name}
-                      matchNumber={m.matchNumber}
-                      teeTime={m.teeTimeLocalIso ?? m.teeTime}
-                      showTeeLabel={false}
                     />
-
-                    {/* Right: Team B Players */}
-                    <div className={`text-right text-sm leading-tight ${textColor}`}>
-                      {(m.teamBPlayers || []).map((p, i) => (
-                          <div key={i} className="font-semibold">
-                              {getPlayerShortName(p.playerId)}
-                          </div>
-                      ))}
-                    </div>
                   </div>
-
-                  {/* Bottom Row: Hole-by-Hole Tracker */}
-                  <HoleByHoleTracker
-                    match={m}
-                    format={round?.format || null}
-                    teamAColor={teamAColor}
-                    teamBColor={teamBColor}
-                  />
-                </Link>
+                </div>
               );
             })
           )}

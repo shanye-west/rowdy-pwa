@@ -60,9 +60,8 @@ export function HoleByHoleTracker({
   const holeStyle = (winner: "teamA" | "teamB" | "AS" | null, afterClose: boolean): CSSProperties => {
     const baseStyle: CSSProperties = {
       width: showAll ? perHoleCalc : fixedSize,
-      height: showAll ? perHoleCalc : fixedSize,
+      aspectRatio: "1 / 1",
       minWidth: "14px",
-      minHeight: "14px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -70,6 +69,7 @@ export function HoleByHoleTracker({
       fontWeight: 600,
       borderRadius: "50%",
       transition: "all 0.12s ease",
+      boxSizing: "border-box",
     };
 
     if (afterClose) {
