@@ -24,33 +24,15 @@ service cloud.firestore {
     
     // Matches: authenticated users who are rostered can update
     match /matches/{matchId} {
-      // Get player IDs from the match roster
-      function getTeamPlayerIds() {
-        let teamA = resource.data.teamAPlayers;
-        let teamB = resource.data.teamBPlayers;
-        let ids = [];
-        
-        // Build list of player IDs from both teams
-        return (teamA.size() > 0 ? [teamA[0].playerId] : [])
-          .concat(teamA.size() > 1 ? [teamA[1].playerId] : [])
-          .concat(teamB.size() > 0 ? [teamB[0].playerId] : [])
-          .concat(teamB.size() > 1 ? [teamB[1].playerId] : []);
+      // Check if user is authorized using pre-computed authorizedUids array
+      // This avoids expensive player document reads in security rules
+      function isAuthorizedPlayer() {
+        return request.auth != null && 
+               resource.data.keys().hasAny(['authorizedUids']) &&
+               request.auth.uid in resource.data.authorizedUids;
       }
-      
-      // Check if the authenticated user's linked player is in this match
-      function isRosteredPlayer() {
-        let playerIds = getTeamPlayerIds();
-        
-        // Check each player doc to see if their authUid matches the request
-        return (playerIds.size() > 0 && exists(/databases/$(database)/documents/players/$(playerIds[0])) && 
-                get(/databases/$(database)/documents/players/$(playerIds[0])).data.authUid == request.auth.uid) ||
-               (playerIds.size() > 1 && exists(/databases/$(database)/documents/players/$(playerIds[1])) && 
-                get(/databases/$(database)/documents/players/$(playerIds[1])).data.authUid == request.auth.uid) ||
-               (playerIds.size() > 2 && exists(/databases/$(database)/documents/players/$(playerIds[2])) && 
-                get(/databases/$(database)/documents/players/$(playerIds[2])).data.authUid == request.auth.uid) ||
-               (playerIds.size() > 3 && exists(/databases/$(database)/documents/players/$(playerIds[3])) && 
-                get(/databases/$(database)/documents/players/$(playerIds[3])).data.authUid == request.auth.uid);
-      }
+
+      // Note: legacy roster-based checks removed. Matches should include `authorizedUids`.
 
       // New: allow public edits if the tournament explicitly enables openPublicEdits
       function isTournamentOpen() {
@@ -61,8 +43,8 @@ service cloud.firestore {
                get(/databases/$(database)/documents/tournaments/$(tid)).data.openPublicEdits == true;
       }
 
-      // Allow updates if user is authenticated and rostered OR the tournament allows public edits.
-      allow update: if (request.auth != null && isRosteredPlayer()) || isTournamentOpen();
+      // Allow updates if user is authorized (matches with `authorizedUids`) OR the tournament allows public edits.
+      allow update: if isAuthorizedPlayer() || isTournamentOpen();
       allow create, delete: if false;
     }
   }

@@ -17,6 +17,7 @@
       "strokesReceived": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }
   ],
+  "authorizedUids": [],
   "holes": {},
   "status": {
     "leader": null,

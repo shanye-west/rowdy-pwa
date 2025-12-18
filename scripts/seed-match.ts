@@ -88,7 +88,23 @@ async function seedMatch(inputFile: string, force: boolean) {
     process.exit(0);
   }
 
-  await docRef.set(match);
+  // Fetch player auth UIDs to populate authorizedUids for security rules
+  const allPlayerIds = [...(match.teamAPlayers || []), ...(match.teamBPlayers || [])]
+    .map((p: any) => p.playerId);
+  const authorizedUids: string[] = [];
+  
+  for (const playerId of allPlayerIds) {
+    const pSnap = await db.collection("players").doc(playerId).get();
+    if (pSnap.exists) {
+      const authUid = pSnap.data()?.authUid;
+      if (authUid) authorizedUids.push(authUid);
+    }
+  }
+
+  // Add authorizedUids to match document
+  const matchWithAuth = { ...match, authorizedUids };
+
+  await docRef.set(matchWithAuth);
   console.log(`${existing.exists ? "🔄 Updated" : "✅ Created"} match: ${match.id}`);
   console.log(`\n⚡ Note: seedMatchBoilerplate Cloud Function will initialize the holes structure`);
 }

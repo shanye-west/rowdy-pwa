@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
@@ -8,6 +10,29 @@ import OfflineImage from "./components/OfflineImage";
 import { formatRoundType } from "./utils";
 
 export default function App() {
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  
+  // PWA update handler
+  const { updateServiceWorker } = useRegisterSW({
+    onNeedRefresh() {
+      setShowUpdatePrompt(true);
+    },
+    onRegisteredSW(swUrl: string, r: ServiceWorkerRegistration | undefined) {
+      console.log("Service Worker registered:", swUrl);
+      // Check for updates every 60 seconds
+      if (r) {
+        setInterval(() => {
+          r.update();
+        }, 60000);
+      }
+    },
+  });
+
+  const handleUpdateClick = () => {
+    setShowUpdatePrompt(false);
+    updateServiceWorker(true);
+  };
+
   const {
     loading,
     tournament,
@@ -199,6 +224,67 @@ export default function App() {
           </section>
 
           <LastUpdated />
+        </div>
+      )}
+
+      {/* PWA Update Prompt */}
+      {showUpdatePrompt && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            maxWidth: "90%",
+            width: "400px",
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              backgroundColor: "var(--brand-primary, #1e40af)",
+              color: "white",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Update Available</div>
+              <div style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                A new version is ready. Reload to update.
+              </div>
+            </div>
+            <button
+              onClick={handleUpdateClick}
+              className="btn btn-primary"
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "white",
+                color: "var(--brand-primary, #1e40af)",
+                fontWeight: 600,
+              }}
+            >
+              Reload
+            </button>
+            <button
+              onClick={() => setShowUpdatePrompt(false)}
+              style={{
+                padding: "8px",
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                opacity: 0.7,
+              }}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </Layout>

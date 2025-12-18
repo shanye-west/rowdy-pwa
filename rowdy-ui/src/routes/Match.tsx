@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
@@ -6,14 +6,12 @@ import { db } from "../firebase";
 import type { RoundFormat, HoleInputLoose } from "../types";
 import { 
   SCORECARD_CELL_WIDTH, 
-  SCORECARD_LABEL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
   MIN_DRIVES_PER_ROUND,
 } from "../constants";
-import { formatRoundType } from "../utils";
+
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
-import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { ConnectionBanner } from "../components/ConnectionBanner";
@@ -26,14 +24,18 @@ import {
   TeamScoreRow,
   DriveSelectorsSection,
   DrivesTrackerBanner,
+  StrokesInfoModal,
+  ConfirmMatchCloseModal,
+  DrivePickerModal,
+  MatchStatusHeader,
+  ScorecardTableHeader,
   type HoleData,
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
-import { Modal, ModalActions } from "../components/Modal";
-import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
+
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
 // --- MATCH CLOSING HELPERS ---
@@ -119,22 +121,6 @@ export default function Match() {
   
   // STROKES INFO: Modal state for showing handicap info
   const [strokesInfoModal, setStrokesInfoModal] = useState(false);
-  // Tooltip state for small abbreviation definitions (key and screen coords)
-  const [defTooltip, setDefTooltip] = useState<{ key: string; x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    if (!strokesInfoModal) setDefTooltip(null);
-  }, [strokesInfoModal]);
-
-  const openDefTooltip = (e: React.MouseEvent, key: string) => {
-    e.stopPropagation();
-    const el = e.currentTarget as HTMLElement;
-    const rect = el.getBoundingClientRect();
-    // store center x so tooltip can be centered above the element
-    // Position tooltip so its right edge sits slightly left of the icon
-    const offset = 6; // pixels to nudge left of the icon
-    setDefTooltip({ key, x: rect.left - offset, y: rect.top });
-  };
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -678,7 +664,7 @@ export default function Match() {
   }
 
   const tName = tournament?.name || "Match Scoring";
-  const tSeries = tournament?.series;
+  const tSeries = tournament?.series || "rowdyCup";
   // Four player rows: Best Ball and Shamble (individual player scores)
   const isFourPlayerRows = format === "twoManBestBall" || format === "twoManShamble";
 
@@ -751,7 +737,6 @@ export default function Match() {
   }
 
   const cellWidth = SCORECARD_CELL_WIDTH;
-  const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
   
   // Winner color for border on first post-match cell
@@ -764,87 +749,15 @@ export default function Match() {
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
         {/* MATCH STATUS HEADER */}
-        <div className="space-y-3">
-          {/* Top row: centered format pill with auth status on the right */}
-          <div className="relative">
-            {/* Strokes Info label with tappable superscript icon (entire area is clickable) */}
-            <button
-              onClick={() => setStrokesInfoModal(true)}
-              aria-label="Open strokes info"
-              className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 rounded"
-            >
-              <span className="text-sm text-slate-700">Strokes</span>
-              <span className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <circle cx="12" cy="16" r="1" />
-                </svg>
-              </span>
-            </button>
-            
-            <div className="flex justify-center">
-              <div 
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
-              >
-                <span>{formatRoundType(format)}</span>
-              </div>
-            </div>
-
-            {/* Auth status - positioned to the right, inline with pill */}
-            {editBlockReason && (editBlockReason === "historical" || (!roundLocked && !isMatchClosed)) && (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs pr-2" style={{ color: "#94a3b8" }}>
-                {editBlockReason === "historical" && (
-                  <span> View only</span>
-                )}
-                {editBlockReason === "login" && (
-                  <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
-                )}
-                {editBlockReason === "not-rostered" && (
-                  <span>👀 Spectating</span>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* Main status display - uses shared MatchStatusBadge component */}
-          {(() => {
-            const { bgStyle, borderStyle } = getMatchCardStyles(
-              match.status,
-              match.result,
-              tournament?.teamA?.color || "var(--team-a-default)",
-              tournament?.teamB?.color || "var(--team-b-default)"
-            );
-
-            return (
-              <div 
-                className="card"
-                role="status"
-                aria-label="Match status"
-                style={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px 16px',
-                  ...bgStyle,
-                  ...borderStyle
-                }}
-              >
-                <MatchStatusBadge
-                  status={match.status}
-                  result={match.result}
-                  teamAColor={tournament?.teamA?.color || "var(--team-a-default)"}
-                  teamBColor={tournament?.teamB?.color || "var(--team-b-default)"}
-                  teamAName={tournament?.teamA?.name}
-                  teamBName={tournament?.teamB?.name}
-                  teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
-                />
-              </div>
-            );
-          })()}
-        </div>
+        <MatchStatusHeader
+          format={format}
+          match={match}
+          tournament={tournament}
+          editBlockReason={editBlockReason}
+          roundLocked={roundLocked}
+          isMatchClosed={isMatchClosed}
+          onOpenStrokesInfo={() => setStrokesInfoModal(true)}
+        />
 
         {/* DRIVE_TRACKING: Drives Tracker Banner */}
         {trackDrives && drivesUsed && drivesNeeded && !isMatchClosed && (
@@ -894,160 +807,14 @@ export default function Match() {
               className="w-max border-collapse text-center text-sm"
               style={{ minWidth: "100%" }}
             >
-              {/* HEADER ROW - Hole Numbers: 1-9 | OUT | 10-18 | IN | TOT */}
-              <thead>
-                <tr style={{ 
-                  backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b",
-                  color: "white" 
-                }}>
-                  <th 
-                    className="sticky left-0 z-10 font-bold text-left px-3 py-2"
-                    style={{ 
-                      width: labelWidth, 
-                      minWidth: labelWidth,
-                      backgroundColor: tSeries === "christmasClassic" ? "#b8860b" : "#1e293b"
-                    }}
-                  >
-                    HOLE
-                  </th>
-                  {/* Front 9 */}
-                  {holes.slice(0, 9).map(h => (
-                    <th 
-                      key={h.k} 
-                      className="font-bold py-2"
-                      style={{ width: cellWidth, minWidth: cellWidth }}
-                    >
-                      {h.num}
-                    </th>
-                  ))}
-                  <th 
-                    className="font-bold py-2 border-l-2" 
-                    style={{ 
-                      width: totalColWidth, 
-                      minWidth: totalColWidth,
-                      backgroundColor: tSeries === "christmasClassic" ? "#996f00" : "#334155",
-                      borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
-                    }}
-                  >OUT</th>
-                  {/* Back 9 - post-match cells have border and tint */}
-                  {holes.slice(9, 18).map((h, i) => {
-                    const holeIdx = 9 + i;
-                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    
-                    return (
-                      <th 
-                        key={h.k} 
-                        className="font-bold py-2 border-l-2"
-                        style={{ 
-                          width: cellWidth, 
-                          minWidth: cellWidth,
-                          borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569",
-                          ...(isPostMatch ? { opacity: 0.7 } : {}),
-                        }}
-                      >
-                        {h.num}
-                      </th>
-                    );
-                  })}
-                  <th 
-                    className="font-bold py-2 border-l-2" 
-                    style={{ 
-                      width: totalColWidth, 
-                      minWidth: totalColWidth,
-                      backgroundColor: tSeries === "christmasClassic" ? "#996f00" : "#334155",
-                      borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
-                    }}
-                  >IN</th>
-                  <th 
-                    className="font-bold py-2" 
-                    style={{ 
-                      width: totalColWidth, 
-                      minWidth: totalColWidth,
-                      backgroundColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
-                    }}
-                  >TOT</th>
-                </tr>
-              </thead>
+              <ScorecardTableHeader
+                holes={holes}
+                closingHole={closingHole}
+                totals={totals}
+                tSeries={tSeries}
+                courseTees={course?.tees || round?.course?.tee}
+              />
               <tbody>
-                {/* Handicap Row */}
-                <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
-                  <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1">Hcp</td>
-                  {holes.slice(0, 9).map(h => (
-                    <td key={h.k} className="py-1">{h.hcpIndex || ""}</td>
-                  ))}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
-                  {holes.slice(9, 18).map((h, i) => {
-                    const holeIdx = 9 + i;
-                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    
-                    return (
-                      <td 
-                        key={h.k} 
-                        className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
-                      >
-                        {h.hcpIndex || ""}
-                      </td>
-                    );
-                  })}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
-                  <td className="py-1 bg-slate-200"></td>
-                </tr>
-
-                {/* Yardage Row */}
-                <tr className="bg-slate-50 text-slate-900 text-xs border-b border-slate-200">
-                  <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1 capitalize">{course?.tees || round?.course?.tee || 'Yards'}</td>
-                  {holes.slice(0, 9).map(h => (
-                    <td key={h.k} className="py-1">{h.yards || ""}</td>
-                  ))}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
-                    {holes.slice(0, 9).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
-                  </td>
-                  {holes.slice(9, 18).map((h, i) => {
-                    const holeIdx = 9 + i;
-                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    
-                    return (
-                      <td 
-                        key={h.k} 
-                        className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
-                        
-                      >
-                        {h.yards || ""}
-                      </td>
-                    );
-                  })}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
-                    {holes.slice(9, 18).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
-                  </td>
-                  <td className="py-1 bg-slate-200">
-                    {holes.reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
-                  </td>
-                </tr>
-
-                {/* Par Row */}
-                <tr className="bg-slate-100 text-slate-600 text-xs font-semibold">
-                  <td className="sticky left-0 z-10 bg-slate-100 text-left px-3 py-1.5">Par</td>
-                  {holes.slice(0, 9).map(h => (
-                    <td key={h.k} className="py-1.5">{h.par}</td>
-                  ))}
-                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
-                  {holes.slice(9, 18).map((h, i) => {
-                    const holeIdx = 9 + i;
-                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    
-                    return (
-                      <td 
-                        key={h.k} 
-                        className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-200/60" : ""}`}
-                        
-                      >
-                        {h.par}
-                      </td>
-                    );
-                  })}
-                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
-                  <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
-                </tr>
 
                 {/* Team A Player Rows - Using memoized PlayerScoreRow */}
                 {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => (
@@ -1258,289 +1025,44 @@ export default function Match() {
         <LastUpdated />
 
         {/* CONFIRM MATCH CLOSE MODAL */}
-        <Modal
+        <ConfirmMatchCloseModal
           isOpen={!!confirmCloseModal}
           onClose={handleCancelClose}
-          title="End Match?"
-          ariaLabel="Confirm match end"
-        >
-          {confirmCloseModal && (
-            <>
-              {/* Match Score Tile - same format as scorecard */}
-              <div 
-                className="rounded-lg mb-4"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px 16px',
-                  backgroundColor: confirmCloseModal.winner === "AS" 
-                    ? '#f1f5f9' 
-                    : confirmCloseModal.winner === "teamA" 
-                      ? teamAColor 
-                      : teamBColor,
-                  border: confirmCloseModal.winner === "AS" ? '2px solid #cbd5e1' : 'none'
-                }}
-              >
-                <MatchStatusBadge
-                  status={{ closed: true, thru: confirmCloseModal.thru, margin: confirmCloseModal.margin }}
-                  result={{ winner: confirmCloseModal.winner }}
-                  teamAColor={teamAColor}
-                  teamBColor={teamBColor}
-                  teamAName={tournament?.teamA?.name}
-                  teamBName={tournament?.teamB?.name}
-                  teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
-                />
-              </div>
-
-              <ModalActions
-                primaryLabel="Confirm"
-                onPrimary={handleConfirmClose}
-                secondaryLabel="Cancel"
-                onSecondary={handleCancelClose}
-              />
-            </>
-          )}
-        </Modal>
-
-        {/* ABBREVIATION DEFINITION MODAL removed in favor of inline tooltip */}
+          onConfirm={handleConfirmClose}
+          winner={confirmCloseModal?.winner ?? null}
+          margin={confirmCloseModal?.margin ?? 0}
+          thru={confirmCloseModal?.thru ?? 0}
+          teamAColor={teamAColor}
+          teamBColor={teamBColor}
+          tournament={tournament}
+          teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
+        />
 
         {/* DRIVE SELECTOR MODAL */}
-        <Modal
+        <DrivePickerModal
           isOpen={!!driveModal}
           onClose={() => setDriveModal(null)}
-          title={driveModal ? `Whose drive for Hole ${driveModal.hole.num}?` : ""}
-          ariaLabel="Select drive player"
-        >
-          {driveModal && (() => {
-            const teamPlayers = driveModal.team === "A" ? match.teamAPlayers : match.teamBPlayers;
-            const numPlayers = teamPlayers?.length || 2;
-            const color = driveModal.team === "A" ? teamAColor : teamBColor;
-            
-            return (
-              <>
-                <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color }}>
-                  {driveModal.team === "A" ? (
-                    <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: teamAColor }} />
-                  ) : (
-                    <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" style={{ color: teamBColor }} />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  {/* Player buttons (2 or 4 depending on format) */}
-                  {Array.from({ length: numPlayers }, (_, i) => {
-                    const playerId = teamPlayers?.[i]?.playerId;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => handleDriveSelect(i as 0 | 1 | 2 | 3)}
-                        aria-label={`Select ${getPlayerName(playerId)}'s drive`}
-                        className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
-                        style={{ backgroundColor: color }}
-                      >
-                        {getPlayerName(playerId)}
-                      </button>
-                    );
-                  })}
-                  {/* Clear button */}
-                  <button
-                    type="button"
-                    onClick={() => handleDriveSelect(null)}
-                    aria-label="Clear drive selection"
-                    className="w-full py-3 px-4 rounded-lg bg-slate-200 text-slate-600 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
-                  >
-                    Clear
-                  </button>
-                </div>
-                {/* Cancel */}
-                <button
-                  type="button"
-                  onClick={() => setDriveModal(null)}
-                  className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-700"
-                >
-                  Cancel
-                </button>
-              </>
-            );
-          })()}
-        </Modal>
+          onSelect={handleDriveSelect}
+          hole={driveModal?.hole ?? null}
+          team={driveModal?.team ?? null}
+          match={match}
+          tournament={tournament}
+          teamAColor={teamAColor}
+          teamBColor={teamBColor}
+          getPlayerName={getPlayerName}
+        />
 
         {/* STROKES INFO MODAL */}
-        <Modal
+        <StrokesInfoModal
           isOpen={strokesInfoModal}
           onClose={() => setStrokesInfoModal(false)}
-          title="Handicap Information"
-          ariaLabel="Handicap information for match players"
-        >
-          {(() => {
-            // Helper to get handicap index for a player
-            const getHandicapIndex = (playerId: string): number | null => {
-              return tournament?.teamA?.handicapByPlayer?.[playerId] ?? 
-                     tournament?.teamB?.handicapByPlayer?.[playerId] ?? 
-                     null;
-            };
-
-            // Helper to calculate skins strokes for a player
-            const calculateSkinsStrokesCount = (playerId: string): number => {
-              if (!course || !round) return 0;
-              const handicapIndex = getHandicapIndex(playerId);
-              if (handicapIndex == null) return 0;
-              
-              const skinsPercent = round.skinsHandicapPercent ?? 100;
-              const courseHandicap = (handicapIndex * ((course.slope || 113) / 113)) + ((course.rating || 72) - (course.par || 72));
-              const adjustedHandicap = courseHandicap * (skinsPercent / 100);
-              return Math.round(adjustedHandicap);
-            };
-
-            // Build player rows
-            const playerRows: Array<{
-              name: string;
-              hi: number | null;
-              ch: number | null;
-              so: number;
-              sh: number;
-            }> = [];
-
-            // Team A players
-            match.teamAPlayers?.forEach((p, idx) => {
-              const handicapIndex = getHandicapIndex(p.playerId);
-              const courseHandicap = getCourseHandicapFor("A", idx);
-              const strokesOff = p.strokesReceived?.reduce((sum, s) => sum + s, 0) ?? 0;
-              const skinsHandicap = calculateSkinsStrokesCount(p.playerId);
-              
-              playerRows.push({
-                name: getPlayerName(p.playerId),
-                hi: handicapIndex,
-                ch: courseHandicap,
-                so: strokesOff,
-                sh: skinsHandicap,
-              });
-            });
-
-            // Team B players
-            match.teamBPlayers?.forEach((p, idx) => {
-              const handicapIndex = getHandicapIndex(p.playerId);
-              const courseHandicap = getCourseHandicapFor("B", idx);
-              const strokesOff = p.strokesReceived?.reduce((sum, s) => sum + s, 0) ?? 0;
-              const skinsHandicap = calculateSkinsStrokesCount(p.playerId);
-              
-              playerRows.push({
-                name: getPlayerName(p.playerId),
-                hi: handicapIndex,
-                ch: courseHandicap,
-                so: strokesOff,
-                sh: skinsHandicap,
-              });
-            });
-
-            return (
-              <div className="overflow-x-auto" onClick={() => setDefTooltip(null)}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
-                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-start justify-start">
-                          <span>H.I.</span>
-                          <button
-                            onClick={(e) => openDefTooltip(e, "HI")}
-                            aria-label="Define H.I."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="8" x2="12" y2="12" />
-                              <circle cx="12" cy="16" r="1" />
-                            </svg>
-                          </button>
-                        </div>
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-start justify-start">
-                          <span>C.H.</span>
-                          <button
-                            onClick={(e) => openDefTooltip(e, "CH")}
-                            aria-label="Define C.H."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="8" x2="12" y2="12" />
-                              <circle cx="12" cy="16" r="1" />
-                            </svg>
-                          </button>
-                        </div>
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-start justify-start">
-                          <span>S.O.</span>
-                          <button
-                            onClick={(e) => openDefTooltip(e, "SO")}
-                            aria-label="Define S.O."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="8" x2="12" y2="12" />
-                              <circle cx="12" cy="16" r="1" />
-                            </svg>
-                          </button>
-                        </div>
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-start justify-start">
-                          <span>S.H.</span>
-                          <button
-                            onClick={(e) => openDefTooltip(e, "SH")}
-                            aria-label="Define S.H."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="12" y1="8" x2="12" y2="12" />
-                              <circle cx="12" cy="16" r="1" />
-                            </svg>
-                          </button>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {playerRows.map((row, i) => (
-                      <tr key={i} className="border-b border-slate-100">
-                        <td className="py-2 px-2 text-slate-800">{row.name}</td>
-                        <td className="py-2 px-2 text-left text-slate-600">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
-                        <td className="py-2 px-2 text-left text-slate-600">{row.ch != null ? row.ch : "—"}</td>
-                        <td className="py-2 px-2 text-left text-slate-600">{row.so}</td>
-                        <td className="py-2 px-2 text-left text-slate-600">{row.sh}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {defTooltip && (() => {
-                  const defs: Record<string,string> = {
-                    HI: "Handicap Index",
-                    CH: "Course Handicap",
-                    SO: "Matchplay Strokes",
-                    SH: "Skins Strokes",
-                  };
-                  const text = defs[defTooltip.key] ?? "";
-                  const left = defTooltip.x;
-                  const top = Math.max(8, defTooltip.y - 6);
-                  return (
-                    <div style={{ position: 'fixed', left, top, transform: 'translate(-100%, -120%)', zIndex: 1200 }}>
-                      <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow" style={{ whiteSpace: 'nowrap' }}>
-                        {text}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            );
-          })()}
-        </Modal>
+          match={match}
+          tournament={tournament}
+          course={course}
+          round={round}
+          getPlayerName={getPlayerName}
+          getCourseHandicapFor={getCourseHandicapFor}
+        />
       </div>
     </Layout>
   );
