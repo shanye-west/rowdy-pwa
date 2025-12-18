@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
 import { formatTeeTime } from "../utils";
+import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
@@ -96,25 +97,6 @@ function SkinsComponent() {
     selectedTab === "gross" ? h.grossWinner !== null : h.netWinner !== null
   ).length;
   const valuePerSkin = skinsWon > 0 ? (totalPot ?? 0) / skinsWon : 0;
-
-  // Helper to convert numeric score to label (Eagle/Birdie/Par/Bogey/etc.)
-  const scoreLabel = (score: number | null, parVal: number) => {
-    if (score === null) return "";
-    // Hole-in-one should be shown explicitly
-    if (score === 1) return "Hole-in-One";
-    const diff = score - parVal;
-    if (diff === 0) return "Par";
-    if (diff === -1) return "Birdie";
-    if (diff === -2) return "Eagle";
-    if (diff === -3) return "Double Eagle";
-    if (diff === 1) return "Bogey";
-    if (diff === 2) return "Double Bogey";
-    if (diff === 3) return "Triple Bogey";
-    if (diff === 4) return "Quad Bogey";
-    if (diff < -3) return `${Math.abs(diff)} under par`;
-    if (diff >= 5) return `${diff} over par`;
-    return `${diff} over par`;
-  };
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
@@ -250,8 +232,6 @@ function SkinsComponent() {
           </h2>
 
           <div style={{ display: "grid", gap: 10 }}>
-            {/* Helper to convert numeric score to label (Eagle/Birdie/Par/Bogey/etc.) */}
-            {false && null}
             {holeSkinsData.map(hole => {
               const isExpanded = expandedHole === hole.holeNumber;
               const winner = selectedTab === "gross" ? hole.grossWinner : hole.netWinner;

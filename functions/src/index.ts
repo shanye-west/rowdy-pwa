@@ -19,6 +19,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 // Import shared modules
 import type { RoundFormat } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
+import { calculateCourseHandicap, calculateStrokesReceived } from "./ghin.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
   playersPerSide, 
@@ -1333,50 +1334,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
 // These functions are called from the admin UI to create documents
 // ============================================================================
 
-/**
- * Calculate GHIN course handicap from handicap index.
- * Formula: courseHandicap = (handicapIndex × (slopeRating ÷ 113)) + (courseRating − par)
- * @param handicapIndex - Player's handicap index (e.g., 7.4)
- * @param slopeRating - Course slope rating (default 113)
- * @param courseRating - Course rating (defaults to par if not provided)
- * @param par - Course par (default 72)
- * @returns Rounded course handicap
- */
-function calculateCourseHandicap(
-  handicapIndex: number,
-  slopeRating: number = 113,
-  courseRating?: number,
-  par: number = DEFAULT_COURSE_PAR
-): number {
-  const hiNum = (typeof handicapIndex === 'number') ? handicapIndex : Number(handicapIndex) || 0;
-  const slope = Number(slopeRating) || 113;
-  const parNum = Number(par) || DEFAULT_COURSE_PAR;
-  const rating = (typeof courseRating === 'number') ? courseRating : (Number(courseRating) || parNum);
-
-  const unrounded = (hiNum * (slope / 113)) + (rating - parNum);
-  const rounded = Math.round(unrounded);
-  return Number.isNaN(rounded) ? 0 : rounded;
-}
-
-/**
- * Calculate strokesReceived array for a player based on course handicap.
- * Strokes are assigned to holes by difficulty (hcpIndex), with 1 stroke max per hole.
- */
-function calculateStrokesReceived(courseHandicap: number, courseHoles: any[]): number[] {
-  const strokes = Array(18).fill(0);
-  
-  // Sort holes by hcpIndex (1=hardest, 18=easiest)
-  const sortedByDifficulty = [...courseHoles].sort((a, b) => a.hcpIndex - b.hcpIndex);
-  
-  // Give stroke on the N hardest holes (where N = courseHandicap, max 18)
-  const strokeCount = Math.min(Math.max(0, Math.round(courseHandicap)), 18);
-  for (let i = 0; i < strokeCount; i++) {
-    const holeNum = sortedByDifficulty[i].number;
-    strokes[holeNum - 1] = 1;  // Convert to 0-based index
-  }
-  
-  return strokes;
-}
+// GHIN handicap helpers now live in ./ghin.ts (calculateCourseHandicap, calculateStrokesReceived)
 
 /**
  * Admin-only function to create a match with calculated strokesReceived.
