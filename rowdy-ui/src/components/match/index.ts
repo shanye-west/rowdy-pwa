@@ -18,3 +18,13 @@ export type { DriveSelectorsSectionProps } from "./DriveSelectorsSection";
 
 export { DrivesTrackerBanner } from "./DrivesTrackerBanner";
 export type { DrivesTrackerBannerProps } from "./DrivesTrackerBanner";
+
+export { StrokesInfoModal } from "./StrokesInfoModal";
+
+export { ConfirmMatchCloseModal } from "./ConfirmMatchCloseModal";
+
+export { DrivePickerModal } from "./DrivePickerModal";
+
+export { MatchStatusHeader } from "./MatchStatusHeader";
+
+export { ScorecardTableHeader } from "./ScorecardTableHeader";
