@@ -242,13 +242,10 @@ export default function EditMatch() {
         teamBPlayers: validTeamB,
       };
 
-      // Include teeTime if provided - convert datetime-local to Pacific Time (UTC-8)
+      // Include teeTime if provided - treat datetime-local as Pacific Time (UTC-8)
       if (teeTime) {
-        const localDate = new Date(teeTime);
-        const pacificOffset = -8 * 60;
-        const browserOffset = localDate.getTimezoneOffset();
-        const offsetDiff = pacificOffset - browserOffset;
-        const pacificDate = new Date(localDate.getTime() + offsetDiff * 60 * 1000);
+        // Append timezone offset to force Pacific Time interpretation
+        const pacificDate = new Date(teeTime + '-08:00');
         payload.teeTime = pacificDate.toISOString();
       }
 
