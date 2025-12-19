@@ -1,6 +1,7 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -27,21 +28,35 @@ const RouteLoader = () => (
   </div>
 );
 
+function RootWrapper() {
+  const location = useLocation();
+  useEffect(() => {
+    try { window.scrollTo({ top: 0, left: 0 }); } catch (e) {}
+  }, [location.pathname]);
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
-  { path: "/", element: <App />, errorElement: <ErrorBoundary /> },
-  { path: "/round/:roundId", element: <Suspense fallback={<RouteLoader />}><Round /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/round/:roundId/skins", element: <Suspense fallback={<RouteLoader />}><Skins /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/tournament/:tournamentId", element: <Suspense fallback={<RouteLoader />}><Tournament /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/admin", element: <Suspense fallback={<RouteLoader />}><Admin /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/admin/match", element: <Suspense fallback={<RouteLoader />}><AddMatch /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/admin/match/edit", element: <Suspense fallback={<RouteLoader />}><EditMatch /></Suspense>, errorElement: <ErrorBoundary /> },
-  { path: "/admin/match/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateMatchStrokes /></Suspense>, errorElement: <ErrorBoundary /> },
-  // Catch-all 404 route
-  { path: "*", element: <NotFound /> },
+  {
+    path: "/",
+    element: <RootWrapper />,
+    errorElement: <ErrorBoundary />,
+    children: [
+      { index: true, element: <App /> },
+      { path: "round/:roundId", element: <Suspense fallback={<RouteLoader />}><Round /></Suspense> },
+      { path: "round/:roundId/skins", element: <Suspense fallback={<RouteLoader />}><Skins /></Suspense> },
+      { path: "match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense> },
+      { path: "teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense> },
+      { path: "history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense> },
+      { path: "tournament/:tournamentId", element: <Suspense fallback={<RouteLoader />}><Tournament /></Suspense> },
+      { path: "login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense> },
+      { path: "admin", element: <Suspense fallback={<RouteLoader />}><Admin /></Suspense> },
+      { path: "admin/match", element: <Suspense fallback={<RouteLoader />}><AddMatch /></Suspense> },
+      { path: "admin/match/edit", element: <Suspense fallback={<RouteLoader />}><EditMatch /></Suspense> },
+      { path: "admin/match/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateMatchStrokes /></Suspense> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

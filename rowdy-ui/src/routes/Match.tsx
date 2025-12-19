@@ -88,6 +88,8 @@ export default function Match() {
   
   // Simple online/offline tracking
   const { isOnline } = useNetworkStatus();
+
+  
   
   // Track horizontal scroll position for scroll indicator
   const [canScrollRight, setCanScrollRight] = useState(true);
