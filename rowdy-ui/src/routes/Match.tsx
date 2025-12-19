@@ -556,8 +556,8 @@ export default function Match() {
       const playerId = roster?.[pIdx]?.playerId;
       if (!playerId) return false;
       
-      // Player wins if they win either gross or net
-      return winner.grossWinnerId === playerId || winner.netWinnerId === playerId;
+      // Player wins if they win net skins (not gross)
+      return winner.netWinnerId === playerId;
     };
   }, [skinsWinnersByHole, match?.teamAPlayers, match?.teamBPlayers]);
 
