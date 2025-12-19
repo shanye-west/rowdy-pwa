@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundFormat, HoleInputLoose, HoleInfo } from "../types";
+import type { RoundFormat, HoleInputLoose } from "../types";
 import { 
   SCORECARD_CELL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
@@ -32,10 +32,10 @@ import {
   type HoleData,
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
+import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
-import { calculateSkinsStrokes } from "../utils/ghin";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
@@ -82,6 +82,9 @@ export default function Match() {
     match, round, course, tournament, players, matchFacts, 
     loading, error,
   } = useMatchData(matchId);
+  
+  // Fetch skins data for the round (for $ icon display)
+  const { holeSkinsData } = useSkinsData(round?.id);
   
   // Simple online/offline tracking
   const { isOnline } = useNetworkStatus();
@@ -525,107 +528,21 @@ export default function Match() {
   const getLowScoreStatusB0 = useMemo(() => createGetLowScoreStatus("B", 0), [createGetLowScoreStatus]);
   const getLowScoreStatusB1 = useMemo(() => createGetLowScoreStatus("B", 1), [createGetLowScoreStatus]);
 
-  // Calculate skins winners per hole (for displaying $ icon)
+  // Build skins winners lookup from useSkinsData hook
+  // This already calculates winners across ALL matches in the round (not just this match)
   const skinsWinnersByHole = useMemo(() => {
-    // Only calculate for skins-enabled rounds
-    const skinsEnabled = (round?.skinsGrossPot ?? 0) > 0 || (round?.skinsNetPot ?? 0) > 0;
-    const validFormat = format === "singles" || format === "twoManBestBall";
-    
-    if (!skinsEnabled || !validFormat || !round || !tournament || !course?.holes) {
-      return new Map<string, { grossWinnerId: string | null; netWinnerId: string | null }>();
-    }
-
-    const handicapPercent = round.skinsHandicapPercent ?? 100;
-    const slopeRating = course.slope ?? 113;
-    const courseRating = course.rating ?? (course.par ?? 72);
-    const coursePar = course.par ?? 72;
-
-    // Calculate skins strokes for each player
-    const getSkinsStrokesForPlayer = (playerId: string, teamKey: "teamA" | "teamB"): number[] => {
-      const teamData = teamKey === "teamA" ? tournament.teamA : tournament.teamB;
-      const handicapIndex = teamData?.handicapByPlayer?.[playerId] ?? 0;
-      
-      return calculateSkinsStrokes(
-        handicapIndex,
-        handicapPercent,
-        slopeRating,
-        courseRating,
-        coursePar,
-        course.holes as HoleInfo[]
-      );
-    };
-
     const winners = new Map<string, { grossWinnerId: string | null; netWinnerId: string | null }>();
-
-    holes.forEach(hole => {
-      const holeKey = hole.k;
-      const holeNum = hole.num;
-      const { input } = hole;
-
-      // Collect all player scores for this hole
-      const playerScores: Array<{ playerId: string; gross: number | null; net: number | null }> = [];
-
-      if (format === "singles") {
-        const teamAPlayer = match?.teamAPlayers?.[0];
-        const teamBPlayer = match?.teamBPlayers?.[0];
-
-        if (teamAPlayer) {
-          const gross = input.teamAPlayerGross ?? null;
-          const skinsStrokes = getSkinsStrokesForPlayer(teamAPlayer.playerId, "teamA");
-          const strokesReceived = skinsStrokes[holeNum - 1];
-          const net = gross !== null ? gross - strokesReceived : null;
-          playerScores.push({ playerId: teamAPlayer.playerId, gross, net });
-        }
-
-        if (teamBPlayer) {
-          const gross = input.teamBPlayerGross ?? null;
-          const skinsStrokes = getSkinsStrokesForPlayer(teamBPlayer.playerId, "teamB");
-          const strokesReceived = skinsStrokes[holeNum - 1];
-          const net = gross !== null ? gross - strokesReceived : null;
-          playerScores.push({ playerId: teamBPlayer.playerId, gross, net });
-        }
-      } else if (format === "twoManBestBall") {
-        [match?.teamAPlayers, match?.teamBPlayers].forEach((team, teamIdx) => {
-          const isTeamA = teamIdx === 0;
-          team?.forEach((player, playerIdx) => {
-            const grossArray = isTeamA ? input.teamAPlayersGross : input.teamBPlayersGross;
-            const gross = grossArray?.[playerIdx] ?? null;
-            const teamKey: "teamA" | "teamB" = isTeamA ? "teamA" : "teamB";
-            const skinsStrokes = getSkinsStrokesForPlayer(player.playerId, teamKey);
-            const strokesReceived = skinsStrokes[holeNum - 1];
-            const net = gross !== null ? gross - strokesReceived : null;
-            playerScores.push({ playerId: player.playerId, gross, net });
-          });
-        });
-      }
-
-      // Find gross winner (lowest score, no ties)
-      const grossScores = playerScores.filter(s => s.gross !== null);
-      let grossWinnerId: string | null = null;
-      if (grossScores.length > 0) {
-        const lowGross = Math.min(...grossScores.map(s => s.gross!));
-        const grossWinners = grossScores.filter(s => s.gross === lowGross);
-        if (grossWinners.length === 1) {
-          grossWinnerId = grossWinners[0].playerId;
-        }
-      }
-
-      // Find net winner (lowest score, no ties)
-      const netScores = playerScores.filter(s => s.net !== null);
-      let netWinnerId: string | null = null;
-      if (netScores.length > 0) {
-        const lowNet = Math.min(...netScores.map(s => s.net!));
-        const netWinners = netScores.filter(s => s.net === lowNet);
-        if (netWinners.length === 1) {
-          netWinnerId = netWinners[0].playerId;
-        }
-      }
-
-      winners.set(holeKey, { grossWinnerId, netWinnerId });
+    
+    holeSkinsData.forEach(holeData => {
+      const holeKey = String(holeData.holeNumber);
+      winners.set(holeKey, {
+        grossWinnerId: holeData.grossWinner,
+        netWinnerId: holeData.netWinner,
+      });
     });
-
+    
     return winners;
-  }, [holes, format, round, tournament, course, match?.teamAPlayers, match?.teamBPlayers]);
+  }, [holeSkinsData]);
 
   // Create hasSkinWin getter for each player
   const createHasSkinWin = useCallback((team: "A" | "B", pIdx: number) => {
