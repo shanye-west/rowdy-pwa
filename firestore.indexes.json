@@ -42,6 +42,22 @@
         { "fieldPath": "tournamentId", "order": "ASCENDING" },
         { "fieldPath": "outcome", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "playerMatchFacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "playerId", "order": "ASCENDING" },
+        { "fieldPath": "tournamentSeries", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "matches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roundId", "order": "ASCENDING" },
+        { "fieldPath": "matchNumber", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

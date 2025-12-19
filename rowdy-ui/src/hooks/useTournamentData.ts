@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, query, where, onSnapshot, limit } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot, limit, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
@@ -214,22 +214,48 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   }, [tournament?.id, tournamentLoaded]);
 
   // -------------------------------------------------------------------------
-  // 4) Subscribe to all courses (small collection, well-cached)
+  // 4) Subscribe to only courses needed by current tournament rounds
   // -------------------------------------------------------------------------
   useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "courses"),
-      (snap) => {
-        const lookup: Record<string, CourseDoc> = {};
-        snap.docs.forEach(d => {
-          lookup[d.id] = { id: d.id, ...d.data() } as CourseDoc;
-        });
-        setCourses(lookup);
-      },
-      (err) => console.error("Courses subscription error:", err)
-    );
-    return () => unsub();
-  }, []);
+    if (rounds.length === 0) {
+      setCourses({});
+      return;
+    }
+    
+    // Extract unique courseIds from rounds
+    const courseIds = [...new Set(rounds.map(r => r.courseId).filter(Boolean) as string[])];
+    if (courseIds.length === 0) {
+      setCourses({});
+      return;
+    }
+    
+    // Batch courseIds into groups of 10 (Firestore 'in' query limit)
+    const batches: string[][] = [];
+    for (let i = 0; i < courseIds.length; i += 10) {
+      batches.push(courseIds.slice(i, i + 10));
+    }
+    
+    const unsubscribers: (() => void)[] = [];
+    
+    batches.forEach(batch => {
+      const unsub = onSnapshot(
+        query(collection(db, "courses"), where(documentId(), "in", batch)),
+        (snap) => {
+          setCourses(prev => {
+            const updated = { ...prev };
+            snap.docs.forEach(d => {
+              updated[d.id] = { id: d.id, ...d.data() } as CourseDoc;
+            });
+            return updated;
+          });
+        },
+        (err) => console.error("Courses subscription error:", err)
+      );
+      unsubscribers.push(unsub);
+    });
+    
+    return () => unsubscribers.forEach(u => u());
+  }, [rounds]);
 
   // -------------------------------------------------------------------------
   // Derived: coursesByRound lookup

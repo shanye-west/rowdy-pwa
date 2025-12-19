@@ -338,16 +338,27 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const status = after?.status || { leader: null, margin: 0, thru: 0, dormie: false, closed: false };
   const result = after?.result || {};
   
+  // Fetch course data ONCE (consolidating two separate fetches)
+  let courseHoles: { number: number; par: number }[] = [];
   if (courseId) {
     const cSnap = await db.collection("courses").doc(courseId).get();
     if (cSnap.exists) {
       const cData = cSnap.data();
+      // Extract par from course document
       if (typeof cData?.par === "number") {
         coursePar = cData.par;
       } else if (Array.isArray(cData?.holes)) {
         coursePar = cData.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
       }
+      // Extract holes array for ham-and-egg calculations
+      if (Array.isArray(cData?.holes)) {
+        courseHoles = cData.holes.map((h: any) => ({ number: h.number || 0, par: h.par || 4 }));
+      }
     }
+  }
+  // Fallback to default pars if no course data
+  if (courseHoles.length === 0) {
+    courseHoles = Array.from({ length: 18 }, (_, idx) => ({ number: idx + 1, par: 4 }));
   }
 
   if (tId) {
@@ -383,19 +394,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       flattenHandicaps(d.teamA?.handicapByPlayer);
       flattenHandicaps(d.teamB?.handicapByPlayer);
     }
-  }
-
-  // Fetch course holes data early (needed for ham-and-egg calculations in loop)
-  let courseHoles: { number: number; par: number }[] = [];
-  if (courseId) {
-    const cSnapEarly = await db.collection("courses").doc(courseId).get();
-    if (cSnapEarly.exists && Array.isArray(cSnapEarly.data()?.holes)) {
-      courseHoles = cSnapEarly.data()!.holes.map((h: any) => ({ number: h.number || 0, par: h.par || 4 }));
-    }
-  }
-  // Fallback to default pars if no course data
-  if (courseHoles.length === 0) {
-    courseHoles = Array.from({ length: 18 }, (_, idx) => ({ number: idx + 1, par: 4 }));
   }
 
   // Pre-calculate winningHole before main loop

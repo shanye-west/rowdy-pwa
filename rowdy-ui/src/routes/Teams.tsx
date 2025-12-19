@@ -6,7 +6,7 @@ import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import TeamName from "../components/TeamName";
-import type { TournamentDoc, PlayerDoc, PlayerMatchFact, TierMap } from "../types";
+import type { TournamentDoc, PlayerDoc, TierMap } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 // We define a local type for the aggregated tournament stats
@@ -136,40 +136,55 @@ function TeamsComponent() {
     };
   }, [tournament]);
 
-  // 3) Subscribe to playerMatchFacts for this tournament (real-time for live stats)
+  // 3) Subscribe to pre-aggregated playerStats (much more efficient than loading all facts)
   useEffect(() => {
-    if (!tournament?.id) {
+    if (!tournament?.id || !tournament?.series) {
       setStats({});
       setFactsLoaded(tournamentLoaded);
       return;
     }
 
-    const unsub = onSnapshot(
-      query(collection(db, "playerMatchFacts"), where("tournamentId", "==", tournament.id)),
-      (snap) => {
-        const sMap: Record<string, TournamentStat> = {};
-        
-        snap.docs.forEach(d => {
-          const f = d.data() as PlayerMatchFact;
-          const pid = f.playerId;
-          
-          if (!sMap[pid]) sMap[pid] = { wins: 0, losses: 0, halves: 0 };
-          
-          if (f.outcome === "win") sMap[pid].wins++;
-          else if (f.outcome === "loss") sMap[pid].losses++;
-          else if (f.outcome === "halve") sMap[pid].halves++;
-        });
-        
-        setStats(sMap);
-        setFactsLoaded(true);
-      },
-      (err) => {
-        console.error("Facts subscription error:", err);
-        setFactsLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [tournament?.id, tournamentLoaded]);
+    const playerIds = Object.keys(players);
+    if (playerIds.length === 0) {
+      setFactsLoaded(true);
+      return;
+    }
+
+    const unsubscribers: (() => void)[] = [];
+    
+    playerIds.forEach(playerId => {
+      const statsRef = doc(db, "playerStats", playerId, "bySeries", tournament.series);
+      const unsub = onSnapshot(
+        statsRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            setStats(prev => ({
+              ...prev,
+              [playerId]: {
+                wins: data.wins || 0,
+                losses: data.losses || 0,
+                halves: data.halves || 0,
+              }
+            }));
+          } else {
+            // Player has no stats yet
+            setStats(prev => ({
+              ...prev,
+              [playerId]: { wins: 0, losses: 0, halves: 0 }
+            }));
+          }
+        },
+        (err) => {
+          console.error(`Stats subscription error for ${playerId}:`, err);
+        }
+      );
+      unsubscribers.push(unsub);
+    });
+    
+    setFactsLoaded(true);
+    return () => unsubscribers.forEach(u => u());
+  }, [tournament?.id, tournament?.series, players, tournamentLoaded]);
 
   // Coordinated loading state
   useEffect(() => {

@@ -38,7 +38,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Listen to MATCH and fetch players
+  // 1. Listen to MATCH
   useEffect(() => {
     if (!matchId) return;
     setLoading(true);
@@ -55,39 +55,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         
         const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
         setMatch(mData);
-
-        // Extract unique player IDs from both teams
-        const ids = Array.from(new Set([
-          ...(mData.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
-          ...(mData.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
-        ]));
-        
-        if (ids.length === 0) {
-          setLoading(false);
-          return;
-        }
-
-        // Batch fetch players (Firestore 'in' query limited to 10 items)
-        const fetchPlayers = async () => {
-          const batches = [];
-          for (let i = 0; i < ids.length; i += 10) {
-            batches.push(ids.slice(i, i + 10));
-          }
-          
-          const newPlayers: PlayerLookup = {};
-          for (const batch of batches) {
-            const q = query(collection(db, "players"), where(documentId(), "in", batch));
-            const snap = await getDocs(q);
-            snap.forEach(d => { 
-              newPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc; 
-            });
-          }
-          setPlayers(prev => ({ ...prev, ...newPlayers }));
-        };
-
-        fetchPlayers()
-          .catch((err) => setError(`Failed to load players: ${err.message}`))
-          .finally(() => setLoading(false));
       },
       (err) => {
         setError(`Failed to load match: ${err.message}`);
@@ -98,7 +65,56 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => unsub();
   }, [matchId]);
 
-  // 2. Listen to ROUND and fetch Tournament/Course in parallel
+  // 2. Subscribe to players once match loads
+  useEffect(() => {
+    if (!match) return;
+
+    // Extract unique player IDs from both teams
+    const ids = Array.from(new Set([
+      ...(match.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
+      ...(match.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
+    ]));
+    
+    if (ids.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // Batch subscribe to players using onSnapshot for offline cache benefit
+    // Split into batches of 10 (Firestore 'in' query limit)
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += 10) {
+      batches.push(ids.slice(i, i + 10));
+    }
+    
+    const playerUnsubscribers: (() => void)[] = [];
+    
+    batches.forEach(batch => {
+      const q = query(collection(db, "players"), where(documentId(), "in", batch));
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          setPlayers(prev => {
+            const updated = { ...prev };
+            snap.forEach(d => {
+              updated[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+            });
+            return updated;
+          });
+          setLoading(false);
+        },
+        (err) => {
+          setError(`Failed to load players: ${err.message}`);
+          setLoading(false);
+        }
+      );
+      playerUnsubscribers.push(unsub);
+    });
+    
+    return () => playerUnsubscribers.forEach(u => u());
+  }, [match]);
+
+  // 3. Listen to ROUND and fetch Tournament/Course in parallel
   useEffect(() => {
     if (!match?.roundId) return;
     
@@ -157,7 +173,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => unsub();
   }, [match?.roundId, match?.status?.closed]);
 
-  // 3. Match facts now fetched in parallel with tournament/course above
+  // 4. Match facts now fetched in parallel with tournament/course above
   // This effect clears facts when match is not closed
   useEffect(() => {
     if (!match?.status?.closed) {
