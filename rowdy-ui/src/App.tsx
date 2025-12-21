@@ -177,14 +177,12 @@ export default function App() {
                 >
                   {/* Team A - Left */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}> 
-                      <OfflineImage 
-                        src={tournament.teamA?.logo} 
-                        alt={tournament.teamA?.name || "Team A"}
-                        fallbackIcon="🔵"
-                        style={{ width: 28, height: 28, objectFit: "contain", cursor: 'pointer' }}
-                      />
-                    </Link>
+                    <OfflineImage 
+                      src={tournament.teamA?.logo} 
+                      alt={tournament.teamA?.name || "Team A"}
+                      fallbackIcon="🔵"
+                      style={{ width: 28, height: 28, objectFit: "contain" }}
+                    />
                     <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
                       <ScoreBlock
                         final={rs?.teamAConfirmed ?? 0}
@@ -213,14 +211,12 @@ export default function App() {
                         projLeft
                       />
                     </span>
-                    <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
-                      <OfflineImage 
-                        src={tournament.teamB?.logo} 
-                        alt={tournament.teamB?.name || "Team B"}
-                        fallbackIcon="🔴"
-                        style={{ width: 28, height: 28, objectFit: "contain", cursor: 'pointer' }}
-                      />
-                    </Link>
+                    <OfflineImage 
+                      src={tournament.teamB?.logo} 
+                      alt={tournament.teamB?.name || "Team B"}
+                      fallbackIcon="🔴"
+                      style={{ width: 28, height: 28, objectFit: "contain" }}
+                    />
                   </div>
                 </Link>
               );

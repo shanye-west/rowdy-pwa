@@ -112,12 +112,14 @@ function RoundComponent() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
              {/* Team A */}
              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <OfflineImage 
-                  src={tournament?.teamA?.logo} 
-                  alt={tournament?.teamA?.name || "Team A"}
-                  fallbackIcon="🔵"
-                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
-                />
+                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
+                    <OfflineImage 
+                      src={tournament?.teamA?.logo} 
+                      alt={tournament?.teamA?.name || "Team A"}
+                      fallbackIcon="🔵"
+                      style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6, cursor: 'pointer' }}
+                    />
+                  </Link>
                 <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   <span style={{ color: tournament?.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
@@ -144,12 +146,14 @@ function RoundComponent() {
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <OfflineImage 
-                  src={tournament?.teamB?.logo} 
-                  alt={tournament?.teamB?.name || "Team B"}
-                  fallbackIcon="🔴"
-                  style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
-                />
+                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
+                    <OfflineImage 
+                      src={tournament?.teamB?.logo} 
+                      alt={tournament?.teamB?.name || "Team B"}
+                      fallbackIcon="🔴"
+                      style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6, cursor: 'pointer' }}
+                    />
+                  </Link>
                 <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   {stats.pB > 0 && (
