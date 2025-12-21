@@ -1,6 +1,6 @@
 import { useEffect, useState, memo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, query, where, documentId, onSnapshot, limit, doc } from "firebase/firestore";
+import { collection, query, where, documentId, onSnapshot, limit, doc, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -136,7 +136,7 @@ function TeamsComponent() {
     };
   }, [tournament]);
 
-  // 3) Subscribe to pre-aggregated playerStats (much more efficient than loading all facts)
+  // 3) Subscribe to pre-aggregated playerStats using collection group query (1 query instead of N)
   useEffect(() => {
     if (!tournament?.id || !tournament?.series) {
       setStats({});
@@ -150,40 +150,41 @@ function TeamsComponent() {
       return;
     }
 
-    const unsubscribers: (() => void)[] = [];
-    
-    playerIds.forEach(playerId => {
-      const statsRef = doc(db, "playerStats", playerId, "bySeries", tournament.series);
-      const unsub = onSnapshot(
-        statsRef,
-        (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            setStats(prev => ({
-              ...prev,
-              [playerId]: {
-                wins: data.wins || 0,
-                losses: data.losses || 0,
-                halves: data.halves || 0,
-              }
-            }));
-          } else {
-            // Player has no stats yet
-            setStats(prev => ({
-              ...prev,
-              [playerId]: { wins: 0, losses: 0, halves: 0 }
-            }));
+    // Use collection group query to fetch all stats for this series in one query
+    const unsub = onSnapshot(
+      query(
+        collectionGroup(db, "bySeries"),
+        where("series", "==", tournament.series)
+      ),
+      (snap) => {
+        const newStats: Record<string, TournamentStat> = {};
+        snap.docs.forEach(doc => {
+          const data = doc.data();
+          const playerId = data.playerId;
+          if (playerId && playerIds.includes(playerId)) {
+            newStats[playerId] = {
+              wins: data.wins || 0,
+              losses: data.losses || 0,
+              halves: data.halves || 0,
+            };
           }
-        },
-        (err) => {
-          console.error(`Stats subscription error for ${playerId}:`, err);
-        }
-      );
-      unsubscribers.push(unsub);
-    });
+        });
+        // Fill in zeros for players without stats
+        playerIds.forEach(pid => {
+          if (!newStats[pid]) {
+            newStats[pid] = { wins: 0, losses: 0, halves: 0 };
+          }
+        });
+        setStats(newStats);
+        setFactsLoaded(true);
+      },
+      (err) => {
+        console.error("Stats collection group query error:", err);
+        setFactsLoaded(true);
+      }
+    );
     
-    setFactsLoaded(true);
-    return () => unsubscribers.forEach(u => u());
+    return () => unsub();
   }, [tournament?.id, tournament?.series, players, tournamentLoaded]);
 
   // Coordinated loading state

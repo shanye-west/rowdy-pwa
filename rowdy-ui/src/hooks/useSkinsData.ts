@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { 
   RoundDoc, 
@@ -9,6 +9,7 @@ import type {
   SkinsResultDoc 
 } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
+import { useTournamentContextOptional } from "../contexts/TournamentContext";
 
 export type SkinType = "gross" | "net";
 
@@ -20,8 +21,11 @@ export function useSkinsData(roundId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   
   const [round, setRound] = useState<RoundDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
+  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [skinsResult, setSkinsResult] = useState<SkinsResultDoc | null>(null);
+
+  // Try to get tournament from shared context first
+  const tournamentContext = useTournamentContextOptional();
 
   // Subscribe to round
   useEffect(() => {
@@ -51,21 +55,34 @@ export function useSkinsData(roundId: string | undefined) {
     return () => unsub();
   }, [roundId]);
 
-  // Subscribe to tournament (for team colors, names)
+  // Get tournament from context or fetch once (not subscribe) if context doesn't have it
   useEffect(() => {
     if (!round?.tournamentId) return;
 
-    const unsub = onSnapshot(
-      doc(db, "tournaments", round.tournamentId),
-      (snap) => {
-        if (snap.exists()) {
-          setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
-        }
-      }
-    );
+    // Check if context has this tournament
+    if (tournamentContext?.tournament?.id === round.tournamentId) {
+      setLocalTournament(tournamentContext.tournament);
+      return;
+    }
 
-    return () => unsub();
-  }, [round?.tournamentId]);
+    // Context doesn't have it - do a one-time fetch instead of subscribing
+    // Tournament data rarely changes during a session
+    let cancelled = false;
+    async function fetchTournament() {
+      try {
+        const snap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        if (cancelled) return;
+        if (snap.exists()) {
+          setLocalTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
+        }
+      } catch (err) {
+        console.error("Error fetching tournament:", err);
+      }
+    }
+    fetchTournament();
+
+    return () => { cancelled = true; };
+  }, [round?.tournamentId, tournamentContext?.tournament]);
 
   // Subscribe to pre-computed skins results
   useEffect(() => {
@@ -91,6 +108,11 @@ export function useSkinsData(roundId: string | undefined) {
 
     return () => unsub();
   }, [roundId]);
+
+  // Use tournament from context if available, otherwise use local fetch
+  const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
+    ? tournamentContext.tournament 
+    : localTournament;
 
   // Check if skins are enabled and format is valid
   const skinsEnabled = useMemo(() => {

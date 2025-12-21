@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { doc, onSnapshot, getDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
+import { useTournamentContextOptional } from "../contexts/TournamentContext";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
@@ -23,8 +24,8 @@ export interface UseMatchDataResult {
  * Sets up listeners for:
  * 1. Match document (real-time)
  * 2. Round document (real-time, depends on match.roundId)
- * 3. Tournament document (one-time fetch when round loads)
- * 4. Course document (one-time fetch when round loads)
+ * 3. Tournament document (from context or one-time fetch, cached by ID)
+ * 4. Course document (one-time fetch, cached by ID)
  * 5. Player documents (batch fetch when match loads)
  * 6. PlayerMatchFacts (fetch when match closes)
  */
@@ -32,11 +33,18 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [match, setMatch] = useState<MatchDoc | null>(null);
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
+  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<PlayerLookup>({});
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Try to get tournament from shared context
+  const tournamentContext = useTournamentContextOptional();
+  
+  // Cache refs to avoid re-fetching the same tournament/course
+  const fetchedTournamentIdRef = useRef<string | undefined>(undefined);
+  const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
   // 1. Listen to MATCH
   useEffect(() => {
@@ -114,56 +122,16 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => playerUnsubscribers.forEach(u => u());
   }, [match]);
 
-  // 3. Listen to ROUND and fetch Tournament/Course in parallel
+  // 3. Listen to ROUND (real-time for score updates)
   useEffect(() => {
     if (!match?.roundId) return;
     
     const unsub = onSnapshot(
       doc(db, "rounds", match.roundId),
-      async (rSnap) => {
+      (rSnap) => {
         if (!rSnap.exists()) return;
-        
         const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
         setRound(rData);
-        
-        try {
-          // Fetch tournament and course in parallel to avoid N+1 pattern
-          const promises: Promise<any>[] = [];
-          
-          if (rData.tournamentId) {
-            promises.push(
-              getDoc(doc(db, "tournaments", rData.tournamentId)).then(tSnap => {
-                if (tSnap.exists()) {
-                  setTournament(ensureTournamentTeamColors({ id: tSnap.id, ...(tSnap.data() as any) } as TournamentDoc));
-                }
-              })
-            );
-          }
-          
-          if (rData.courseId) {
-            promises.push(
-              getDoc(doc(db, "courses", rData.courseId)).then(cSnap => {
-                if (cSnap.exists()) {
-                  setCourse({ id: cSnap.id, ...(cSnap.data() as any) } as CourseDoc);
-                }
-              })
-            );
-          }
-          
-          // Also fetch match facts in parallel if match is closed
-          if (match?.status?.closed) {
-            promises.push(
-              getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", match.id))).then(snap => {
-                const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
-                setMatchFacts(facts);
-              })
-            );
-          }
-          
-          await Promise.all(promises);
-        } catch (err: any) {
-          setError(`Failed to load round details: ${err.message}`);
-        }
       },
       (err) => {
         setError(`Failed to load round: ${err.message}`);
@@ -171,15 +139,106 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     );
     
     return () => unsub();
-  }, [match?.roundId, match?.status?.closed]);
+  }, [match?.roundId]);
 
-  // 4. Match facts now fetched in parallel with tournament/course above
-  // This effect clears facts when match is not closed
+  // 4. Fetch tournament (from context or one-time fetch, cached by ID)
   useEffect(() => {
-    if (!match?.status?.closed) {
-      setMatchFacts([]);
+    if (!round?.tournamentId) return;
+    
+    // Check if context has this tournament
+    if (tournamentContext?.tournament?.id === round.tournamentId) {
+      setLocalTournament(tournamentContext.tournament);
+      return;
     }
-  }, [match?.status?.closed]);
+    
+    // Skip if we already fetched this tournament
+    if (fetchedTournamentIdRef.current === round.tournamentId && localTournament?.id === round.tournamentId) {
+      return;
+    }
+    
+    let cancelled = false;
+    async function fetchTournament() {
+      try {
+        const tSnap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        if (cancelled) return;
+        if (tSnap.exists()) {
+          setLocalTournament(ensureTournamentTeamColors({ id: tSnap.id, ...tSnap.data() } as TournamentDoc));
+          fetchedTournamentIdRef.current = round!.tournamentId;
+        }
+      } catch (err: any) {
+        console.error("Failed to fetch tournament:", err);
+      }
+    }
+    fetchTournament();
+    
+    return () => { cancelled = true; };
+  }, [round?.tournamentId, tournamentContext?.tournament, localTournament?.id]);
+
+  // 5. Fetch course (one-time fetch, cached by ID)
+  useEffect(() => {
+    if (!round?.courseId) return;
+    
+    // Skip if we already fetched this course
+    if (fetchedCourseIdRef.current === round.courseId && course?.id === round.courseId) {
+      return;
+    }
+    
+    // Check if context has this course cached
+    if (tournamentContext?.courses[round.courseId]) {
+      setCourse(tournamentContext.courses[round.courseId]);
+      fetchedCourseIdRef.current = round.courseId;
+      return;
+    }
+    
+    let cancelled = false;
+    const courseIdToFetch = round.courseId; // Capture for closure
+    async function fetchCourse() {
+      try {
+        const cSnap = await getDoc(doc(db, "courses", courseIdToFetch));
+        if (cancelled) return;
+        if (cSnap.exists()) {
+          const courseData = { id: cSnap.id, ...cSnap.data() } as CourseDoc;
+          setCourse(courseData);
+          fetchedCourseIdRef.current = courseIdToFetch;
+          // Add to context cache if available
+          tournamentContext?.addCourse(courseData);
+        }
+      } catch (err: any) {
+        console.error("Failed to fetch course:", err);
+      }
+    }
+    fetchCourse();
+    
+    return () => { cancelled = true; };
+  }, [round?.courseId, course?.id, tournamentContext]);
+
+  // 6. Fetch match facts when match closes
+  useEffect(() => {
+    if (!match?.id || !match?.status?.closed) {
+      setMatchFacts([]);
+      return;
+    }
+    
+    let cancelled = false;
+    async function fetchFacts() {
+      try {
+        const snap = await getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", match!.id)));
+        if (cancelled) return;
+        const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
+        setMatchFacts(facts);
+      } catch (err: any) {
+        console.error("Failed to fetch match facts:", err);
+      }
+    }
+    fetchFacts();
+    
+    return () => { cancelled = true; };
+  }, [match?.id, match?.status?.closed]);
+
+  // Use tournament from context if available, otherwise use local fetch
+  const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
+    ? tournamentContext.tournament 
+    : localTournament;
 
   return {
     match,

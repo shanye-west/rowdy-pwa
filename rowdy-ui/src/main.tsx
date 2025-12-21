@@ -5,6 +5,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
+import { TournamentProvider } from "./contexts/TournamentContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 
@@ -62,7 +63,9 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <TournamentProvider>
+        <RouterProvider router={router} />
+      </TournamentProvider>
     </AuthProvider>
   </React.StrictMode>
 );
