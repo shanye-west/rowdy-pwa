@@ -235,8 +235,6 @@ export function PostMatchStats({
   const comebackWinB = factB?.comebackWin;
   const neverBehindA = factA?.wasNeverBehind && !factB?.wasNeverBehind;
   const neverBehindB = factB?.wasNeverBehind && !factA?.wasNeverBehind;
-  const jekyllHydeA = factA?.jekyllAndHyde;
-  const jekyllHydeB = factB?.jekyllAndHyde;
   
   // Shared props
   const colors = { teamAColor, teamBColor };

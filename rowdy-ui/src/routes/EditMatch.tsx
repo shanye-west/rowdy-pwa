@@ -43,9 +43,13 @@ export default function EditMatch() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch tournaments (active only)
-        const tournamentsSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
-        const tournamentsData = tournamentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentDoc));
+        // Fetch active tournaments and test tournaments, then merge (dedupe)
+        const activeSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
+        const testSnap = await getDocs(query(collection(db, "tournaments"), where("test", "==", true)));
+        const combinedDocs = [...activeSnap.docs, ...testSnap.docs];
+        const map = new Map<string, TournamentDoc>();
+        combinedDocs.forEach(d => map.set(d.id, ({ id: d.id, ...d.data() } as TournamentDoc)));
+        const tournamentsData = Array.from(map.values());
         setTournaments(tournamentsData);
 
         // Fetch all players
