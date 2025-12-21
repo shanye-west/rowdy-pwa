@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, doc, query, where, documentId, onSnapshot, getDoc } from "firebase/firestore";
+import { collection, doc, query, where, documentId, onSnapshot, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
@@ -195,37 +195,28 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
       chunks.push(pIds.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
     }
 
-    // Track players from all chunks
-    const playersByChunk: Record<number, Record<string, PlayerDoc>> = {};
-    const unsubscribers: (() => void)[] = [];
-
-    chunks.forEach((chunk, chunkIndex) => {
-      const unsub = onSnapshot(
-        query(collection(db, "players"), where(documentId(), "in", chunk)),
-        (snap) => {
-          const chunkPlayers: Record<string, PlayerDoc> = {};
+    // Fetch all player chunks at once (one-time read)
+    Promise.all(
+      chunks.map(chunk => {
+        return getDocs(
+          query(collection(db, "players"), where(documentId(), "in", chunk))
+        );
+      })
+    )
+      .then(snapshots => {
+        const allPlayers: Record<string, PlayerDoc> = {};
+        snapshots.forEach(snap => {
           snap.forEach(d => {
-            chunkPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+            allPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
           });
-          playersByChunk[chunkIndex] = chunkPlayers;
-          
-          // Merge all chunks into players state
-          const merged: Record<string, PlayerDoc> = {};
-          Object.values(playersByChunk).forEach(chunkData => {
-            Object.assign(merged, chunkData);
-          });
-          setPlayers(merged);
-        },
-        (err) => {
-          console.error("Players subscription error:", err);
-        }
-      );
-      unsubscribers.push(unsub);
-    });
+        });
+        setPlayers(allPlayers);
+      })
+      .catch(err => {
+        console.error("Players fetch error:", err);
+      });
 
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
+    return () => {};
   }, [matches]);
 
   // Coordinated loading state

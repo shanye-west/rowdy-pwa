@@ -95,31 +95,29 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       batches.push(ids.slice(i, i + 10));
     }
     
-    const playerUnsubscribers: (() => void)[] = [];
-    
-    batches.forEach(batch => {
-      const q = query(collection(db, "players"), where(documentId(), "in", batch));
-      const unsub = onSnapshot(
-        q,
-        (snap) => {
-          setPlayers(prev => {
-            const updated = { ...prev };
-            snap.forEach(d => {
-              updated[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-            });
-            return updated;
+    // Fetch all player batches at once (one-time read)
+    Promise.all(
+      batches.map(batch => {
+        const q = query(collection(db, "players"), where(documentId(), "in", batch));
+        return getDocs(q);
+      })
+    )
+      .then(snapshots => {
+        const allPlayers: Record<string, PlayerDoc> = {};
+        snapshots.forEach(snap => {
+          snap.forEach(d => {
+            allPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
           });
-          setLoading(false);
-        },
-        (err) => {
-          setError(`Failed to load players: ${err.message}`);
-          setLoading(false);
-        }
-      );
-      playerUnsubscribers.push(unsub);
-    });
+        });
+        setPlayers(allPlayers);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(`Failed to load players: ${err.message}`);
+        setLoading(false);
+      });
     
-    return () => playerUnsubscribers.forEach(u => u());
+    return () => {};
   }, [match]);
 
   // 3. Listen to ROUND (real-time for score updates)
