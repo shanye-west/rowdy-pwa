@@ -70,7 +70,10 @@ const TeamName: React.FC<TeamNameProps> = ({
     const cont = containerRef.current;
     if (!cont) return;
     const ro = new ResizeObserver(() => {
-      fitText();
+      // Defer to avoid ResizeObserver loop warning
+      requestAnimationFrame(() => {
+        fitText();
+      });
     });
     ro.observe(cont);
     // also listen for window resize as a fallback
