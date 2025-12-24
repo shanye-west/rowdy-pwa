@@ -1,21 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { db } from "../firebase";
-import type { TournamentDoc } from "../types";
 import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 
 type DryRunResult = {
   success: boolean;
   dryRun: boolean;
-  tournamentId: string;
-  tournamentName: string;
-  series: string;
   factsToDelete: number;
   affectedPlayers: number;
-  playerIds: string[];
+  tournamentsAffected: number;
   matchesToRecalculate: number;
   message: string;
 };
@@ -23,43 +17,20 @@ type DryRunResult = {
 type ExecuteResult = {
   success: boolean;
   dryRun: boolean;
-  tournamentId: string;
-  tournamentName: string;
-  series: string;
   factsDeleted: number;
-  statsReset: number;
+  statsAutoCleanedUp: number;
+  tournamentsRecalculated: number;
   matchesRecalculated: number;
-  matchIds: string[];
   message: string;
 };
 
 export default function RecalculateTournamentStats() {
   const { player } = useAuth();
-  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"select" | "preview" | "confirm" | "executing" | "complete">("select");
+  const [step, setStep] = useState<"preview" | "confirm" | "executing" | "complete">("preview");
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
   const [executeResult, setExecuteResult] = useState<ExecuteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch all tournaments
-  useEffect(() => {
-    let mounted = true;
-    const fetchTournaments = async () => {
-      try {
-        const snap = await getDocs(collection(db, "tournaments"));
-        const docs = snap.docs
-          .map(d => ({ id: d.id, ...d.data() } as TournamentDoc))
-          .sort((a, b) => (b.year || 0) - (a.year || 0));
-        if (mounted) setTournaments(docs);
-      } catch (err) {
-        console.error("Failed to fetch tournaments:", err);
-      }
-    };
-    fetchTournaments();
-    return () => { mounted = false; };
-  }, []);
 
   // Access control: only admins can view this page
   if (!player?.isAdmin) {
@@ -76,22 +47,17 @@ export default function RecalculateTournamentStats() {
   }
 
   const handleDryRun = async () => {
-    if (!selectedTournamentId) {
-      setError("Please select a tournament");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
       const functions = getFunctions();
-      const recalc = httpsCallable<{ tournamentId: string; dryRun: boolean }, DryRunResult>(
+      const recalc = httpsCallable<{ dryRun: boolean }, DryRunResult>(
         functions,
-        "recalculateTournamentStats"
+        "recalculateAllStats"
       );
 
-      const result = await recalc({ tournamentId: selectedTournamentId, dryRun: true });
+      const result = await recalc({ dryRun: true });
       setDryRunResult(result.data);
       setStep("preview");
     } catch (err: any) {
@@ -103,20 +69,18 @@ export default function RecalculateTournamentStats() {
   };
 
   const handleExecute = async () => {
-    if (!selectedTournamentId) return;
-
     setLoading(true);
     setError(null);
     setStep("executing");
 
     try {
       const functions = getFunctions();
-      const recalc = httpsCallable<{ tournamentId: string }, ExecuteResult>(
+      const recalc = httpsCallable<{}, ExecuteResult>(
         functions,
-        "recalculateTournamentStats"
+        "recalculateAllStats"
       );
 
-      const result = await recalc({ tournamentId: selectedTournamentId });
+      const result = await recalc({});
       setExecuteResult(result.data);
       setStep("complete");
     } catch (err: any) {
@@ -129,39 +93,40 @@ export default function RecalculateTournamentStats() {
   };
 
   const handleReset = () => {
-    setStep("select");
-    setSelectedTournamentId("");
+    setStep("preview");
     setDryRunResult(null);
     setExecuteResult(null);
     setError(null);
   };
 
   return (
-    <Layout title="Recalculate Tournament Stats" showBack>
+    <Layout title="Recalculate All Stats" showBack>
       <div className="p-4 space-y-4 max-w-3xl mx-auto">
         {/* Warning Banner */}
-        <div className="card p-4 bg-amber-50 border border-amber-200">
+        <div className="card p-4 bg-red-50 border-2 border-red-300">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">⚠️</div>
+            <div className="text-3xl">🔥</div>
             <div>
-              <div className="font-semibold text-amber-900 mb-1">Important: Data Recalculation</div>
-              <div className="text-sm text-amber-800 space-y-1">
-                <p>This function will:</p>
-                <ul className="list-disc ml-4 mt-1">
-                  <li>Delete all existing playerMatchFacts for the tournament</li>
-                  <li>Delete all playerStats for affected players</li>
-                  <li>Regenerate facts and stats from closed matches</li>
+              <div className="font-bold text-red-900 mb-2 text-lg">CRITICAL: Global Recalculation</div>
+              <div className="text-sm text-red-800 space-y-2">
+                <p className="font-semibold">This will recalculate ALL tournaments:</p>
+                <ul className="list-disc ml-4 mt-1 space-y-1">
+                  <li>Delete ALL playerMatchFacts across ALL tournaments</li>
+                  <li>playerStats automatically cleaned up via triggers</li>
+                  <li>Regenerate facts from ALL closed matches</li>
+                  <li>Rebuild all stats from fresh data</li>
                 </ul>
-                <p className="mt-2 font-semibold">Always preview first before executing.</p>
+                <p className="mt-3 font-bold bg-red-100 p-2 rounded">⚠️ This is a "nuclear" reset of all statistical data</p>
+                <p className="text-xs mt-2">Use this when you need to ensure complete data integrity across everything.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Step 1: Select Tournament */}
-        {step === "select" && (
+        {/* Initial Preview Button */}
+        {step === "preview" && !dryRunResult && (
           <div className="card p-6">
-            <h2 className="text-xl font-bold mb-4">Select Tournament</h2>
+            <h2 className="text-xl font-bold mb-4">Ready to Preview</h2>
             
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4">
@@ -169,45 +134,31 @@ export default function RecalculateTournamentStats() {
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Tournament</label>
-                <select
-                  value={selectedTournamentId}
-                  onChange={e => setSelectedTournamentId(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  disabled={loading}
-                >
-                  <option value="">-- Select a tournament --</option>
-                  {tournaments.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.year}) - {t.series}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <p className="text-gray-700 mb-6">
+              Click below to run a dry-run preview. This will show you exactly what will happen 
+              without making any changes.
+            </p>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDryRun}
-                  disabled={!selectedTournamentId || loading}
-                  className="btn btn-primary flex-1"
-                >
-                  {loading ? "Loading..." : "Preview Changes"}
-                </button>
-                <Link to="/admin" className="btn btn-secondary">
-                  Cancel
-                </Link>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDryRun}
+                disabled={loading}
+                className="btn btn-primary flex-1"
+              >
+                {loading ? "Loading Preview..." : "Preview Changes"}
+              </button>
+              <Link to="/admin" className="btn btn-secondary">
+                Cancel
+              </Link>
             </div>
           </div>
         )}
 
-        {/* Step 2: Preview Dry Run Results */}
+        {/* Dry Run Results */}
         {step === "preview" && dryRunResult && (
           <div className="space-y-4">
             <div className="card p-6">
-              <h2 className="text-xl font-bold mb-4">Preview: {dryRunResult.tournamentName}</h2>
+              <h2 className="text-xl font-bold mb-4">Preview Results</h2>
               
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4">
@@ -216,17 +167,17 @@ export default function RecalculateTournamentStats() {
               )}
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between p-3 bg-gray-50 rounded">
-                  <span className="font-medium">Tournament:</span>
-                  <span>{dryRunResult.tournamentName} ({dryRunResult.series})</span>
-                </div>
                 <div className="flex justify-between p-3 bg-red-50 rounded">
                   <span className="font-medium">Facts to Delete:</span>
                   <span className="font-bold text-red-700">{dryRunResult.factsToDelete}</span>
                 </div>
-                <div className="flex justify-between p-3 bg-red-50 rounded">
-                  <span className="font-medium">Player Stats to Reset:</span>
-                  <span className="font-bold text-red-700">{dryRunResult.affectedPlayers}</span>
+                <div className="flex justify-between p-3 bg-orange-50 rounded">
+                  <span className="font-medium">Players Affected:</span>
+                  <span className="font-bold text-orange-700">{dryRunResult.affectedPlayers}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-orange-50 rounded">
+                  <span className="font-medium">Tournaments Affected:</span>
+                  <span className="font-bold text-orange-700">{dryRunResult.tournamentsAffected}</span>
                 </div>
                 <div className="flex justify-between p-3 bg-green-50 rounded">
                   <span className="font-medium">Matches to Regenerate:</span>
@@ -259,21 +210,22 @@ export default function RecalculateTournamentStats() {
           </div>
         )}
 
-        {/* Step 3: Final Confirmation */}
+        {/* Final Confirmation */}
         {step === "confirm" && dryRunResult && (
           <div className="card p-6">
-            <h2 className="text-xl font-bold mb-4 text-red-700">⚠️ Final Confirmation</h2>
+            <h2 className="text-xl font-bold mb-4 text-red-700">🔥 FINAL CONFIRMATION</h2>
             
             <div className="bg-red-50 border-2 border-red-300 p-4 rounded-lg mb-6">
               <div className="text-red-900 space-y-2">
-                <p className="font-bold">You are about to permanently:</p>
+                <p className="font-bold text-lg">You are about to PERMANENTLY:</p>
                 <ul className="list-disc ml-6 space-y-1">
                   <li>Delete {dryRunResult.factsToDelete} playerMatchFacts</li>
-                  <li>Reset stats for {dryRunResult.affectedPlayers} players</li>
+                  <li>Affect {dryRunResult.affectedPlayers} players across {dryRunResult.tournamentsAffected} tournaments</li>
                   <li>Trigger regeneration for {dryRunResult.matchesToRecalculate} matches</li>
                 </ul>
-                <p className="mt-4 font-bold">This action cannot be undone.</p>
-                <p className="text-sm mt-2">The system will automatically regenerate fresh data from closed matches.</p>
+                <p className="mt-4 font-bold text-xl bg-red-200 p-3 rounded">⚠️ ALL TOURNAMENTS WILL BE RECALCULATED</p>
+                <p className="text-sm mt-2">playerStats will be automatically cleaned up and rebuilt by triggers.</p>
+                <p className="mt-3 font-bold">This action cannot be undone.</p>
               </div>
             </div>
 
@@ -283,7 +235,7 @@ export default function RecalculateTournamentStats() {
                 disabled={loading}
                 className="btn bg-red-600 hover:bg-red-700 text-white flex-1"
               >
-                {loading ? "Executing..." : "Execute Recalculation"}
+                {loading ? "Executing..." : "Execute Global Recalculation"}
               </button>
               <button
                 onClick={handleReset}
@@ -296,38 +248,39 @@ export default function RecalculateTournamentStats() {
           </div>
         )}
 
-        {/* Step 4: Executing */}
+        {/* Executing */}
         {step === "executing" && (
           <div className="card p-6 text-center">
             <div className="text-4xl mb-4">⏳</div>
-            <h2 className="text-xl font-bold mb-2">Processing...</h2>
+            <h2 className="text-xl font-bold mb-2">Processing Global Recalculation...</h2>
             <p className="text-gray-600">
-              Deleting old data and triggering regeneration. This may take a moment.
+              Deleting all facts across all tournaments and triggering regeneration.
             </p>
+            <p className="text-sm text-gray-500 mt-2">This may take a few moments.</p>
           </div>
         )}
 
-        {/* Step 5: Complete */}
+        {/* Complete */}
         {step === "complete" && executeResult && (
           <div className="space-y-4">
             <div className="card p-6">
               <div className="text-center mb-6">
                 <div className="text-5xl mb-3">✅</div>
-                <h2 className="text-2xl font-bold text-green-700 mb-2">Recalculation Complete!</h2>
+                <h2 className="text-2xl font-bold text-green-700 mb-2">Global Recalculation Complete!</h2>
               </div>
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between p-3 bg-gray-50 rounded">
-                  <span className="font-medium">Tournament:</span>
-                  <span>{executeResult.tournamentName}</span>
-                </div>
                 <div className="flex justify-between p-3 bg-green-50 rounded">
                   <span className="font-medium">Facts Deleted:</span>
                   <span className="font-bold text-green-700">{executeResult.factsDeleted}</span>
                 </div>
                 <div className="flex justify-between p-3 bg-green-50 rounded">
-                  <span className="font-medium">Stats Reset:</span>
-                  <span className="font-bold text-green-700">{executeResult.statsReset}</span>
+                  <span className="font-medium">Players Auto-Cleaned:</span>
+                  <span className="font-bold text-green-700">{executeResult.statsAutoCleanedUp}</span>
+                </div>
+                <div className="flex justify-between p-3 bg-green-50 rounded">
+                  <span className="font-medium">Tournaments Recalculated:</span>
+                  <span className="font-bold text-green-700">{executeResult.tournamentsRecalculated}</span>
                 </div>
                 <div className="flex justify-between p-3 bg-green-50 rounded">
                   <span className="font-medium">Matches Regenerated:</span>
@@ -339,7 +292,7 @@ export default function RecalculateTournamentStats() {
                 <div className="text-sm text-blue-900">
                   <strong>Result:</strong>
                   <p className="mt-2">{executeResult.message}</p>
-                  <p className="mt-2 text-xs">Player stats will be automatically updated in real-time.</p>
+                  <p className="mt-3 text-xs font-semibold">All player stats are being automatically rebuilt in real-time by triggers.</p>
                 </div>
               </div>
 
@@ -348,7 +301,7 @@ export default function RecalculateTournamentStats() {
                   onClick={handleReset}
                   className="btn btn-primary flex-1"
                 >
-                  Recalculate Another Tournament
+                  Run Again
                 </button>
                 <Link to="/admin" className="btn btn-secondary">
                   Back to Admin

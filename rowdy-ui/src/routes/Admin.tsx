@@ -95,15 +95,15 @@ export default function Admin() {
             {/* Recalculate Tournament Stats */}
             <Link 
               to="/admin/tournament/recalculate" 
-              className="block p-4 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors bg-orange-50"
+              className="block p-4 border-2 border-red-300 rounded-lg hover:bg-red-50 transition-colors bg-red-50"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-lg flex items-center gap-2">
-                    <span>⚠️</span>
-                    <span>Recalculate Tournament Stats</span>
+                    <span>🔥</span>
+                    <span>Recalculate All Stats (Global)</span>
                   </div>
-                  <div className="text-sm text-gray-600">Regenerate all playerMatchFacts and stats for a tournament</div>
+                  <div className="text-sm text-gray-600">Regenerate all playerMatchFacts and stats across ALL tournaments</div>
                 </div>
                 <div className="text-2xl">→</div>
               </div>

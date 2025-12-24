@@ -1491,11 +1491,21 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
     return;
   }
 
-  // Query all facts for this player in this series
+  // Query all REMAINING facts for this player in this series
+  // (after any deletion has occurred)
   const snap = await db.collection("playerMatchFacts")
     .where("playerId", "==", playerId)
     .where("tournamentSeries", "==", series)
     .get();
+  
+  // If no facts remain, DELETE the stats document
+  const statsRef = db.collection("playerStats").doc(playerId)
+    .collection("bySeries").doc(series);
+  
+  if (snap.empty) {
+    await statsRef.delete();
+    return;
+  }
   
   // Initialize stats
   let wins = 0, losses = 0, halves = 0, points = 0, matchesPlayed = 0;
@@ -1653,9 +1663,8 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
   }
 
   // Write to subcollection: playerStats/{playerId}/bySeries/{series}
-  await db.collection("playerStats").doc(playerId)
-    .collection("bySeries").doc(series)
-    .set(statsDoc, { merge: true });
+  // Use set() without merge to ensure stale fields are removed
+  await statsRef.set(statsDoc);
 });
 
 // ============================================================================
@@ -2152,21 +2161,21 @@ export const recalculateMatchStrokes = onCall(async (request) => {
 });
 
 /**
- * Admin-only function to recalculate all playerMatchFacts for a tournament.
+ * Admin-only function to recalculate ALL playerMatchFacts across ALL tournaments.
  * 
  * IMPORTANT: This function ensures data integrity by:
- * 1. Deleting ALL existing playerMatchFacts for the tournament (clean slate)
- * 2. Deleting ALL playerStats/{playerId}/bySeries/{series} for affected players
- * 3. "Touching" each closed match to trigger updateMatchFacts regeneration
- * 4. aggregatePlayerStats automatically rebuilds from fresh facts
+ * 1. Deleting ALL existing playerMatchFacts (clean slate across ALL tournaments)
+ * 2. Letting aggregatePlayerStats automatically delete all playerStats (via triggers)
+ * 3. "Touching" EVERY closed match across ALL tournaments to trigger regeneration
+ * 4. aggregatePlayerStats automatically rebuilds all stats from fresh facts
  * 
- * This prevents double-counting or stale stats from corrupting the data.
+ * This is a "nuclear" recalculation that resets everything.
+ * Safe for small tournaments (<1000 matches) and well within Firebase free tier.
  * 
  * Data payload:
- * - tournamentId: string - Tournament to recalculate
  * - dryRun?: boolean - If true, only report what would be done (no changes)
  */
-export const recalculateTournamentStats = onCall(async (request) => {
+export const recalculateAllStats = onCall(async (request) => {
   // Auth check
   const uid = request.auth?.uid;
   if (!uid) {
@@ -2174,7 +2183,7 @@ export const recalculateTournamentStats = onCall(async (request) => {
   }
 
   // Rate limiting check (very restrictive - this is expensive)
-  const rateLimit = checkRateLimit(uid, "recalculateTournamentStats", { maxCalls: 3, windowSeconds: 300 });
+  const rateLimit = checkRateLimit(uid, "recalculateAllStats", { maxCalls: 2, windowSeconds: 600 });
   if (!rateLimit.allowed) {
     throw new HttpsError(
       "resource-exhausted",
@@ -2189,41 +2198,23 @@ export const recalculateTournamentStats = onCall(async (request) => {
   }
 
   // Extract data
-  const { tournamentId, dryRun = false } = request.data;
+  const { dryRun = false } = request.data;
 
-  if (!tournamentId) {
-    throw new HttpsError("invalid-argument", "Missing tournamentId");
-  }
-
-  // Verify tournament exists
-  const tournamentDoc = await db.collection("tournaments").doc(tournamentId).get();
-  if (!tournamentDoc.exists) {
-    throw new HttpsError("not-found", "Tournament not found");
-  }
-
-  const tournament = tournamentDoc.data()!;
-  const series = tournament.series;
-
-  if (!series) {
-    throw new HttpsError("failed-precondition", "Tournament has no series defined");
-  }
-
-  // Step 1: Find all existing playerMatchFacts for this tournament
-  const existingFactsSnap = await db.collection("playerMatchFacts")
-    .where("tournamentId", "==", tournamentId)
-    .get();
+  // Step 1: Find ALL existing playerMatchFacts across ALL tournaments
+  const existingFactsSnap = await db.collection("playerMatchFacts").get();
   
   const factsToDelete = existingFactsSnap.docs.length;
   const affectedPlayerIds = new Set<string>();
+  const tournamentsAffected = new Set<string>();
+  
   existingFactsSnap.docs.forEach(d => {
-    const playerId = d.data().playerId;
-    if (playerId) affectedPlayerIds.add(playerId);
+    const data = d.data();
+    if (data.playerId) affectedPlayerIds.add(data.playerId);
+    if (data.tournamentId) tournamentsAffected.add(data.tournamentId);
   });
 
-  // Step 2: Find all closed matches for this tournament
-  const matchesSnap = await db.collection("matches")
-    .where("tournamentId", "==", tournamentId)
-    .get();
+  // Step 2: Find ALL closed matches across ALL tournaments
+  const matchesSnap = await db.collection("matches").get();
   
   const closedMatches = matchesSnap.docs.filter(d => d.data().status?.closed === true);
   const matchesToRecalculate = closedMatches.length;
@@ -2231,6 +2222,7 @@ export const recalculateTournamentStats = onCall(async (request) => {
   // Also collect player IDs from matches (in case facts were never created)
   closedMatches.forEach(d => {
     const data = d.data();
+    if (data.tournamentId) tournamentsAffected.add(data.tournamentId);
     (data.teamAPlayers || []).forEach((p: any) => {
       if (p.playerId) affectedPlayerIds.add(p.playerId);
     });
@@ -2244,19 +2236,17 @@ export const recalculateTournamentStats = onCall(async (request) => {
     return {
       success: true,
       dryRun: true,
-      tournamentId,
-      tournamentName: tournament.name,
-      series,
       factsToDelete,
       affectedPlayers: affectedPlayerIds.size,
-      playerIds: Array.from(affectedPlayerIds),
+      tournamentsAffected: tournamentsAffected.size,
       matchesToRecalculate,
-      message: `Would delete ${factsToDelete} facts, reset stats for ${affectedPlayerIds.size} players, and regenerate facts for ${matchesToRecalculate} matches.`
+      message: `Would delete ${factsToDelete} facts across ${tournamentsAffected.size} tournaments, affecting ${affectedPlayerIds.size} players, and regenerate facts for ${matchesToRecalculate} matches. playerStats will be automatically cleaned up and rebuilt by triggers.`
     };
   }
 
-  // Step 3: Delete all existing playerMatchFacts for this tournament
+  // Step 3: Delete ALL existing playerMatchFacts
   // Use batched deletes (max 500 per batch)
+  // This triggers aggregatePlayerStats to delete all playerStats automatically
   const factDocs = existingFactsSnap.docs;
   for (let i = 0; i < factDocs.length; i += 500) {
     const batch = db.batch();
@@ -2265,21 +2255,7 @@ export const recalculateTournamentStats = onCall(async (request) => {
     await batch.commit();
   }
 
-  // Step 4: Delete playerStats/{playerId}/bySeries/{series} for ALL affected players
-  // This is CRITICAL - prevents double-counting when facts are regenerated
-  const playerIdsArray = Array.from(affectedPlayerIds);
-  for (let i = 0; i < playerIdsArray.length; i += 500) {
-    const batch = db.batch();
-    const chunk = playerIdsArray.slice(i, i + 500);
-    for (const playerId of chunk) {
-      const statsRef = db.collection("playerStats").doc(playerId)
-        .collection("bySeries").doc(series);
-      batch.delete(statsRef);
-    }
-    await batch.commit();
-  }
-
-  // Step 5: "Touch" each closed match to trigger updateMatchFacts
+  // Step 4: "Touch" EVERY closed match to trigger updateMatchFacts
   // We update a _recalculatedAt timestamp field to trigger the onDocumentWritten
   const touchTimestamp = FieldValue.serverTimestamp();
   const touchedMatchIds: string[] = [];
@@ -2297,13 +2273,10 @@ export const recalculateTournamentStats = onCall(async (request) => {
   return {
     success: true,
     dryRun: false,
-    tournamentId,
-    tournamentName: tournament.name,
-    series,
     factsDeleted: factsToDelete,
-    statsReset: playerIdsArray.length,
+    statsAutoCleanedUp: affectedPlayerIds.size,
+    tournamentsRecalculated: tournamentsAffected.size,
     matchesRecalculated: touchedMatchIds.length,
-    matchIds: touchedMatchIds,
-    message: `Deleted ${factsToDelete} facts, reset stats for ${playerIdsArray.length} players, and triggered regeneration for ${touchedMatchIds.length} matches.`
+    message: `Deleted ${factsToDelete} facts across ${tournamentsAffected.size} tournaments. Triggered regeneration for ${touchedMatchIds.length} matches. playerStats for ${affectedPlayerIds.size} players will be automatically rebuilt by triggers.`
   };
 });
