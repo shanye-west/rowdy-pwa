@@ -21,6 +21,7 @@ const Admin = lazy(() => import("./routes/Admin"));
 const AddMatch = lazy(() => import("./routes/AddMatch"));
 const EditMatch = lazy(() => import("./routes/EditMatch"));
 const RecalculateMatchStrokes = lazy(() => import("./routes/RecalculateMatchStrokes"));
+const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTournamentStats"));
 
 // Loading fallback for lazy-loaded routes
 const RouteLoader = () => (
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: "admin/match", element: <Suspense fallback={<RouteLoader />}><AddMatch /></Suspense> },
       { path: "admin/match/edit", element: <Suspense fallback={<RouteLoader />}><EditMatch /></Suspense> },
       { path: "admin/match/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateMatchStrokes /></Suspense> },
+      { path: "admin/tournament/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateTournamentStats /></Suspense> },
       { path: "*", element: <NotFound /> },
     ],
   },

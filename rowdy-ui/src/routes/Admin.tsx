@@ -92,6 +92,23 @@ export default function Admin() {
               </div>
             </Link>
 
+            {/* Recalculate Tournament Stats */}
+            <Link 
+              to="/admin/tournament/recalculate" 
+              className="block p-4 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors bg-orange-50"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-lg flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Recalculate Tournament Stats</span>
+                  </div>
+                  <div className="text-sm text-gray-600">Regenerate all playerMatchFacts and stats for a tournament</div>
+                </div>
+                <div className="text-2xl">→</div>
+              </div>
+            </Link>
+
             {/* Future: Add Tournament */}
             <div 
               className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
