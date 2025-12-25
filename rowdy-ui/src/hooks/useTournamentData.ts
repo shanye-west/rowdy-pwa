@@ -9,8 +9,8 @@
  * - Computed stats (finalScores, pendingScores, roundStats)
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { collection, doc, query, where, onSnapshot, limit, documentId } from "firebase/firestore";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { collection, doc, query, where, onSnapshot, limit, documentId, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
@@ -214,47 +214,57 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   }, [tournament?.id, tournamentLoaded]);
 
   // -------------------------------------------------------------------------
-  // 4) Subscribe to only courses needed by current tournament rounds
+  // 4) Fetch courses needed by current tournament rounds (ONE-TIME, not subscription)
+  // Course data is static during a tournament, so real-time updates are unnecessary.
+  // This optimization reduces Firestore reads by eliminating persistent subscriptions.
   // -------------------------------------------------------------------------
+  const fetchedCourseIdsRef = useRef<Set<string>>(new Set());
+  
   useEffect(() => {
     if (rounds.length === 0) {
       setCourses({});
       return;
     }
     
-    // Extract unique courseIds from rounds
-    const courseIds = [...new Set(rounds.map(r => r.courseId).filter(Boolean) as string[])];
-    if (courseIds.length === 0) {
-      setCourses({});
-      return;
+    // Extract unique courseIds from rounds that haven't been fetched yet
+    const allCourseIds = [...new Set(rounds.map(r => r.courseId).filter(Boolean) as string[])];
+    const courseIdsToFetch = allCourseIds.filter(id => !fetchedCourseIdsRef.current.has(id));
+    
+    if (courseIdsToFetch.length === 0) {
+      return; // All courses already fetched
     }
     
-    // Batch courseIds into groups of 10 (Firestore 'in' query limit)
-    const batches: string[][] = [];
-    for (let i = 0; i < courseIds.length; i += 10) {
-      batches.push(courseIds.slice(i, i + 10));
-    }
+    let cancelled = false;
     
-    const unsubscribers: (() => void)[] = [];
-    
-    batches.forEach(batch => {
-      const unsub = onSnapshot(
-        query(collection(db, "courses"), where(documentId(), "in", batch)),
-        (snap) => {
-          setCourses(prev => {
-            const updated = { ...prev };
-            snap.docs.forEach(d => {
-              updated[d.id] = { id: d.id, ...d.data() } as CourseDoc;
-            });
-            return updated;
+    async function fetchCourses() {
+      try {
+        // Batch courseIds into groups of 10 (Firestore 'in' query limit)
+        const batches: string[][] = [];
+        for (let i = 0; i < courseIdsToFetch.length; i += 10) {
+          batches.push(courseIdsToFetch.slice(i, i + 10));
+        }
+        
+        const fetchedCourses: Record<string, CourseDoc> = {};
+        
+        await Promise.all(batches.map(async (batch) => {
+          const snap = await getDocs(query(collection(db, "courses"), where(documentId(), "in", batch)));
+          snap.docs.forEach(d => {
+            fetchedCourses[d.id] = { id: d.id, ...d.data() } as CourseDoc;
+            fetchedCourseIdsRef.current.add(d.id);
           });
-        },
-        (err) => console.error("Courses subscription error:", err)
-      );
-      unsubscribers.push(unsub);
-    });
+        }));
+        
+        if (cancelled) return;
+        
+        setCourses(prev => ({ ...prev, ...fetchedCourses }));
+      } catch (err) {
+        console.error("Courses fetch error:", err);
+      }
+    }
     
-    return () => unsubscribers.forEach(u => u());
+    fetchCourses();
+    
+    return () => { cancelled = true; };
   }, [rounds]);
 
   // -------------------------------------------------------------------------

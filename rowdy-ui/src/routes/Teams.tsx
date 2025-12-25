@@ -1,13 +1,13 @@
-import { useEffect, useState, memo } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, query, where, documentId, onSnapshot, limit, doc, collectionGroup } from "firebase/firestore";
+import { collection, query, where, documentId, onSnapshot, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import TeamName from "../components/TeamName";
-import type { TournamentDoc, PlayerDoc, TierMap } from "../types";
-import { ensureTournamentTeamColors } from "../utils/teamColors";
+import type { PlayerDoc, TierMap } from "../types";
+import { useTournamentData } from "../hooks/useTournamentData";
 
 // We define a local type for the aggregated tournament stats
 type TournamentStat = {
@@ -19,66 +19,31 @@ type TournamentStat = {
 function TeamsComponent() {
   const [searchParams] = useSearchParams();
   const teamParam = searchParams.get("team");
+  const tournamentIdParam = searchParams.get("tournamentId");
+  
+  // Use shared tournament hook instead of creating a duplicate subscription
+  // This eliminates 1 real-time subscription per Teams page view
+  const tournamentOptions = useMemo(() => 
+    tournamentIdParam 
+      ? { tournamentId: tournamentIdParam } 
+      : { fetchActive: true },
+    [tournamentIdParam]
+  );
+  const { tournament, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
 
   // Track loading states
-  const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const [factsLoaded, setFactsLoaded] = useState(false);
 
-  // 1) Subscribe to tournament: use `tournamentId` search param when provided,
-  // otherwise fall back to the active tournament.
+  // Sync error from tournament hook
   useEffect(() => {
-    let unsub = () => {};
-
-    if (searchParams.get("tournamentId")) {
-      const tid = searchParams.get("tournamentId") as string;
-      const docRef = doc(db, "tournaments", tid);
-      const listener = onSnapshot(
-        docRef,
-        (snap) => {
-          if (snap.exists()) setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
-          else {
-            setTournament(null);
-            setError("Tournament not found.");
-          }
-          setTournamentLoaded(true);
-        },
-        (err) => {
-          console.error("Tournament subscription error:", err);
-          setError("Failed to load tournament");
-          setTournamentLoaded(true);
-        }
-      );
-      unsub = listener;
-    } else {
-      const listener = onSnapshot(
-        query(collection(db, "tournaments"), where("active", "==", true), limit(1)),
-        (snap) => {
-          if (snap.empty) {
-            setTournament(null);
-          } else {
-            const doc = snap.docs[0];
-            setTournament(ensureTournamentTeamColors({ id: doc.id, ...doc.data() } as TournamentDoc));
-          }
-          setTournamentLoaded(true);
-        },
-        (err) => {
-          console.error("Tournament subscription error:", err);
-          setError("Failed to load tournament");
-          setTournamentLoaded(true);
-        }
-      );
-      unsub = listener;
-    }
-
-    return () => unsub();
-  }, [searchParams]);
+    if (tournamentError) setError(tournamentError);
+  }, [tournamentError]);
 
   // 2) Subscribe to players when tournament loads (using onSnapshot for offline cache)
   useEffect(() => {
@@ -140,7 +105,7 @@ function TeamsComponent() {
   useEffect(() => {
     if (!tournament?.id) {
       setStats({});
-      setFactsLoaded(tournamentLoaded);
+      setFactsLoaded(!tournamentLoading);
       return;
     }
 
@@ -185,14 +150,14 @@ function TeamsComponent() {
     );
     
     return () => unsub();
-  }, [tournament?.id, players, tournamentLoaded]);
+  }, [tournament?.id, players, tournamentLoading]);
 
   // Coordinated loading state
   useEffect(() => {
-    if (tournamentLoaded && (!tournament || factsLoaded)) {
+    if (!tournamentLoading && (!tournament || factsLoaded)) {
       setLoading(false);
     }
-  }, [tournamentLoaded, tournament, factsLoaded]);
+  }, [tournamentLoading, tournament, factsLoaded]);
 
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (

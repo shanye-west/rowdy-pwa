@@ -84,7 +84,8 @@ export default function Match() {
   } = useMatchData(matchId);
   
   // Fetch skins data for the round (for $ icon display)
-  const { holeSkinsData } = useSkinsData(round?.id);
+  // Pass prefetched round to avoid duplicate subscription
+  const { holeSkinsData } = useSkinsData(round?.id, { prefetchedRound: round });
   
   // Simple online/offline tracking
   const { isOnline } = useNetworkStatus();

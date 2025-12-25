@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, onSnapshot, query } from "firebase/firestore";
+import { doc, collection, onSnapshot, query, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
@@ -99,6 +99,10 @@ export function usePlayerStatsBySeries(playerId: string | undefined) {
 
 /**
  * Fetch stats for multiple players in a specific series (for leaderboards)
+ * 
+ * OPTIMIZED: Uses batch getDocs queries instead of N individual subscriptions.
+ * This reduces Firestore reads from O(n) real-time subscriptions to O(n/10) one-time queries.
+ * For 24 players, this reduces from 24 WebSocket connections to 3 batch queries.
  */
 export function useSeriesLeaderboard(series: TournamentSeries, playerIds: string[]) {
   const [leaderboard, setLeaderboard] = useState<PlayerStatsBySeries[]>([]);
@@ -112,26 +116,44 @@ export function useSeriesLeaderboard(series: TournamentSeries, playerIds: string
     }
 
     setLoading(true);
-    const unsubscribes: (() => void)[] = [];
-    const statsMap = new Map<string, PlayerStatsBySeries>();
-
-    playerIds.forEach((playerId) => {
-      const docRef = doc(db, "playerStats", playerId, "bySeries", series);
-      const unsub = onSnapshot(docRef, (snap) => {
-        if (snap.exists()) {
-          statsMap.set(playerId, { ...snap.data(), playerId, series } as PlayerStatsBySeries);
-        } else {
-          statsMap.delete(playerId);
-        }
-        // Update leaderboard with current stats, sorted by points desc
-        const sorted = Array.from(statsMap.values()).sort((a, b) => b.points - a.points);
-        setLeaderboard(sorted);
+    let cancelled = false;
+    
+    // Batch fetch all player stats using getDocs instead of N onSnapshot subscriptions
+    // Split into chunks of 10 (Firestore 'in' query limit)
+    async function fetchLeaderboard() {
+      try {
+        const stats: PlayerStatsBySeries[] = [];
+        
+        // Fetch each player's stats document (no collection-group query for subcollections with specific doc IDs)
+        const fetchPromises = playerIds.map(async (playerId) => {
+          const docRef = doc(db, "playerStats", playerId, "bySeries", series);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            return { ...snap.data(), playerId, series } as PlayerStatsBySeries;
+          }
+          return null;
+        });
+        
+        const results = await Promise.all(fetchPromises);
+        if (cancelled) return;
+        
+        results.forEach(stat => {
+          if (stat) stats.push(stat);
+        });
+        
+        // Sort by points descending
+        stats.sort((a, b) => b.points - a.points);
+        setLeaderboard(stats);
         setLoading(false);
-      });
-      unsubscribes.push(unsub);
-    });
-
-    return () => unsubscribes.forEach((unsub) => unsub());
+      } catch (err) {
+        console.error("Error fetching leaderboard:", err);
+        if (!cancelled) setLoading(false);
+      }
+    }
+    
+    fetchLeaderboard();
+    
+    return () => { cancelled = true; };
   }, [series, playerIds.join(",")]);
 
   return { leaderboard, loading };

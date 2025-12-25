@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, documentId } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import Layout from "../components/Layout";
@@ -32,7 +32,7 @@ export default function AddMatch() {
   const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
   const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
 
-  // Fetch tournaments and players on mount
+  // Fetch tournaments on mount (players fetched when tournament selected)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -45,11 +45,6 @@ export default function AddMatch() {
         const tournamentsData = Array.from(map.values());
         setTournaments(tournamentsData);
 
-        // Fetch all players
-        const playersSnap = await getDocs(collection(db, "players"));
-        const playersData = playersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PlayerDoc));
-        setPlayers(playersData);
-
         setLoading(false);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -60,6 +55,57 @@ export default function AddMatch() {
 
     fetchData();
   }, []);
+
+  // Get selected tournament data
+  const selectedTournament = useMemo(() => 
+    tournaments.find(t => t.id === tournamentId), 
+    [tournaments, tournamentId]
+  );
+
+  // Fetch players ONLY for the selected tournament's roster (reduces reads from 100+ to ~24)
+  useEffect(() => {
+    if (!selectedTournament) {
+      setPlayers([]);
+      return;
+    }
+    
+    // Extract all player IDs from both teams' rosters
+    const teamARoster = selectedTournament.teamA?.rosterByTier || {};
+    const teamBRoster = selectedTournament.teamB?.rosterByTier || {};
+    const allIds = [
+      ...(teamARoster.A || []), ...(teamARoster.B || []), ...(teamARoster.C || []), ...(teamARoster.D || []),
+      ...(teamBRoster.A || []), ...(teamBRoster.B || []), ...(teamBRoster.C || []), ...(teamBRoster.D || []),
+    ];
+    
+    if (allIds.length === 0) {
+      setPlayers([]);
+      return;
+    }
+    
+    // Batch fetch only roster players (limit 30 per 'in' query)
+    const fetchRosterPlayers = async () => {
+      try {
+        const batches: string[][] = [];
+        for (let i = 0; i < allIds.length; i += 30) {
+          batches.push(allIds.slice(i, i + 30));
+        }
+        
+        const allPlayers: PlayerDoc[] = [];
+        await Promise.all(batches.map(async (batch) => {
+          const snap = await getDocs(query(collection(db, "players"), where(documentId(), "in", batch)));
+          snap.docs.forEach(d => {
+            allPlayers.push({ id: d.id, ...d.data() } as PlayerDoc);
+          });
+        }));
+        
+        setPlayers(allPlayers);
+      } catch (err) {
+        console.error("Error fetching roster players:", err);
+      }
+    };
+    
+    fetchRosterPlayers();
+  }, [selectedTournament]);
 
   // Fetch rounds when tournament changes
   useEffect(() => {
@@ -82,12 +128,6 @@ export default function AddMatch() {
 
     fetchRounds();
   }, [tournamentId]);
-
-  // Get selected tournament data
-  const selectedTournament = useMemo(() => 
-    tournaments.find(t => t.id === tournamentId), 
-    [tournaments, tournamentId]
-  );
 
   // Get available players for each team
   const teamAAvailablePlayers = useMemo(() => {

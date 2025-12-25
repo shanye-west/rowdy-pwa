@@ -255,12 +255,20 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   const shouldAutoComplete = status.closed && allHolesCompleted && !before.completed;
 
   // Store computation signature and context for updateMatchFacts to avoid re-fetching
+  // This denormalization reduces Firestore reads in updateMatchFacts by caching
+  // frequently-needed round data that doesn't change during a match
   const roundData = rSnap.data();
   const updateData: any = { 
     status, 
     result, 
     _computeSig: holesSig,
-    _lastComputed: { format, roundId, courseId: roundData?.courseId },
+    _lastComputed: { 
+      format, 
+      roundId, 
+      courseId: roundData?.courseId,
+      pointsValue: roundData?.pointsValue ?? 1,
+      day: roundData?.day ?? 0,
+    },
   };
   
   if (shouldAutoComplete) {
@@ -282,26 +290,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const tId = after?.tournamentId || "";
   const rId = after?.roundId || "";
   
-  // Try to reuse context from computeMatchOnWrite to avoid redundant fetch
-  let format: RoundFormat = (after?._lastComputed?.format as RoundFormat) || "twoManBestBall";
-  let points = 1;
-  let courseId = after?._lastComputed?.courseId || "";
-  let day = 0;
+  // Reuse cached context from computeMatchOnWrite to avoid redundant fetches
+  // This optimization reduces Firestore reads by 1 (round doc) per match close
+  const cachedData = after?._lastComputed || {};
+  let format: RoundFormat = (cachedData.format as RoundFormat) || "twoManBestBall";
+  let points = cachedData.pointsValue ?? 1;
+  let courseId = cachedData.courseId || "";
+  let day = cachedData.day ?? 0;
   
-  // Fetch round for format/points/courseId if not cached
-  if (rId) {
+  // Only fetch round if cached data is incomplete (fallback for old matches)
+  const needsRoundFetch = !cachedData.format || cachedData.pointsValue === undefined;
+  if (needsRoundFetch && rId) {
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) {
       const rData = rSnap.data();
-      // Use cached format if available, otherwise fetch
-      if (!after?._lastComputed?.format) {
-        format = (rData?.format as RoundFormat) || "twoManBestBall";
-      }
-      points = rData?.pointsValue ?? 1;
-      if (!courseId) {
-        courseId = rData?.courseId || "";
-      }
-      day = rData?.day ?? 0;
+      format = (rData?.format as RoundFormat) || format;
+      points = rData?.pointsValue ?? points;
+      courseId = courseId || (rData?.courseId || "");
+      day = rData?.day ?? day;
     }
   }
   

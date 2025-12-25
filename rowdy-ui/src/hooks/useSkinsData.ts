@@ -16,19 +16,40 @@ export type SkinType = "gross" | "net";
 // Re-export types for consumers (Skins.tsx, Match.tsx)
 export type { HoleSkinData, PlayerSkinsTotal, PlayerHoleScore } from "../types";
 
-export function useSkinsData(roundId: string | undefined) {
+interface UseSkinsDataOptions {
+  /** Pre-fetched round data to avoid duplicate subscriptions */
+  prefetchedRound?: RoundDoc | null;
+}
+
+/**
+ * Hook for fetching skins data for a round.
+ * 
+ * OPTIMIZED: Accepts optional prefetchedRound to avoid duplicate round subscriptions.
+ * When called from Match.tsx, pass the round from useMatchData to eliminate 1 subscription.
+ */
+export function useSkinsData(roundId: string | undefined, options: UseSkinsDataOptions = {}) {
+  const { prefetchedRound } = options;
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [round, setRound] = useState<RoundDoc | null>(null);
+  const [localRound, setLocalRound] = useState<RoundDoc | null>(null);
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [skinsResult, setSkinsResult] = useState<SkinsResultDoc | null>(null);
 
   // Try to get tournament from shared context first
   const tournamentContext = useTournamentContextOptional();
 
-  // Subscribe to round
+  // Use prefetched round if available, otherwise subscribe
+  const round = prefetchedRound ?? localRound;
+
+  // Subscribe to round ONLY if no prefetched round is provided
   useEffect(() => {
+    // Skip subscription if we have a prefetched round
+    if (prefetchedRound !== undefined) {
+      return;
+    }
+    
     if (!roundId) {
       setLoading(false);
       return;
@@ -38,9 +59,9 @@ export function useSkinsData(roundId: string | undefined) {
       doc(db, "rounds", roundId),
       (snap) => {
         if (snap.exists()) {
-          setRound({ id: snap.id, ...snap.data() } as RoundDoc);
+          setLocalRound({ id: snap.id, ...snap.data() } as RoundDoc);
         } else {
-          setRound(null);
+          setLocalRound(null);
           setError("Round not found");
           setLoading(false);
         }
@@ -53,7 +74,7 @@ export function useSkinsData(roundId: string | undefined) {
     );
 
     return () => unsub();
-  }, [roundId]);
+  }, [roundId, prefetchedRound]);
 
   // Get tournament from context or fetch once (not subscribe) if context doesn't have it
   useEffect(() => {
