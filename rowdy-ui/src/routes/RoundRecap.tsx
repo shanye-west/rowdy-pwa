@@ -519,8 +519,6 @@ export default function RoundRecap() {
         {/* Hole Stats View */}
         {viewMode === "holes" && (
           <div className="card p-6">
-            <h2 className="text-xl font-bold mb-4">Hole-by-Hole Statistics</h2>
-
             {/* Best/Worst Hole Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {recap.leaders.bestHole && (
