@@ -13,6 +13,7 @@ export default function RoundRecap() {
   const [viewMode, setViewMode] = useState<"vsAll" | "scoringSummary" | "holes">("vsAll");
   const [birdieMode, setbirdieMode] = useState<"gross" | "net">("gross");
   const [eagleMode, setEagleMode] = useState<"gross" | "net">("gross");
+  const [scoringTab, setScoringTab] = useState<"birdies" | "eagles">("birdies");
 
   useEffect(() => {
     if (!roundId) return;
@@ -217,122 +218,136 @@ export default function RoundRecap() {
           </div>
         )}
 
-        {/* Scoring Summary View (Birdies + Eagles combined) */}
+        {/* Scoring Summary View with inner tabs for Birdies/Eagles */}
         {viewMode === "scoringSummary" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Birdie Leaders</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setbirdieMode("gross")}
-                    className={`px-3 py-1 text-sm rounded ${
-                      birdieMode === "gross"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Gross
-                  </button>
-                  <button
-                    onClick={() => setbirdieMode("net")}
-                    className={`px-3 py-1 text-sm rounded ${
-                      birdieMode === "net"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Net
-                  </button>
-                </div>
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Scoring Summary</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setScoringTab("birdies")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
+                    scoringTab === "birdies"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Birdies
+                </button>
+                <button
+                  onClick={() => setScoringTab("eagles")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
+                    scoringTab === "eagles"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Eagles
+                </button>
               </div>
-
-              {currentBirdies.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">No birdies recorded</div>
-              ) : (
-                <div className="space-y-3">
-                  {currentBirdies.map((leader, idx) => (
-                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                      <div className="flex-1">
-                        <div className="font-semibold">
-                          <div className="max-w-[20rem]">
-                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
-                              (leader.playerName || "").split(" / ").map((n, i) => (
-                                <div key={i} className="truncate">{n}</div>
-                              ))
-                            ) : (
-                              <div className="truncate">{leader.playerName}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Holes: {leader.holes.join(", ")}
-                        </div>
-                      </div>
-                      <div className="text-3xl font-bold text-blue-600">{leader.count}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Eagle Leaders</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEagleMode("gross")}
-                    className={`px-3 py-1 text-sm rounded ${
-                      eagleMode === "gross"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Gross
-                  </button>
-                  <button
-                    onClick={() => setEagleMode("net")}
-                    className={`px-3 py-1 text-sm rounded ${
-                      eagleMode === "net"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700"
-                    }`}
-                  >
-                    Net
-                  </button>
+            {scoringTab === "birdies" ? (
+              <div>
+                <div className="flex items-center justify-end mb-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setbirdieMode("gross")}
+                      className={`px-3 py-1 text-sm rounded ${
+                        birdieMode === "gross" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      Gross
+                    </button>
+                    <button
+                      onClick={() => setbirdieMode("net")}
+                      className={`px-3 py-1 text-sm rounded ${
+                        birdieMode === "net" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      Net
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {currentEagles.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">No eagles recorded</div>
-              ) : (
-                <div className="space-y-3">
-                  {currentEagles.map((leader, idx) => (
-                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                      <div className="flex-1">
-                        <div className="font-semibold">
-                          <div className="max-w-[20rem]">
-                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
-                              (leader.playerName || "").split(" / ").map((n, i) => (
-                                <div key={i} className="truncate">{n}</div>
-                              ))
-                            ) : (
-                              <div className="truncate">{leader.playerName}</div>
-                            )}
+                {currentBirdies.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">No birdies recorded</div>
+                ) : (
+                  <div className="space-y-3">
+                    {currentBirdies.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                        <div className="flex-1">
+                          <div className="font-semibold">
+                            <div className="max-w-[20rem]">
+                              {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                                (leader.playerName || "").split(" / ").map((n, i) => (
+                                  <div key={i} className="truncate">{n}</div>
+                                ))
+                              ) : (
+                                <div className="truncate">{leader.playerName}</div>
+                              )}
+                            </div>
                           </div>
+                          <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
                         </div>
-                        <div className="text-sm text-gray-600">
-                          Holes: {leader.holes.join(", ")}
-                        </div>
+                        <div className="text-3xl font-bold text-blue-600">{leader.count}</div>
                       </div>
-                      <div className="text-3xl font-bold text-yellow-600">{leader.count}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-end mb-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEagleMode("gross")}
+                      className={`px-3 py-1 text-sm rounded ${
+                        eagleMode === "gross" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      Gross
+                    </button>
+                    <button
+                      onClick={() => setEagleMode("net")}
+                      className={`px-3 py-1 text-sm rounded ${
+                        eagleMode === "net" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      Net
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {currentEagles.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">No eagles recorded</div>
+                ) : (
+                  <div className="space-y-3">
+                    {currentEagles.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                        <div className="flex-1">
+                          <div className="font-semibold">
+                            <div className="max-w-[20rem]">
+                              {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                                (leader.playerName || "").split(" / ").map((n, i) => (
+                                  <div key={i} className="truncate">{n}</div>
+                                ))
+                              ) : (
+                                <div className="truncate">{leader.playerName}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
+                        </div>
+                        <div className="text-3xl font-bold text-yellow-600">{leader.count}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
