@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundRecapDoc, VsAllRecord } from "../types";
+import type { PlayerHoleSummary, RoundRecapDoc, VsAllRecord } from "../types";
 import Layout from "../components/Layout";
 
 export default function RoundRecap() {
@@ -10,6 +10,8 @@ export default function RoundRecap() {
   const [recap, setRecap] = useState<RoundRecapDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [playerSummaries, setPlayerSummaries] = useState<PlayerHoleSummary[]>([]);
+  const [loadingSummaries, setLoadingSummaries] = useState(false);
   const [viewMode, setViewMode] = useState<"vsAll" | "grossScoring" | "netScoring" | "holes">("vsAll");
   const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
@@ -26,9 +28,11 @@ export default function RoundRecap() {
         if (!recapSnap.exists()) {
           setError("Recap not found");
           setRecap(null);
+          setPlayerSummaries([]);
         } else {
           const recapData = recapSnap.data() as RoundRecapDoc;
           setRecap(recapData);
+          setPlayerSummaries(recapData.playerHoleSummaries || []);
         }
       } catch (err) {
         console.error("Failed to load recap:", err);
@@ -40,6 +44,64 @@ export default function RoundRecap() {
 
     fetchRecap();
   }, [roundId]);
+
+  // Backfill player hole summaries for older recap docs by querying match facts
+  useEffect(() => {
+    if (!roundId || !recap || (recap.playerHoleSummaries && recap.playerHoleSummaries.length > 0)) {
+      setLoadingSummaries(false);
+      return;
+    }
+
+    const loadPlayerSummaries = async () => {
+      setLoadingSummaries(true);
+      try {
+        const factsSnap = await getDocs(
+          query(collection(db, "playerMatchFacts"), where("roundId", "==", roundId))
+        );
+
+        const summaries: PlayerHoleSummary[] = factsSnap.docs.map((d) => {
+          const data: any = d.data();
+          const perfArray = Array.isArray(data.holePerformance) ? data.holePerformance : [];
+          const holes = perfArray
+            .map((perf: any) => {
+              const holeNum = typeof perf?.hole === "number" ? perf.hole : null;
+              if (!holeNum) return null;
+
+              const gross = typeof perf.gross === "number" ? perf.gross : null;
+              const net = typeof perf.net === "number" ? perf.net : null;
+              const strokes = typeof perf.strokes === "number" ? perf.strokes : null;
+
+              if (gross == null && net == null && strokes == null) return null;
+
+              const holeEntry: any = { h: holeNum, g: gross };
+              if (net != null) holeEntry.n = net;
+              if (strokes != null) holeEntry.s = strokes;
+              return holeEntry;
+            })
+            .filter(Boolean)
+            .sort((a: any, b: any) => a.h - b.h);
+
+          return {
+            playerId: data.playerId,
+            playerName: data.playerName || data.playerId,
+            holesPlayed:
+              typeof data.holesPlayed === "number"
+                ? data.holesPlayed
+                : holes.reduce((sum: number, h: any) => sum + (typeof h.g === "number" ? 1 : 0), 0),
+            holes,
+          } as PlayerHoleSummary;
+        });
+
+        setPlayerSummaries(summaries.filter((s) => s.holes.length > 0));
+      } catch (err) {
+        console.error("Failed to load player summaries for recap:", err);
+      } finally {
+        setLoadingSummaries(false);
+      }
+    };
+
+    loadPlayerSummaries();
+  }, [roundId, recap]);
 
   // Short-circuit while loading / error / missing recap to avoid many null checks below
   if (loading) {
@@ -111,6 +173,27 @@ export default function RoundRecap() {
     const pct = (record.wins / total) * 100;
     return pct.toFixed(1) + "%";
   };
+
+  const hasNetTotals = playerSummaries.some((s) => s.holes.some((h) => typeof h.n === "number"));
+
+  const playerTotals = playerSummaries
+    .map((s) => {
+      const grossSum = s.holes.reduce(
+        (sum, h) => sum + (typeof h.g === "number" ? h.g : 0),
+        0
+      );
+      const netHoles = s.holes.filter((h) => typeof h.n === "number");
+      const netSum = netHoles.reduce(
+        (sum, h) => sum + (typeof h.n === "number" ? h.n : 0),
+        0
+      );
+      return {
+        ...s,
+        totalGross: grossSum,
+        totalNet: netHoles.length > 0 ? netSum : null,
+      };
+    })
+    .sort((a, b) => a.playerName.localeCompare(b.playerName));
 
   return (
     <Layout title="Round Recap" showBack>
@@ -585,6 +668,48 @@ export default function RoundRecap() {
                 </tbody>
               </table>
             </div>
+
+            {playerSummaries.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold">Player Hole Totals</h3>
+                  {loadingSummaries && (
+                    <span className="text-sm text-gray-500">Updating…</span>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-2">Player</th>
+                        <th className="text-center py-2 px-2">Holes</th>
+                        <th className="text-center py-2 px-2">Total Gross</th>
+                        {hasNetTotals && (
+                          <th className="text-center py-2 px-2">Total Net</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {playerTotals.map((summary) => (
+                        <tr key={summary.playerId} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-2 font-medium">{summary.playerName}</td>
+                          <td className="py-2 px-2 text-center text-gray-600">{summary.holesPlayed}</td>
+                          <td className="py-2 px-2 text-center font-semibold text-green-700">
+                            {summary.totalGross}
+                          </td>
+                          {hasNetTotals && (
+                            <td className="py-2 px-2 text-center font-semibold text-blue-700">
+                              {summary.totalNet ?? "—"}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

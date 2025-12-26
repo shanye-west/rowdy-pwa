@@ -2880,6 +2880,46 @@ export const computeRoundRecap = onCall(async (request) => {
     computedBy: uid,
   };
 
+  // Compact per-player hole summaries (gross/net/strokes) for UI consumption
+  const playerHoleSummaries: any[] = [];
+  for (const fact of allFacts) {
+    const perfArray = Array.isArray(fact.holePerformance) ? fact.holePerformance : [];
+    const holes: any[] = [];
+
+    for (const perf of perfArray) {
+      const holeNum = typeof perf?.hole === "number" ? perf.hole : null;
+      if (!holeNum) continue;
+
+      const gross = typeof perf.gross === "number" ? perf.gross : null;
+      const net = typeof perf.net === "number" ? perf.net : null;
+      const strokes = typeof perf.strokes === "number" ? perf.strokes : null;
+
+      // Skip empty entries to keep payload minimal
+      if (gross == null && net == null && strokes == null) continue;
+
+      const holeEntry: any = { h: holeNum, g: gross };
+      if (net != null) holeEntry.n = net;
+      if (strokes != null) holeEntry.s = strokes;
+      holes.push(holeEntry);
+    }
+
+    if (holes.length > 0) {
+      holes.sort((a, b) => a.h - b.h);
+      playerHoleSummaries.push({
+        playerId: fact.playerId,
+        playerName: playerNames[fact.playerId] || fact.playerId,
+        holesPlayed: typeof fact.holesPlayed === "number"
+          ? fact.holesPlayed
+          : holes.reduce((sum, h) => sum + (typeof h.g === "number" ? 1 : 0), 0),
+        holes,
+      });
+    }
+  }
+
+  if (playerHoleSummaries.length > 0) {
+    (recapDoc as any).playerHoleSummaries = playerHoleSummaries;
+  }
+
   // Write to roundRecaps collection
   await db.collection("roundRecaps").doc(roundId).set(recapDoc);
 

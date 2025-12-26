@@ -496,6 +496,18 @@ export interface ScoringLeader {
   teamKey?: string; // For team formats
 }
 
+export interface PlayerHoleSummary {
+  playerId: string;
+  playerName: string;
+  holesPlayed: number;
+  holes: Array<{
+    h: number; // hole number
+    g: number | null; // gross score
+    n?: number | null; // net score (when available)
+    s?: number | null; // strokes received (0/1) when applicable
+  }>;
+}
+
 export interface RoundRecapDoc {
   roundId: string;
   tournamentId: string;
@@ -507,10 +519,13 @@ export interface RoundRecapDoc {
   
   // "vs All" simulation results
   vsAllRecords: VsAllRecord[];
-  
+
   // Hole-by-hole averages
   holeAverages: HoleAverageData[];
-  
+
+  // Optional hole snapshots per player to avoid additional queries on recap
+  playerHoleSummaries?: PlayerHoleSummary[];
+
   // Leaders
   leaders: {
     birdiesGross: BirdieEagleLeader[];
