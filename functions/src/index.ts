@@ -2704,16 +2704,34 @@ export const computeRoundRecap = onCall(async (request) => {
           return fPlayerIds.join("_") === teamKey;
         });
         
-        // For each hole, find best net (relative) and best absolute net
+        // For each hole, compute team best-net using each player's full course handicap (no spin-down)
+        // Build hole handicap index array (1..18) from course definition
+        const holeHcpIndexes: number[] = Array.from({ length: 18 }, (_, idx) => {
+          const ch = course.holes?.find((hh: any) => hh.number === idx + 1);
+          return ch?.hcpIndex ?? 0;
+        });
+
+        const computeStrokesReceivedFromCourseHcp = (courseHcp: number) => {
+          const rounded = Math.round(courseHcp);
+          const capped = Math.min(Math.max(rounded, 0), 18);
+          // Return 0/1 per hole where holeHcpIndex <= capped (only one stroke max per hole)
+          return holeHcpIndexes.map(hIdx => (hIdx > 0 && hIdx <= capped) ? 1 : 0);
+        };
+
         for (let holeNum = 1; holeNum <= 18; holeNum++) {
           const holeNetsRel: number[] = [];
           const holeNetsAbs: number[] = [];
 
           for (const tf of teamFacts) {
             const perf = tf.holePerformance?.find((p: any) => p.hole === holeNum);
-            if (perf && perf.net != null && perf.par != null) {
-              holeNetsRel.push(perf.net - perf.par);
-              holeNetsAbs.push(perf.net);
+            if (perf && perf.gross != null && perf.par != null) {
+              // Compute strokes received for this player based on their course handicap (rounded, capped at 18)
+              const playerCourseHcp = typeof tf.playerHandicap === 'number' ? tf.playerHandicap : 0;
+              const strokesArr = computeStrokesReceivedFromCourseHcp(playerCourseHcp);
+              const stroke = strokesArr[holeNum - 1] || 0;
+              const net = perf.gross - stroke;
+              holeNetsRel.push(net - perf.par);
+              holeNetsAbs.push(net);
             }
           }
 
