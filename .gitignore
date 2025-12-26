@@ -10,6 +10,9 @@ firebase-debug.*.log*
 # Firebase cache
 .firebase/
 
+# Debug CSVs (local validation outputs)
+debug-csvs/
+
 # Firebase config
 
 # Uncomment this if you'd like others to create their own Firebase project.
@@ -94,6 +97,3 @@ rowdy-pwa.web.app-lighthouse-report.json
 
 # Random plans
 UI-Stats-Plan.md
-
-#debug CSVs
-debug-csvs/
