@@ -41,6 +41,7 @@ export interface VsAllRecord {
 /**
  * Simulate a head-to-head match between two players/teams
  * Computes new strokesReceived arrays based on spin-down, then compares hole-by-hole
+ * For team formats with individual scores (bestBall), pass all team members in teamMembersA/B
  */
 export function simulateHeadToHead(
   playerA: PlayerFactForSim,
@@ -49,13 +50,94 @@ export function simulateHeadToHead(
   format: RoundFormat,
   slopeRating: number,
   courseRating: number,
-  coursePar: number
+  coursePar: number,
+  teamMembersA?: PlayerFactForSim[],
+  teamMembersB?: PlayerFactForSim[]
 ): { winner: "A" | "B" | "tie"; holesWonA: number; holesWonB: number } {
   let holesWonA = 0;
   let holesWonB = 0;
   let margin = 0; // positive = A leading, negative = B leading
 
-  // For singles and bestBall, compute new strokesReceived based on spin-down
+  // For bestBall with team members, compute team-level strokes
+  if (isBestBallFormat(format) && teamMembersA && teamMembersB) {
+    // Compute course handicaps for all players in both teams
+    const allPlayers = [...teamMembersA, ...teamMembersB];
+    const chMap = new Map<string, number>();
+    for (const p of allPlayers) {
+      const ch = calculateCourseHandicap(p.playerHandicap, slopeRating, courseRating, coursePar);
+      chMap.set(p.playerId, ch);
+    }
+
+    // Spin down to lowest handicap across both teams
+    const lowestHandicap = Math.min(...Array.from(chMap.values()));
+
+    // For each hole, compute team scores as best net
+    for (let holeNum = 1; holeNum <= 18; holeNum++) {
+      const holeIndex = holeNum - 1;
+
+      // Compute net scores for team A members
+      const teamANets: number[] = [];
+      for (const member of teamMembersA) {
+        const perf = member.holePerformance.find(p => p.hole === holeNum);
+        if (perf && perf.gross != null) {
+          const ch = chMap.get(member.playerId) ?? 0;
+          const adj = ch - lowestHandicap;
+          const strokes = calculateStrokesReceived(adj, courseHoles);
+          const net = perf.gross - (strokes[holeIndex] || 0);
+          teamANets.push(net);
+        }
+      }
+
+      // Compute net scores for team B members
+      const teamBNets: number[] = [];
+      for (const member of teamMembersB) {
+        const perf = member.holePerformance.find(p => p.hole === holeNum);
+        if (perf && perf.gross != null) {
+          const ch = chMap.get(member.playerId) ?? 0;
+          const adj = ch - lowestHandicap;
+          const strokes = calculateStrokesReceived(adj, courseHoles);
+          const net = perf.gross - (strokes[holeIndex] || 0);
+          teamBNets.push(net);
+        }
+      }
+
+      // Skip hole if either team has no scores
+      if (teamANets.length === 0 || teamBNets.length === 0) continue;
+
+      // Team hole score = best (minimum) net
+      const teamAScore = Math.min(...teamANets);
+      const teamBScore = Math.min(...teamBNets);
+
+      // Determine hole winner
+      if (teamAScore < teamBScore) {
+        holesWonA++;
+        margin++;
+      } else if (teamBScore < teamAScore) {
+        holesWonB++;
+        margin--;
+      }
+
+      // Check if match is closed
+      const holesRemaining = 18 - holeNum;
+      if (Math.abs(margin) > holesRemaining) {
+        break;
+      }
+    }
+
+    // Determine final winner
+    let winner: "A" | "B" | "tie";
+    if (holesWonA > holesWonB) {
+      winner = "A";
+    } else if (holesWonB > holesWonA) {
+      winner = "B";
+    } else {
+      winner = "tie";
+    }
+
+    return { winner, holesWonA, holesWonB };
+  }
+
+  // For singles and bestBall (without team members), compute new strokesReceived based on spin-down
   let strokesA: number[] = [];
   let strokesB: number[] = [];
 
@@ -239,15 +321,28 @@ export function computeVsAllForRound(
         const teamMembersB = teams.get(teamKeyB)!;
         const repB = teamMembersB[0];
 
-        const result = simulateHeadToHead(
-          repA,
-          repB,
-          courseHoles,
-          format,
-          slopeRating,
-          courseRating,
-          coursePar
-        );
+        // For bestBall, pass all team members; for shamble/scramble, pass reps only
+        const result = isBestBallFormat(format)
+          ? simulateHeadToHead(
+              repA,
+              repB,
+              courseHoles,
+              format,
+              slopeRating,
+              courseRating,
+              coursePar,
+              teamMembersA,
+              teamMembersB
+            )
+          : simulateHeadToHead(
+              repA,
+              repB,
+              courseHoles,
+              format,
+              slopeRating,
+              courseRating,
+              coursePar
+            );
 
         if (result.winner === "A") {
           wins++;
