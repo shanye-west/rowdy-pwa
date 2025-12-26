@@ -10,11 +10,9 @@ export default function RoundRecap() {
   const [recap, setRecap] = useState<RoundRecapDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"vsAll" | "scoringLeaders" | "scoringSummary" | "holes">("vsAll");
-  const [birdieMode, setbirdieMode] = useState<"gross" | "net">("gross");
-  const [eagleMode, setEagleMode] = useState<"gross" | "net">("gross");
-  const [scoringTab, setScoringTab] = useState<"birdies" | "eagles">("birdies");
-  const [scoringLeaderTab, setScoringLeaderTab] = useState<"gross" | "net" | "teamGross" | "teamNet">("gross");
+  const [viewMode, setViewMode] = useState<"vsAll" | "grossScoring" | "netScoring" | "holes">("vsAll");
+  const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
+  const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
 
   useEffect(() => {
     if (!roundId) return;
@@ -30,17 +28,6 @@ export default function RoundRecap() {
         } else {
           const recapData = recapSnap.data() as RoundRecapDoc;
           setRecap(recapData);
-          
-          // Set initial scoring leader tab based on what's available
-          if (recapData.leaders.scoringGross && recapData.leaders.scoringGross.length > 0) {
-            setScoringLeaderTab("gross");
-          } else if (recapData.leaders.scoringNet && recapData.leaders.scoringNet.length > 0) {
-            setScoringLeaderTab("net");
-          } else if (recapData.leaders.scoringTeamGross && recapData.leaders.scoringTeamGross.length > 0) {
-            setScoringLeaderTab("teamGross");
-          } else if (recapData.leaders.scoringTeamNet && recapData.leaders.scoringTeamNet.length > 0) {
-            setScoringLeaderTab("teamNet");
-          }
         }
       } catch (err) {
         console.error("Failed to load recap:", err);
@@ -120,9 +107,7 @@ export default function RoundRecap() {
     return b.wins - a.wins; // Tie-break by total wins
   });
 
-  // Get current birdie/eagle leaders
-  const currentBirdies = birdieMode === "gross" ? recap.leaders.birdiesGross : recap.leaders.birdiesNet;
-  const currentEagles = eagleMode === "gross" ? recap.leaders.eaglesGross : recap.leaders.eaglesNet;
+  // (Gross/Net birdie and eagle lists are accessed directly in each scoring tab)
 
   const formatWinPct = (record: VsAllRecord) => {
     const total = record.wins + record.losses + record.ties;
@@ -146,41 +131,25 @@ export default function RoundRecap() {
         <div className="flex gap-2 overflow-x-auto">
           <button
             onClick={() => setViewMode("vsAll")}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-              viewMode === "vsAll"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "vsAll" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
             vs All
           </button>
           <button
-            onClick={() => setViewMode("scoringLeaders")}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-              viewMode === "scoringLeaders"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            onClick={() => setViewMode("grossScoring")}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "grossScoring" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
-            Scoring Leaders
+            Gross Scoring
           </button>
           <button
-            onClick={() => setViewMode("scoringSummary")}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-              viewMode === "scoringSummary"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            onClick={() => setViewMode("netScoring")}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "netScoring" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
-            Scoring Summary
+            Net Scoring
           </button>
           <button
             onClick={() => setViewMode("holes")}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-              viewMode === "holes"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "holes" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
             Hole Stats
           </button>
@@ -241,321 +210,306 @@ export default function RoundRecap() {
           </div>
         )}
 
-        {/* Scoring Leaders View */}
-        {viewMode === "scoringLeaders" && (
+        {/* Gross Scoring Tab */}
+        {viewMode === "grossScoring" && (
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Scoring Leaders</h2>
-              <div className="flex gap-2 flex-wrap">
-                {(recap.leaders.scoringGross && recap.leaders.scoringGross.length > 0) && (
-                  <button
-                    onClick={() => setScoringLeaderTab("gross")}
-                    className={`px-3 py-2 rounded-lg font-medium whitespace-nowrap text-sm ${
-                      scoringLeaderTab === "gross"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Individual Gross
-                  </button>
-                )}
-                {(recap.leaders.scoringNet && recap.leaders.scoringNet.length > 0) && (
-                  <button
-                    onClick={() => setScoringLeaderTab("net")}
-                    className={`px-3 py-2 rounded-lg font-medium whitespace-nowrap text-sm ${
-                      scoringLeaderTab === "net"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Individual Net
-                  </button>
-                )}
-                {(recap.leaders.scoringTeamGross && recap.leaders.scoringTeamGross.length > 0) && (
-                  <button
-                    onClick={() => setScoringLeaderTab("teamGross")}
-                    className={`px-3 py-2 rounded-lg font-medium whitespace-nowrap text-sm ${
-                      scoringLeaderTab === "teamGross"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Team Gross
-                  </button>
-                )}
-                {(recap.leaders.scoringTeamNet && recap.leaders.scoringTeamNet.length > 0) && (
-                  <button
-                    onClick={() => setScoringLeaderTab("teamNet")}
-                    className={`px-3 py-2 rounded-lg font-medium whitespace-nowrap text-sm ${
-                      scoringLeaderTab === "teamNet"
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    Team Net
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {scoringLeaderTab === "gross" && recap.leaders.scoringGross && (
-              <div className="space-y-3">
-                {recap.leaders.scoringGross.map((leader, idx) => (
-                  <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{leader.playerName}</div>
-                      <div className="text-sm text-gray-600">
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                        {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                      </div>
-                      {leader.holesCompleted < 18 && (
-                        <div className="text-xs text-gray-500">
-                          ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {scoringLeaderTab === "net" && recap.leaders.scoringNet && (
-              <div className="space-y-3">
-                {recap.leaders.scoringNet.map((leader, idx) => (
-                  <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{leader.playerName}</div>
-                      <div className="text-sm text-gray-600">
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                        {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                      </div>
-                      {leader.holesCompleted < 18 && (
-                        <div className="text-xs text-gray-500">
-                          ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {scoringLeaderTab === "teamGross" && recap.leaders.scoringTeamGross && (
-              <div className="space-y-3">
-                {recap.leaders.scoringTeamGross.map((leader, idx) => (
-                  <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">
-                        {leader.playerName.split(" / ").map((n, i) => (
-                          <div key={i}>{n}</div>
-                        ))}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                        {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                      </div>
-                      {leader.holesCompleted < 18 && (
-                        <div className="text-xs text-gray-500">
-                          ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {scoringLeaderTab === "teamNet" && recap.leaders.scoringTeamNet && (
-              <div className="space-y-3">
-                {recap.leaders.scoringTeamNet.map((leader, idx) => (
-                  <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">
-                        {leader.playerName.split(" / ").map((n, i) => (
-                          <div key={i}>{n}</div>
-                        ))}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                        {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                      </div>
-                      {leader.holesCompleted < 18 && (
-                        <div className="text-xs text-gray-500">
-                          ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {scoringLeaderTab === "gross" && (!recap.leaders.scoringGross || recap.leaders.scoringGross.length === 0) && (
-              <div className="text-gray-500 text-center py-8">No individual gross scoring data available</div>
-            )}
-            {scoringLeaderTab === "net" && (!recap.leaders.scoringNet || recap.leaders.scoringNet.length === 0) && (
-              <div className="text-gray-500 text-center py-8">No individual net scoring data available</div>
-            )}
-            {scoringLeaderTab === "teamGross" && (!recap.leaders.scoringTeamGross || recap.leaders.scoringTeamGross.length === 0) && (
-              <div className="text-gray-500 text-center py-8">No team gross scoring data available</div>
-            )}
-            {scoringLeaderTab === "teamNet" && (!recap.leaders.scoringTeamNet || recap.leaders.scoringTeamNet.length === 0) && (
-              <div className="text-gray-500 text-center py-8">No team net scoring data available</div>
-            )}
-          </div>
-        )}
-
-        {/* Scoring Summary View with inner tabs for Birdies/Eagles */}
-        {viewMode === "scoringSummary" && (
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Scoring Summary</h2>
+              <h2 className="text-xl font-bold">Gross Scoring</h2>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setScoringTab("birdies")}
-                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                    scoringTab === "birdies"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  onClick={() => setGrossTab("scores")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${grossTab === "scores" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                >
+                  Scores
+                </button>
+                <button
+                  onClick={() => setGrossTab("birdies")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${grossTab === "birdies" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                 >
                   Birdies
                 </button>
                 <button
-                  onClick={() => setScoringTab("eagles")}
-                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-                    scoringTab === "eagles"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  onClick={() => setGrossTab("eagles")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${grossTab === "eagles" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
                 >
                   Eagles
                 </button>
               </div>
             </div>
-
-            {scoringTab === "birdies" ? (
-              <div>
-                <div className="flex items-center justify-end mb-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setbirdieMode("gross")}
-                      className={`px-3 py-1 text-sm rounded ${
-                        birdieMode === "gross" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      Gross
-                    </button>
-                    <button
-                      onClick={() => setbirdieMode("net")}
-                      className={`px-3 py-1 text-sm rounded ${
-                        birdieMode === "net" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      Net
-                    </button>
-                  </div>
-                </div>
-
-                {currentBirdies.length === 0 ? (
-                  <div className="text-gray-500 text-center py-8">No birdies recorded</div>
-                ) : (
-                  <div className="space-y-3">
-                    {currentBirdies.map((leader, idx) => (
-                      <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            {grossTab === "scores" && (
+              <div className="space-y-3">
+                {/* Individual and team gross scoring leaders */}
+                {recap.leaders.scoringGross && recap.leaders.scoringGross.length > 0 && (
+                  <>
+                    <div className="font-semibold mb-2">Individual Gross</div>
+                    {recap.leaders.scoringGross.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
                         <div className="flex-1">
-                          <div className="font-semibold">
-                            <div className="max-w-[20rem]">
-                              {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
-                                (leader.playerName || "").split(" / ").map((n, i) => (
-                                  <div key={i} className="truncate">{n}</div>
-                                ))
-                              ) : (
-                                <div className="truncate">{leader.playerName}</div>
-                              )}
-                            </div>
+                          <div className="font-semibold text-lg">{leader.playerName}</div>
+                          <div className="text-sm text-gray-600">
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
                           </div>
-                          <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
                         </div>
-                        <div className="text-3xl font-bold text-blue-600">{leader.count}</div>
+                        <div className="text-right">
+                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                          </div>
+                          {leader.holesCompleted < 18 && (
+                            <div className="text-xs text-gray-500">
+                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
-                  </div>
+                  </>
+                )}
+                {recap.leaders.scoringTeamGross && recap.leaders.scoringTeamGross.length > 0 && (
+                  <>
+                    <div className="font-semibold mt-6 mb-2">Team Gross</div>
+                    {recap.leaders.scoringTeamGross.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-lg">
+                            {leader.playerName.split(" / ").map((n, i) => (
+                              <div key={i}>{n}</div>
+                            ))}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                          </div>
+                          {leader.holesCompleted < 18 && (
+                            <div className="text-xs text-gray-500">
+                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {(!recap.leaders.scoringGross || recap.leaders.scoringGross.length === 0) && (!recap.leaders.scoringTeamGross || recap.leaders.scoringTeamGross.length === 0) && (
+                  <div className="text-gray-500 text-center py-8">No gross scoring data available</div>
                 )}
               </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-end mb-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEagleMode("gross")}
-                      className={`px-3 py-1 text-sm rounded ${
-                        eagleMode === "gross" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      Gross
-                    </button>
-                    <button
-                      onClick={() => setEagleMode("net")}
-                      className={`px-3 py-1 text-sm rounded ${
-                        eagleMode === "net" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      Net
-                    </button>
-                  </div>
-                </div>
-
-                {currentEagles.length === 0 ? (
-                  <div className="text-gray-500 text-center py-8">No eagles recorded</div>
+            )}
+            {grossTab === "birdies" && (
+              <div className="space-y-3">
+                <div className="font-semibold mb-2">Gross Birdies</div>
+                {recap.leaders.birdiesGross && recap.leaders.birdiesGross.length > 0 ? (
+                  recap.leaders.birdiesGross.map((leader, idx) => (
+                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold">
+                          <div className="max-w-[20rem]">
+                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                              (leader.playerName || "").split(" / ").map((n, i) => (
+                                <div key={i} className="truncate">{n}</div>
+                              ))
+                            ) : (
+                              <div className="truncate">{leader.playerName}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
+                      </div>
+                      <div className="text-3xl font-bold text-blue-600">{leader.count}</div>
+                    </div>
+                  ))
                 ) : (
-                  <div className="space-y-3">
-                    {currentEagles.map((leader, idx) => (
-                      <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-gray-500 text-center py-8">No gross birdies recorded</div>
+                )}
+              </div>
+            )}
+            {grossTab === "eagles" && (
+              <div className="space-y-3">
+                <div className="font-semibold mb-2">Gross Eagles</div>
+                {recap.leaders.eaglesGross && recap.leaders.eaglesGross.length > 0 ? (
+                  recap.leaders.eaglesGross.map((leader, idx) => (
+                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold">
+                          <div className="max-w-[20rem]">
+                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                              (leader.playerName || "").split(" / ").map((n, i) => (
+                                <div key={i} className="truncate">{n}</div>
+                              ))
+                            ) : (
+                              <div className="truncate">{leader.playerName}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
+                      </div>
+                      <div className="text-3xl font-bold text-yellow-600">{leader.count}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 text-center py-8">No gross eagles recorded</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Net Scoring Tab */}
+        {viewMode === "netScoring" && (
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Net Scoring</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNetTab("scores")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${netTab === "scores" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                >
+                  Scores
+                </button>
+                <button
+                  onClick={() => setNetTab("birdies")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${netTab === "birdies" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                >
+                  Birdies
+                </button>
+                <button
+                  onClick={() => setNetTab("eagles")}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${netTab === "eagles" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                >
+                  Eagles
+                </button>
+              </div>
+            </div>
+            {netTab === "scores" && (
+              <div className="space-y-3">
+                {/* Individual and team net scoring leaders */}
+                {recap.leaders.scoringNet && recap.leaders.scoringNet.length > 0 && (
+                  <>
+                    <div className="font-semibold mb-2">Individual Net</div>
+                    {recap.leaders.scoringNet.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
                         <div className="flex-1">
-                          <div className="font-semibold">
-                            <div className="max-w-[20rem]">
-                              {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
-                                (leader.playerName || "").split(" / ").map((n, i) => (
-                                  <div key={i} className="truncate">{n}</div>
-                                ))
-                              ) : (
-                                <div className="truncate">{leader.playerName}</div>
-                              )}
-                            </div>
+                          <div className="font-semibold text-lg">{leader.playerName}</div>
+                          <div className="text-sm text-gray-600">
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
                           </div>
-                          <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
                         </div>
-                        <div className="text-3xl font-bold text-yellow-600">{leader.count}</div>
+                        <div className="text-right">
+                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                          </div>
+                          {leader.holesCompleted < 18 && (
+                            <div className="text-xs text-gray-500">
+                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
-                  </div>
+                  </>
+                )}
+                {recap.leaders.scoringTeamNet && recap.leaders.scoringTeamNet.length > 0 && (
+                  <>
+                    <div className="font-semibold mt-6 mb-2">Team Net</div>
+                    {recap.leaders.scoringTeamNet.map((leader, idx) => (
+                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-lg">
+                            {leader.playerName.split(" / ").map((n, i) => (
+                              <div key={i}>{n}</div>
+                            ))}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                          </div>
+                          {leader.holesCompleted < 18 && (
+                            <div className="text-xs text-gray-500">
+                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {(!recap.leaders.scoringNet || recap.leaders.scoringNet.length === 0) && (!recap.leaders.scoringTeamNet || recap.leaders.scoringTeamNet.length === 0) && (
+                  <div className="text-gray-500 text-center py-8">No net scoring data available</div>
+                )}
+              </div>
+            )}
+            {netTab === "birdies" && (
+              <div className="space-y-3">
+                <div className="font-semibold mb-2">Net Birdies</div>
+                {recap.leaders.birdiesNet && recap.leaders.birdiesNet.length > 0 ? (
+                  recap.leaders.birdiesNet.map((leader, idx) => (
+                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold">
+                          <div className="max-w-[20rem]">
+                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                              (leader.playerName || "").split(" / ").map((n, i) => (
+                                <div key={i} className="truncate">{n}</div>
+                              ))
+                            ) : (
+                              <div className="truncate">{leader.playerName}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
+                      </div>
+                      <div className="text-3xl font-bold text-blue-600">{leader.count}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 text-center py-8">No net birdies recorded</div>
+                )}
+              </div>
+            )}
+            {netTab === "eagles" && (
+              <div className="space-y-3">
+                <div className="font-semibold mb-2">Net Eagles</div>
+                {recap.leaders.eaglesNet && recap.leaders.eaglesNet.length > 0 ? (
+                  recap.leaders.eaglesNet.map((leader, idx) => (
+                    <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold">
+                          <div className="max-w-[20rem]">
+                            {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                              (leader.playerName || "").split(" / ").map((n, i) => (
+                                <div key={i} className="truncate">{n}</div>
+                              ))
+                            ) : (
+                              <div className="truncate">{leader.playerName}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">Holes: {leader.holes.join(", ")}</div>
+                      </div>
+                      <div className="text-3xl font-bold text-yellow-600">{leader.count}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-500 text-center py-8">No net eagles recorded</div>
                 )}
               </div>
             )}
