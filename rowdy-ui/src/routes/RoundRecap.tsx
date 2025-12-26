@@ -117,14 +117,31 @@ export default function RoundRecap() {
     return n > 0 ? `+${n}` : `${n}`;
   };
 
+  const formatLabel = (f?: string | null) => {
+    switch (f) {
+      case "singles":
+        return "Singles";
+      case "twoManBestBall":
+        return "2-man Best Ball";
+      case "twoManShamble":
+        return "2-man Shamble";
+      case "twoManScramble":
+        return "2-man Scramble";
+      case "fourManScramble":
+        return "4-man Scramble";
+      default:
+        return f || "";
+    }
+  };
+
   return (
     <Layout title="Round Recap" showBack>
       <div className="p-4 space-y-4 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="card p-6">
+          <div className="card p-6">
           <h1 className="text-2xl font-bold mb-2">{recap.courseName}</h1>
           <div className="text-sm text-gray-600">
-            Day {recap.day} • {recap.format} • Par {recap.coursePar}
+            Day {recap.day} • {formatLabel(recap.format)} • Par {recap.coursePar}
           </div>
         </div>
 
