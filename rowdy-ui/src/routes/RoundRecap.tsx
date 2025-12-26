@@ -208,8 +208,7 @@ export default function RoundRecap() {
         {/* Gross Scoring Tab */}
         {viewMode === "grossScoring" && (
           <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div />
+            <div className="flex items-center justify-center mb-4">
               <div className="flex gap-2">
                 <button
                   onClick={() => setGrossTab("scores")}
@@ -353,8 +352,7 @@ export default function RoundRecap() {
         {/* Net Scoring Tab */}
         {viewMode === "netScoring" && (
           <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div />
+            <div className="flex items-center justify-center mb-4">
               <div className="flex gap-2">
                 <button
                   onClick={() => setNetTab("scores")}
@@ -380,7 +378,7 @@ export default function RoundRecap() {
               <div className="space-y-3">
                 {/* For twoManBestBall, allow toggling between Team and Individual Net views */}
                 {recap.format === "twoManBestBall" && (
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex gap-2 justify-center mb-2">
                     <button
                       onClick={() => setNetScoreView("team")}
                       className={`px-3 py-1 rounded-lg font-medium ${netScoreView === "team" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
