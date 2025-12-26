@@ -92,6 +92,20 @@ export default function Admin() {
               </div>
             </Link>
 
+            {/* Generate Round Recap */}
+            <Link 
+              to="/admin/round/recap" 
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-lg">Generate Round Recap</div>
+                  <div className="text-sm text-gray-600">Compute "vs All" simulation and round statistics</div>
+                </div>
+                <div className="text-2xl">→</div>
+              </div>
+            </Link>
+
             {/* Recalculate Tournament Stats */}
             <Link 
               to="/admin/tournament/recalculate" 

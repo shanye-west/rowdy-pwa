@@ -245,3 +245,67 @@ export interface SkinsResultDoc {
   lastUpdated: any; // FieldValue.serverTimestamp()
   _computeSig: string; // Hash to detect changes
 }
+
+// ============================================================================
+// ROUND RECAP TYPES
+// Pre-computed round statistics including "vs All" simulations
+// ============================================================================
+
+export interface VsAllRecord {
+  playerId: string;
+  playerName: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  teamKey?: string; // For team formats: "player1Id_player2Id"
+}
+
+export interface HoleAverageData {
+  holeNumber: number;
+  par: number;
+  avgGross: number | null;
+  avgNet: number | null; // Only for singles/bestBall
+  lowestGross: number | null;
+  lowestNet: number | null;
+  highestGross: number | null;
+  highestNet: number | null;
+  scoringCount: number; // Number of players with scores
+}
+
+export interface BirdieEagleLeader {
+  playerId: string;
+  playerName: string;
+  count: number;
+  holes: number[]; // Hole numbers where achieved
+}
+
+export interface RoundRecapDoc {
+  roundId: string;
+  tournamentId: string;
+  format: RoundFormat;
+  day?: number;
+  courseId: string;
+  courseName: string;
+  coursePar: number;
+  
+  // "vs All" simulation results
+  vsAllRecords: VsAllRecord[];
+  
+  // Hole-by-hole averages
+  holeAverages: HoleAverageData[];
+  
+  // Leaders
+  leaders: {
+    birdiesGross: BirdieEagleLeader[];
+    birdiesNet: BirdieEagleLeader[];
+    eaglesGross: BirdieEagleLeader[];
+    eaglesNet: BirdieEagleLeader[];
+    
+    // Best/worst holes
+    bestHole?: { holeNumber: number; avgStrokesUnderPar: number }; // Lowest avg vs par
+    worstHole?: { holeNumber: number; avgStrokesOverPar: number }; // Highest avg vs par
+  };
+  
+  computedAt: any; // FieldValue.serverTimestamp()
+  computedBy: string; // uid of admin who triggered
+}

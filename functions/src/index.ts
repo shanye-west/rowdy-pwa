@@ -20,6 +20,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateCourseHandicap, calculateStrokesReceived, calculateSkinsStrokes } from "./ghin.js";
+import { computeVsAllForRound, type PlayerFactForSim } from "./helpers/vsAllSimulation.js";
 import { checkRateLimit } from "./rateLimit.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
@@ -2332,3 +2333,293 @@ export const recalculateAllStats = onCall(async (request) => {
     message: `Deleted ${factsToDelete} facts across ${tournamentsAffected.size} tournaments. Triggered regeneration for ${touchedMatchIds.length} matches. playerStats for ${affectedPlayerIds.size} players will be automatically rebuilt by triggers.`
   };
 });
+
+// ============================================================================
+// COMPUTE ROUND RECAP
+// Manually-triggered function to precompute round statistics including "vs All"
+// ============================================================================
+
+export const computeRoundRecap = onCall(async (request) => {
+  // Auth check
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Rate limiting (2 calls per 10 minutes)
+  const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 600 });
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
+  }
+
+  // Verify admin status
+  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+
+  // Extract data
+  const { roundId } = request.data;
+  if (!roundId) {
+    throw new HttpsError("invalid-argument", "roundId is required");
+  }
+
+  // Check if recap already exists - FAIL if it does
+  const existingRecapSnap = await db.collection("roundRecaps").doc(roundId).get();
+  if (existingRecapSnap.exists) {
+    throw new HttpsError(
+      "already-exists",
+      "Round recap already exists. Delete it manually before regenerating."
+    );
+  }
+
+  // Fetch round metadata
+  const roundSnap = await db.collection("rounds").doc(roundId).get();
+  if (!roundSnap.exists) {
+    throw new HttpsError("not-found", "Round not found");
+  }
+  const round = roundSnap.data()!;
+  
+  if (!round.format) {
+    throw new HttpsError("failed-precondition", "Round format must be set before generating recap");
+  }
+  if (!round.courseId) {
+    throw new HttpsError("failed-precondition", "Round must have a course assigned");
+  }
+
+  // Fetch course data
+  const courseSnap = await db.collection("courses").doc(round.courseId).get();
+  if (!courseSnap.exists) {
+    throw new HttpsError("not-found", "Course not found");
+  }
+  const course = courseSnap.data()!;
+  const courseHoles = course.holes || [];
+  const coursePar = course.par || 72;
+  const slopeRating = course.slope || 113;
+  const courseRating = course.rating || coursePar;
+
+  // Fetch all playerMatchFacts for this round
+  const factsSnap = await db.collection("playerMatchFacts")
+    .where("roundId", "==", roundId)
+    .get();
+
+  if (factsSnap.empty) {
+    throw new HttpsError(
+      "failed-precondition",
+      "No player match facts found for this round. Ensure all matches are closed."
+    );
+  }
+
+  const allFacts = factsSnap.docs.map(d => d.data());
+
+  // Fetch player names
+  const playerIds = [...new Set(allFacts.map(f => f.playerId))];
+  const playerNames: Record<string, string> = {};
+  
+  for (let i = 0; i < playerIds.length; i += 30) {
+    const batch = playerIds.slice(i, i + 30);
+    const playersSnap = await db.collection("players")
+      .where("__name__", "in", batch)
+      .get();
+    playersSnap.docs.forEach(d => {
+      playerNames[d.id] = d.data().displayName || d.id;
+    });
+  }
+
+  // Transform facts into simulation format
+  const playerFactsForSim: PlayerFactForSim[] = allFacts.map(f => ({
+    playerId: f.playerId,
+    playerName: playerNames[f.playerId] || f.playerId,
+    playerHandicap: f.playerHandicap || 0,
+    team: f.team,
+    partnerIds: f.partnerIds,
+    holePerformance: f.holePerformance || [],
+  }));
+
+  // Compute "vs All" records
+  const vsAllRecords = computeVsAllForRound(
+    playerFactsForSim,
+    courseHoles,
+    round.format,
+    slopeRating,
+    courseRating,
+    coursePar
+  );
+
+  // Compute hole-by-hole averages
+  const holeAverages: any[] = [];
+  for (let holeNum = 1; holeNum <= 18; holeNum++) {
+    const holeData = courseHoles.find((h: any) => h.number === holeNum);
+    const holePar = holeData?.par || 4;
+
+    const grossScores: number[] = [];
+    const netScores: number[] = [];
+
+    for (const fact of allFacts) {
+      const perf = fact.holePerformance?.find((p: any) => p.hole === holeNum);
+      if (perf && perf.gross != null) {
+        grossScores.push(perf.gross);
+        if (perf.net != null) {
+          netScores.push(perf.net);
+        }
+      }
+    }
+
+    const avgGross = grossScores.length > 0
+      ? grossScores.reduce((a, b) => a + b, 0) / grossScores.length
+      : null;
+    const avgNet = netScores.length > 0
+      ? netScores.reduce((a, b) => a + b, 0) / netScores.length
+      : null;
+
+    holeAverages.push({
+      holeNumber: holeNum,
+      par: holePar,
+      avgGross: avgGross ? Math.round(avgGross * 100) / 100 : null,
+      avgNet: avgNet ? Math.round(avgNet * 100) / 100 : null,
+      lowestGross: grossScores.length > 0 ? Math.min(...grossScores) : null,
+      lowestNet: netScores.length > 0 ? Math.min(...netScores) : null,
+      highestGross: grossScores.length > 0 ? Math.max(...grossScores) : null,
+      highestNet: netScores.length > 0 ? Math.max(...netScores) : null,
+      scoringCount: grossScores.length,
+    });
+  }
+
+  // Compute birdie/eagle leaders
+  const birdieGrossMap = new Map<string, { count: number; holes: number[] }>();
+  const birdieNetMap = new Map<string, { count: number; holes: number[] }>();
+  const eagleGrossMap = new Map<string, { count: number; holes: number[] }>();
+  const eagleNetMap = new Map<string, { count: number; holes: number[] }>();
+
+  for (const fact of allFacts) {
+    const playerId = fact.playerId;
+    const playerName = playerNames[playerId] || playerId;
+
+    if (!birdieGrossMap.has(playerId)) {
+      birdieGrossMap.set(playerId, { count: 0, holes: [] });
+      birdieNetMap.set(playerId, { count: 0, holes: [] });
+      eagleGrossMap.set(playerId, { count: 0, holes: [] });
+      eagleNetMap.set(playerId, { count: 0, holes: [] });
+    }
+
+    for (const perf of fact.holePerformance || []) {
+      if (perf.gross != null && perf.par != null) {
+        const grossVsPar = perf.gross - perf.par;
+        
+        if (grossVsPar === -1) {
+          birdieGrossMap.get(playerId)!.count++;
+          birdieGrossMap.get(playerId)!.holes.push(perf.hole);
+        } else if (grossVsPar <= -2) {
+          eagleGrossMap.get(playerId)!.count++;
+          eagleGrossMap.get(playerId)!.holes.push(perf.hole);
+        }
+
+        if (perf.net != null) {
+          const netVsPar = perf.net - perf.par;
+          
+          if (netVsPar === -1) {
+            birdieNetMap.get(playerId)!.count++;
+            birdieNetMap.get(playerId)!.holes.push(perf.hole);
+          } else if (netVsPar <= -2) {
+            eagleNetMap.get(playerId)!.count++;
+            eagleNetMap.get(playerId)!.holes.push(perf.hole);
+          }
+        }
+      }
+    }
+  }
+
+  const toLeaderArray = (map: Map<string, { count: number; holes: number[] }>) => {
+    return Array.from(map.entries())
+      .filter(([_, data]) => data.count > 0)
+      .map(([playerId, data]) => ({
+        playerId,
+        playerName: playerNames[playerId] || playerId,
+        count: data.count,
+        holes: data.holes,
+      }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  const birdiesGross = toLeaderArray(birdieGrossMap);
+  const birdiesNet = toLeaderArray(birdieNetMap);
+  const eaglesGross = toLeaderArray(eagleGrossMap);
+  const eaglesNet = toLeaderArray(eagleNetMap);
+
+  // Best/worst holes (by average strokes vs par)
+  const holesWithScores = holeAverages.filter(h => h.avgGross != null);
+  let bestHole = null;
+  let worstHole = null;
+
+  if (holesWithScores.length > 0) {
+    const sorted = holesWithScores
+      .map(h => ({
+        holeNumber: h.holeNumber,
+        avgVsPar: h.avgGross! - h.par,
+      }))
+      .sort((a, b) => a.avgVsPar - b.avgVsPar);
+
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+
+    if (best.avgVsPar < 0) {
+      bestHole = {
+        holeNumber: best.holeNumber,
+        avgStrokesUnderPar: Math.abs(Math.round(best.avgVsPar * 100) / 100),
+      };
+    }
+
+    if (worst.avgVsPar > 0) {
+      worstHole = {
+        holeNumber: worst.holeNumber,
+        avgStrokesOverPar: Math.round(worst.avgVsPar * 100) / 100,
+      };
+    }
+  }
+
+  // Build recap document
+  const recapDoc = {
+    roundId,
+    tournamentId: round.tournamentId,
+    format: round.format,
+    day: round.day,
+    courseId: round.courseId,
+    courseName: course.name || "Unknown Course",
+    coursePar,
+    vsAllRecords,
+    holeAverages,
+    leaders: {
+      birdiesGross,
+      birdiesNet,
+      eaglesGross,
+      eaglesNet,
+      bestHole,
+      worstHole,
+    },
+    computedAt: FieldValue.serverTimestamp(),
+    computedBy: uid,
+  };
+
+  // Write to roundRecaps collection
+  await db.collection("roundRecaps").doc(roundId).set(recapDoc);
+
+  return {
+    success: true,
+    roundId,
+    stats: {
+      playersAnalyzed: playerIds.length,
+      vsAllMatchupsSimulated: vsAllRecords.length > 0 
+        ? vsAllRecords[0].wins + vsAllRecords[0].losses + vsAllRecords[0].ties
+        : 0,
+      birdiesGrossLeader: birdiesGross[0]?.playerName || "None",
+      birdiesGrossCount: birdiesGross[0]?.count || 0,
+      eaglesGrossLeader: eaglesGross[0]?.playerName || "None",
+      eaglesGrossCount: eaglesGross[0]?.count || 0,
+    },
+    message: "Round recap generated successfully",
+  };
+});
+
