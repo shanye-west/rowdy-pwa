@@ -92,46 +92,44 @@ function RoundComponent() {
         
         {/* ROUND HEADER / SCOREBOARD */}
         <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
-          {/* Action Buttons (top-right corner) */}
-          <div style={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            display: 'flex',
-            gap: 8,
-          }}>
-            {/* Recap Link */}
-            {hasRecap && !checkingRecap && (
-              <Link
-                to={`/round/${round.id}/recap`}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  borderRadius: 6,
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          {/* Recap Link (top-left corner) */}
+          {hasRecap && !checkingRecap && (
+            <Link
+              to={`/round/${round.id}/recap`}
+              style={{
+                position: 'absolute',
+                top: 16,
+                left: 16,
+                padding: '8px 12px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                borderRadius: 6,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                 }}
                 className="hover:bg-blue-700 transition-colors"
               >
                 Recap
               </Link>
             )}
-            
-            {/* Skins Link */}
-            {skinsEnabled && (
-              <Link
-                to={`/round/${round.id}/skins`}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#f59e0b',
+          
+          {/* Skins Link (top-right corner) */}
+          {skinsEnabled && (
+            <Link
+              to={`/round/${round.id}/skins`}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                padding: '8px 12px',
+                backgroundColor: '#f59e0b',
                   color: 'white',
                   borderRadius: 6,
                   fontSize: '0.75rem',
@@ -149,7 +147,6 @@ function RoundComponent() {
                 Skins
               </Link>
             )}
-          </div>
           
           <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
             Round {round.day ?? ""}

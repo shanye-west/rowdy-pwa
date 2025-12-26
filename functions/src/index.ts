@@ -2489,55 +2489,107 @@ export const computeRoundRecap = onCall(async (request) => {
   }
 
   // Compute birdie/eagle leaders
-  const birdieGrossMap = new Map<string, { count: number; holes: number[] }>();
-  const birdieNetMap = new Map<string, { count: number; holes: number[] }>();
-  const eagleGrossMap = new Map<string, { count: number; holes: number[] }>();
-  const eagleNetMap = new Map<string, { count: number; holes: number[] }>();
+  // For team formats (scramble/shamble), group by team
+  // For bestBall, keep individual tracking
+  const isTeamBirdieFormat = round.format === "twoManScramble" || round.format === "twoManShamble" || round.format === "fourManScramble";
+  
+  const birdieGrossMap = new Map<string, { count: number; holes: number[]; playerNames?: string[] }>();
+  const birdieNetMap = new Map<string, { count: number; holes: number[]; playerNames?: string[] }>();
+  const eagleGrossMap = new Map<string, { count: number; holes: number[]; playerNames?: string[] }>();
+  const eagleNetMap = new Map<string, { count: number; holes: number[]; playerNames?: string[] }>();
 
-  for (const fact of allFacts) {
-    const playerId = fact.playerId;
-    const playerName = playerNames[playerId] || playerId;
-
-    if (!birdieGrossMap.has(playerId)) {
-      birdieGrossMap.set(playerId, { count: 0, holes: [] });
-      birdieNetMap.set(playerId, { count: 0, holes: [] });
-      eagleGrossMap.set(playerId, { count: 0, holes: [] });
-      eagleNetMap.set(playerId, { count: 0, holes: [] });
-    }
-
-    for (const perf of fact.holePerformance || []) {
-      if (perf.gross != null && perf.par != null) {
-        const grossVsPar = perf.gross - perf.par;
-        
-        if (grossVsPar === -1) {
-          birdieGrossMap.get(playerId)!.count++;
-          birdieGrossMap.get(playerId)!.holes.push(perf.hole);
-        } else if (grossVsPar <= -2) {
-          eagleGrossMap.get(playerId)!.count++;
-          eagleGrossMap.get(playerId)!.holes.push(perf.hole);
+  if (isTeamBirdieFormat) {
+    // For scramble/shamble: group by team and count birdies/eagles per team
+    const teamBirdies = new Map<string, { count: number; holes: number[]; playerNames: string[] }>();
+    const teamEagles = new Map<string, { count: number; holes: number[]; playerNames: string[] }>();
+    
+    for (const fact of allFacts) {
+      // Create team key
+      const allPlayerIds = [fact.playerId, ...(fact.partnerIds || [])];
+      allPlayerIds.sort();
+      const teamKey = allPlayerIds.join("_");
+      
+      if (!teamBirdies.has(teamKey)) {
+        const teamPlayerNames = allPlayerIds.map(id => playerNames[id] || id);
+        teamBirdies.set(teamKey, { count: 0, holes: [], playerNames: teamPlayerNames });
+        teamEagles.set(teamKey, { count: 0, holes: [], playerNames: teamPlayerNames });
+      }
+      
+      // Only count once per team (first member processes the team performance)
+      const teamData = teamBirdies.get(teamKey)!;
+      if (teamData.count === 0 || teamData.holes.length === 0) {
+        // Process hole performance for this team (only once)
+        for (const perf of fact.holePerformance || []) {
+          if (perf.gross != null && perf.par != null) {
+            const grossVsPar = perf.gross - perf.par;
+            
+            if (grossVsPar === -1 && !teamBirdies.get(teamKey)!.holes.includes(perf.hole)) {
+              teamBirdies.get(teamKey)!.count++;
+              teamBirdies.get(teamKey)!.holes.push(perf.hole);
+            } else if (grossVsPar <= -2 && !teamEagles.get(teamKey)!.holes.includes(perf.hole)) {
+              teamEagles.get(teamKey)!.count++;
+              teamEagles.get(teamKey)!.holes.push(perf.hole);
+            }
+          }
         }
+      }
+    }
+    
+    // Convert team maps to individual player entries (using teamKey as playerId)
+    for (const [teamKey, data] of teamBirdies.entries()) {
+      birdieGrossMap.set(teamKey, { count: data.count, holes: data.holes, playerNames: data.playerNames });
+    }
+    for (const [teamKey, data] of teamEagles.entries()) {
+      eagleGrossMap.set(teamKey, { count: data.count, holes: data.holes, playerNames: data.playerNames });
+    }
+    // No net tracking for scramble/shamble (gross only)
+  } else {
+    // Individual tracking for singles and bestBall
+    for (const fact of allFacts) {
+      const playerId = fact.playerId;
+      const playerName = playerNames[playerId] || playerId;
 
-        if (perf.net != null) {
-          const netVsPar = perf.net - perf.par;
+      if (!birdieGrossMap.has(playerId)) {
+        birdieGrossMap.set(playerId, { count: 0, holes: [] });
+        birdieNetMap.set(playerId, { count: 0, holes: [] });
+        eagleGrossMap.set(playerId, { count: 0, holes: [] });
+        eagleNetMap.set(playerId, { count: 0, holes: [] });
+      }
+
+      for (const perf of fact.holePerformance || []) {
+        if (perf.gross != null && perf.par != null) {
+          const grossVsPar = perf.gross - perf.par;
           
-          if (netVsPar === -1) {
-            birdieNetMap.get(playerId)!.count++;
-            birdieNetMap.get(playerId)!.holes.push(perf.hole);
-          } else if (netVsPar <= -2) {
-            eagleNetMap.get(playerId)!.count++;
-            eagleNetMap.get(playerId)!.holes.push(perf.hole);
+          if (grossVsPar === -1) {
+            birdieGrossMap.get(playerId)!.count++;
+            birdieGrossMap.get(playerId)!.holes.push(perf.hole);
+          } else if (grossVsPar <= -2) {
+            eagleGrossMap.get(playerId)!.count++;
+            eagleGrossMap.get(playerId)!.holes.push(perf.hole);
+          }
+
+          if (perf.net != null) {
+            const netVsPar = perf.net - perf.par;
+            
+            if (netVsPar === -1) {
+              birdieNetMap.get(playerId)!.count++;
+              birdieNetMap.get(playerId)!.holes.push(perf.hole);
+            } else if (netVsPar <= -2) {
+              eagleNetMap.get(playerId)!.count++;
+              eagleNetMap.get(playerId)!.holes.push(perf.hole);
+            }
           }
         }
       }
     }
   }
 
-  const toLeaderArray = (map: Map<string, { count: number; holes: number[] }>) => {
+  const toLeaderArray = (map: Map<string, { count: number; holes: number[]; playerNames?: string[] }>) => {
     return Array.from(map.entries())
       .filter(([_, data]) => data.count > 0)
       .map(([playerId, data]) => ({
         playerId,
-        playerName: playerNames[playerId] || playerId,
+        playerName: data.playerNames ? data.playerNames.join(" / ") : (playerNames[playerId] || playerId),
         count: data.count,
         holes: data.holes,
       }))

@@ -63,8 +63,40 @@ export default function RoundRecap() {
     );
   }
 
+  // For team formats, deduplicate vsAll records by teamKey
+  // Group players with the same teamKey into a single display entry
+  const isTeamFormat = recap.format !== "singles";
+  
+  let displayVsAll: Array<VsAllRecord & { displayName?: string }> = [];
+  
+  if (isTeamFormat) {
+    // Group by teamKey
+    const teamMap = new Map<string, VsAllRecord[]>();
+    for (const record of recap.vsAllRecords) {
+      const key = record.teamKey || record.playerId;
+      if (!teamMap.has(key)) {
+        teamMap.set(key, []);
+      }
+      teamMap.get(key)!.push(record);
+    }
+    
+    // Create one entry per team with combined player names
+    for (const [teamKey, members] of teamMap.entries()) {
+      const firstMember = members[0];
+      const playerNames = members.map(m => m.playerName).join(" / ");
+      displayVsAll.push({
+        ...firstMember,
+        displayName: playerNames,
+        playerId: teamKey,
+      });
+    }
+  } else {
+    // Singles: use records as-is
+    displayVsAll = recap.vsAllRecords.map(r => ({ ...r, displayName: r.playerName }));
+  }
+  
   // Sort vsAll by win percentage
-  const sortedVsAll = [...recap.vsAllRecords].sort((a, b) => {
+  const sortedVsAll = [...displayVsAll].sort((a, b) => {
     const totalA = a.wins + a.losses + a.ties;
     const totalB = b.wins + b.losses + b.ties;
     const winPctA = totalA > 0 ? a.wins / totalA : 0;
@@ -164,7 +196,7 @@ export default function RoundRecap() {
                   {sortedVsAll.map((record, idx) => (
                     <tr key={record.playerId} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-2 font-bold text-gray-500">{idx + 1}</td>
-                      <td className="py-3 px-2 font-medium">{record.playerName}</td>
+                      <td className="py-3 px-2 font-medium">{record.displayName || record.playerName}</td>
                       <td className="py-3 px-2 text-center text-green-700 font-semibold">
                         {record.wins}
                       </td>
