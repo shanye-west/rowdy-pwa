@@ -10,7 +10,7 @@ export default function RoundRecap() {
   const [recap, setRecap] = useState<RoundRecapDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"vsAll" | "grossScoring" | "netScoring" | "holes">("vsAll");
+  const [viewMode, setViewMode] = useState<"vsAll" | "grossScoring" | "netScoring" | "holes">("grossScoring");
   const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netScoreView, setNetScoreView] = useState<"team" | "individual">("team");
