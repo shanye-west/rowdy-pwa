@@ -54,6 +54,10 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
     ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
     : "/teams";
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <>
       {/* STICKY HEADER */}

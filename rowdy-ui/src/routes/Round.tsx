@@ -5,13 +5,12 @@ import { db } from "../firebase";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
-import Layout from "../components/Layout";
 import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
-import { RoundPageSkeleton } from "../components/Skeleton";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 function RoundComponent() {
   const { roundId } = useParams();
@@ -54,11 +53,12 @@ function RoundComponent() {
   // Use shared player helper - this returns short name format (F. LastName)
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
-  if (loading) return (
-    <Layout title="Loading..." showBack>
-      <RoundPageSkeleton />
-    </Layout>
-  );
+  const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
+
+  usePageMeta({ title: tournament?.name, series: tSeries, showBack: true, tournamentLogo: tLogo });
+
+  if (loading) return <div className="py-20" aria-hidden="true" />;
   if (error) return (
     <div className="p-5 text-center text-red-600">
       <div className="text-2xl mb-2">⚠️</div>
@@ -67,19 +67,13 @@ function RoundComponent() {
   );
   if (!round) {
     return (
-      <Layout title="Round" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">Round not found.</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔍</div>
+        <div className="empty-state-text">Round not found.</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
-
-  const tName = tournament?.name || "Round Detail";
-  const tSeries = tournament?.series;
-  const tLogo = tournament?.tournamentLogo;
 
   // Check if skins are enabled for this round
   const hasGross = (round.skinsGrossPot ?? 0) > 0;
@@ -87,8 +81,7 @@ function RoundComponent() {
   const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
 
   return (
-    <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 20 }}>
+    <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
         {/* ROUND HEADER / SCOREBOARD */}
         <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
@@ -306,7 +299,6 @@ function RoundComponent() {
         </section>
         <LastUpdated />
       </div>
-    </Layout>
   );
 }
 

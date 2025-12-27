@@ -2,11 +2,12 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
-import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 // TeamName removed from history list (only logos shown)
 import type { TournamentDoc } from "../types";
+import { usePageMeta } from "../contexts/PageMetaContext";
+import { useTournamentContext } from "../contexts/TournamentContext";
 
 type TournamentSeries = "rowdyCup" | "christmasClassic";
 
@@ -20,6 +21,14 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<TournamentSeries>("rowdyCup");
+  const { tournament } = useTournamentContext();
+
+  usePageMeta({
+    title: tournament?.name,
+    series: tournament?.series,
+    showBack: true,
+    tournamentLogo: tournament?.tournamentLogo,
+  });
 
   // Fetch all non-active tournaments (one-time read - historical data doesn't change)
   useEffect(() => {
@@ -65,16 +74,11 @@ export default function History() {
   }, [tournaments]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="spinner-lg"></div>
-      </div>
-    );
+    return <div className="py-20" aria-hidden="true" />;
   }
 
   return (
-    <Layout title="History" showBack>
-      <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
         
         {/* Series Selector Tabs */}
         {availableSeries.length > 1 && (
@@ -236,6 +240,5 @@ export default function History() {
 
         <LastUpdated />
       </div>
-    </Layout>
   );
 }

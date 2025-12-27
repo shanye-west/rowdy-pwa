@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import type { TournamentDoc, RoundDoc, MatchDoc } from "../types";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 export default function RecalculateMatchStrokes() {
   const { player } = useAuth();
@@ -23,17 +23,17 @@ export default function RecalculateMatchStrokes() {
   const [roundId, setRoundId] = useState("");
   const [matchId, setMatchId] = useState("");
 
+  usePageMeta({ title: "Recalculate Match Strokes", showBack: true });
+
   // Access control
   if (!player?.isAdmin) {
     return (
-      <Layout title="Recalculate Match Strokes" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
@@ -131,15 +131,12 @@ export default function RecalculateMatchStrokes() {
 
   if (loading) {
     return (
-      <Layout title="Recalculate Match Strokes" showBack>
-        <div className="p-4">Loading...</div>
-      </Layout>
+      <div className="p-4">Loading...</div>
     );
   }
 
   return (
-    <Layout title="Recalculate Match Strokes" showBack>
-      <div className="p-4 max-w-2xl mx-auto">
+    <div className="p-4 max-w-2xl mx-auto">
         <div className="card p-6">
           <p className="text-sm text-gray-600 mb-6">
             Recalculate strokesReceived for a match using current tournament handicap indexes and GHIN formula.
@@ -258,6 +255,5 @@ export default function RecalculateMatchStrokes() {
           </div>
         </div>
       </div>
-    </Layout>
   );
 }

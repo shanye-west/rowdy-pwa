@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 /**
  * Error boundary for route errors.
@@ -81,7 +82,6 @@ export default function ErrorBoundary() {
     return (
       <Layout title="Updating...">
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="spinner-lg mb-4"></div>
           <h1 className="text-xl font-bold mb-2">Updating App</h1>
           <p className="text-slate-500">
             A new version is available. Reloading...
@@ -175,21 +175,21 @@ export default function ErrorBoundary() {
 export function NotFound() {
   const navigate = useNavigate();
 
+  usePageMeta({ title: "Not Found", showBack: true });
+
   return (
-    <Layout title="Not Found" showBack>
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-        <div className="text-6xl mb-4">🔍</div>
-        <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
-        <p className="text-slate-500 mb-6">
-          The page you're looking for doesn't exist.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-        >
-          Go Home
-        </button>
-      </div>
-    </Layout>
+    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+      <div className="text-6xl mb-4">🔍</div>
+      <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
+      <p className="text-slate-500 mb-6">
+        The page you're looking for doesn't exist.
+      </p>
+      <button
+        onClick={() => navigate("/")}
+        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+      >
+        Go Home
+      </button>
+    </div>
   );
 }

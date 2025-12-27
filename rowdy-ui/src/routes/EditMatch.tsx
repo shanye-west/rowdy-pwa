@@ -3,9 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, query, where, doc, getDoc, documentId } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import type { TournamentDoc, RoundDoc, PlayerDoc, MatchDoc } from "../types";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 type PlayerInput = {
   playerId: string;
@@ -26,6 +26,8 @@ export default function EditMatch() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  usePageMeta({ title: "Edit Match", showBack: true });
 
   // Selection state
   const [tournamentId, setTournamentId] = useState("");
@@ -313,42 +315,31 @@ export default function EditMatch() {
   // Access control - check after all hooks are declared
   if (!player?.isAdmin) {
     return (
-      <Layout title="Edit Match" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
   if (loading) {
-    return (
-      <Layout title="Edit Match" showBack>
-        <div className="flex items-center justify-center py-20">
-          <div className="spinner-lg"></div>
-        </div>
-      </Layout>
-    );
+    return <div className="py-20" aria-hidden="true" />;
   }
 
   if (success) {
     return (
-      <Layout title="Edit Match" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">✅</div>
-          <div className="empty-state-text">Match Updated!</div>
-          <div className="text-sm text-gray-500 mt-2">Redirecting to match...</div>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">✅</div>
+        <div className="empty-state-text">Match Updated!</div>
+        <div className="text-sm text-gray-500 mt-2">Redirecting to match...</div>
+      </div>
     );
   }
 
   return (
-    <Layout title="Edit Match" showBack>
-      <div className="p-4 max-w-2xl mx-auto">
+    <div className="p-4 max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Match Selection */}
           <div className="card p-6 space-y-4">
@@ -420,11 +411,9 @@ export default function EditMatch() {
             )}
           </div>
 
-          {/* Show loading spinner while fetching match details */}
+          {/* Loading placeholder while fetching match details */}
           {matchLoading && (
-            <div className="flex items-center justify-center py-10">
-              <div className="spinner-lg"></div>
-            </div>
+            <div className="py-10" aria-hidden="true" />
           )}
 
           {/* Edit Form - only show if match is selected and loaded */}
@@ -626,6 +615,5 @@ export default function EditMatch() {
           )}
         </form>
       </div>
-    </Layout>
   );
 }

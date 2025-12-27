@@ -4,8 +4,8 @@ import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
 import { formatTeeTime } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
-import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 function SkinsComponent() {
   const { roundId } = useParams();
@@ -22,9 +22,10 @@ function SkinsComponent() {
   const [selectedTab, setSelectedTab] = useState<SkinType>("gross");
   const [expandedHole, setExpandedHole] = useState<number | null>(null);
 
-  const tName = tournament?.name || "Skins Game";
   const tSeries = tournament?.series;
   const tLogo = tournament?.tournamentLogo;
+
+  usePageMeta({ title: tournament?.name, series: tSeries, showBack: true, tournamentLogo: tLogo });
 
   const hasGross = (round?.skinsGrossPot ?? 0) > 0;
   const hasNet = (round?.skinsNetPot ?? 0) > 0;
@@ -41,43 +42,35 @@ function SkinsComponent() {
 
   if (loading) {
     return (
-      <Layout title="Loading..." showBack>
-        <div className="p-5 text-center text-slate-500">Loading skins...</div>
-      </Layout>
+      <div className="p-5 text-center text-slate-500">Loading skins...</div>
     );
   }
 
   if (error) {
     return (
-      <Layout title="Error" showBack>
-        <div className="p-5 text-center text-red-600">
-          <div className="text-2xl mb-2">⚠️</div>
-          <div>{error}</div>
-        </div>
-      </Layout>
+      <div className="p-5 text-center text-red-600">
+        <div className="text-2xl mb-2">⚠️</div>
+        <div>{error}</div>
+      </div>
     );
   }
 
   if (!round || !skinsEnabled) {
     if (!round) {
       return (
-        <Layout title="Skins" showBack>
-          <div className="empty-state">
-            <div className="empty-state-icon">🎯</div>
-            <div className="empty-state-text">Round not found</div>
-            <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-          </div>
-        </Layout>
+        <div className="empty-state">
+          <div className="empty-state-icon">🎯</div>
+          <div className="empty-state-text">Round not found</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
       );
     }
 
     return (
-      <Layout title="Skins" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🎯</div>
-          <div className="empty-state-text">No skins game configured for this round</div>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🎯</div>
+        <div className="empty-state-text">No skins game configured for this round</div>
+      </div>
     );
   }
 
@@ -99,8 +92,7 @@ function SkinsComponent() {
   const valuePerSkin = skinsWon > 0 ? (totalPot ?? 0) / skinsWon : 0;
 
   return (
-    <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 20 }}>
+    <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
         {/* HEADER */}
         <section className="card" style={{ padding: 20, textAlign: "center" }}>
@@ -401,9 +393,8 @@ function SkinsComponent() {
           </div>
         </section>
 
-        <LastUpdated />
-      </div>
-    </Layout>
+      <LastUpdated />
+    </div>
   );
 }
 

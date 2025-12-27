@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { db } from "../firebase";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 type TournamentOption = {
   id: string;
@@ -42,6 +42,8 @@ export default function GenerateRoundRecap() {
   const [selectedRoundId, setSelectedRoundId] = useState<string>("");
   const [result, setResult] = useState<ComputeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  usePageMeta({ title: "Generate Round Recap", showBack: true });
 
   // Load tournaments
   useEffect(() => {
@@ -141,20 +143,17 @@ export default function GenerateRoundRecap() {
   // Access control: only admins can view this page
   if (!player?.isAdmin) {
     return (
-      <Layout title="Generate Round Recap" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
   return (
-    <Layout title="Generate Round Recap" showBack>
-      <div className="p-4 space-y-4 max-w-3xl mx-auto">
+    <div className="p-4 space-y-4 max-w-3xl mx-auto">
         {/* Info Banner */}
         <div className="card p-4 bg-blue-50 border-2 border-blue-300">
           <div className="flex items-start gap-3">
@@ -301,6 +300,5 @@ export default function GenerateRoundRecap() {
           </div>
         )}
       </div>
-    </Layout>
   );
 }

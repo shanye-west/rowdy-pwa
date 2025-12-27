@@ -3,9 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, query, where, documentId } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import type { TournamentDoc, RoundDoc, PlayerDoc } from "../types";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 type PlayerInput = {
   playerId: string;
@@ -23,6 +23,8 @@ export default function AddMatch() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  usePageMeta({ title: "Add Match", showBack: true });
 
   // Form fields
   const [tournamentId, setTournamentId] = useState("");
@@ -200,42 +202,31 @@ export default function AddMatch() {
   // Access control - check after all hooks are declared
   if (!player?.isAdmin) {
     return (
-      <Layout title="Add Match" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
   if (loading) {
-    return (
-      <Layout title="Add Match" showBack>
-        <div className="flex items-center justify-center py-20">
-          <div className="spinner-lg"></div>
-        </div>
-      </Layout>
-    );
+    return <div className="py-20" aria-hidden="true" />;
   }
 
   if (success) {
     return (
-      <Layout title="Add Match" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">✅</div>
-          <div className="empty-state-text">Match Created!</div>
-          <div className="text-sm text-gray-500 mt-2">Redirecting to match...</div>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">✅</div>
+        <div className="empty-state-text">Match Created!</div>
+        <div className="text-sm text-gray-500 mt-2">Redirecting to match...</div>
+      </div>
     );
   }
 
   return (
-    <Layout title="Add Match" showBack>
-      <div className="p-4 max-w-2xl mx-auto">
+    <div className="p-4 max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Tournament Selection */}
           <div className="card p-6 space-y-4">
@@ -434,6 +425,5 @@ export default function AddMatch() {
           </button>
         </form>
       </div>
-    </Layout>
   );
 }

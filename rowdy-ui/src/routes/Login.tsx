@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import Layout from "../components/Layout";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,6 +14,8 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  usePageMeta({ title: "Login", showBack: true });
 
   // If already logged in, redirect home
   if (player) {
@@ -82,8 +84,7 @@ export default function Login() {
   }
 
   return (
-    <Layout title="Login" showBack>
-      <div style={{ padding: "1rem", maxWidth: 400, margin: "0 auto" }}>
+    <div style={{ padding: "1rem", maxWidth: 400, margin: "0 auto" }}>
         
         {/* Help Text */}
         <p style={{ 
@@ -352,6 +353,5 @@ export default function Login() {
           </form>
         )}
       </div>
-    </Layout>
   );
 }

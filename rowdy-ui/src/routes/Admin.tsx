@@ -3,12 +3,15 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc } from "../types";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 export default function Admin() {
   const { player } = useAuth();
   const [testTournaments, setTestTournaments] = useState<TournamentDoc[]>([]);
+
+  const pageTitle = player?.isAdmin ? "Admin Dashboard" : "Admin";
+  usePageMeta({ title: pageTitle, showBack: true });
 
   useEffect(() => {
     let mounted = true;
@@ -29,20 +32,17 @@ export default function Admin() {
   // Access control: only admins can view this page
   if (!player?.isAdmin) {
     return (
-      <Layout title="Admin" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
   return (
-    <Layout title="Admin Dashboard" showBack>
-      <div className="p-4 space-y-4 max-w-2xl mx-auto">
+    <div className="p-4 space-y-4 max-w-2xl mx-auto">
         <div className="card p-6">
           <h2 className="text-xl font-bold mb-4">Data Management</h2>
           <p className="text-sm text-gray-600 mb-6">
@@ -187,7 +187,6 @@ export default function Admin() {
             )}
           </div>
         </div>
-      </div>
-    </Layout>
+    </div>
   );
 }

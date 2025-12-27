@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundRecapDoc, VsAllRecord } from "../types";
-import Layout from "../components/Layout";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 export default function RoundRecap() {
   const { roundId } = useParams<{ roundId: string }>();
@@ -14,6 +14,8 @@ export default function RoundRecap() {
   const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netScoreView, setNetScoreView] = useState<"team" | "individual">("team");
+
+  usePageMeta({ showBack: true });
 
   useEffect(() => {
     if (!roundId) return;
@@ -44,25 +46,19 @@ export default function RoundRecap() {
   // Short-circuit while loading / error / missing recap to avoid many null checks below
   if (loading) {
     return (
-      <Layout title="Round Recap" showBack>
-        <div className="p-4">Loading recap…</div>
-      </Layout>
+      <div className="p-4">Loading recap…</div>
     );
   }
 
   if (error) {
     return (
-      <Layout title="Round Recap" showBack>
-        <div className="p-4 text-red-600">{error}</div>
-      </Layout>
+      <div className="p-4 text-red-600">{error}</div>
     );
   }
 
   if (!recap) {
     return (
-      <Layout title="Round Recap" showBack>
-        <div className="p-4">Recap not available</div>
-      </Layout>
+      <div className="p-4">Recap not available</div>
     );
   }
 
@@ -135,8 +131,7 @@ export default function RoundRecap() {
   };
 
   return (
-    <Layout title="Round Recap" showBack>
-      <div className="p-4 space-y-4 max-w-6xl mx-auto">
+    <div className="p-4 space-y-4 max-w-6xl mx-auto">
         {/* Header */}
           <div className="card p-6">
           <h1 className="text-2xl font-bold mb-2">{recap.courseName}</h1>
@@ -605,6 +600,5 @@ export default function RoundRecap() {
           </div>
         )}
       </div>
-    </Layout>
   );
 }

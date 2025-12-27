@@ -11,11 +11,9 @@ import {
 } from "../constants";
 
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
-import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { MatchPageSkeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   MatchFlowGraph, 
@@ -36,6 +34,7 @@ import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
@@ -677,12 +676,11 @@ export default function Match() {
   // Get team colors
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
+  const tSeries = tournament?.series || "rowdyCup";
 
-  if (loading) return (
-    <Layout title="Loading..." showBack>
-      <MatchPageSkeleton />
-    </Layout>
-  );
+  usePageMeta({ title: tournament?.name, series: tSeries, showBack: true, tournamentLogo: tournament?.tournamentLogo });
+
+  if (loading) return <div className="py-20" aria-hidden="true" />;
   
   if (error) return (
     <div className="empty-state">
@@ -694,18 +692,13 @@ export default function Match() {
   
   if (!match) {
     return (
-      <Layout title="Match Scoring" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">Match not found.</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔍</div>
+        <div className="empty-state-text">Match not found.</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
-
-  const tName = tournament?.name || "Match Scoring";
-  const tSeries = tournament?.series || "rowdyCup";
   // Four player rows: Best Ball and Shamble (individual player scores)
   const isFourPlayerRows = format === "twoManBestBall" || format === "twoManShamble";
 
@@ -787,8 +780,7 @@ export default function Match() {
                       "#94a3b8"; // Gray for AS
 
   return (
-    <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
-      <div className="p-4 space-y-4 max-w-4xl mx-auto">
+    <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
         {/* MATCH STATUS HEADER */}
         <MatchStatusHeader
@@ -1108,6 +1100,5 @@ export default function Match() {
           getCourseHandicapFor={getCourseHandicapFor}
         />
       </div>
-    </Layout>
   );
 }

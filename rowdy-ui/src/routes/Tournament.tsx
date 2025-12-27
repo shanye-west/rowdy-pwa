@@ -1,13 +1,13 @@
 import { memo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
-import Layout from "../components/Layout";
 import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
 import OfflineImage from "../components/OfflineImage";
 import { formatRoundType } from "../utils";
+import { usePageMeta } from "../contexts/PageMetaContext";
 // RedirectCountdown removed; show Go Home button instead
 
 /**
@@ -27,34 +27,29 @@ function TournamentComponent() {
     totalPointsAvailable,
   } = useTournamentData({ tournamentId });
 
+  const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
+
+  usePageMeta({ title: tournament?.name, series: tSeries, showBack: true, tournamentLogo: tLogo });
+
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="spinner-lg"></div>
-      </div>
-    );
+    return <div className="py-20" aria-hidden="true" />;
   }
 
   if (!tournament) {
     return (
-      <Layout title="Tournament" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">Tournament not found.</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔍</div>
+        <div className="empty-state-text">Tournament not found.</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
-  const tName = tournament?.name || "Tournament";
-  const tSeries = tournament?.series;
-  const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
   return (
-    <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 24 }}>
+    <div style={{ padding: 16, display: "grid", gap: 24 }}>
         
         {/* HERO SCOREBOARD */}
         <section className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -209,7 +204,6 @@ function TournamentComponent() {
 
         <LastUpdated />
       </div>
-    </Layout>
   );
 }
 

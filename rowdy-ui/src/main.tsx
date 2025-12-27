@@ -1,13 +1,16 @@
 import React, { Suspense, lazy, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigationType } from "react-router-dom";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
+import { PageMetaProvider, usePageMetaContext } from "./contexts/PageMetaContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
+import Layout from "./components/Layout";
 
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazy(() => import("./routes/Match"));
@@ -26,24 +29,73 @@ const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTourna
 const GenerateRoundRecap = lazy(() => import("./routes/GenerateRoundRecap"));
 
 // Loading fallback for lazy-loaded routes
-const RouteLoader = () => (
-  <div className="flex items-center justify-center py-20">
-    <div className="spinner-lg"></div>
-  </div>
-);
+const RouteLoader = () => <div className="py-20" aria-hidden="true" />;
 
 function RootWrapper() {
   const location = useLocation();
+  const navigationType = useNavigationType();
+  const reduceMotion = useReducedMotion();
+  const easeOut: [number, number, number, number] = [0.22, 1, 0.36, 1];
+  const easeIn: [number, number, number, number] = [0.4, 0, 1, 1];
+  const { meta } = usePageMetaContext();
+  const direction = navigationType === "POP" ? -1 : 1;
+
   useEffect(() => {
     try { window.scrollTo({ top: 0, left: 0 }); } catch (e) {}
   }, [location.pathname]);
-  return <Outlet />;
+
+  const variants = reduceMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.01 } },
+        exit: { opacity: 0, transition: { duration: 0.01 } },
+      }
+    : {
+        initial: (dir: number) => ({ opacity: 0, x: dir > 0 ? 80 : -80 }),
+        animate: {
+          opacity: 1,
+          x: 0,
+          transition: { duration: 0.45, ease: easeOut },
+        },
+        exit: (dir: number) => ({
+          opacity: 0,
+          x: dir > 0 ? -80 : 80,
+          transition: { duration: 0.35, ease: easeIn },
+        }),
+      };
+
+  return (
+    <Layout
+      title={meta.title ?? "Rowdy Cup"}
+      series={meta.series}
+      showBack={meta.showBack}
+      tournamentLogo={meta.tournamentLogo}
+    >
+      <AnimatePresence mode="wait" initial={false} custom={direction}>
+        <motion.div
+          key={location.pathname}
+          custom={direction}
+          variants={variants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          style={{ minHeight: "100%", width: "100%", willChange: reduceMotion ? "opacity" : "transform, opacity" }}
+        >
+          <Outlet />
+        </motion.div>
+      </AnimatePresence>
+    </Layout>
+  );
 }
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootWrapper />,
+    element: (
+      <PageMetaProvider>
+        <RootWrapper />
+      </PageMetaProvider>
+    ),
     errorElement: <ErrorBoundary />,
     children: [
       { index: true, element: <App /> },

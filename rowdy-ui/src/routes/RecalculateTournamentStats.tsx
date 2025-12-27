@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 type DryRunResult = {
   success: boolean;
@@ -32,17 +32,18 @@ export default function RecalculateTournamentStats() {
   const [executeResult, setExecuteResult] = useState<ExecuteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const pageTitle = player?.isAdmin ? "Recalculate All Stats" : "Recalculate Tournament Stats";
+  usePageMeta({ title: pageTitle, showBack: true });
+
   // Access control: only admins can view this page
   if (!player?.isAdmin) {
     return (
-      <Layout title="Recalculate Tournament Stats" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
+      <div className="empty-state">
+        <div className="empty-state-icon">🔒</div>
+        <div className="empty-state-text">Access Denied</div>
+        <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
     );
   }
 
@@ -100,8 +101,7 @@ export default function RecalculateTournamentStats() {
   };
 
   return (
-    <Layout title="Recalculate All Stats" showBack>
-      <div className="p-4 space-y-4 max-w-3xl mx-auto">
+    <div className="p-4 space-y-4 max-w-3xl mx-auto">
         {/* Warning Banner */}
         <div className="card p-4 bg-red-50 border-2 border-red-300">
           <div className="flex items-start gap-3">
@@ -311,6 +311,5 @@ export default function RecalculateTournamentStats() {
           </div>
         )}
       </div>
-    </Layout>
   );
 }

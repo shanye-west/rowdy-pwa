@@ -3,12 +3,12 @@ import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
-import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import OfflineImage from "./components/OfflineImage";
 import { formatRoundType } from "./utils";
+import { usePageMeta } from "./contexts/PageMetaContext";
 
 export default function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
@@ -49,20 +49,16 @@ export default function App() {
   
   const loading = tournamentLoading || dataLoading;
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
-  );
-
-  const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
+  usePageMeta({ title: tournament?.name, series: tSeries, showBack: false, tournamentLogo: tLogo });
+
+  if (loading) return <div className="py-20" aria-hidden="true" />;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
   return (
-    <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
+    <>
       {!tournament ? (
         <div className="empty-state">
           <div className="empty-state-icon">🏌️</div>
@@ -293,6 +289,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

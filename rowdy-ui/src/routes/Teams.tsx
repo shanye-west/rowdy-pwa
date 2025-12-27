@@ -2,12 +2,12 @@ import { useEffect, useState, useMemo, memo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { collection, query, where, documentId, onSnapshot, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
-import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import TeamName from "../components/TeamName";
 import type { PlayerDoc, TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
+import { usePageMeta } from "../contexts/PageMetaContext";
 
 // We define a local type for the aggregated tournament stats
 type TournamentStat = {
@@ -159,6 +159,13 @@ function TeamsComponent() {
     }
   }, [tournamentLoading, tournament, factsLoaded]);
 
+  usePageMeta({
+    title: tournament?.name,
+    series: tournament?.series,
+    showBack: true,
+    tournamentLogo: tournament?.tournamentLogo,
+  });
+
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (
       <div className="card p-4 opacity-60">
@@ -244,11 +251,7 @@ function TeamsComponent() {
     );
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
-  );
+  if (loading) return <div className="py-20" aria-hidden="true" />;
   if (error) return (
     <div className="p-5 text-center text-red-600">
       <div className="text-2xl mb-2">⚠️</div>
@@ -264,8 +267,7 @@ function TeamsComponent() {
   const teamBLogo = tournament?.teamB?.logo;
 
   return (
-    <Layout title="Team Rosters" series={tournament?.series} showBack tournamentLogo={tournament?.tournamentLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
         
         {/* Team Selector Tabs */}
         <div 
@@ -375,7 +377,6 @@ function TeamsComponent() {
 
         <LastUpdated />
       </div>
-    </Layout>
   );
 }
 
