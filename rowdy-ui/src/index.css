@@ -64,8 +64,6 @@
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 221 58% 18%;
-    --bg-glow-1: rgba(19, 36, 72, 0.12);
-    --bg-glow-2: rgba(191, 32, 60, 0.14);
 
     /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
     --brand-primary: #132448;
@@ -73,7 +71,7 @@
     --brand-accent: #ffffff;
     
     /* UI Colors */
-    --app-bg: #eef2f7;
+    --app-bg: #f6f6f6;
     --card-bg: #ffffff;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
@@ -95,23 +93,18 @@
   body.theme-christmas {
     --brand-primary: #ef211c;
     --brand-secondary: #00863c;
-    --app-bg: #fdfdfd;
+    --app-bg: #f6f6f6;
     --team-a-default: #00863c;
     --team-b-default: #ef211c;
     --primary: 1 87% 52%;
     --secondary: 147 100% 26%;
     --ring: 1 87% 52%;
-    --bg-glow-1: rgba(0, 134, 60, 0.16);
-    --bg-glow-2: rgba(239, 33, 28, 0.16);
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    background:
-      radial-gradient(circle at 20% 0%, var(--bg-glow-1), transparent 45%),
-      radial-gradient(circle at 85% 10%, var(--bg-glow-2), transparent 40%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    background-color: var(--app-bg);
     color: var(--text-primary);
     overscroll-behavior-y: contain;
   }

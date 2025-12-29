@@ -45,12 +45,13 @@ export default function RoundRecap() {
   }, [roundId]);
 
   useEffect(() => {
-    if (!recap?.tournamentId) {
+    const tournamentId = recap?.tournamentId;
+    if (!tournamentId) {
       setTournament(null);
       return;
     }
 
-    if (tournamentContext?.tournament?.id === recap.tournamentId) {
+    if (tournamentContext?.tournament?.id === tournamentId) {
       setTournament(tournamentContext.tournament);
       return;
     }
@@ -58,7 +59,7 @@ export default function RoundRecap() {
     let cancelled = false;
     async function fetchTournament() {
       try {
-        const snap = await getDoc(doc(db, "tournaments", recap.tournamentId));
+        const snap = await getDoc(doc(db, "tournaments", tournamentId!));
         if (cancelled) return;
         if (snap.exists()) {
           setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
