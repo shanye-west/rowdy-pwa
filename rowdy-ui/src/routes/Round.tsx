@@ -1,6 +1,10 @@
 import { memo, useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
+import { motion } from "framer-motion";
+import {
+  AlertTriangle,
+} from "lucide-react";
 import { db } from "../firebase";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
@@ -12,6 +16,20 @@ import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
 import { RoundPageSkeleton } from "../components/Skeleton";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { cn } from "../lib/utils";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 function RoundComponent() {
   const { roundId } = useParams();
@@ -29,7 +47,6 @@ function RoundComponent() {
     stats: { finalTeamA: fA, finalTeamB: fB, projectedTeamA: pA, projectedTeamB: pB },
   } = useRoundData(roundId);
 
-  // Check if recap exists for this round
   useEffect(() => {
     if (!roundId) return;
     
@@ -48,10 +65,6 @@ function RoundComponent() {
     checkRecap();
   }, [roundId]);
 
-  // Alias stats for template compatibility
-  const stats = { fA, fB, pA, pB };
-
-  // Use shared player helper - this returns short name format (F. LastName)
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
   if (loading) return (
@@ -59,19 +72,41 @@ function RoundComponent() {
       <RoundPageSkeleton />
     </Layout>
   );
+
   if (error) return (
-    <div className="p-5 text-center text-red-600">
-      <div className="text-2xl mb-2">⚠️</div>
-      <div>{error}</div>
-    </div>
+    <Layout title="Round" showBack>
+      <div className="px-4 py-10">
+        <Card className="mx-auto max-w-md border-red-200 bg-red-50/70 text-center">
+          <CardContent className="py-6">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="text-sm font-semibold text-red-700">Unable to load round</div>
+            <div className="mt-1 text-sm text-red-600">{error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
+
   if (!round) {
     return (
       <Layout title="Round" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">Round not found.</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        <div className="px-4 py-10">
+          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+            <CardContent className="py-8">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="text-lg font-semibold text-slate-900">Round not found</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                This round is not available right now.
+              </div>
+              <Button asChild className="mt-4">
+                <Link to="/">Go Home</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
@@ -80,232 +115,221 @@ function RoundComponent() {
   const tName = tournament?.name || "Round Detail";
   const tSeries = tournament?.series;
   const tLogo = tournament?.tournamentLogo;
+  const courseName = course?.name || round.course?.name;
+  const roundLabel = round.day ? `Round ${round.day}` : "Round";
 
-  // Check if skins are enabled for this round
   const hasGross = (round.skinsGrossPot ?? 0) > 0;
   const hasNet = (round.skinsNetPot ?? 0) > 0;
   const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
+  const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
+  const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 20 }}>
-        
-        {/* ROUND HEADER / SCOREBOARD */}
-        <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
-          {/* Recap Link (top-left corner) */}
-          {hasRecap && !checkingRecap && (
-            <Link
-              to={`/round/${round.id}/recap`}
-              style={{
-                position: 'absolute',
-                top: 16,
-                left: 16,
-                padding: '8px 12px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                borderRadius: 6,
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                }}
-                className="hover:bg-blue-700 transition-colors"
-              >
-                Recap
-              </Link>
-            )}
-          
-          {/* Skins Link (top-right corner) */}
-          {skinsEnabled && (
-            <Link
-              to={`/round/${round.id}/skins`}
-              style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                padding: '8px 12px',
-                backgroundColor: '#f59e0b',
-                  color: 'white',
-                  borderRadius: 6,
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                }}
-                className="hover:bg-amber-600 transition-colors"
-              >
-                Skins
-              </Link>
-            )}
-          
-          <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
-            Round {round.day ?? ""}
-          </h1>
-          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 4 }}>
-            {formatRoundType(round.format)}
-          </div>
-          {(course?.name || round.course?.name) && (
-            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 12 }}>
-              {course?.name || round.course?.name}
-            </div>
-          )}
+      <motion.div
+        className="space-y-6 px-4 py-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.section variants={itemVariants}>
+          <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
+            <CardContent className="relative space-y-5 py-6">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex items-center">
+                  {hasRecap && !checkingRecap && (
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                    >
+                      <Link to={`/round/${round.id}/recap`}>
+                        Recap
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
+                </div>
+                <div className="flex items-center justify-end">
+                  {skinsEnabled && (
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                    >
+                      <Link to={`/round/${round.id}/skins`}>
+                        Skins
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
-             {/* Team A */}
-             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
+                {courseName && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {courseName}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
+                <div className="flex flex-col items-center gap-1">
                   <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
                     <OfflineImage 
                       src={tournament?.teamA?.logo} 
                       alt={tournament?.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
-                      style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6, cursor: 'pointer' }}
+                      style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
                   </Link>
-                <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }} />
-                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  <span style={{ color: tournament?.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
-                  {stats.pA > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        left: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginLeft: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pA})
+                  <TeamName
+                    name={tournament?.teamA?.name || "Team A"}
+                    variant="inline"
+                    minFontPx={14}
+                    maxFontPx={24}
+                    style={{ color: teamAColor }}
+                  />
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-semibold tracking-tight" style={{ color: teamAColor }}>
+                      {fA}
                     </span>
-                  )}
+                    {pA > 0 && (
+                      <span className="text-[0.6rem] font-semibold text-slate-400">(+{pA})</span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ height: "100%", background: "var(--divider)" }}></div>
+                <div className="h-14 w-px bg-slate-200" />
 
-              {/* Team B */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className="flex flex-col items-center gap-1">
                   <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
                     <OfflineImage 
                       src={tournament?.teamB?.logo} 
                       alt={tournament?.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
-                      style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6, cursor: 'pointer' }}
+                      style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
                   </Link>
-                <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" minFontPx={18} maxFontPx={36} style={{ color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }} />
-                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  {stats.pB > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        right: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginRight: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pB})
+                  <TeamName
+                    name={tournament?.teamB?.name || "Team B"}
+                    variant="inline"
+                    minFontPx={14}
+                    maxFontPx={24}
+                    style={{ color: teamBColor }}
+                  />
+                  <div className="flex items-baseline gap-1">
+                    {pB > 0 && (
+                      <span className="text-[0.6rem] font-semibold text-slate-400">(+{pB})</span>
+                    )}
+                    <span className="text-3xl font-semibold tracking-tight" style={{ color: teamBColor }}>
+                      {fB}
                     </span>
-                  )}
-                  <span style={{ color: tournament?.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
-                </div>
-              </div>
-          </div>
-        </section>
-
-        {/* MATCH CARDS */}
-        <section style={{ display: "grid", gap: 20 }} role="list" aria-label="Matches">
-          {matches.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
-              <div className="empty-state-text">No matches scheduled.</div>
-            </div>
-          ) : (
-            matches.map((m) => {
-              const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
-              const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
-              const { bgStyle, borderStyle, textColor } = getMatchCardStyles(
-                m.status,
-                m.result,
-                teamAColor,
-                teamBColor
-              );
-
-              const teamANames = (m.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
-              const teamBNames = (m.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
-
-              return (
-                <div key={m.id} role="listitem" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <Link
-                    to={`/match/${m.id}`}
-                    className="card card-hover"
-                    aria-label={`Match: ${teamANames} vs ${teamBNames}`}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      ...bgStyle,
-                      ...borderStyle,
-                    }}
-                  >
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "center" }}>
-                      <div className={`text-left text-sm leading-tight ${textColor}`}>
-                        {(m.teamAPlayers || []).map((p, i) => (
-                          <div key={i} className="font-semibold">{getPlayerShortName(p.playerId)}</div>
-                        ))}
-                      </div>
-
-                      <MatchStatusBadge
-                        status={m.status}
-                        result={m.result}
-                        teamAColor={teamAColor}
-                        teamBColor={teamBColor}
-                        teamAName={tournament?.teamA?.name}
-                        teamBName={tournament?.teamB?.name}
-                        matchNumber={m.matchNumber}
-                        teeTime={m.teeTime}
-                        showTeeLabel={false}
-                      />
-
-                      <div className={`text-right text-sm leading-tight ${textColor}`}>
-                        {(m.teamBPlayers || []).map((p, i) => (
-                          <div key={i} className="font-semibold">{getPlayerShortName(p.playerId)}</div>
-                        ))}
-                      </div>
-                    </div>
-                  </Link>
-
-                  {/* Hole-by-Hole Tracker always rendered below the card */}
-                  <div style={{ paddingLeft: 2, paddingRight: 2, marginTop: -10 }}>
-                    <HoleByHoleTracker
-                      match={m}
-                      format={round?.format || null}
-                      teamAColor={teamAColor}
-                      teamBColor={teamBColor}
-                    />
                   </div>
                 </div>
-              );
-            })
+              </div>
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        <motion.section variants={itemVariants} className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              Matches
+            </div>
+            <Badge variant="outline" className="uppercase tracking-[0.2em]">
+              {matches.length} total
+            </Badge>
+          </div>
+
+          {matches.length === 0 ? (
+            <Card className="border-slate-200/80 bg-white/85">
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                No matches scheduled.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-5" role="list" aria-label="Matches">
+              {matches.map((match) => {
+                const { bgStyle, borderStyle, textColor } = getMatchCardStyles(
+                  match.status,
+                  match.result,
+                  teamAColor,
+                  teamBColor
+                );
+                const teamANames = (match.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
+                const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
+
+                return (
+                  <motion.div key={match.id} variants={itemVariants} role="listitem">
+                    <Link
+                      to={`/match/${match.id}`}
+                      aria-label={`Match: ${teamANames} vs ${teamBNames}`}
+                      className="block"
+                    >
+                      <Card
+                        className="overflow-hidden border-slate-200/70 transition-transform hover:-translate-y-0.5"
+                        style={{ ...bgStyle, ...borderStyle }}
+                      >
+                        <CardContent className="space-y-4 py-4">
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                            <div className={cn("text-left text-sm leading-tight", textColor)}>
+                              {(match.teamAPlayers || []).map((player, index) => (
+                                <div key={index} className="font-semibold">
+                                  {getPlayerShortName(player.playerId)}
+                                </div>
+                              ))}
+                            </div>
+
+                            <MatchStatusBadge
+                              status={match.status}
+                              result={match.result}
+                              teamAColor={teamAColor}
+                              teamBColor={teamBColor}
+                              teamAName={tournament?.teamA?.name}
+                              teamBName={tournament?.teamB?.name}
+                              matchNumber={match.matchNumber}
+                              teeTime={match.teeTime}
+                              showTeeLabel={false}
+                            />
+
+                            <div className={cn("text-right text-sm leading-tight", textColor)}>
+                              {(match.teamBPlayers || []).map((player, index) => (
+                                <div key={index} className="font-semibold">
+                                  {getPlayerShortName(player.playerId)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+
+                    <div className="mt-2 px-2">
+                      <HoleByHoleTracker
+                        match={match}
+                        format={round?.format || null}
+                        teamAColor={teamAColor}
+                        teamBColor={teamBColor}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
-        </section>
-        <LastUpdated />
-      </div>
+        </motion.section>
+
+        <motion.div variants={itemVariants}>
+          <LastUpdated />
+        </motion.div>
+      </motion.div>
     </Layout>
   );
 }
