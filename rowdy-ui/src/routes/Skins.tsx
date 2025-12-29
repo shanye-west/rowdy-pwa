@@ -173,11 +173,7 @@ function SkinsComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                  <Target className="h-4 w-4 text-primary" />
-                  Skins Game
-                </div>
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 <Badge variant="secondary" className="uppercase tracking-[0.2em]">
                   {roundLabel}
                 </Badge>
