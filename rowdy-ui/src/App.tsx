@@ -108,15 +108,15 @@ export default function App() {
               <CardContent className="relative space-y-6 pt-6">
                 <div className="space-y-2">
                   <div className="text-center">
-                    <div className="text-[1.0rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                    <div className="text-[1.0rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Total Score
                     </div>
                   </div>
 
                   {showPoints && (
                     <div className="space-y-1">
-                      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                        First to {pointsToWinDisplay}
+                      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                        {pointsToWinDisplay} points needed to win
                       </div>
                       <div className="rounded-xl bg-white/80 p-2 shadow-inner">
                         <ScoreTrackerBar
