@@ -16,7 +16,7 @@ import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
 import { RoundPageSkeleton } from "../components/Skeleton";
-import { Badge } from "../components/ui/badge";
+// Badge removed from this file (was used for matches pill)
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { cn } from "../lib/utils";
@@ -240,14 +240,11 @@ function RoundComponent() {
         </motion.section>
 
         <motion.section variants={itemVariants} className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="pl-1 text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              Matches
+            <div className="flex items-center px-1">
+              <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                Matches
+              </div>
             </div>
-            <Badge variant="outline" className="uppercase tracking-[0.2em]">
-              {matches.length} total
-            </Badge>
-          </div>
 
           {matches.length === 0 ? (
             <Card className="border-slate-200/80 bg-white/85">
