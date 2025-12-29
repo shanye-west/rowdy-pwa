@@ -16,7 +16,7 @@ import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
 import { RoundPageSkeleton } from "../components/Skeleton";
-import { Badge } from "../components/ui/badge";
+// Badge removed from this file (was used for matches pill)
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { cn } from "../lib/utils";
@@ -136,7 +136,7 @@ function RoundComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-3">
                 <div className="flex items-center">
                   {hasRecap && !checkingRecap && (
                     <Button
@@ -169,6 +169,7 @@ function RoundComponent() {
                   )}
                 </div>
               </div>
+
 
               <div className="text-center">
                 <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
@@ -239,14 +240,11 @@ function RoundComponent() {
         </motion.section>
 
         <motion.section variants={itemVariants} className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Matches
+            <div className="flex items-center px-1">
+              <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                Matches
+              </div>
             </div>
-            <Badge variant="outline" className="uppercase tracking-[0.2em]">
-              {matches.length} total
-            </Badge>
-          </div>
 
           {matches.length === 0 ? (
             <Card className="border-slate-200/80 bg-white/85">
