@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundRecapDoc, VsAllRecord } from "../types";
+import type { RoundRecapDoc, TournamentDoc, VsAllRecord } from "../types";
 import Layout from "../components/Layout";
+import { useTournamentContextOptional } from "../contexts/TournamentContext";
 
 export default function RoundRecap() {
   const { roundId } = useParams<{ roundId: string }>();
@@ -14,6 +15,8 @@ export default function RoundRecap() {
   const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netScoreView, setNetScoreView] = useState<"team" | "individual">("team");
+  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
+  const tournamentContext = useTournamentContextOptional();
 
   useEffect(() => {
     if (!roundId) return;
@@ -41,10 +44,40 @@ export default function RoundRecap() {
     fetchRecap();
   }, [roundId]);
 
+  useEffect(() => {
+    if (!recap?.tournamentId) {
+      setTournament(null);
+      return;
+    }
+
+    if (tournamentContext?.tournament?.id === recap.tournamentId) {
+      setTournament(tournamentContext.tournament);
+      return;
+    }
+
+    let cancelled = false;
+    async function fetchTournament() {
+      try {
+        const snap = await getDoc(doc(db, "tournaments", recap.tournamentId));
+        if (cancelled) return;
+        if (snap.exists()) {
+          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+        }
+      } catch (err) {
+        console.error("Failed to load tournament:", err);
+      }
+    }
+    fetchTournament();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [recap?.tournamentId, tournamentContext?.tournament]);
+
   // Short-circuit while loading / error / missing recap to avoid many null checks below
   if (loading) {
     return (
-      <Layout title="Round Recap" showBack>
+      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="p-4">Loading recap…</div>
       </Layout>
     );
@@ -52,7 +85,7 @@ export default function RoundRecap() {
 
   if (error) {
     return (
-      <Layout title="Round Recap" showBack>
+      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="p-4 text-red-600">{error}</div>
       </Layout>
     );
@@ -60,7 +93,7 @@ export default function RoundRecap() {
 
   if (!recap) {
     return (
-      <Layout title="Round Recap" showBack>
+      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="p-4">Recap not available</div>
       </Layout>
     );
@@ -135,7 +168,7 @@ export default function RoundRecap() {
   };
 
   return (
-    <Layout title="Round Recap" showBack>
+    <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-6xl mx-auto">
         {/* Header */}
           <div className="card p-6">

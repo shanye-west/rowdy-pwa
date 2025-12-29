@@ -145,7 +145,7 @@
   /* Sticky Header - extends into safe area (notch area) on mobile */
   .app-header {
     @apply flex items-center justify-between px-4 sticky top-0 z-50;
-    background: linear-gradient(120deg, rgba(19, 36, 72, 0.98), rgba(191, 32, 60, 0.9));
+    background: linear-gradient(120deg, rgba(19, 36, 72, 0.98) 0% 50%, rgba(191, 32, 60, 0.96) 50% 100%);
     color: var(--brand-accent);
     height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
@@ -156,7 +156,7 @@
 
   /* Christmas Classic: diagonal split header (green bottom-left, red top-right) */
   body.theme-christmas .app-header {
-    background: linear-gradient(120deg, rgba(0, 134, 60, 0.96), rgba(239, 33, 28, 0.92));
+    background: linear-gradient(120deg, rgba(0, 134, 60, 0.96) 0% 50%, rgba(239, 33, 28, 0.95) 50% 100%);
   }
 
   .header-title {
