@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
-import { formatRoundType, formatTeeTime } from "../utils";
+import { formatTeeTime } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -172,17 +172,9 @@ function SkinsComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                <Badge variant="secondary" className="uppercase tracking-[0.2em]">
-                  {roundLabel}
-                </Badge>
-              </div>
-
               <div className="text-center">
                 <div className="text-2xl font-semibold text-slate-900">Skins Game</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {formatRoundType(round.format)} - {skinModeLabel}
-                </div>
+                <div className="mt-1 text-sm text-muted-foreground">{roundLabel} • {skinModeLabel}</div>
               </div>
 
               {hasGross && hasNet && (
@@ -313,9 +305,6 @@ function SkinsComponent() {
                 </CardTitle>
                 <CardDescription>Tap a hole to see full scoring.</CardDescription>
               </div>
-              <Badge variant="outline" className="uppercase tracking-[0.2em]">
-                {holeSkinsData.length} holes
-              </Badge>
             </CardHeader>
             <CardContent className="space-y-3">
               {holeSkinsData.map((hole) => {
