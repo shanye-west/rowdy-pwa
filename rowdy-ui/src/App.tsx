@@ -107,7 +107,7 @@ export default function App() {
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
               <CardContent className="relative space-y-6 pt-6">
                 <div className="text-center">
-                  <div className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                  <div className="text-[1.0rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
                     Total Score
                   </div>
                 </div>
