@@ -153,12 +153,6 @@ function RoundComponent() {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
-                  {courseName && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {courseName}
-                    </div>
-                  )}
                 </div>
                 <div className="flex items-center justify-end">
                   {skinsEnabled && (
@@ -176,7 +170,15 @@ function RoundComponent() {
                 </div>
               </div>
 
-              
+
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
+                {courseName && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {courseName}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
                 <div className="flex flex-col items-center gap-1">
