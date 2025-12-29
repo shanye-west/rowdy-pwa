@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useLocation, matchPath } from "react-router-dom";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useLocation, matchPath, Outlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -17,6 +17,7 @@ import PullToRefresh from "./PullToRefresh";
 import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
+import { useLayout } from "../contexts/LayoutContext";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -28,6 +29,10 @@ type LayoutProps = {
   children: React.ReactNode;
 };
 
+type LayoutShellProps = {
+  children?: React.ReactNode;
+};
+
 const menuMotion = {
   initial: { opacity: 0, y: 10, scale: 0.98 },
   animate: { opacity: 1, y: 0, scale: 1 },
@@ -35,12 +40,15 @@ const menuMotion = {
   transition: { duration: 0.18 },
 };
 
-export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
+export function LayoutShell({ children }: LayoutShellProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
+  const { config } = useLayout();
+  const { title, series, showBack, tournamentLogo } = config;
+  const location = useLocation();
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -70,12 +78,22 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
 
   // Compute dynamic Team Rosters link: if current route is a specific tournament,
   // point the Team Rosters menu entry at that tournament's rosters.
-  const location = useLocation();
   const tournamentMatch = matchPath({ path: "/tournament/:tournamentId" }, location.pathname);
   const teamLink = tournamentMatch && (tournamentMatch.params as any)?.tournamentId
     ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
     : "/teams";
   const closeMenu = () => setMenuOpen(false);
+  const content = children ?? <Outlet />;
+
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0 });
+    } catch (error) {}
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <>
@@ -250,9 +268,28 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
         )}
 
         <main className="app-container">
-          {children}
+          {content}
         </main>
       </PullToRefresh>
     </>
   );
+}
+
+export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
+  const { config, setConfig } = useLayout();
+
+  useLayoutEffect(() => {
+    if (title === "Loading...") {
+      setConfig({
+        title: config.title,
+        series: config.series,
+        tournamentLogo: config.tournamentLogo,
+        showBack: showBack ?? config.showBack,
+      });
+      return;
+    }
+    setConfig({ title, series, showBack, tournamentLogo });
+  }, [title, series, showBack, tournamentLogo, setConfig, config]);
+
+  return <>{children}</>;
 }
