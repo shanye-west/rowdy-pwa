@@ -1,11 +1,35 @@
-import { memo, useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { memo, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  ListChecks,
+  Target,
+  Trophy,
+} from "lucide-react";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
 import { formatTeeTime } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { cn } from "../lib/utils";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 function SkinsComponent() {
   const { roundId } = useParams();
@@ -28,8 +52,8 @@ function SkinsComponent() {
 
   const hasGross = (round?.skinsGrossPot ?? 0) > 0;
   const hasNet = (round?.skinsNetPot ?? 0) > 0;
+  const skinModeLabel = hasGross && hasNet ? "Gross + Net" : hasGross ? "Gross" : "Net";
 
-  // If only net or only gross skins are configured, default to that tab.
   useEffect(() => {
     if (!round) return;
     if (hasNet && !hasGross) {
@@ -41,18 +65,35 @@ function SkinsComponent() {
 
   if (loading) {
     return (
-      <Layout title="Loading..." showBack>
-        <div className="p-5 text-center text-slate-500">Loading skins...</div>
+      <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo}>
+        <div className="px-4 py-10">
+          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
+            <CardContent className="flex items-center gap-3 py-6">
+              <div className="spinner" />
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Loading skins</div>
+                <div className="text-xs text-muted-foreground">Preparing hole results.</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </Layout>
     );
   }
 
   if (error) {
     return (
-      <Layout title="Error" showBack>
-        <div className="p-5 text-center text-red-600">
-          <div className="text-2xl mb-2">⚠️</div>
-          <div>{error}</div>
+      <Layout title="Skins" showBack series={tSeries} tournamentLogo={tLogo}>
+        <div className="px-4 py-10">
+          <Card className="mx-auto max-w-md border-red-200 bg-red-50/70">
+            <CardContent className="py-6 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="text-sm font-semibold text-red-700">Unable to load skins</div>
+              <div className="mt-1 text-sm text-red-600">{error}</div>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
@@ -61,348 +102,403 @@ function SkinsComponent() {
   if (!round || !skinsEnabled) {
     if (!round) {
       return (
-        <Layout title="Skins" showBack>
-          <div className="empty-state">
-            <div className="empty-state-icon">🎯</div>
-            <div className="empty-state-text">Round not found</div>
-            <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        <Layout title="Skins" showBack series={tSeries} tournamentLogo={tLogo}>
+          <div className="px-4 py-10">
+            <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+              <CardContent className="py-8">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                  <Target className="h-6 w-6" />
+                </div>
+                <div className="text-lg font-semibold text-slate-900">Round not found</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  This round is not available right now.
+                </div>
+                <Button asChild className="mt-4">
+                  <Link to="/">Go Home</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </Layout>
       );
     }
 
     return (
-      <Layout title="Skins" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🎯</div>
-          <div className="empty-state-text">No skins game configured for this round</div>
+      <Layout title="Skins" showBack series={tSeries} tournamentLogo={tLogo}>
+        <div className="px-4 py-10">
+          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+            <CardContent className="py-8">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <Target className="h-6 w-6" />
+              </div>
+              <div className="text-lg font-semibold text-slate-900">Skins not configured</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                No skins game has been set for this round.
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
   }
 
-  // Filter player totals by selected tab
   const leaderboard = playerTotals
-    .filter(p => selectedTab === "gross" ? p.grossSkinsWon > 0 : p.netSkinsWon > 0)
+    .filter((player) => (selectedTab === "gross" ? player.grossSkinsWon > 0 : player.netSkinsWon > 0))
     .sort((a, b) => {
       if (selectedTab === "gross") {
         return b.grossSkinsWon - a.grossSkinsWon || b.grossEarnings - a.grossEarnings;
-      } else {
-        return b.netSkinsWon - a.netSkinsWon || b.netEarnings - a.netEarnings;
       }
+      return b.netSkinsWon - a.netSkinsWon || b.netEarnings - a.netEarnings;
     });
 
-  const totalPot = selectedTab === "gross" ? round.skinsGrossPot : round.skinsNetPot;
-  const skinsWon = holeSkinsData.filter(h => 
-    selectedTab === "gross" ? h.grossWinner !== null : h.netWinner !== null
+  const totalPot =
+    selectedTab === "gross" ? round.skinsGrossPot ?? 0 : round.skinsNetPot ?? 0;
+  const skinsWonCount = holeSkinsData.filter((hole) =>
+    selectedTab === "gross" ? hole.grossWinner !== null : hole.netWinner !== null
   ).length;
-  const valuePerSkin = skinsWon > 0 ? (totalPot ?? 0) / skinsWon : 0;
+  const valuePerSkin = skinsWonCount > 0 ? totalPot / skinsWonCount : 0;
+
+  const roundLabel = round.day ? `Round ${round.day}` : "Round";
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <div style={{ padding: 16, display: "grid", gap: 20 }}>
-        
-        {/* HEADER */}
-        <section className="card" style={{ padding: 20, textAlign: "center" }}>
-          <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
-            Skins Game
-          </h1>
-          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 12 }}>
-            Round {round.day ?? ""}
-          </div>
-
-          {/* TABS */}
-          {hasGross && hasNet && (
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-              <button
-                onClick={() => setSelectedTab("gross")}
-                className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${
-                  selectedTab === "gross"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                }`}
-              >
-                Gross Skins
-              </button>
-              <button
-                onClick={() => setSelectedTab("net")}
-                className={`px-4 py-2 rounded font-semibold text-sm transition-colors ${
-                  selectedTab === "net"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                }`}
-              >
-                Net Skins
-              </button>
-            </div>
-          )}
-
-          {/* POT INFO */}
-          <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f1f5f9", borderRadius: 8 }}>
-            <div style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.05em" }}>
-              Total Pot
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#1e293b", marginTop: 4 }}>
-              ${totalPot?.toFixed(0)}
-            </div>
-            {skinsWon > 0 && (
-              <div style={{ fontSize: "0.85rem", color: "#64748b", marginTop: 4 }}>
-                {skinsWon} skin{skinsWon !== 1 ? "s" : ""} won · ${valuePerSkin.toFixed(2)} per skin
+      <motion.div
+        className="space-y-6 px-4 py-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.section variants={itemVariants}>
+          <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
+            <CardContent className="relative space-y-5 py-6">
+              <div className="text-center">
+                <div className="text-2xl font-semibold text-slate-900">Skins Game</div>
+                <div className="mt-1 text-sm text-muted-foreground">{roundLabel} • {skinModeLabel}</div>
               </div>
-            )}
-            {skinsWon === 0 && (
-              <div style={{ fontSize: "0.85rem", color: "#94a3b8", marginTop: 4 }}>
-                No skins won yet
-              </div>
-            )}
-          </div>
-        </section>
 
-        {/* LEADERBOARD */}
-        <section className="card" style={{ padding: 20 }}>
-          <h2 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", fontWeight: 700 }}>
-            Leaderboard
-          </h2>
-          
-          {leaderboard.length === 0 ? (
-            <div className="empty-state" style={{ padding: "20px 0" }}>
-              <div className="empty-state-text" style={{ fontSize: "0.9rem" }}>
-                No skins won yet
+              {hasGross && hasNet && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={selectedTab === "gross" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => setSelectedTab("gross")}
+                  >
+                    Gross Skins
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedTab === "net" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => setSelectedTab("net")}
+                  >
+                    Net Skins
+                  </Button>
+                </div>
+              )}
+
+              <div className="grid gap-3">
+                <Card className="border-slate-200/70 bg-slate-50/80">
+                  <CardContent className="text-center py-6">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Total Pot
+                    </div>
+                    <div className="text-2xl font-semibold text-slate-900 mt-2">
+                      ${totalPot.toFixed(0)}
+                    </div>
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {skinsWonCount} skin{skinsWonCount !== 1 ? "s" : ""} won • {skinsWonCount > 0 ? `$${valuePerSkin.toFixed(2)} per skin` : "--"}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gap: 12 }}>
-              {leaderboard.map((player, idx) => {
-                const skinsWon = selectedTab === "gross" ? player.grossSkinsWon : player.netSkinsWon;
-                const holes = selectedTab === "gross" ? player.grossHoles : player.netHoles;
-                const earnings = selectedTab === "gross" ? player.grossEarnings : player.netEarnings;
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        <motion.section variants={itemVariants}>
+          <Card className="border-slate-200/80 bg-white/85">
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Trophy className="h-4 w-4 text-primary" />
+                  Leaderboard
+                </CardTitle>
+                <CardDescription>
+                  {selectedTab === "gross" ? "Gross skins results" : "Net skins results"}
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="uppercase tracking-[0.2em]">
+                {leaderboard.length} players
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {leaderboard.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                  No skins won yet
+                </div>
+              ) : (
+                leaderboard.map((player, idx) => {
+                  const playerSkins =
+                    selectedTab === "gross" ? player.grossSkinsWon : player.netSkinsWon;
+                  const playerHoles =
+                    selectedTab === "gross" ? player.grossHoles : player.netHoles;
+                  const earnings =
+                    selectedTab === "gross" ? player.grossEarnings : player.netEarnings;
+                  const isLeader = idx === 0;
+
+                  return (
+                    <div
+                      key={player.playerId}
+                      className={cn(
+                        "flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-3",
+                        isLeader
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-slate-200/80 bg-white/80"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold",
+                            isLeader
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-slate-100 text-slate-600"
+                          )}
+                        >
+                          {isLeader ? <Crown className="h-5 w-5" /> : idx + 1}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {player.playerName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {playerSkins} skin{playerSkins !== 1 ? "s" : ""} - Holes{" "}
+                            {playerHoles.join(", ")}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          Earnings
+                        </div>
+                        <div className="text-lg font-semibold text-emerald-600">
+                          ${earnings.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        <motion.section variants={itemVariants}>
+          <Card className="border-slate-200/80 bg-white/85">
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListChecks className="h-4 w-4 text-primary" />
+                  Hole Results
+                </CardTitle>
+                <CardDescription>Tap a hole to see full scoring.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {holeSkinsData.map((hole) => {
+                const isExpanded = expandedHole === hole.holeNumber;
+                const winner = selectedTab === "gross" ? hole.grossWinner : hole.netWinner;
+                const lowScore = selectedTab === "gross" ? hole.grossLowScore : hole.netLowScore;
+                const par = hole.par;
+                const tiedCount = selectedTab === "gross" ? hole.grossTiedCount : hole.netTiedCount;
+
+                let winnerText = "--";
+                if (lowScore !== null) {
+                  if (winner) {
+                    const playerName =
+                      hole.allScores.find((score) => score.playerId === winner)?.playerName ||
+                      winner;
+                    winnerText = playerName;
+                  } else if (tiedCount > 1) {
+                    winnerText = `${tiedCount} players tied`;
+                  }
+                }
+
+                const allPlayersCompleted = hole.allPlayersCompleted;
+                const isHoleWinner = !!winner && lowScore !== null;
 
                 return (
-                  <div
-                    key={player.playerId}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "auto 1fr auto",
-                      gap: 12,
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      backgroundColor: "#f8fafc",
-                      borderRadius: 8,
-                      border: "1px solid #e2e8f0",
-                    }}
+                  <Card
+                    key={hole.holeNumber}
+                    className={cn(
+                      "overflow-hidden border-slate-200/80",
+                      allPlayersCompleted ? "bg-emerald-50/40" : "bg-white"
+                    )}
                   >
-                    {/* Rank */}
-                    <div style={{ 
-                      fontSize: "1.2rem", 
-                      fontWeight: 800, 
-                      color: "#64748b",
-                      minWidth: 32,
-                      textAlign: "center"
-                    }}>
-                      {idx + 1}
-                    </div>
+                    <button
+                      onClick={() => setExpandedHole(isExpanded ? null : hole.holeNumber)}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition",
+                        allPlayersCompleted
+                          ? "bg-emerald-50/70 hover:bg-emerald-50"
+                          : "bg-slate-50/70 hover:bg-slate-50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold",
+                            allPlayersCompleted
+                              ? "border-emerald-200 bg-white text-emerald-700"
+                              : "border-slate-200 bg-white text-slate-600"
+                          )}
+                        >
+                          {hole.holeNumber}
+                        </div>
+                        <div>
+                          <div
+                            className={cn(
+                              "text-sm font-semibold",
+                              isHoleWinner ? "text-slate-900" : "text-slate-700"
+                            )}
+                          >
+                            {winnerText}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Par {hole.par}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {lowScore !== null && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              allPlayersCompleted
+                                ? "border-emerald-200 text-emerald-700"
+                                : "border-slate-200 text-slate-600"
+                            )}
+                          >
+                            {scoreLabel(lowScore, par)}
+                          </Badge>
+                        )}
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-slate-500" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-slate-500" />
+                        )}
+                      </div>
+                    </button>
 
-                    {/* Player Info */}
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#1e293b" }}>
-                        {player.playerName}
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 2 }}>
-                        {skinsWon} skin{skinsWon !== 1 ? "s" : ""} · Hole{holes.length !== 1 ? "s" : ""} {holes.join(", ")}
-                      </div>
-                    </div>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-3 px-4 pb-4">
+                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                              <span>All Scores</span>
+                              <span>{selectedTab === "gross" ? "Gross" : "Net"}</span>
+                            </div>
+                            <div className="space-y-2">
+                              {(() => {
+                                const sorted = [...hole.allScores].sort((a, b) => {
+                                  const aVal = selectedTab === "gross" ? a.gross : a.net;
+                                  const bVal = selectedTab === "gross" ? b.gross : b.net;
 
-                    {/* Earnings */}
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#16a34a" }}>
-                        ${earnings.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
+                                  const aCompleted = aVal !== null && aVal !== undefined;
+                                  const bCompleted = bVal !== null && bVal !== undefined;
+
+                                  if (aCompleted && !bCompleted) return -1;
+                                  if (!aCompleted && bCompleted) return 1;
+
+                                  if (aCompleted && bCompleted) {
+                                    if (aVal !== bVal) return (aVal as number) - (bVal as number);
+                                    return a.playerName.localeCompare(b.playerName);
+                                  }
+
+                                  const aThru = a.playerThru ?? 0;
+                                  const bThru = b.playerThru ?? 0;
+                                  if (aThru !== bThru) return bThru - aThru;
+
+                                  const aT = a.playerTeeTime
+                                    ? a.playerTeeTime.toDate
+                                      ? a.playerTeeTime.toDate().getTime()
+                                      : new Date(a.playerTeeTime).getTime()
+                                    : null;
+                                  const bT = b.playerTeeTime
+                                    ? b.playerTeeTime.toDate
+                                      ? b.playerTeeTime.toDate().getTime()
+                                      : new Date(b.playerTeeTime).getTime()
+                                    : null;
+
+                                  if (aT !== null && bT !== null) return aT - bT;
+                                  if (aT !== null && bT === null) return -1;
+                                  if (aT === null && bT !== null) return 1;
+
+                                  return a.playerName.localeCompare(b.playerName);
+                                });
+
+                                return sorted.map((score) => {
+                                  const scoreValue = selectedTab === "gross" ? score.gross : score.net;
+                                  const hasScore = scoreValue !== null && scoreValue !== undefined;
+                                  const isWinner = score.playerId === winner;
+                                  const thru = score.playerThru ?? 0;
+                                  const scoreDisplay = hasScore
+                                    ? scoreLabel(scoreValue as number, hole.par)
+                                    : thru === 0 && score.playerTeeTime
+                                      ? formatTeeTime(score.playerTeeTime)
+                                      : `Thru ${thru}`;
+
+                                  return (
+                                    <div
+                                      key={score.playerId}
+                                      className={cn(
+                                        "flex items-center justify-between rounded-lg border px-3 py-2 text-sm",
+                                        isWinner
+                                          ? "border-emerald-200 bg-emerald-50"
+                                          : "border-slate-200 bg-slate-50/70"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2 text-slate-900">
+                                        <span className="font-medium">{score.playerName}</span>
+                                        {selectedTab === "net" && score.hasStroke && (
+                                          <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                                        )}
+                                      </div>
+                                      <div
+                                        className={cn(
+                                          "text-sm font-semibold",
+                                          hasScore ? "text-slate-900" : "text-slate-400"
+                                        )}
+                                      >
+                                        {scoreDisplay}
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
                 );
               })}
-            </div>
-          )}
-        </section>
+            </CardContent>
+          </Card>
+        </motion.section>
 
-        {/* HOLE BREAKDOWN */}
-        <section className="card" style={{ padding: 20 }}>
-          <h2 style={{ margin: "0 0 16px 0", fontSize: "1.1rem", fontWeight: 700 }}>
-            Hole-by-Hole Results
-          </h2>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            {holeSkinsData.map(hole => {
-              const isExpanded = expandedHole === hole.holeNumber;
-              const winner = selectedTab === "gross" ? hole.grossWinner : hole.netWinner;
-              const lowScore = selectedTab === "gross" ? hole.grossLowScore : hole.netLowScore;
-              const par = hole.par;
-              const tiedCount = selectedTab === "gross" ? hole.grossTiedCount : hole.netTiedCount;
-              
-              let winnerText = "—";
-              if (lowScore !== null) {
-                if (winner) {
-                  const playerName = hole.allScores.find(s => s.playerId === winner)?.playerName || winner;
-                  winnerText = playerName;
-                } else if (tiedCount > 1) {
-                  winnerText = `${tiedCount} players tied`;
-                }
-              }
-
-              // Emphasize only on the collapsed hole header when there is a single outright winner
-              const allPlayersCompleted = hole.allPlayersCompleted;
-              const isHoleWinner = !!winner && lowScore !== null;
-
-              return (
-                <div
-                  key={hole.holeNumber}
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    backgroundColor: allPlayersCompleted ? "#f0fdf4" : "#ffffff",
-                  }}
-                >
-                  {/* Hole Header (clickable) */}
-                  <button
-                    onClick={() => setExpandedHole(isExpanded ? null : hole.holeNumber)}
-                    style={{
-                      width: "100%",
-                      display: "grid",
-                      gridTemplateColumns: "auto 1fr auto auto",
-                      gap: 12,
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      backgroundColor: allPlayersCompleted ? "#dcfce7" : "#f8fafc",
-                      border: "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    {/* Hole Number */}
-                    <div style={{ 
-                      fontSize: "0.9rem", 
-                      fontWeight: 700, 
-                      color: "#64748b",
-                      minWidth: 40
-                    }}>
-                      Hole {hole.holeNumber}
-                    </div>
-
-                    {/* Winner */}
-                    <div style={isHoleWinner ? { fontSize: "0.95rem", fontWeight: 800, color: "#1e293b" } : { fontSize: "0.85rem", color: "#1e293b" }}>
-                      {winnerText}
-                    </div>
-
-                    {/* Score */}
-                    {lowScore !== null && (
-                      <div style={{ 
-                        fontSize: "0.9rem", 
-                        fontWeight: 700, 
-                        color: allPlayersCompleted ? "#16a34a" : "#64748b"
-                      }}>
-                        {scoreLabel(lowScore, par)}
-                      </div>
-                    )}
-
-                    {/* Expand Icon */}
-                    <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                      {isExpanded ? "▼" : "▶"}
-                    </div>
-                  </button>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div style={{ padding: "12px 16px", backgroundColor: "#ffffff" }}>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: 8, fontWeight: 600 }}>
-                        All Scores (Par {hole.par})
-                      </div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {(() => {
-                          const sorted = [...hole.allScores].sort((a, b) => {
-                            const aVal = selectedTab === "gross" ? a.gross : a.net;
-                            const bVal = selectedTab === "gross" ? b.gross : b.net;
-
-                            const aCompleted = aVal !== null && aVal !== undefined;
-                            const bCompleted = bVal !== null && bVal !== undefined;
-
-                            // If one completed and the other didn't, completed comes first
-                            if (aCompleted && !bCompleted) return -1;
-                            if (!aCompleted && bCompleted) return 1;
-
-                            // Both completed: sort by score (lowest first), then name
-                            if (aCompleted && bCompleted) {
-                              if (aVal !== bVal) return (aVal as number) - (bVal as number);
-                              return a.playerName.localeCompare(b.playerName);
-                            }
-
-                            // Neither completed: order by playerThru (higher first), then by tee time (earliest first), then name
-                            const aThru = a.playerThru ?? 0;
-                            const bThru = b.playerThru ?? 0;
-                            if (aThru !== bThru) return bThru - aThru; // higher 'thru' first
-
-                            const aT = a.playerTeeTime ? (a.playerTeeTime.toDate ? a.playerTeeTime.toDate().getTime() : new Date(a.playerTeeTime).getTime()) : null;
-                            const bT = b.playerTeeTime ? (b.playerTeeTime.toDate ? b.playerTeeTime.toDate().getTime() : new Date(b.playerTeeTime).getTime()) : null;
-
-                            if (aT !== null && bT !== null) return aT - bT;
-                            if (aT !== null && bT === null) return -1;
-                            if (aT === null && bT !== null) return 1;
-
-                            return a.playerName.localeCompare(b.playerName);
-                          });
-
-                          return sorted.map(score => {
-                            const displayScore = selectedTab === "gross" ? score.gross : score.net;
-                            const isWinner = score.playerId === winner;
-
-                            return (
-                              <div
-                                key={score.playerId}
-                                style={{
-                                  display: "grid",
-                                  gridTemplateColumns: "1fr auto",
-                                  gap: 8,
-                                  padding: "6px 12px",
-                                  backgroundColor: isWinner ? "#dcfce7" : "#f8fafc",
-                                  borderRadius: 4,
-                                  border: isWinner ? "1px solid #86efac" : "1px solid #e2e8f0",
-                                }}
-                              >
-                                <div style={{ fontSize: "0.85rem", color: "#1e293b" }}>
-                                  {score.playerName}
-                                  {selectedTab === "net" && score.hasStroke && (
-                                    <span style={{ marginLeft: 4, fontSize: "0.7rem", color: "#3b82f6" }}>●</span>
-                                  )}
-                                </div>
-                                <div style={{ 
-                                  fontSize: "0.85rem", 
-                                  fontWeight: 600,
-                                  color: displayScore === null ? "#cbd5e1" : "#1e293b"
-                                }}>
-                                  {displayScore !== null ? (
-                                    scoreLabel(displayScore, hole.par)
-                                  ) : (
-                                    // If player hasn't started (thru === 0), show tee time when available
-                                    score.playerThru === 0 && score.playerTeeTime
-                                      ? formatTeeTime(score.playerTeeTime)
-                                      : `Thru ${score.playerThru}`
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <LastUpdated />
-      </div>
+        <motion.div variants={itemVariants}>
+          <LastUpdated />
+        </motion.div>
+      </motion.div>
     </Layout>
   );
 }
