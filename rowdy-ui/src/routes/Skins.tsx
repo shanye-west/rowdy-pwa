@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Coins,
   Crown,
   ListChecks,
   Target,
@@ -210,9 +209,7 @@ function SkinsComponent() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <Card className="border-slate-200/70 bg-slate-50/80">
                   <CardContent className="flex items-center gap-3 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm">
-                      <Coins className="h-5 w-5" />
-                    </div>
+                    
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         Total Pot
@@ -225,9 +222,7 @@ function SkinsComponent() {
                 </Card>
                 <Card className="border-slate-200/70 bg-slate-50/80">
                   <CardContent className="flex items-center gap-3 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm">
-                      <Trophy className="h-5 w-5" />
-                    </div>
+                    
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         Skins Won
@@ -240,9 +235,7 @@ function SkinsComponent() {
                 </Card>
                 <Card className="border-slate-200/70 bg-slate-50/80">
                   <CardContent className="flex items-center gap-3 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm">
-                      <Crown className="h-5 w-5" />
-                    </div>
+                    
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         Per Skin
