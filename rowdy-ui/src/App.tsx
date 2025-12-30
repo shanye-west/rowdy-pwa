@@ -74,6 +74,8 @@ export default function App() {
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
+  const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
+  const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
   const showPoints = totalPointsAvailable > 0;
 
@@ -125,8 +127,8 @@ export default function App() {
                           teamBConfirmed={stats.teamBConfirmed}
                           teamAPending={stats.teamAPending}
                           teamBPending={stats.teamBPending}
-                          teamAColor={tournament.teamA?.color}
-                          teamBColor={tournament.teamB?.color}
+                          teamAColor={teamAColor}
+                          teamBColor={teamBColor}
                         />
                       </div>
                     </div>
@@ -142,13 +144,16 @@ export default function App() {
                         fallbackIcon="🔵"
                         style={{ width: 40, height: 40, objectFit: "contain" }}
                       />
-                      <div className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                      <div
+                        className="text-sm font-semibold transition-opacity group-hover:opacity-90"
+                        style={{ color: teamAColor }}
+                      >
                         {tournament.teamA?.name || "Team A"}
                       </div>
                     </Link>
                     <div
                       className="text-4xl font-semibold tracking-tight"
-                      style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}
+                      style={{ color: teamAColor }}
                     >
                       {stats.teamAConfirmed}
                     </div>
@@ -166,13 +171,16 @@ export default function App() {
                         fallbackIcon="🔴"
                         style={{ width: 40, height: 40, objectFit: "contain" }}
                       />
-                      <div className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                      <div
+                        className="text-sm font-semibold transition-opacity group-hover:opacity-90"
+                        style={{ color: teamBColor }}
+                      >
                         {tournament.teamB?.name || "Team B"}
                       </div>
                     </Link>
                     <div
                       className="text-4xl font-semibold tracking-tight"
-                      style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}
+                      style={{ color: teamBColor }}
                     >
                       {stats.teamBConfirmed}
                     </div>
@@ -211,7 +219,7 @@ export default function App() {
                               <ScoreBlock
                                 final={rs?.teamAConfirmed ?? 0}
                                 proj={rs?.teamAPending ?? 0}
-                                color={tournament.teamA?.color}
+                                color={teamAColor}
                               />
                             </div>
                           </div>
@@ -233,7 +241,7 @@ export default function App() {
                               <ScoreBlock
                                 final={rs?.teamBConfirmed ?? 0}
                                 proj={rs?.teamBPending ?? 0}
-                                color={tournament.teamB?.color}
+                                color={teamBColor}
                                 projLeft
                               />
                             </div>
