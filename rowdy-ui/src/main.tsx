@@ -16,6 +16,7 @@ const Round = lazy(() => import("./routes/Round"));
 const Skins = lazy(() => import("./routes/Skins"));
 const RoundRecap = lazy(() => import("./routes/RoundRecap"));
 const Teams = lazy(() => import("./routes/Teams"));
+const Player = lazy(() => import("./routes/Player"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
 const Tournament = lazy(() => import("./routes/Tournament"));
@@ -49,6 +50,7 @@ const router = createBrowserRouter([
       { path: "round/:roundId/recap", element: <Suspense fallback={<RouteLoader />}><RoundRecap /></Suspense> },
       { path: "match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense> },
       { path: "teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense> },
+      { path: "player/:playerId", element: <Suspense fallback={<RouteLoader />}><Player /></Suspense> },
       { path: "history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense> },
       { path: "tournament/:tournamentId", element: <Suspense fallback={<RouteLoader />}><Tournament /></Suspense> },
       { path: "login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense> },

@@ -90,10 +90,10 @@ export default function App() {
               </div>
               <div>
                 <div className="text-lg font-semibold text-slate-900">No active tournament</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Check back soon for updated pairings and live scoring.
-                </div>
               </div>
+              <Button asChild variant="outline" className="mx-auto">
+                <Link to="/history">View tournament history</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

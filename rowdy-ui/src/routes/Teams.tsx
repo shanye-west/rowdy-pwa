@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, memo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { collection, query, where, documentId, onSnapshot, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
@@ -208,7 +208,12 @@ function TeamsComponent() {
                       className="flex justify-between items-center px-4 py-2 border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150"
                     >
                       <div className="flex items-baseline gap-2">
-                        <span className="font-semibold">{name}</span>
+                        <Link
+                          to={`/player/${pid}`}
+                          className="font-semibold text-slate-900 hover:text-slate-700"
+                        >
+                          {name}
+                        </Link>
                         {hcp != null && (
                           <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
                         )}
