@@ -49,6 +49,8 @@ function TournamentComponent() {
   const tName = tournament?.name || "Tournament";
   const tSeries = tournament?.series;
   const tLogo = tournament?.tournamentLogo;
+  const teamLinkA = `/teams?tournamentId=${encodeURIComponent(tournament.id)}&team=A`;
+  const teamLinkB = `/teams?tournamentId=${encodeURIComponent(tournament.id)}&team=B`;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
@@ -89,12 +91,14 @@ function TournamentComponent() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
             {/* Team A */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <OfflineImage 
-                src={tournament.teamA?.logo} 
-                alt={tournament.teamA?.name || "Team A"}
-                fallbackIcon="🔵"
-                style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
-              />
+              <Link to={teamLinkA} aria-label="View Team A roster">
+                <OfflineImage 
+                  src={tournament.teamA?.logo} 
+                  alt={tournament.teamA?.name || "Team A"}
+                  fallbackIcon="🔵"
+                  style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
+                />
+              </Link>
               <div style={{ 
                 fontWeight: 800, 
                 color: tournament.teamA?.color || "var(--team-a-default)", 
@@ -113,12 +117,14 @@ function TournamentComponent() {
 
             {/* Team B */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <OfflineImage 
-                src={tournament.teamB?.logo} 
-                alt={tournament.teamB?.name || "Team B"}
-                fallbackIcon="🔴"
-                style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
-              />
+              <Link to={teamLinkB} aria-label="View Team B roster">
+                <OfflineImage 
+                  src={tournament.teamB?.logo} 
+                  alt={tournament.teamB?.name || "Team B"}
+                  fallbackIcon="🔴"
+                  style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
+                />
+              </Link>
               <div style={{ 
                 fontWeight: 800, 
                 color: tournament.teamB?.color || "var(--team-b-default)", 
