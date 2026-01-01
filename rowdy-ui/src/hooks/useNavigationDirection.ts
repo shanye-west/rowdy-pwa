@@ -66,5 +66,5 @@ export const pageTransitionVariants = {
 export const pageTransitionConfig = {
   type: "tween" as const,
   ease: [0.4, 0, 0.2, 1] as [number, number, number, number], // Cubic bezier for smooth ease-out
-  duration: 0.35,
+  duration: 0.55, // Slower, smoother transition
 };
