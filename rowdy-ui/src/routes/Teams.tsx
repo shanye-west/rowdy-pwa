@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, memo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { collection, query, where, documentId, onSnapshot, collectionGroup } from "firebase/firestore";
+import { collection, query, where, documentId, getDocs, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -29,7 +29,14 @@ function TeamsComponent() {
       : { fetchActive: true },
     [tournamentIdParam]
   );
-  const { tournament, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
+  const { tournament, rounds, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
+  
+  // Create a stable trigger for refetching stats when rounds lock
+  // This will change when any round.locked value changes
+  const roundsLockState = useMemo(() => 
+    rounds.map(r => `${r.id}:${r.locked ? '1' : '0'}`).join(','),
+    [rounds]
+  );
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +52,7 @@ function TeamsComponent() {
     if (tournamentError) setError(tournamentError);
   }, [tournamentError]);
 
-  // 2) Subscribe to players when tournament loads (using onSnapshot for offline cache)
+  // 2) Fetch players when tournament loads (one-time read, refreshes on tournament update)
   useEffect(() => {
     if (!tournament) {
       setPlayers({});
@@ -62,46 +69,33 @@ function TeamsComponent() {
     }
 
     // Firestore 'in' limit is 30, so we need to chunk
-    // For real-time updates, we create multiple subscriptions
+    // Using getDocs instead of onSnapshot to reduce active listeners
     const chunks: string[][] = [];
     for (let i = 0; i < allIds.length; i += 30) {
       chunks.push(allIds.slice(i, i + 30));
     }
 
-    // Track players from all chunks
-    const playersByChunk: Record<number, Record<string, PlayerDoc>> = {};
-    const unsubscribers: (() => void)[] = [];
-
-    chunks.forEach((chunk, chunkIndex) => {
-      const unsub = onSnapshot(
-        query(collection(db, "players"), where(documentId(), "in", chunk)),
-        (snap) => {
-          const chunkPlayers: Record<string, PlayerDoc> = {};
+    // Fetch all chunks in parallel
+    Promise.all(
+      chunks.map(chunk => 
+        getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
+      )
+    )
+      .then(snapshots => {
+        const merged: Record<string, PlayerDoc> = {};
+        snapshots.forEach(snap => {
           snap.forEach(d => {
-            chunkPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
+            merged[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
           });
-          playersByChunk[chunkIndex] = chunkPlayers;
-          
-          // Merge all chunks into players state
-          const merged: Record<string, PlayerDoc> = {};
-          Object.values(playersByChunk).forEach(chunkData => {
-            Object.assign(merged, chunkData);
-          });
-          setPlayers(merged);
-        },
-        (err) => {
-          console.error("Players subscription error:", err);
-        }
-      );
-      unsubscribers.push(unsub);
-    });
+        });
+        setPlayers(merged);
+      })
+      .catch(err => {
+        console.error("Players fetch error:", err);
+      });
+  }, [tournament]); // Refetch when tournament updates (triggers when rounds lock via useTournamentData subscription)
 
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
-  }, [tournament]);
-
-  // 3) Subscribe to pre-aggregated byTournament stats using collection group query
+  // 3) Fetch pre-aggregated byTournament stats using collection group query (one-time read)
   useEffect(() => {
     if (!tournament?.id) {
       setStats({});
@@ -115,13 +109,14 @@ function TeamsComponent() {
       return;
     }
 
-    // Use collection group query to fetch all stats for this tournament in one query
-    const unsub = onSnapshot(
+    // Use getDocs instead of onSnapshot to fetch stats once per tournament update
+    getDocs(
       query(
         collectionGroup(db, "byTournament"),
         where("tournamentId", "==", tournament.id)
-      ),
-      (snap) => {
+      )
+    )
+      .then(snap => {
         const newStats: Record<string, TournamentStat> = {};
         snap.docs.forEach(doc => {
           const data = doc.data();
@@ -142,15 +137,12 @@ function TeamsComponent() {
         });
         setStats(newStats);
         setFactsLoaded(true);
-      },
-      (err) => {
+      })
+      .catch(err => {
         console.error("Stats collection group query error:", err);
         setFactsLoaded(true);
-      }
-    );
-    
-    return () => unsub();
-  }, [tournament?.id, players, tournamentLoading]);
+      });
+  }, [tournament?.id, players, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
 
   // Coordinated loading state
   useEffect(() => {
