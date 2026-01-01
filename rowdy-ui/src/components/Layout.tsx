@@ -18,7 +18,7 @@ import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
-import { useNavigationDirection, pageTransitionVariants, pageTransitionConfig } from "../hooks/useNavigationDirection";
+import { useViewTransitionDirection } from "../hooks/useViewTransition";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -50,7 +50,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
   const location = useLocation();
-  const direction = useNavigationDirection();
+  
+  // Track navigation direction for CSS View Transitions
+  useViewTransitionDirection();
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -86,23 +88,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
     : "/teams";
   const closeMenu = () => setMenuOpen(false);
   
-  // Render page content with slide transition
-  const pageContent = children ?? (
-    <AnimatePresence initial={false} custom={direction}>
-      <motion.div
-        key={location.pathname}
-        custom={direction}
-        variants={pageTransitionVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={pageTransitionConfig}
-        style={{ width: "100%" }}
-      >
-        <Outlet />
-      </motion.div>
-    </AnimatePresence>
-  );
+  // Simple page content - CSS View Transitions handle the animation
+  const pageContent = children ?? <Outlet />;
 
   useEffect(() => {
     try {
@@ -286,8 +273,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         )}
 
-        <main className="app-container overflow-hidden">{pageContent}
-        </main>
+        <main className="app-container">{pageContent}</main>
       </PullToRefresh>
     </>
   );
