@@ -1,7 +1,8 @@
 import { memo, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import {
   AlertTriangle,
 } from "lucide-react";
@@ -94,7 +95,7 @@ function RoundComponent() {
                 This round is not available right now.
               </div>
               <Button asChild className="mt-4">
-                <Link to="/">Go Home</Link>
+                <ViewTransitionLink to="/">Go Home</ViewTransitionLink>
               </Button>
             </CardContent>
           </Card>
@@ -137,9 +138,9 @@ function RoundComponent() {
                         variant="outline"
                         className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
                       >
-                        <Link to={`/round/${round.id}/recap`}>
+                        <ViewTransitionLink to={`/round/${round.id}/recap`}>
                           Recap
-                        </Link>
+                        </ViewTransitionLink>
                       </Button>
                     )}
                   </div>
@@ -154,9 +155,9 @@ function RoundComponent() {
                         variant="outline"
                         className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
                       >
-                        <Link to={`/round/${round.id}/skins`}>
+                        <ViewTransitionLink to={`/round/${round.id}/skins`}>
                           Skins
-                        </Link>
+                        </ViewTransitionLink>
                       </Button>
                     )}
                   </div>
@@ -174,14 +175,14 @@ function RoundComponent() {
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
                 <div className="flex flex-col items-center gap-1">
-                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
+                  <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
                     <OfflineImage 
                       src={tournament?.teamA?.logo} 
                       alt={tournament?.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
                       style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
-                  </Link>
+                  </ViewTransitionLink>
                   <TeamName
                     name={tournament?.teamA?.name || "Team A"}
                     variant="inline"
@@ -202,14 +203,14 @@ function RoundComponent() {
                 <div className="h-14 w-px bg-slate-200" />
 
                 <div className="flex flex-col items-center gap-1">
-                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
+                  <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
                     <OfflineImage 
                       src={tournament?.teamB?.logo} 
                       alt={tournament?.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
                       style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
-                  </Link>
+                  </ViewTransitionLink>
                   <TeamName
                     name={tournament?.teamB?.name || "Team B"}
                     variant="inline"
@@ -258,7 +259,7 @@ function RoundComponent() {
 
                 return (
                   <motion.div key={match.id} variants={itemVariants} role="listitem">
-                    <Link
+                    <ViewTransitionLink
                       to={`/match/${match.id}`}
                       aria-label={`Match: ${teamANames} vs ${teamBNames}`}
                       className="block"
@@ -299,7 +300,7 @@ function RoundComponent() {
                           </div>
                         </CardContent>
                       </Card>
-                    </Link>
+                    </ViewTransitionLink>
 
                     <div className="mt-2 px-2">
                       <HoleByHoleTracker
