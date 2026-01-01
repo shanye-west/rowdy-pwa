@@ -117,40 +117,40 @@
   
   /* Default transition: slide left (forward navigation) */
   ::view-transition-old(page-content) {
-    animation: slide-out-left 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: slide-out-left 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   
   ::view-transition-new(page-content) {
-    animation: slide-in-right 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: slide-in-right 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   
   /* Back navigation: slide right */
   html[data-nav-direction="back"]::view-transition-old(page-content) {
-    animation: slide-out-right 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: slide-out-right 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   
   html[data-nav-direction="back"]::view-transition-new(page-content) {
-    animation: slide-in-left 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: slide-in-left 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   
-  /* Slide animations */
+  /* Slide animations - reduced slide distance and faster timing */
   @keyframes slide-out-left {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(-25%); opacity: 0; }
+    from { transform: translateX(0); }
+    to { transform: translateX(-20%); opacity: 0.5; }
   }
   
   @keyframes slide-in-right {
-    from { transform: translateX(25%); opacity: 0; }
+    from { transform: translateX(20%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
   
   @keyframes slide-out-right {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(25%); opacity: 0; }
+    from { transform: translateX(0); }
+    to { transform: translateX(20%); opacity: 0.5; }
   }
   
   @keyframes slide-in-left {
-    from { transform: translateX(-25%); opacity: 0; }
+    from { transform: translateX(-20%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
   

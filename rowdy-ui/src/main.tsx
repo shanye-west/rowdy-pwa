@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
@@ -27,13 +27,7 @@ const RecalculateMatchStrokes = lazy(() => import("./routes/RecalculateMatchStro
 const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTournamentStats"));
 const GenerateRoundRecap = lazy(() => import("./routes/GenerateRoundRecap"));
 
-// Loading fallback for lazy-loaded routes
-const RouteLoader = () => (
-  <div className="flex items-center justify-center py-20">
-    <div className="spinner-lg"></div>
-  </div>
-);
-
+// No loading fallback - CSS View Transitions handle page navigation smoothly
 const router = createBrowserRouter([
   {
     path: "/",
@@ -45,21 +39,21 @@ const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <App /> },
-      { path: "round/:roundId", element: <Suspense fallback={<RouteLoader />}><Round /></Suspense> },
-      { path: "round/:roundId/skins", element: <Suspense fallback={<RouteLoader />}><Skins /></Suspense> },
-      { path: "round/:roundId/recap", element: <Suspense fallback={<RouteLoader />}><RoundRecap /></Suspense> },
-      { path: "match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense> },
-      { path: "teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense> },
-      { path: "player/:playerId", element: <Suspense fallback={<RouteLoader />}><Player /></Suspense> },
-      { path: "history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense> },
-      { path: "tournament/:tournamentId", element: <Suspense fallback={<RouteLoader />}><Tournament /></Suspense> },
-      { path: "login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense> },
-      { path: "admin", element: <Suspense fallback={<RouteLoader />}><Admin /></Suspense> },
-      { path: "admin/match", element: <Suspense fallback={<RouteLoader />}><AddMatch /></Suspense> },
-      { path: "admin/match/edit", element: <Suspense fallback={<RouteLoader />}><EditMatch /></Suspense> },
-      { path: "admin/match/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateMatchStrokes /></Suspense> },
-      { path: "admin/round/recap", element: <Suspense fallback={<RouteLoader />}><GenerateRoundRecap /></Suspense> },
-      { path: "admin/tournament/recalculate", element: <Suspense fallback={<RouteLoader />}><RecalculateTournamentStats /></Suspense> },
+      { path: "round/:roundId", element: <Round /> },
+      { path: "round/:roundId/skins", element: <Skins /> },
+      { path: "round/:roundId/recap", element: <RoundRecap /> },
+      { path: "match/:matchId", element: <Match /> },
+      { path: "teams", element: <Teams /> },
+      { path: "player/:playerId", element: <Player /> },
+      { path: "history", element: <History /> },
+      { path: "tournament/:tournamentId", element: <Tournament /> },
+      { path: "login", element: <Login /> },
+      { path: "admin", element: <Admin /> },
+      { path: "admin/match", element: <AddMatch /> },
+      { path: "admin/match/edit", element: <EditMatch /> },
+      { path: "admin/match/recalculate", element: <RecalculateMatchStrokes /> },
+      { path: "admin/round/recap", element: <GenerateRoundRecap /> },
+      { path: "admin/tournament/recalculate", element: <RecalculateTournamentStats /> },
       { path: "*", element: <NotFound /> },
     ],
   },
