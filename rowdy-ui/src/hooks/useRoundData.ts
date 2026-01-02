@@ -47,6 +47,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   const [roundLoaded, setRoundLoaded] = useState(false);
   const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
+  const [playersLoaded, setPlayersLoaded] = useState(false);
 
   // 1) Subscribe to round document
   useEffect(() => {
@@ -61,6 +62,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     setRoundLoaded(false);
     setTournamentLoaded(false);
     setMatchesLoaded(false);
+    setPlayersLoaded(false);
     // Clear stale data from previous round
     setRound(null);
     setMatches([]);
@@ -227,10 +229,16 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => unsub?.();
   }, [roundId, round?.locked]);
 
-  // 5) Subscribe to players when matches change
+  // 5) Fetch players when matches are loaded
   useEffect(() => {
+    // Don't run until matches have actually been loaded
+    if (!matchesLoaded) {
+      return;
+    }
+
     if (matches.length === 0) {
       setPlayers({});
+      setPlayersLoaded(true);
       return;
     }
 
@@ -242,8 +250,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
 
     if (playerIds.size === 0) {
       setPlayers({});
+      setPlayersLoaded(true);
       return;
     }
+
+    // Set loading state while fetching players
+    setPlayersLoaded(false);
 
     const pIds = Array.from(playerIds);
     // Firestore 'in' query limit
@@ -268,20 +280,21 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
           });
         });
         setPlayers(allPlayers);
+        setPlayersLoaded(true);
       })
       .catch(err => {
         console.error("Players fetch error:", err);
+        setPlayersLoaded(true);
       });
 
     return () => {};
-  }, [matches]);
+  }, [matches, matchesLoaded]);
 
-  // Coordinated loading state - wait for round, tournament, and matches
+  // Coordinated loading state - wait for round, tournament, matches, and players
   useEffect(() => {
-    if (roundLoaded && tournamentLoaded && matchesLoaded) {
-      setLoading(false);
-    }
-  }, [roundLoaded, tournamentLoaded, matchesLoaded]);
+    const allLoaded = roundLoaded && tournamentLoaded && matchesLoaded && playersLoaded;
+    setLoading(!allLoaded);
+  }, [roundLoaded, tournamentLoaded, matchesLoaded, playersLoaded]);
 
   // Compute round stats
   const stats = useMemo(() => {
