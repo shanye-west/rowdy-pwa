@@ -31,13 +31,17 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   const [error, setError] = useState<string | null>(null);
   
   const [round, setRound] = useState<RoundDoc | null>(null);
-  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
+  
+  // Try to get tournament from shared context
+  const tournamentContext = useTournamentContextOptional();
+  
+  // Initialize localTournament from context if available (to avoid flashing)
+  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(
+    tournamentContext?.tournament || null
+  );
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-
-  // Try to get tournament from shared context
-  const tournamentContext = useTournamentContextOptional();
   
   // Cache refs to avoid re-fetching
   const fetchedCourseIdRef = useRef<string | undefined>(undefined);
@@ -81,9 +85,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
 
   // 2) Get tournament from context or fetch once (not subscribe)
   useEffect(() => {
-    if (!round?.tournamentId) return;
+    if (!round?.tournamentId) {
+      setLocalTournament(null);
+      return;
+    }
 
-    // Check if context has this tournament
+    // Check if context has this tournament - use it immediately
     if (tournamentContext?.tournament?.id === round.tournamentId) {
       setLocalTournament(tournamentContext.tournament);
       return;
@@ -97,9 +104,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
         if (cancelled) return;
         if (snap.exists()) {
           setLocalTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
+        } else {
+          setLocalTournament(null);
         }
       } catch (err) {
         console.error("Tournament fetch error:", err);
+        setLocalTournament(null);
       }
     }
     fetchTournament();
@@ -274,15 +284,23 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     
     return { finalTeamA, finalTeamB, projectedTeamA, projectedTeamB };
   }, [matches, round]);
-  // Use tournament from context if available, otherwise use local fetch
-  const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
-    ? tournamentContext.tournament
-    : localTournament;
+
+  // Use tournament from context if available (prioritize context for consistency)
+  const tournament = useMemo(() => {
+    // If context has the tournament we need, use it
+    const contextTournament = tournamentContext?.tournament;
+    if (contextTournament?.id === round?.tournamentId) {
+      return contextTournament;
+    }
+    // Otherwise use the local fetch result
+    return localTournament;
+  }, [tournamentContext?.tournament, round?.tournamentId, localTournament]);
+
   return {
     loading,
     error,
     round,
-    tournament,
+    tournament: tournament || null,
     course,
     matches,
     players,
