@@ -125,6 +125,9 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       batches.push(ids.slice(i, i + 10));
     }
     
+    // Track if effect has been cleaned up to prevent stale state updates
+    let cancelled = false;
+    
     // Fetch all player batches at once (one-time read)
     Promise.all(
       batches.map(batch => {
@@ -133,6 +136,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       })
     )
       .then(snapshots => {
+        if (cancelled) return; // Prevent stale updates if matchId changed
         const allPlayers: Record<string, PlayerDoc> = {};
         snapshots.forEach(snap => {
           snap.forEach(d => {
@@ -143,11 +147,12 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         setLoading(false);
       })
       .catch(err => {
+        if (cancelled) return;
         setError(`Failed to load players: ${err.message}`);
         setLoading(false);
       });
     
-    return () => {};
+    return () => { cancelled = true; };
   }, [match]);
 
   // 3. Listen to ROUND (real-time for score updates)

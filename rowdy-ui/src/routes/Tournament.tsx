@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { Link, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
@@ -29,16 +29,6 @@ function TournamentComponent() {
     totalPointsAvailable,
   } = useTournamentData({ tournamentId });
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -53,7 +43,7 @@ function TournamentComponent() {
         <div className="empty-state">
           <div className="empty-state-icon">🔍</div>
           <div className="empty-state-text">Tournament not found.</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+          <ViewTransitionLink to="/" className="btn btn-primary mt-4">Go Home</ViewTransitionLink>
         </div>
       </Layout>
     );
@@ -71,13 +61,8 @@ function TournamentComponent() {
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
             <CardContent className="relative space-y-6 pt-6">
@@ -110,7 +95,7 @@ function TournamentComponent() {
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                 <div className="flex flex-col items-center gap-2">
-                  <Link to={teamLinkA} className="group flex flex-col items-center gap-2">
+                  <ViewTransitionLink to={teamLinkA} className="group flex flex-col items-center gap-2">
                     <OfflineImage 
                       src={tournament.teamA?.logo} 
                       alt={tournament.teamA?.name || "Team A"}
@@ -123,7 +108,7 @@ function TournamentComponent() {
                     >
                       {tournament.teamA?.name || "Team A"}
                     </div>
-                  </Link>
+                  </ViewTransitionLink>
                   <div
                     className="text-4xl font-semibold tracking-tight"
                     style={{ color: teamAColor }}
@@ -137,7 +122,7 @@ function TournamentComponent() {
                 </div>
 
                 <div className="flex flex-col items-center gap-2">
-                  <Link to={teamLinkB} className="group flex flex-col items-center gap-2">
+                  <ViewTransitionLink to={teamLinkB} className="group flex flex-col items-center gap-2">
                     <OfflineImage 
                       src={tournament.teamB?.logo} 
                       alt={tournament.teamB?.name || "Team B"}
@@ -150,7 +135,7 @@ function TournamentComponent() {
                     >
                       {tournament.teamB?.name || "Team B"}
                     </div>
-                  </Link>
+                  </ViewTransitionLink>
                   <div
                     className="text-4xl font-semibold tracking-tight"
                     style={{ color: teamBColor }}
@@ -161,9 +146,9 @@ function TournamentComponent() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section className="space-y-3" variants={itemVariants}>
+        <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Schedule
@@ -177,8 +162,8 @@ function TournamentComponent() {
               const courseName = course?.name || r.course?.name;
 
               return (
-                <motion.div key={r.id} variants={itemVariants}>
-                  <Link to={`/round/${r.id}`} className="group block">
+                <div key={r.id}>
+                  <ViewTransitionLink to={`/round/${r.id}`} className="group block">
                     <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
                       <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                         <div className="flex items-center gap-3">
@@ -227,17 +212,17 @@ function TournamentComponent() {
                         </div>
                       </CardContent>
                     </Card>
-                  </Link>
-                </motion.div>
+                  </ViewTransitionLink>
+                </div>
               );
             })}
           </div>
-        </motion.section>
+        </section>
 
-        <motion.div variants={itemVariants}>
+        <div>
           <LastUpdated />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Layout>
   );
 }

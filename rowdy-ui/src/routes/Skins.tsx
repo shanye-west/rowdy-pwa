@@ -1,6 +1,5 @@
 import { memo, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   ChevronDown,
@@ -20,16 +19,6 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { cn } from "../lib/utils";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
 
 function SkinsComponent() {
   const { roundId } = useParams();
@@ -66,16 +55,8 @@ function SkinsComponent() {
   if (loading) {
     return (
       <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo}>
-        <div className="px-4 py-10">
-          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
-            <CardContent className="flex items-center gap-3 py-6">
-              <div className="spinner" />
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Loading skins</div>
-                <div className="text-xs text-muted-foreground">Preparing hole results.</div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="spinner-lg"></div>
         </div>
       </Layout>
     );
@@ -162,13 +143,8 @@ function SkinsComponent() {
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
@@ -215,9 +191,9 @@ function SkinsComponent() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants}>
+        <section>
           <Card className="border-slate-200/80 bg-white/85">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
@@ -293,9 +269,9 @@ function SkinsComponent() {
               )}
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants}>
+        <section>
           <Card className="border-slate-200/80 bg-white/85">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
@@ -391,114 +367,106 @@ function SkinsComponent() {
                       </div>
                     </button>
 
-                    <AnimatePresence initial={false}>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="space-y-3 px-4 pb-4">
-                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                              <span>All Scores</span>
-                              <span>{selectedTab === "gross" ? "Gross" : "Net"}</span>
-                            </div>
-                            <div className="space-y-2">
-                              {(() => {
-                                const sorted = [...hole.allScores].sort((a, b) => {
-                                  const aVal = selectedTab === "gross" ? a.gross : a.net;
-                                  const bVal = selectedTab === "gross" ? b.gross : b.net;
+                    {isExpanded && (
+                      <div className="overflow-hidden">
+                        <div className="space-y-3 px-4 pb-4">
+                          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            <span>All Scores</span>
+                            <span>{selectedTab === "gross" ? "Gross" : "Net"}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {(() => {
+                              const sorted = [...hole.allScores].sort((a, b) => {
+                                const aVal = selectedTab === "gross" ? a.gross : a.net;
+                                const bVal = selectedTab === "gross" ? b.gross : b.net;
 
-                                  const aCompleted = aVal !== null && aVal !== undefined;
-                                  const bCompleted = bVal !== null && bVal !== undefined;
+                                const aCompleted = aVal !== null && aVal !== undefined;
+                                const bCompleted = bVal !== null && bVal !== undefined;
 
-                                  if (aCompleted && !bCompleted) return -1;
-                                  if (!aCompleted && bCompleted) return 1;
+                                if (aCompleted && !bCompleted) return -1;
+                                if (!aCompleted && bCompleted) return 1;
 
-                                  if (aCompleted && bCompleted) {
-                                    if (aVal !== bVal) return (aVal as number) - (bVal as number);
-                                    return a.playerName.localeCompare(b.playerName);
-                                  }
-
-                                  const aThru = a.playerThru ?? 0;
-                                  const bThru = b.playerThru ?? 0;
-                                  if (aThru !== bThru) return bThru - aThru;
-
-                                  const aT = a.playerTeeTime
-                                    ? a.playerTeeTime.toDate
-                                      ? a.playerTeeTime.toDate().getTime()
-                                      : new Date(a.playerTeeTime).getTime()
-                                    : null;
-                                  const bT = b.playerTeeTime
-                                    ? b.playerTeeTime.toDate
-                                      ? b.playerTeeTime.toDate().getTime()
-                                      : new Date(b.playerTeeTime).getTime()
-                                    : null;
-
-                                  if (aT !== null && bT !== null) return aT - bT;
-                                  if (aT !== null && bT === null) return -1;
-                                  if (aT === null && bT !== null) return 1;
-
+                                if (aCompleted && bCompleted) {
+                                  if (aVal !== bVal) return (aVal as number) - (bVal as number);
                                   return a.playerName.localeCompare(b.playerName);
-                                });
+                                }
 
-                                return sorted.map((score) => {
-                                  const scoreValue = selectedTab === "gross" ? score.gross : score.net;
-                                  const hasScore = scoreValue !== null && scoreValue !== undefined;
-                                  const isWinner = score.playerId === winner;
-                                  const thru = score.playerThru ?? 0;
-                                  const scoreDisplay = hasScore
-                                    ? scoreLabel(scoreValue as number, hole.par)
-                                    : thru === 0 && score.playerTeeTime
-                                      ? formatTeeTime(score.playerTeeTime)
-                                      : `Thru ${thru}`;
+                                const aThru = a.playerThru ?? 0;
+                                const bThru = b.playerThru ?? 0;
+                                if (aThru !== bThru) return bThru - aThru;
 
-                                  return (
+                                const aT = a.playerTeeTime
+                                  ? a.playerTeeTime.toDate
+                                    ? a.playerTeeTime.toDate().getTime()
+                                    : new Date(a.playerTeeTime).getTime()
+                                  : null;
+                                const bT = b.playerTeeTime
+                                  ? b.playerTeeTime.toDate
+                                    ? b.playerTeeTime.toDate().getTime()
+                                    : new Date(b.playerTeeTime).getTime()
+                                  : null;
+
+                                if (aT !== null && bT !== null) return aT - bT;
+                                if (aT !== null && bT === null) return -1;
+                                if (aT === null && bT !== null) return 1;
+
+                                return a.playerName.localeCompare(b.playerName);
+                              });
+
+                              return sorted.map((score) => {
+                                const scoreValue = selectedTab === "gross" ? score.gross : score.net;
+                                const hasScore = scoreValue !== null && scoreValue !== undefined;
+                                const isWinner = score.playerId === winner;
+                                const thru = score.playerThru ?? 0;
+                                const scoreDisplay = hasScore
+                                  ? scoreLabel(scoreValue as number, hole.par)
+                                  : thru === 0 && score.playerTeeTime
+                                    ? formatTeeTime(score.playerTeeTime)
+                                    : `Thru ${thru}`;
+
+                                return (
+                                  <div
+                                    key={score.playerId}
+                                    className={cn(
+                                      "flex items-center justify-between rounded-lg border px-3 py-2 text-sm",
+                                      isWinner
+                                        ? "border-emerald-200 bg-emerald-50"
+                                        : "border-slate-200 bg-slate-50/70"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2 text-slate-900">
+                                      <span className="font-medium">{score.playerName}</span>
+                                      {selectedTab === "net" && score.hasStroke && (
+                                        <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                                      )}
+                                    </div>
                                     <div
-                                      key={score.playerId}
                                       className={cn(
-                                        "flex items-center justify-between rounded-lg border px-3 py-2 text-sm",
-                                        isWinner
-                                          ? "border-emerald-200 bg-emerald-50"
-                                          : "border-slate-200 bg-slate-50/70"
+                                        "text-sm font-semibold",
+                                        hasScore ? "text-slate-900" : "text-slate-400"
                                       )}
                                     >
-                                      <div className="flex items-center gap-2 text-slate-900">
-                                        <span className="font-medium">{score.playerName}</span>
-                                        {selectedTab === "net" && score.hasStroke && (
-                                          <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                                        )}
-                                      </div>
-                                      <div
-                                        className={cn(
-                                          "text-sm font-semibold",
-                                          hasScore ? "text-slate-900" : "text-slate-400"
-                                        )}
-                                      >
-                                        {scoreDisplay}
-                                      </div>
+                                      {scoreDisplay}
                                     </div>
-                                  );
-                                });
-                              })()}
-                            </div>
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 );
               })}
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.div variants={itemVariants}>
+        <div>
           <LastUpdated />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Layout>
   );
 }

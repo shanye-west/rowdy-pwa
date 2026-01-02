@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
@@ -186,7 +186,7 @@ export default function History() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {filteredTournaments.map(t => (
-              <Link 
+              <ViewTransitionLink 
                 key={t.id}
                 to={`/tournament/${t.id}`}
                 className="card card-hover"
@@ -229,7 +229,7 @@ export default function History() {
                     style={{ width: 56, height: 56, objectFit: "contain" }}
                   />
                 </div>
-              </Link>
+              </ViewTransitionLink>
             ))}
           </div>
         )}

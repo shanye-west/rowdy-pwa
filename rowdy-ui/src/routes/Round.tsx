@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import {
   AlertTriangle,
 } from "lucide-react";
@@ -15,21 +15,10 @@ import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
-import { RoundPageSkeleton } from "../components/Skeleton";
 // Badge removed from this file (was used for matches pill)
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { cn } from "../lib/utils";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
 
 function RoundComponent() {
   const { roundId } = useParams();
@@ -69,7 +58,9 @@ function RoundComponent() {
 
   if (loading) return (
     <Layout title="Loading..." showBack>
-      <RoundPageSkeleton />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="spinner-lg"></div>
+      </div>
     </Layout>
   );
 
@@ -103,7 +94,7 @@ function RoundComponent() {
                 This round is not available right now.
               </div>
               <Button asChild className="mt-4">
-                <Link to="/">Go Home</Link>
+                <ViewTransitionLink to="/">Go Home</ViewTransitionLink>
               </Button>
             </CardContent>
           </Card>
@@ -126,13 +117,8 @@ function RoundComponent() {
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
@@ -146,9 +132,9 @@ function RoundComponent() {
                         variant="outline"
                         className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
                       >
-                        <Link to={`/round/${round.id}/recap`}>
+                        <ViewTransitionLink to={`/round/${round.id}/recap`}>
                           Recap
-                        </Link>
+                        </ViewTransitionLink>
                       </Button>
                     )}
                   </div>
@@ -163,9 +149,9 @@ function RoundComponent() {
                         variant="outline"
                         className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
                       >
-                        <Link to={`/round/${round.id}/skins`}>
+                        <ViewTransitionLink to={`/round/${round.id}/skins`}>
                           Skins
-                        </Link>
+                        </ViewTransitionLink>
                       </Button>
                     )}
                   </div>
@@ -183,14 +169,14 @@ function RoundComponent() {
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
                 <div className="flex flex-col items-center gap-1">
-                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
+                  <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
                     <OfflineImage 
                       src={tournament?.teamA?.logo} 
                       alt={tournament?.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
                       style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
-                  </Link>
+                  </ViewTransitionLink>
                   <TeamName
                     name={tournament?.teamA?.name || "Team A"}
                     variant="inline"
@@ -211,14 +197,14 @@ function RoundComponent() {
                 <div className="h-14 w-px bg-slate-200" />
 
                 <div className="flex flex-col items-center gap-1">
-                  <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
+                  <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
                     <OfflineImage 
                       src={tournament?.teamB?.logo} 
                       alt={tournament?.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
                       style={{ width: 40, height: 40, objectFit: "contain" }}
                     />
-                  </Link>
+                  </ViewTransitionLink>
                   <TeamName
                     name={tournament?.teamB?.name || "Team B"}
                     variant="inline"
@@ -238,9 +224,9 @@ function RoundComponent() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants} className="space-y-3">
+        <section className="space-y-3">
             <div className="flex items-center px-1">
               <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Matches
@@ -266,8 +252,8 @@ function RoundComponent() {
                 const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
 
                 return (
-                  <motion.div key={match.id} variants={itemVariants} role="listitem">
-                    <Link
+                  <div key={match.id} role="listitem">
+                    <ViewTransitionLink
                       to={`/match/${match.id}`}
                       aria-label={`Match: ${teamANames} vs ${teamBNames}`}
                       className="block"
@@ -308,7 +294,7 @@ function RoundComponent() {
                           </div>
                         </CardContent>
                       </Card>
-                    </Link>
+                    </ViewTransitionLink>
 
                     <div className="mt-2 px-2">
                       <HoleByHoleTracker
@@ -318,17 +304,17 @@ function RoundComponent() {
                         teamBColor={teamBColor}
                       />
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
           )}
-        </motion.section>
+        </section>
 
-        <motion.div variants={itemVariants}>
+        <div>
           <LastUpdated />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Layout>
   );
 }

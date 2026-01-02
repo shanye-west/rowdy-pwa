@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
-import { AnimatePresence, motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { db } from "../firebase";
 import type { RoundRecapDoc, TournamentDoc, VsAllRecord } from "../types";
@@ -11,16 +10,6 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "../components/ui/card";
 import { cn } from "../lib/utils";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
 
 export default function RoundRecap() {
   const { roundId } = useParams<{ roundId: string }>();
@@ -95,16 +84,8 @@ export default function RoundRecap() {
   if (loading) {
     return (
       <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
-        <div className="px-4 py-10">
-          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
-            <CardContent className="flex items-center gap-3 py-6">
-              <div className="spinner" />
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Loading recap</div>
-                <div className="text-xs text-muted-foreground">Pulling round summary data.</div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="spinner-lg"></div>
         </div>
       </Layout>
     );
@@ -221,13 +202,8 @@ export default function RoundRecap() {
 
   return (
     <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
@@ -246,9 +222,9 @@ export default function RoundRecap() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants}>
+        <section>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
               size="sm"
@@ -283,19 +259,12 @@ export default function RoundRecap() {
               Hole Stats
             </Button>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants}>
-          <AnimatePresence mode="wait">
-            {viewMode === "vsAll" && (
-              <motion.div
-                key="vsAll"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card className="border-slate-200/80 bg-white/85">
+        <section>
+          {viewMode === "vsAll" && (
+            <div>
+              <Card className="border-slate-200/80 bg-white/85">
                   <CardHeader>
                     <CardDescription>
                       Simulated record if each player or team played all others.
@@ -344,17 +313,11 @@ export default function RoundRecap() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             )}
 
             {viewMode === "grossScoring" && (
-              <motion.div
-                key="grossScoring"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.2 }}
-              >
+              <div>
                 <Card className="border-slate-200/80 bg-white/85">
                   <CardHeader className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -539,17 +502,11 @@ export default function RoundRecap() {
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             )}
 
             {viewMode === "netScoring" && (
-              <motion.div
-                key="netScoring"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.2 }}
-              >
+              <div>
                 <Card className="border-slate-200/80 bg-white/85">
                   <CardHeader className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -758,17 +715,11 @@ export default function RoundRecap() {
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             )}
 
             {viewMode === "holes" && (
-              <motion.div
-                key="holes"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.2 }}
-              >
+              <div>
                 <Card className="border-slate-200/80 bg-white/85">
                   <CardHeader className="space-y-4" />
                   <CardContent className="space-y-5">
@@ -841,11 +792,10 @@ export default function RoundRecap() {
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.section>
-      </motion.div>
+        </section>
+      </div>
     </Layout>
   );
 }

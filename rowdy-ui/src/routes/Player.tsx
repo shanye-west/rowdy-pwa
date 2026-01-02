@@ -16,8 +16,6 @@ export default function Player() {
         <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
           <CardContent className="py-8">
             <div className="text-lg font-semibold text-slate-900">Player Bio - Coming Soon</div>
-                        <div className="text-lg font-semibold text-slate-900">Eat a Dick, Dugan</div>
-
           </CardContent>
         </Card>
       </div>
