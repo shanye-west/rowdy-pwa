@@ -45,6 +45,7 @@ function TeamsComponent() {
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
 
   // Track loading states
+  const [playersLoaded, setPlayersLoaded] = useState(false);
   const [factsLoaded, setFactsLoaded] = useState(false);
 
   // Sync error from tournament hook
@@ -56,6 +57,7 @@ function TeamsComponent() {
   useEffect(() => {
     if (!tournament) {
       setPlayers({});
+      setPlayersLoaded(true);
       return;
     }
 
@@ -65,8 +67,12 @@ function TeamsComponent() {
 
     if (allIds.length === 0) {
       setPlayers({});
+      setPlayersLoaded(true);
       return;
     }
+
+    // Mark as loading while fetching
+    setPlayersLoaded(false);
 
     // Firestore 'in' limit is 30, so we need to chunk
     // Using getDocs instead of onSnapshot to reduce active listeners
@@ -89,9 +95,11 @@ function TeamsComponent() {
           });
         });
         setPlayers(merged);
+        setPlayersLoaded(true);
       })
       .catch(err => {
         console.error("Players fetch error:", err);
+        setPlayersLoaded(true);
       });
   }, [tournament]); // Refetch when tournament updates (triggers when rounds lock via useTournamentData subscription)
 
@@ -100,6 +108,11 @@ function TeamsComponent() {
     if (!tournament?.id) {
       setStats({});
       setFactsLoaded(!tournamentLoading);
+      return;
+    }
+
+    // Wait for players to load before fetching stats
+    if (!playersLoaded) {
       return;
     }
 
@@ -142,14 +155,13 @@ function TeamsComponent() {
         console.error("Stats collection group query error:", err);
         setFactsLoaded(true);
       });
-  }, [tournament?.id, players, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
+  }, [tournament?.id, players, playersLoaded, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
 
   // Coordinated loading state
   useEffect(() => {
-    if (!tournamentLoading && (!tournament || factsLoaded)) {
-      setLoading(false);
-    }
-  }, [tournamentLoading, tournament, factsLoaded]);
+    const allLoaded = !tournamentLoading && (!tournament || (playersLoaded && factsLoaded));
+    setLoading(!allLoaded);
+  }, [tournamentLoading, tournament, playersLoaded, factsLoaded]);
 
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (
