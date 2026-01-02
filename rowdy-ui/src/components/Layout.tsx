@@ -27,6 +27,7 @@ type LayoutProps = {
   series?: string; // "rowdyCup" | "christmasClassic"
   showBack?: boolean;
   tournamentLogo?: string;
+  isLoading?: boolean;
   children: React.ReactNode;
 };
 
@@ -41,11 +42,20 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { player, logout, loading: authLoading } = useAuth();
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
   const { config } = useLayout();
-  const { title, series, showBack, tournamentLogo } = config;
+  const { title, series, showBack, tournamentLogo, isLoading } = config;
   const location = useLocation();
   
   // Track navigation direction for CSS View Transitions
   useViewTransitionDirection();
+
+  // Set loading state on document for CSS transitions
+  useEffect(() => {
+    if (isLoading) {
+      document.documentElement.dataset.pageLoading = "true";
+    } else {
+      delete document.documentElement.dataset.pageLoading;
+    }
+  }, [isLoading]);
 
   // Handle back navigation with view transition
   const handleBack = () => {
@@ -280,7 +290,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   );
 }
 
-export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
+export default function Layout({ title, series, showBack, tournamentLogo, isLoading, children }: LayoutProps) {
   const { config, setConfig } = useLayout();
 
   useLayoutEffect(() => {
@@ -290,11 +300,12 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
         series: config.series,
         tournamentLogo: config.tournamentLogo,
         showBack: showBack ?? config.showBack,
+        isLoading: isLoading ?? true, // Treat "Loading..." title as loading state
       });
       return;
     }
-    setConfig({ title, series, showBack, tournamentLogo });
-  }, [title, series, showBack, tournamentLogo, setConfig, config]);
+    setConfig({ title, series, showBack, tournamentLogo, isLoading });
+  }, [title, series, showBack, tournamentLogo, isLoading, setConfig, config]);
 
   return <>{children}</>;
 }

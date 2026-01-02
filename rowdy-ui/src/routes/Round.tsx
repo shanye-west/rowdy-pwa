@@ -58,7 +58,7 @@ function RoundComponent() {
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
   if (loading) return (
-    <Layout title="Loading..." showBack>
+    <Layout title="Loading..." showBack isLoading>
       <RoundPageSkeleton />
     </Layout>
   );

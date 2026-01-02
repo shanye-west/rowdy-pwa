@@ -683,7 +683,7 @@ export default function Match() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   if (loading) return (
-    <Layout title="Loading..." showBack>
+    <Layout title="Loading..." showBack isLoading>
       <MatchPageSkeleton />
     </Layout>
   );

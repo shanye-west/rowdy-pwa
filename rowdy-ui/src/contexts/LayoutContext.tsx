@@ -5,6 +5,7 @@ type LayoutConfig = {
   series?: string;
   showBack?: boolean;
   tournamentLogo?: string;
+  isLoading?: boolean;
 };
 
 type LayoutContextValue = {
@@ -28,7 +29,8 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
         prev.title === next.title &&
         prev.series === next.series &&
         prev.showBack === next.showBack &&
-        prev.tournamentLogo === next.tournamentLogo
+        prev.tournamentLogo === next.tournamentLogo &&
+        prev.isLoading === next.isLoading
       ) {
         return prev;
       }

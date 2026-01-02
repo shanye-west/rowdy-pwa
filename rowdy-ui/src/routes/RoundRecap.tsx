@@ -83,7 +83,7 @@ export default function RoundRecap() {
 
   if (loading) {
     return (
-      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo} isLoading>
         <div className="px-4 py-10">
           <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
             <CardContent className="flex items-center gap-3 py-6">

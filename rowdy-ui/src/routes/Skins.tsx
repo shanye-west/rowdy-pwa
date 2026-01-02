@@ -54,7 +54,7 @@ function SkinsComponent() {
 
   if (loading) {
     return (
-      <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo}>
+      <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo} isLoading>
         <div className="px-4 py-10">
           <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
             <CardContent className="flex items-center gap-3 py-6">
