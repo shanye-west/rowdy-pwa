@@ -124,8 +124,15 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   }, [matchId]);
 
   // 2. Subscribe to players once match loads
+  // Use stable player IDs string to avoid re-fetching on every match update
+  const playerIdsString = match ? 
+    Array.from(new Set([
+      ...(match.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
+      ...(match.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
+    ])).sort().join(',') : '';
+  
   useEffect(() => {
-    if (!match) {
+    if (!match || !playerIdsString) {
       setPlayersLoaded(true);
       return;
     }
@@ -133,10 +140,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (!matchLoaded) return;
 
     // Extract unique player IDs from both teams
-    const ids = Array.from(new Set([
-      ...(match.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
-      ...(match.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
-    ]));
+    const ids = playerIdsString.split(',').filter(Boolean);
     
     if (ids.length === 0) {
       setPlayersLoaded(true);
@@ -180,11 +184,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       });
     
     return () => { cancelled = true; };
-  }, [match, matchLoaded]);
+  }, [playerIdsString, matchLoaded]);
 
   // 3. Listen to ROUND (real-time for score updates)
+  const roundId = match?.roundId;
+  
   useEffect(() => {
-    if (!match?.roundId) {
+    if (!roundId) {
       setRoundLoaded(true);
       return;
     }
@@ -194,7 +200,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setRoundLoaded(false);
     
     const unsub = onSnapshot(
-      doc(db, "rounds", match.roundId),
+      doc(db, "rounds", roundId),
       (rSnap) => {
         if (!rSnap.exists()) {
           setRoundLoaded(true);
@@ -211,31 +217,42 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     );
     
     return () => unsub();
-  }, [match?.roundId, matchLoaded]);
+  }, [roundId, matchLoaded]);
 
   // 4. Fetch tournament (from context or one-time fetch, cached by ID)
+  const tournamentId = round?.tournamentId;
+  
   useEffect(() => {
-    if (!round?.tournamentId) return;
+    if (!tournamentId) {
+      setTournamentLoaded(true);
+      return;
+    }
+    
+    if (!roundLoaded) return;
     
     // Check if context has this tournament
-    if (tournamentContext?.tournament?.id === round.tournamentId) {
+    if (tournamentContext?.tournament?.id === tournamentId) {
       setLocalTournament(tournamentContext.tournament);
+      setTournamentLoaded(true);
       return;
     }
     
     // Skip if we already fetched this tournament
-    if (fetchedTournamentIdRef.current === round.tournamentId && localTournament?.id === round.tournamentId) {
+    if (fetchedTournamentIdRef.current === tournamentId && localTournament?.id === tournamentId) {
+      setTournamentLoaded(true);
       return;
     }
     
+    setTournamentLoaded(false);
     let cancelled = false;
+    const tournamentIdToFetch = tournamentId; // Capture for closure
     async function fetchTournament() {
       try {
-        const tSnap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        const tSnap = await getDoc(doc(db, "tournaments", tournamentIdToFetch));
         if (cancelled) return;
         if (tSnap.exists()) {
           setLocalTournament(ensureTournamentTeamColors({ id: tSnap.id, ...tSnap.data() } as TournamentDoc));
-          fetchedTournamentIdRef.current = round!.tournamentId;
+          fetchedTournamentIdRef.current = tournamentIdToFetch;
         }
         setTournamentLoaded(true);
       } catch (err: any) {
@@ -246,11 +263,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     fetchTournament();
     
     return () => { cancelled = true; };
-  }, [round?.tournamentId, tournamentContext?.tournament, localTournament?.id, roundLoaded]);
+  }, [tournamentId, tournamentContext?.tournament?.id, roundLoaded]);
 
   // 5. Fetch course (one-time fetch, cached by ID)
+  const courseId = round?.courseId;
+  
   useEffect(() => {
-    if (!round?.courseId) {
+    if (!courseId) {
       setCourseLoaded(true);
       return;
     }
@@ -258,23 +277,23 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (!roundLoaded) return;
     
     // Skip if we already fetched this course
-    if (fetchedCourseIdRef.current === round.courseId && course?.id === round.courseId) {
+    if (fetchedCourseIdRef.current === courseId && course?.id === courseId) {
       setCourseLoaded(true);
       return;
     }
     
     // Check if context has this course cached (prioritize context cache)
-    if (tournamentContext?.courses[round.courseId]) {
-      const cachedCourse = tournamentContext.courses[round.courseId];
+    if (tournamentContext?.courses[courseId]) {
+      const cachedCourse = tournamentContext.courses[courseId];
       setCourse(cachedCourse);
-      fetchedCourseIdRef.current = round.courseId;
+      fetchedCourseIdRef.current = courseId;
       setCourseLoaded(true);
       return;
     }
     
     setCourseLoaded(false);
     let cancelled = false;
-    const courseIdToFetch = round.courseId; // Capture for closure
+    const courseIdToFetch = courseId; // Capture for closure
     async function fetchCourse() {
       try {
         const cSnap = await getDoc(doc(db, "courses", courseIdToFetch));
@@ -293,11 +312,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     fetchCourse();
     
     return () => { cancelled = true; };
-  }, [round?.courseId, tournamentContext?.courses, roundLoaded]);
+  }, [courseId, roundLoaded]);
 
   // 6. Fetch match facts when match closes
+  const matchClosed = match?.status?.closed ?? false;
+  const factMatchId = match?.id;
+  
   useEffect(() => {
-    if (!match?.id || !match?.status?.closed) {
+    if (!factMatchId || !matchClosed) {
       setMatchFacts([]);
       setFactsLoaded(true);
       return;
@@ -309,7 +331,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     let cancelled = false;
     async function fetchFacts() {
       try {
-        const snap = await getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", match!.id)));
+        const snap = await getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", factMatchId)));
         if (cancelled) return;
         const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
         setMatchFacts(facts);
@@ -322,7 +344,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     fetchFacts();
     
     return () => { cancelled = true; };
-  }, [match?.id, match?.status?.closed, matchLoaded]);
+  }, [factMatchId, matchClosed, matchLoaded]);
 
   // Coordinate all loading states
   useEffect(() => {
