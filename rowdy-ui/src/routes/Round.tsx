@@ -1,7 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
-import { motion } from "framer-motion";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import {
   AlertTriangle,
@@ -21,7 +20,6 @@ import { RoundPageSkeleton } from "../components/Skeleton";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { cn } from "../lib/utils";
-import { containerVariants, itemVariants } from "../utils/animations";
 
 function RoundComponent() {
   const { roundId } = useParams();
@@ -118,13 +116,8 @@ function RoundComponent() {
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
@@ -230,9 +223,9 @@ function RoundComponent() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section variants={itemVariants} className="space-y-3">
+        <section className="space-y-3">
             <div className="flex items-center px-1">
               <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Matches
@@ -258,7 +251,7 @@ function RoundComponent() {
                 const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
 
                 return (
-                  <motion.div key={match.id} variants={itemVariants} role="listitem">
+                  <div key={match.id} role="listitem">
                     <ViewTransitionLink
                       to={`/match/${match.id}`}
                       aria-label={`Match: ${teamANames} vs ${teamBNames}`}
@@ -310,17 +303,17 @@ function RoundComponent() {
                         teamBColor={teamBColor}
                       />
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
           )}
-        </motion.section>
+        </section>
 
-        <motion.div variants={itemVariants}>
+        <div>
           <LastUpdated />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Layout>
   );
 }

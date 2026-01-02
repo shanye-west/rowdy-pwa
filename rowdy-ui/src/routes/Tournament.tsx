@@ -1,6 +1,5 @@
 import { memo } from "react";
 import { useParams } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useTournamentData } from "../hooks/useTournamentData";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
@@ -11,7 +10,6 @@ import OfflineImage from "../components/OfflineImage";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
 import { formatRoundType } from "../utils";
-import { containerVariants, itemVariants } from "../utils/animations";
 // RedirectCountdown removed; show Go Home button instead
 
 /**
@@ -63,13 +61,8 @@ function TournamentComponent() {
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
-      <motion.div
-        className="space-y-6 px-4 py-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.section variants={itemVariants}>
+      <div className="space-y-6 px-4 py-6">
+        <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
             <CardContent className="relative space-y-6 pt-6">
@@ -153,9 +146,9 @@ function TournamentComponent() {
               </div>
             </CardContent>
           </Card>
-        </motion.section>
+        </section>
 
-        <motion.section className="space-y-3" variants={itemVariants}>
+        <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Schedule
@@ -169,7 +162,7 @@ function TournamentComponent() {
               const courseName = course?.name || r.course?.name;
 
               return (
-                <motion.div key={r.id} variants={itemVariants}>
+                <div key={r.id}>
                   <ViewTransitionLink to={`/round/${r.id}`} className="group block">
                     <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
                       <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
@@ -220,16 +213,16 @@ function TournamentComponent() {
                       </CardContent>
                     </Card>
                   </ViewTransitionLink>
-                </motion.div>
+                </div>
               );
             })}
           </div>
-        </motion.section>
+        </section>
 
-        <motion.div variants={itemVariants}>
+        <div>
           <LastUpdated />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Layout>
   );
 }

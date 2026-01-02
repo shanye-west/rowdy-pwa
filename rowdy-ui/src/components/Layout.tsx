@@ -1,6 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation, matchPath, Outlet } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
   Menu,
@@ -33,13 +32,6 @@ type LayoutProps = {
 
 type LayoutShellProps = {
   children?: React.ReactNode;
-};
-
-const menuMotion = {
-  initial: { opacity: 0, y: 10, scale: 0.98 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: 10, scale: 0.98 },
-  transition: { duration: 0.18 },
 };
 
 export function LayoutShell({ children }: LayoutShellProps) {
@@ -174,14 +166,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
 
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                {...menuMotion}
-                className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Card className="border border-white/30 bg-white/95 shadow-2xl backdrop-blur">
+          {menuOpen && (
+            <div
+              className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right animate-menu-open"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Card className="border border-white/30 bg-white/95 shadow-2xl backdrop-blur">
                   {!authLoading && player && (
                     <div className="px-4 py-3">
                       <div className="text-sm font-semibold text-slate-900">
@@ -259,9 +249,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
                     )}
                   </div>
                 </Card>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </div>
       </header>
 

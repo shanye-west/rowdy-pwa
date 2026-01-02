@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Flag, RefreshCw, X } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
@@ -14,7 +13,6 @@ import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
 import { formatRoundType } from "./utils";
-import { containerVariants, itemVariants } from "./utils/animations";
 
 export default function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
@@ -89,13 +87,8 @@ export default function App() {
           </Card>
         </div>
       ) : (
-        <motion.div
-          className="space-y-6 px-4 py-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <motion.section variants={itemVariants}>
+        <div className="space-y-6 px-4 py-6">
+          <section>
             <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
               <CardContent className="relative space-y-6 pt-6">
@@ -179,9 +172,9 @@ export default function App() {
                 </div>
               </CardContent>
             </Card>
-          </motion.section>
+          </section>
 
-          <motion.section className="space-y-3" variants={itemVariants}>
+          <section className="space-y-3">
               <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                   Schedule
@@ -195,7 +188,7 @@ export default function App() {
                 const courseName = course?.name || r.course?.name;
 
                 return (
-                  <motion.div key={r.id} variants={itemVariants}>
+                  <div key={r.id}>
                     <ViewTransitionLink to={`/round/${r.id}`} className="group block">
                       <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
                         <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
@@ -246,27 +239,21 @@ export default function App() {
                         </CardContent>
                       </Card>
                     </ViewTransitionLink>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
-          </motion.section>
+          </section>
 
-          <motion.div variants={itemVariants}>
+          <div>
             <LastUpdated />
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
 
       {/* PWA Update Prompt */}
-      <AnimatePresence>
-        {showUpdatePrompt && (
-          <motion.div
-            className="fixed bottom-6 left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-          >
+      {showUpdatePrompt && (
+        <div className="fixed bottom-6 left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2 animate-slide-up">
             <Card className="border-white/20 bg-slate-900 text-white shadow-2xl">
               <CardContent className="flex items-center gap-3 py-4">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
@@ -298,9 +285,8 @@ export default function App() {
                 </Button>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </Layout>
   );
 }
