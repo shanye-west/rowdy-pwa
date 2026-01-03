@@ -78,17 +78,15 @@ function TournamentComponent() {
                     <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                       {pointsToWinDisplay} points needed to win
                     </div>
-                    <div className="rounded-xl bg-white/80 p-2 shadow-inner">
-                      <ScoreTrackerBar
-                        totalPoints={totalPointsAvailable}
-                        teamAConfirmed={stats.teamAConfirmed}
-                        teamBConfirmed={stats.teamBConfirmed}
-                        teamAPending={stats.teamAPending}
-                        teamBPending={stats.teamBPending}
-                        teamAColor={teamAColor}
-                        teamBColor={teamBColor}
-                      />
-                    </div>
+                    <ScoreTrackerBar
+                      totalPoints={totalPointsAvailable}
+                      teamAConfirmed={stats.teamAConfirmed}
+                      teamBConfirmed={stats.teamBConfirmed}
+                      teamAPending={stats.teamAPending}
+                      teamBPending={stats.teamBPending}
+                      teamAColor={teamAColor}
+                      teamBColor={teamBColor}
+                    />
                   </div>
                 )}
               </div>
