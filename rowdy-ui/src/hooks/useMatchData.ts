@@ -48,6 +48,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
 
   // Try to get tournament from shared context
   const tournamentContext = useTournamentContextOptional();
+  const { getTournamentById, addTournament } = tournamentContext || {};
   
   // Cache refs to avoid re-fetching the same tournament/course
   const fetchedTournamentIdRef = useRef<string | undefined>(undefined);
@@ -237,6 +238,15 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       return;
     }
     
+    // Check if it's in the context cache
+    const cachedTournament = getTournamentById?.(tournamentId);
+    if (cachedTournament) {
+      setLocalTournament(cachedTournament);
+      fetchedTournamentIdRef.current = tournamentId;
+      setTournamentLoaded(true);
+      return;
+    }
+    
     // Skip if we already fetched this tournament
     if (fetchedTournamentIdRef.current === tournamentId && localTournament?.id === tournamentId) {
       setTournamentLoaded(true);
@@ -251,8 +261,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         const tSnap = await getDoc(doc(db, "tournaments", tournamentIdToFetch));
         if (cancelled) return;
         if (tSnap.exists()) {
-          setLocalTournament(ensureTournamentTeamColors({ id: tSnap.id, ...tSnap.data() } as TournamentDoc));
+          const tournament = ensureTournamentTeamColors({ id: tSnap.id, ...tSnap.data() } as TournamentDoc);
+          setLocalTournament(tournament);
           fetchedTournamentIdRef.current = tournamentIdToFetch;
+          // Add to context cache for future use
+          if (tournament) {
+            addTournament?.(tournament);
+          }
         }
         setTournamentLoaded(true);
       } catch (err: any) {
