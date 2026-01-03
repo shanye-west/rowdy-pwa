@@ -142,12 +142,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     ])).sort().join(',') : '';
   
   useEffect(() => {
+    // Don't mark as loaded until match is loaded
+    if (!matchLoaded) return;
+    
     if (!match || !playerIdsString) {
+      // Match loaded but has no players - this is the "loaded with no players" case
       setPlayersLoaded(true);
       return;
     }
-    
-    if (!matchLoaded) return;
 
     // Extract unique player IDs from both teams
     const ids = playerIdsString.split(',').filter(Boolean);
@@ -200,12 +202,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const roundId = match?.roundId;
   
   useEffect(() => {
+    // Don't mark as loaded until match is loaded
+    if (!matchLoaded) return;
+    
     if (!roundId) {
+      // Match loaded but has no roundId - this is the "loaded with no round" case
       setRoundLoaded(true);
       return;
     }
-    
-    if (!matchLoaded) return;
     
     setRoundLoaded(false);
     
@@ -233,12 +237,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const tournamentId = round?.tournamentId;
   
   useEffect(() => {
+    // Don't mark as loaded until we know the tournamentId (after round loads)
+    if (!roundLoaded) return;
+    
     if (!tournamentId) {
+      // Round loaded but has no tournament - this is the "loaded with no tournament" case
       setTournamentLoaded(true);
       return;
     }
-    
-    if (!roundLoaded) return;
     
     // Check if context has this tournament
     if (tournamentContext?.tournament?.id === tournamentId) {
@@ -293,12 +299,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const courseId = round?.courseId;
   
   useEffect(() => {
+    // Don't mark as loaded until we know the courseId (after round loads)
+    if (!roundLoaded) return;
+    
     if (!courseId) {
+      // Round loaded but has no course - this is the "loaded with no course" case
       setCourseLoaded(true);
       return;
     }
-    
-    if (!roundLoaded) return;
     
     // Skip if we already fetched this course
     if (fetchedCourseIdRef.current === courseId && course?.id === courseId) {
@@ -329,8 +337,10 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
           // Add to context cache if available
           tournamentContext?.addCourse(courseData);
         }
+        setCourseLoaded(true);
       } catch (err: any) {
         console.error("Failed to fetch course:", err);
+        setCourseLoaded(true);
       }
     }
     fetchCourse();
@@ -343,13 +353,15 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const factMatchId = match?.id;
   
   useEffect(() => {
+    // Don't mark as loaded until match is loaded
+    if (!matchLoaded) return;
+    
     if (!factMatchId || !matchClosed) {
+      // Match loaded but not closed - no facts needed
       setMatchFacts([]);
       setFactsLoaded(true);
       return;
     }
-    
-    if (!matchLoaded) return;
     
     setFactsLoaded(false);
     let cancelled = false;
@@ -377,29 +389,34 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   }, [matchLoaded, roundLoaded, courseLoaded, tournamentLoaded, playersLoaded, factsLoaded]);
 
   // Use tournament from context if available, otherwise check cache, then local fetch
-  // localTournament is preserved during navigation, so it's available immediately
+  // During initial load, use context's tournament as fallback to prevent header flash
   const tournament = useMemo(() => {
     const tournamentId = round?.tournamentId;
     
-    // If we don't have tournamentId yet (still loading), use preserved localTournament
-    // This prevents header flash during navigation within the same tournament
-    if (!tournamentId) {
-      return localTournament;
+    // If we have a specific tournamentId, try to find the matching tournament
+    if (tournamentId) {
+      // Check if context has this tournament as the main tournament
+      if (tournamentContext?.tournament?.id === tournamentId) {
+        return tournamentContext.tournament;
+      }
+      
+      // Check cache synchronously
+      const cached = getTournamentById?.(tournamentId);
+      if (cached) {
+        return cached;
+      }
+      
+      // Fall back to local fetch result
+      if (localTournament) {
+        return localTournament;
+      }
     }
     
-    // Check if context has this tournament as the main tournament
-    if (tournamentContext?.tournament?.id === tournamentId) {
-      return tournamentContext.tournament;
-    }
-    
-    // Check cache synchronously
-    const cached = getTournamentById?.(tournamentId);
-    if (cached) {
-      return cached;
-    }
-    
-    // Fall back to local fetch result
-    return localTournament;
+    // During loading (no tournamentId yet), use any available tournament data:
+    // 1. Preserved localTournament from previous match in same tournament
+    // 2. Context's active tournament (most common navigation case)
+    // This prevents header flash with default colors during navigation
+    return localTournament ?? tournamentContext?.tournament ?? null;
   }, [round?.tournamentId, tournamentContext?.tournament, getTournamentById, localTournament]);
 
   return {
