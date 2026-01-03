@@ -256,10 +256,10 @@ function RoundComponent() {
                     <ViewTransitionLink
                       to={`/match/${match.id}`}
                       aria-label={`Match: ${teamANames} vs ${teamBNames}`}
-                      className="block"
+                      className="card-link-hover block"
                     >
                       <Card
-                        className="overflow-hidden border-slate-200/70 transition-transform hover:-translate-y-0.5"
+                        className="overflow-hidden border-slate-200/70"
                         style={{ ...bgStyle, ...borderStyle }}
                       >
                         <CardContent className="space-y-4 py-4">

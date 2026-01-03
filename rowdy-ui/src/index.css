@@ -226,7 +226,18 @@
   .card-hover {
     @apply transition-all duration-200;
   }
-  .card-hover:hover {
+  .card-hover:hover,
+  .card-hover:active {
+    @apply shadow-xl;
+    transform: translateY(-2px);
+  }
+
+  /* Link wrapper that applies hover effect to child cards */
+  .card-link-hover > * {
+    @apply transition-all duration-200;
+  }
+  .card-link-hover:hover > *,
+  .card-link-hover:active > * {
     @apply shadow-xl;
     transform: translateY(-2px);
   }

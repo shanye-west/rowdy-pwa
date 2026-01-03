@@ -189,8 +189,8 @@ export default function App() {
 
                 return (
                   <div key={r.id}>
-                    <ViewTransitionLink to={`/round/${r.id}`} className="group block">
-                      <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
+                    <ViewTransitionLink to={`/round/${r.id}`} className="card-link-hover block">
+                      <Card className="border-slate-200/80 bg-white/80">
                         <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                           <div className="flex items-center gap-3">
                             <OfflineImage 

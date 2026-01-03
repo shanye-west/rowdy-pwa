@@ -309,7 +309,7 @@ function SkinsComponent() {
                   <Card
                     key={hole.holeNumber}
                     className={cn(
-                      "overflow-hidden border-slate-200/80",
+                      "overflow-hidden border-slate-200/80 card-hover",
                       allPlayersCompleted ? "bg-emerald-50/40" : "bg-white"
                     )}
                   >
