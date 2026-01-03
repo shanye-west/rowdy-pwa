@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { doc, onSnapshot, getDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
@@ -62,13 +62,22 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       return;
     }
     
+    // Reset ALL loaded states when matchId changes to prevent stale "loaded" flags
     setMatchLoaded(false);
+    setRoundLoaded(false);
+    setCourseLoaded(false);
+    setTournamentLoaded(false);
+    setPlayersLoaded(false);
+    setFactsLoaded(false);
+    
     setError(null);
     // Clear stale data from previous match
+    // NOTE: We intentionally keep localTournament to prevent header color flash
+    // during navigation within the same tournament. It will be overwritten when
+    // the new tournament data loads.
     setMatch(null);
     setRound(null);
     setCourse(null);
-    setLocalTournament(null);
     setPlayers({});
     setMatchFacts([]);
 
@@ -367,10 +376,31 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setLoading(!allLoaded);
   }, [matchLoaded, roundLoaded, courseLoaded, tournamentLoaded, playersLoaded, factsLoaded]);
 
-  // Use tournament from context if available, otherwise use local fetch
-  const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
-    ? tournamentContext.tournament 
-    : localTournament;
+  // Use tournament from context if available, otherwise check cache, then local fetch
+  // localTournament is preserved during navigation, so it's available immediately
+  const tournament = useMemo(() => {
+    const tournamentId = round?.tournamentId;
+    
+    // If we don't have tournamentId yet (still loading), use preserved localTournament
+    // This prevents header flash during navigation within the same tournament
+    if (!tournamentId) {
+      return localTournament;
+    }
+    
+    // Check if context has this tournament as the main tournament
+    if (tournamentContext?.tournament?.id === tournamentId) {
+      return tournamentContext.tournament;
+    }
+    
+    // Check cache synchronously
+    const cached = getTournamentById?.(tournamentId);
+    if (cached) {
+      return cached;
+    }
+    
+    // Fall back to local fetch result
+    return localTournament;
+  }, [round?.tournamentId, tournamentContext?.tournament, getTournamentById, localTournament]);
 
   return {
     match,

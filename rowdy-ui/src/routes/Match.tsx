@@ -682,7 +682,7 @@ export default function Match() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   if (loading) return (
-    <Layout title="Loading..." showBack>
+    <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="spinner-lg"></div>
       </div>
