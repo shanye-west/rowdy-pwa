@@ -27,8 +27,17 @@ export function StrokesInfoModal({
 
   const openDefTooltip = (e: React.MouseEvent, key: string) => {
     e.stopPropagation();
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setDefTooltip({ key, x: rect.left, y: rect.top });
+    const button = e.currentTarget as HTMLElement;
+    const buttonRect = button.getBoundingClientRect();
+    const container = button.closest('.relative') as HTMLElement;
+    const containerRect = container?.getBoundingClientRect();
+    
+    if (containerRect) {
+      // Calculate position relative to the container
+      const x = buttonRect.left - containerRect.left + buttonRect.width / 2;
+      const y = buttonRect.top - containerRect.top;
+      setDefTooltip({ key, x, y });
+    }
   };
 
   // Helper to get handicap index for a player
@@ -99,74 +108,67 @@ export function StrokesInfoModal({
       ariaLabel="Handicap information for match players"
       maxWidth="max-w-2xl"
     >
-      <div className="overflow-x-auto" onClick={() => setDefTooltip(null)}>
-        <table className="w-full text-sm">
+      <div onClick={() => setDefTooltip(null)} className="relative">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200">
               <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
               <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                <div className="flex items-start justify-start">
+                <button
+                  onClick={(e) => openDefTooltip(e, "HI")}
+                  aria-label="Define H.I."
+                  className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
+                >
                   <span>H.I.</span>
-                  <button
-                    onClick={(e) => openDefTooltip(e, "HI")}
-                    aria-label="Define H.I."
-                    className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <circle cx="12" cy="16" r="1" />
-                    </svg>
-                  </button>
-                </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+                </button>
               </th>
               <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                <div className="flex items-start justify-start">
+                <button
+                  onClick={(e) => openDefTooltip(e, "CH")}
+                  aria-label="Define C.H."
+                  className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
+                >
                   <span>C.H.</span>
-                  <button
-                    onClick={(e) => openDefTooltip(e, "CH")}
-                    aria-label="Define C.H."
-                    className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <circle cx="12" cy="16" r="1" />
-                    </svg>
-                  </button>
-                </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+                </button>
               </th>
               <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                <div className="flex items-start justify-start">
+                <button
+                  onClick={(e) => openDefTooltip(e, "SO")}
+                  aria-label="Define S.O."
+                  className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
+                >
                   <span>S.O.</span>
-                  <button
-                    onClick={(e) => openDefTooltip(e, "SO")}
-                    aria-label="Define S.O."
-                    className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <circle cx="12" cy="16" r="1" />
-                    </svg>
-                  </button>
-                </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+                </button>
               </th>
               <th className="text-left py-2 px-2 font-semibold text-slate-700">
-                <div className="flex items-start justify-start">
+                <button
+                  onClick={(e) => openDefTooltip(e, "SH")}
+                  aria-label="Define S.H."
+                  className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
+                >
                   <span>S.H.</span>
-                  <button
-                    onClick={(e) => openDefTooltip(e, "SH")}
-                    aria-label="Define S.H."
-                    className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <circle cx="12" cy="16" r="1" />
-                    </svg>
-                  </button>
-                </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <circle cx="12" cy="16" r="1" />
+                  </svg>
+                </button>
               </th>
             </tr>
           </thead>
@@ -182,6 +184,7 @@ export function StrokesInfoModal({
             ))}
           </tbody>
         </table>
+        </div>
         {defTooltip && (() => {
           const defs: Record<string, string> = {
             HI: "Handicap Index",
@@ -190,11 +193,17 @@ export function StrokesInfoModal({
             SH: "Skins Strokes",
           };
           const text = defs[defTooltip.key] ?? "";
-          const left = defTooltip.x;
-          const top = defTooltip.y;
           return (
-            <div style={{ position: 'fixed', left, top, transform: 'translate(-50%, calc(-100% - 8px))', zIndex: 1200 }}>
-              <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow" style={{ whiteSpace: 'nowrap' }}>
+            <div 
+              style={{ 
+                position: 'absolute', 
+                left: `${defTooltip.x}px`, 
+                top: `${defTooltip.y}px`, 
+                transform: 'translate(-50%, calc(-100% - 8px))'
+              }}
+              className="pointer-events-none z-50"
+            >
+              <div className="bg-slate-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
                 {text}
               </div>
             </div>
