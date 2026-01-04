@@ -1,5 +1,4 @@
-import { memo, useCallback, useState, useRef, useLayoutEffect, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
+import { memo, useCallback, useMemo, type CSSProperties } from "react";
 import { ScoreNumberPicker } from "./ScoreNumberPicker";
 
 /** Props for ScoreInputCell */
@@ -19,6 +18,8 @@ export interface ScoreInputCellProps {
   isPostMatch?: boolean;
   /** When true, player is winning a skin on this hole (no ties) */
   hasSkinWin?: boolean;
+  /** Unique cell identifier for popover targeting (e.g., 'teamA-p0-h1') */
+  cellId?: string;
 }
 
 /** Memoized score input cell - prevents re-render unless props change */
@@ -35,10 +36,10 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   onChange,
   isPostMatch = false,
   hasSkinWin = false,
+  cellId,
 }: ScoreInputCellProps) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  // Generate unique popover ID based on cellId (or fall back to holeKey)
+  const popoverId = useMemo(() => `picker-${cellId || holeKey}`, [cellId, holeKey]);
   
   // Create a subtle tint using the passed teamColor. Use a darker tint for solo and lighter for tied.
   const tintPercent = lowScoreStatus === 'solo' ? '15%' : lowScoreStatus === 'tied' ? '5%' : null;
@@ -62,44 +63,25 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   // Number of squares: 1 for bogey (1 over), 2 for double bogey (2 over), etc.
   const squareCount = overPar > 0 ? overPar : 0;
   
-  // Handle cell tap to open picker
-  const handleCellClick = useCallback(() => {
-    if (!locked) {
-      setShowPicker(true);
-    }
-  }, [locked]);
-  
   // Handle number selection from picker
   const handleSelect = useCallback((num: number) => {
     onChange(holeKey, num);
-    // Always close picker after any selection
-    setShowPicker(false);
-  }, [holeKey, onChange]);
+    // Popover will auto-dismiss after selection with togglepopover
+    const popover = document.getElementById(popoverId) as HTMLElement & { hidePopover?: () => void };
+    if (popover?.hidePopover) {
+      popover.hidePopover();
+    }
+  }, [holeKey, onChange, popoverId]);
   
   // Handle clear from picker
   const handleClear = useCallback(() => {
     onChange(holeKey, null);
-    setShowPicker(false);
-  }, [holeKey, onChange]);
-  
-  // Handle picker close
-  const handleClose = useCallback(() => {
-    setShowPicker(false);
-  }, []);
-
-  // When picker opens, compute its position relative to the viewport so we can portal it.
-  useLayoutEffect(() => {
-    if (showPicker && buttonRef.current) {
-      const btnRect = buttonRef.current.getBoundingClientRect();
-      // center horizontally in viewport
-      const left = window.innerWidth / 2;
-      // position directly below the tapped cell
-      const top = btnRect.bottom + 8; // 8px gap below the cell
-      setPickerPos({ left, top });
-    } else {
-      setPickerPos(null);
+    // Close popover
+    const popover = document.getElementById(popoverId) as HTMLElement & { hidePopover?: () => void };
+    if (popover?.hidePopover) {
+      popover.hidePopover();
     }
-  }, [showPicker]);
+  }, [holeKey, onChange, popoverId]);
 
   return (
     <div className="relative flex flex-col items-center">
@@ -107,7 +89,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
       <button
         type="button"
         aria-label={`Score for hole ${holeNum}${value ? `: ${value}` : ''}`}
-        ref={buttonRef}
+        popoverTarget={popoverId}
         className={`
           w-11 h-11 text-center text-base font-semibold rounded-md border
           transition-colors duration-100 select-none
@@ -117,27 +99,20 @@ export const ScoreInputCell = memo(function ScoreInputCell({
               ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
               : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
           }
-          ${showPicker ? 'ring-2 ring-blue-400 shadow-lg z-30 scale-[1.02]' : ''}
         `}
         disabled={locked}
-        onClick={handleCellClick}
         style={lowScoreStyle}
       >
         {value !== "" ? value : ""}
       </button>
       
-      {/* Number picker popover */}
-      {showPicker && pickerPos && createPortal(
-        <div style={{ position: 'fixed', left: pickerPos.left, top: pickerPos.top, transform: 'translateX(-50%)', zIndex: 9999 }}>
-          <ScoreNumberPicker
-            value={value}
-            onSelect={handleSelect}
-            onClear={handleClear}
-            onClose={handleClose}
-          />
-        </div>,
-        document.body
-      )}
+      {/* Number picker popover - uses Popover API with anchor positioning */}
+      <ScoreNumberPicker
+        id={popoverId}
+        value={value}
+        onSelect={handleSelect}
+        onClear={handleClear}
+      />
       {/* Birdie/Eagle circles - centered over input */}
       {circleCount > 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

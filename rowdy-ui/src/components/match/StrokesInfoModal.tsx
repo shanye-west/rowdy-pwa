@@ -97,6 +97,7 @@ export function StrokesInfoModal({
       onClose={onClose}
       title="Handicap Information"
       ariaLabel="Handicap information for match players"
+      maxWidth="max-w-2xl"
     >
       <div className="overflow-x-auto" onClick={() => setDefTooltip(null)}>
         <table className="w-full text-sm">
@@ -190,9 +191,9 @@ export function StrokesInfoModal({
           };
           const text = defs[defTooltip.key] ?? "";
           const left = defTooltip.x;
-          const top = Math.max(8, defTooltip.y - 6);
+          const top = defTooltip.y;
           return (
-            <div style={{ position: 'fixed', left, top, transform: 'translate(-100%, -120%)', zIndex: 1200 }}>
+            <div style={{ position: 'fixed', left, top, transform: 'translate(-50%, calc(-100% - 8px))', zIndex: 1200 }}>
               <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow" style={{ whiteSpace: 'nowrap' }}>
                 {text}
               </div>

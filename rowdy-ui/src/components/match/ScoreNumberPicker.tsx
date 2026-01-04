@@ -1,10 +1,10 @@
-import { memo, useState, useCallback, useEffect, useRef } from "react";
+import { memo, useState, useCallback, useRef } from "react";
 
 export interface ScoreNumberPickerProps {
   value: number | "";
   onSelect: (value: number) => void;
   onClear: () => void;
-  onClose: () => void;
+  id: string;
 }
 
 /** Custom number picker for score entry - 3x3 grid (1-9) with expandable 10-15 */
@@ -12,28 +12,10 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
   value,
   onSelect,
   onClear,
-  onClose,
+  id,
 }: ScoreNumberPickerProps) {
   const [showExtended, setShowExtended] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  // Close picker when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    }
-    
-    // Use capture phase to catch events before they bubble
-    document.addEventListener("mousedown", handleClickOutside, true);
-    document.addEventListener("touchstart", handleClickOutside, true);
-    
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside, true);
-      document.removeEventListener("touchstart", handleClickOutside, true);
-    };
-  }, [onClose]);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
 
   // Trigger haptic feedback
   const haptic = useCallback(() => {
@@ -57,8 +39,6 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
     setShowExtended((prev) => !prev);
   }, [haptic]);
 
-  // No external collapse signal - parent controls closing picker now
-
   // Common button styles
   const buttonBase = "flex items-center justify-center text-lg font-semibold rounded-lg transition-all duration-100 active:scale-95 select-none";
   const buttonSize = "w-12 h-12"; // 48px - good touch target
@@ -71,7 +51,9 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
   return (
     <div
       ref={pickerRef}
-      className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50"
+      id={id}
+      popover="auto"
+      className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 m-0"
       style={{ minWidth: "180px" }}
     >
       {/* Main 3x3 grid (1-9) */}

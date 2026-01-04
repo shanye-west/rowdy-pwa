@@ -1,4 +1,4 @@
-import { useEffect, useCallback, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export interface ModalProps {
   /** Whether the modal is open */
@@ -16,14 +16,14 @@ export interface ModalProps {
 }
 
 /**
- * Reusable modal component with backdrop, keyboard handling, and accessibility.
+ * Reusable modal component using native <dialog> element.
  * 
  * Features:
- * - Closes on backdrop click
- * - Closes on Escape key
- * - Prevents body scroll when open
- * - Proper ARIA attributes
- * - Focus trap (returns focus on close)
+ * - Native backdrop with ::backdrop pseudo-element
+ * - Native Escape key handling
+ * - Built-in focus trap and body scroll prevention
+ * - Proper ARIA attributes automatically
+ * - Top-layer positioning (no z-index needed)
  */
 export function Modal({
   isOpen,
@@ -33,44 +33,51 @@ export function Modal({
   maxWidth = "max-w-sm",
   ariaLabel,
 }: ModalProps) {
-  // Handle escape key
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    [onClose]
-  );
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Add/remove escape key listener
+  // Sync dialog open/close state with isOpen prop
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      // Prevent body scroll
-      document.body.style.overflow = "hidden";
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
     }
+  }, [isOpen]);
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+  // Handle native dialog close events (Escape key, programmatic close)
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const handleClose = () => {
+      onClose();
     };
-  }, [isOpen, handleKeyDown]);
 
-  if (!isOpen) return null;
+    dialog.addEventListener("close", handleClose);
+    return () => dialog.removeEventListener("close", handleClose);
+  }, [onClose]);
+
+  // Handle backdrop click (click on dialog itself, not on content)
+  const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+    const dialog = dialogRef.current;
+    if (dialog && e.target === dialog) {
+      onClose();
+    }
+  };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      onClick={handleDialogClick}
       aria-label={ariaLabel || title}
+      className="backdrop:bg-black/50 bg-transparent p-0 border-0"
     >
-      <div
-        className={`bg-white rounded-xl shadow-xl p-6 mx-4 w-full ${maxWidth}`}
-        onClick={(e) => e.stopPropagation()}
-        role="document"
+      <div 
+        className={`bg-white rounded-xl shadow-xl p-6 ${maxWidth}`}
+        style={{ width: 'calc(100vw - 32px)' }}
       >
         {title && (
           <h3 className="text-lg font-bold text-center text-slate-800 mb-4">
@@ -79,7 +86,7 @@ export function Modal({
         )}
         {children}
       </div>
-    </div>
+    </dialog>
   );
 }
 

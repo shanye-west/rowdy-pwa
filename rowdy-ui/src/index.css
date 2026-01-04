@@ -363,4 +363,64 @@
   .divider {
     @apply border-t border-slate-200 my-4;
   }
+
+  /* Native Dialog Styling */
+  dialog {
+    max-width: 100vw;
+    max-height: 100vh;
+    /* Center in viewport */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+  }
+  
+  dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  dialog[open] {
+    animation: dialog-fade-in 0.2s ease-in-out;
+  }
+
+  @keyframes dialog-fade-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 10px));
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  /* Native Popover API Styling */
+  [popover] {
+    /* Center in viewport */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    /* Smooth open/close transitions */
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, overlay 0.2s ease-in-out allow-discrete, display 0.2s ease-in-out allow-discrete;
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 10px));
+  }
+
+  [popover]:popover-open {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Starting state for transitions */
+  @starting-style {
+    [popover]:popover-open {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 10px));
+    }
+  }
 }
