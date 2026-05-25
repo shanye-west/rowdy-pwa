@@ -6,6 +6,7 @@ import { db, functions } from "../firebase";
 import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import type { TournamentDoc, RoundDoc, PlayerDoc, MatchDoc } from "../types";
+import { toDateOrNull } from "../utils";
 
 type PlayerInput = {
   playerId: string;
@@ -184,11 +185,11 @@ export default function EditMatch() {
         // Set form fields
         setMatchId(selectedMatchId);
         
-        // Convert teeTime Timestamp to datetime-local format (Pacific Time)
-        if (matchData.teeTime) {
-          const timestamp = matchData.teeTime.toDate();
+        // Convert teeTime to datetime-local format (Pacific Time)
+        const teeTimeDate = toDateOrNull(matchData.teeTime);
+        if (teeTimeDate) {
           // Format as Pacific Time for datetime-local input
-          const pacificDate = new Date(timestamp.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+          const pacificDate = new Date(teeTimeDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
           const year = pacificDate.getFullYear();
           const month = String(pacificDate.getMonth() + 1).padStart(2, '0');
           const day = String(pacificDate.getDate()).padStart(2, '0');
