@@ -1,4 +1,19 @@
+import { Timestamp } from "firebase/firestore";
+
 export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "fourManScramble" | "singles";
+
+/**
+ * A Firestore timestamp field that may also appear as a Date, ISO/datetime string,
+ * or serialized POJO (e.g. when passed via props or returned from a callable function).
+ * Use `toDateOrNull()` from utils.ts to normalize to a Date before formatting.
+ */
+export type FirestoreTimestampLike =
+  | Timestamp
+  | Date
+  | string
+  | { _seconds: number; _nanoseconds?: number }
+  | { seconds: number; nanoseconds?: number }
+  | null;
 
 // ============================================================================
 // HOLE INPUT TYPES - Format-specific score input structures
@@ -198,7 +213,7 @@ export type MatchDoc = {
   roundId: string;
   tournamentId?: string;
   matchNumber?: number; // For ordering matches on Round page (like day for rounds)
-  teeTime?: any; // Firestore Timestamp - tee time for the match (stored as Pacific Time UTC-8)
+  teeTime?: FirestoreTimestampLike; // tee time for the match (stored as Pacific Time UTC-8)
   completed?: boolean; // Auto-set when match closes and all 18 holes are scored
   holes?: Record<string, HoleData>;
   result?: { 
@@ -326,7 +341,7 @@ export type PlayerMatchFact = {
   isCoCaptain?: boolean;         // Player was co-captain for their team in this tournament
   captainVsCaptain?: boolean;    // Match had captains from both teams AND this player is one of them
 
-  updatedAt?: any;
+  updatedAt?: FirestoreTimestampLike;
 };
 
 export type PlayerStatDoc = {
@@ -336,7 +351,7 @@ export type PlayerStatDoc = {
   halves: number;
   totalPoints: number;
   matchesPlayed: number;
-  lastUpdated?: any; // Firestore Timestamp
+  lastUpdated?: FirestoreTimestampLike;
 };
 
 // =============================================================================
@@ -400,7 +415,7 @@ export type PlayerStatsBySeries = {
   captainVsCaptainLosses?: number;
   captainVsCaptainHalves?: number;
   
-  lastUpdated?: any; // Firestore Timestamp
+  lastUpdated?: FirestoreTimestampLike;
 };
 
 // ============================================================================
@@ -415,7 +430,7 @@ export interface PlayerHoleScore {
   net: number | null;
   hasStroke: boolean;
   playerThru: number; // Number of holes completed by this player
-  playerTeeTime?: any; // Firestore Timestamp or serialized timestamp
+  playerTeeTime?: FirestoreTimestampLike;
 }
 
 export interface HoleSkinData {
@@ -448,7 +463,7 @@ export interface SkinsResultDoc {
   playerTotals: PlayerSkinsTotal[];
   skinsGrossPot: number;
   skinsNetPot: number;
-  lastUpdated?: any; // Firestore Timestamp
+  lastUpdated?: FirestoreTimestampLike;
   _computeSig?: string; // Hash to detect changes
 }
 
@@ -529,6 +544,6 @@ export interface RoundRecapDoc {
     worstHole?: { holeNumber: number; avgStrokesOverPar: number }; // Highest avg vs par
   };
   
-  computedAt?: any; // Firestore Timestamp
+  computedAt?: FirestoreTimestampLike;
   computedBy?: string; // uid of admin who triggered
 }

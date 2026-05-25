@@ -1,4 +1,5 @@
-import type { MatchDoc } from "./types";
+import { Timestamp } from "firebase/firestore";
+import type { FirestoreTimestampLike, MatchDoc } from "./types";
 
 export function formatRoundType(format: string | null | undefined): string {
   if (!format) return "Format TBD";
@@ -13,25 +14,43 @@ export function formatRoundType(format: string | null | undefined): string {
 }
 
 /**
- * Format tee time for display
- * @param timestamp - Firestore Timestamp or Date
- * @returns Formatted time string (e.g., "9:10am")
+ * Normalize a Firestore timestamp-like value to a Date.
+ * Handles Timestamp objects, Date, ISO/datetime strings, and serialized POJOs
+ * with `_seconds` or `seconds` fields (the two forms Firestore can produce
+ * when timestamps cross a serialization boundary).
  */
-export function formatTeeTime(timestamp: any): string {
-  if (!timestamp) return "";
-  
-  // Handle Firestore Timestamp
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  
+export function toDateOrNull(value: FirestoreTimestampLike | undefined): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (value instanceof Timestamp) return value.toDate();
+  if (typeof value === "string") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === "object") {
+    const seconds = "_seconds" in value ? value._seconds : value.seconds;
+    if (typeof seconds === "number") return new Date(seconds * 1000);
+  }
+  return null;
+}
+
+/**
+ * Format tee time for display, e.g. "9:10am".
+ * Accepts any FirestoreTimestampLike shape; returns "" when value is missing or unparseable.
+ */
+export function formatTeeTime(timestamp: FirestoreTimestampLike | undefined): string {
+  const date = toDateOrNull(timestamp);
+  if (!date) return "";
+
   let hours = date.getHours();
   const minutes = date.getMinutes();
   const ampm = hours >= 12 ? "pm" : "am";
-  
+
   hours = hours % 12;
-  hours = hours ? hours : 12; // 0 should be 12
-  
+  hours = hours ? hours : 12;
+
   const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
-  
+
   return `${hours}:${minutesStr}${ampm}`;
 }
 

@@ -1,6 +1,6 @@
 import { Modal, ModalActions } from "../Modal";
 import { MatchStatusBadge } from "../MatchStatusBadge";
-import type { TournamentDoc } from "../../types";
+import type { FirestoreTimestampLike, TournamentDoc } from "../../types";
 
 type ConfirmMatchCloseModalProps = {
   isOpen: boolean;
@@ -12,7 +12,7 @@ type ConfirmMatchCloseModalProps = {
   teamAColor: string;
   teamBColor: string;
   tournament: TournamentDoc | null;
-  teeTime: string | { _seconds: number } | undefined;
+  teeTime?: FirestoreTimestampLike;
 };
 
 export function ConfirmMatchCloseModal({

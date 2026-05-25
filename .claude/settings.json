@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test)",
+      "Bash(npm run test:*)",
+      "Bash(npm run preview)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm ci)",
+      "Bash(npx tsc)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest)",
+      "Bash(npx vitest:*)",
+      "Bash(firebase emulators:*)",
+      "Bash(firebase functions:log)",
+      "Bash(firebase functions:log:*)"
+    ],
+    "deny": [
+      "Bash(firebase deploy:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(npm run seed:*)",
+      "Bash(npm run seed)",
+      "Bash(npm run export)",
+      "Bash(npm run export:*)"
+    ]
+  }
+}

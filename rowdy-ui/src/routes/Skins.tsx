@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
-import { formatTeeTime } from "../utils";
+import { formatTeeTime, toDateOrNull } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -395,16 +395,8 @@ function SkinsComponent() {
                                 const bThru = b.playerThru ?? 0;
                                 if (aThru !== bThru) return bThru - aThru;
 
-                                const aT = a.playerTeeTime
-                                  ? a.playerTeeTime.toDate
-                                    ? a.playerTeeTime.toDate().getTime()
-                                    : new Date(a.playerTeeTime).getTime()
-                                  : null;
-                                const bT = b.playerTeeTime
-                                  ? b.playerTeeTime.toDate
-                                    ? b.playerTeeTime.toDate().getTime()
-                                    : new Date(b.playerTeeTime).getTime()
-                                  : null;
+                                const aT = toDateOrNull(a.playerTeeTime)?.getTime() ?? null;
+                                const bT = toDateOrNull(b.playerTeeTime)?.getTime() ?? null;
 
                                 if (aT !== null && bT !== null) return aT - bT;
                                 if (aT !== null && bT === null) return -1;
