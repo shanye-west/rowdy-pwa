@@ -4,12 +4,21 @@
  */
 
 import type { RoundFormat, MatchData, MatchStatus, MatchResult, PlayerInMatch } from "../types.js";
+import { MIN_GROSS_SCORE, MAX_GROSS_SCORE } from "../constants.js";
 
 // --- SCORING HELPERS ---
 
 export function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
 export function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
-function to2(arr: any[]) { return [isNum(arr?.[0]) ? arr[0] : null, isNum(arr?.[1]) ? arr[1] : null]; }
+/**
+ * A gross score is only usable if it's a plausible golf score. Clients can
+ * write arbitrary values into the holes map (rules don't validate values),
+ * so out-of-range garbage is treated the same as "hole not scored yet".
+ */
+export function isValidGross(n: any): n is number {
+  return isNum(n) && Number.isInteger(n) && n >= MIN_GROSS_SCORE && n <= MAX_GROSS_SCORE;
+}
+function to2(arr: any[]) { return [isValidGross(arr?.[0]) ? arr[0] : null, isValidGross(arr?.[1]) ? arr[1] : null]; }
 
 export function holesRange(obj: Record<string, any>) {
   const keys = Object.keys(obj).filter(k => /^[1-9]$|^1[0-8]$/.test(k)).map(Number);
@@ -28,14 +37,14 @@ export function decideHole(format: RoundFormat, i: number, match: MatchData): "t
     // Scramble: one gross score per team
     const a = h.teamAGross;
     const b = h.teamBGross;
-    if (!isNum(a) || !isNum(b)) return null;
+    if (!isValidGross(a) || !isValidGross(b)) return null;
     return a < b ? "teamA" : b < a ? "teamB" : "AS";
   }
   
   if (format === "singles") {
     const aG = h.teamAPlayerGross;
     const bG = h.teamBPlayerGross;
-    if (!isNum(aG) || !isNum(bG)) return null;
+    if (!isValidGross(aG) || !isValidGross(bG)) return null;
     const aNet = aG - clamp01(match.teamAPlayers?.[0]?.strokesReceived?.[i - 1]);
     const bNet = bG - clamp01(match.teamBPlayers?.[0]?.strokesReceived?.[i - 1]);
     return aNet < bNet ? "teamA" : bNet < aNet ? "teamB" : "AS";

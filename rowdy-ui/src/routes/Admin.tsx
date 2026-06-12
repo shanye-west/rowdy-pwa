@@ -123,41 +123,61 @@ export default function Admin() {
               </div>
             </Link>
 
-            {/* Future: Add Tournament */}
-            <div 
-              className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+            {/* Match Controls */}
+            <Link
+              to="/admin/match/controls"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-lg text-gray-500">Add Tournament</div>
-                  <div className="text-sm text-gray-400">Coming soon</div>
+                  <div className="font-semibold text-lg">Match Controls</div>
+                  <div className="text-sm text-gray-600">Lock/unlock a match, override a hole score, or delete a match</div>
                 </div>
+                <div className="text-2xl">→</div>
               </div>
-            </div>
+            </Link>
 
-            {/* Future: Add Round */}
-            <div 
-              className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+            {/* Manage Tournament */}
+            <Link
+              to="/admin/tournament"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-lg text-gray-500">Add Round</div>
-                  <div className="text-sm text-gray-400">Coming soon</div>
+                  <div className="font-semibold text-lg">Manage Tournament</div>
+                  <div className="text-sm text-gray-600">Rosters, handicaps, captains, active flag, public-edit toggle</div>
                 </div>
+                <div className="text-2xl">→</div>
               </div>
-            </div>
+            </Link>
 
-            {/* Future: Add Player */}
-            <div 
-              className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+            {/* Manage Rounds */}
+            <Link
+              to="/admin/rounds"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-lg text-gray-500">Add Player</div>
-                  <div className="text-sm text-gray-400">Coming soon</div>
+                  <div className="font-semibold text-lg">Manage Rounds</div>
+                  <div className="text-sm text-gray-600">Create rounds, set format/course/points/skins, lock or unlock</div>
                 </div>
+                <div className="text-2xl">→</div>
               </div>
-            </div>
+            </Link>
+
+            {/* Manage Players */}
+            <Link
+              to="/admin/players"
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-lg">Manage Players</div>
+                  <div className="text-sm text-gray-600">Add players, rename, and link login accounts by email</div>
+                </div>
+                <div className="text-2xl">→</div>
+              </div>
+            </Link>
           </div>
         </div>
 

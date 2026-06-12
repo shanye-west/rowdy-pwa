@@ -13,6 +13,7 @@
 
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
@@ -21,7 +22,7 @@ import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, Skin
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateCourseHandicap, calculateStrokesReceived, calculateSkinsStrokes } from "./ghin.js";
 import { computeVsAllForRound, type PlayerFactForSim } from "./helpers/vsAllSimulation.js";
-import { checkRateLimit } from "./rateLimit.js";
+import { requireAdmin } from "./helpers/adminAuth.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
   playersPerSide, 
@@ -29,17 +30,40 @@ import {
   normalizeHoles, 
   defaultStatus 
 } from "./helpers/matchHelpers.js";
-import { 
-  summarize, 
+import {
+  summarize,
   buildStatusAndResult,
   decideHole,
   holesRange,
   clamp01,
-  isNum
+  isValidGross
 } from "./scoring/matchScoring.js";
 
 initializeApp();
 const db = getFirestore();
+
+/**
+ * Wraps a background trigger handler so any thrown error is logged with the
+ * event params (matchId, factId, …) before the failure propagates. Background
+ * triggers have no caller to surface errors to — without this, a failed fetch
+ * or batch.commit() leaves no diagnostic trail in Cloud Logging.
+ */
+function withTriggerLogging<E extends { params: unknown }>(
+  name: string,
+  handler: (event: E) => Promise<unknown>
+): (event: E) => Promise<void> {
+  return async (event) => {
+    try {
+      await handler(event);
+    } catch (err) {
+      logger.error(`${name} trigger failed`, {
+        params: event.params,
+        error: err instanceof Error ? (err.stack ?? err.message) : String(err),
+      });
+      throw err;
+    }
+  };
+}
 
 // ============================================================================
 // DOCUMENT SEED TRIGGERS
@@ -201,7 +225,7 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
 // Computes match status and result on every match write
 // ============================================================================
 
-export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async (event) => {
+export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTriggerLogging("computeMatchOnWrite", async (event) => {
   const before = event.data?.before?.data() || {};
   const after = event.data?.after?.data();
   if (!after) return;
@@ -277,14 +301,14 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   }
   
   await event.data!.after.ref.set(updateData, { merge: true });
-});
+}));
 
 // ============================================================================
 // STATS ENGINE
 // Generates PlayerMatchFact documents when matches close
 // ============================================================================
 
-export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
+export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTriggerLogging("updateMatchFacts", async (event) => {
   const matchId = event.params.matchId;
   const after = event.data?.after?.data();
   const before = event.data?.before?.data();
@@ -721,17 +745,17 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (format === "twoManScramble") {
       const aGross = h.teamAGross;
       const bGross = h.teamBGross;
-      if (isNum(aGross)) teamATotalGross += aGross;
-      if (isNum(bGross)) teamBTotalGross += bGross;
+      if (isValidGross(aGross)) teamATotalGross += aGross;
+      if (isValidGross(bGross)) teamBTotalGross += bGross;
     } else if (format === "singles") {
       const aGross = h.teamAPlayerGross;
       const bGross = h.teamBPlayerGross;
-      if (isNum(aGross)) {
+      if (isValidGross(aGross)) {
         teamAPlayerGross[0] += aGross;
         const aStroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
         teamAPlayerNet[0] += (aGross - aStroke);
       }
-      if (isNum(bGross)) {
+      if (isValidGross(bGross)) {
         teamBPlayerGross[0] += bGross;
         const bStroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
         teamBPlayerNet[0] += (bGross - bStroke);
@@ -740,24 +764,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       if (Array.isArray(aArr)) {
-        if (isNum(aArr[0])) teamAPlayerGross[0] += aArr[0];
-        if (isNum(aArr[1])) teamAPlayerGross[1] += aArr[1];
-        if (isNum(aArr[0]) && isNum(aArr[1])) {
+        if (isValidGross(aArr[0])) teamAPlayerGross[0] += aArr[0];
+        if (isValidGross(aArr[1])) teamAPlayerGross[1] += aArr[1];
+        if (isValidGross(aArr[0]) && isValidGross(aArr[1])) {
           teamATotalGross += Math.min(aArr[0], aArr[1]);
-        } else if (isNum(aArr[0])) {
+        } else if (isValidGross(aArr[0])) {
           teamATotalGross += aArr[0];
-        } else if (isNum(aArr[1])) {
+        } else if (isValidGross(aArr[1])) {
           teamATotalGross += aArr[1];
         }
       }
       if (Array.isArray(bArr)) {
-        if (isNum(bArr[0])) teamBPlayerGross[0] += bArr[0];
-        if (isNum(bArr[1])) teamBPlayerGross[1] += bArr[1];
-        if (isNum(bArr[0]) && isNum(bArr[1])) {
+        if (isValidGross(bArr[0])) teamBPlayerGross[0] += bArr[0];
+        if (isValidGross(bArr[1])) teamBPlayerGross[1] += bArr[1];
+        if (isValidGross(bArr[0]) && isValidGross(bArr[1])) {
           teamBTotalGross += Math.min(bArr[0], bArr[1]);
-        } else if (isNum(bArr[0])) {
+        } else if (isValidGross(bArr[0])) {
           teamBTotalGross += bArr[0];
-        } else if (isNum(bArr[1])) {
+        } else if (isValidGross(bArr[1])) {
           teamBTotalGross += bArr[1];
         }
       }
@@ -766,24 +790,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       if (Array.isArray(aArr)) {
-        if (isNum(aArr[0])) {
+        if (isValidGross(aArr[0])) {
           teamAPlayerGross[0] += aArr[0];
           const a0Stroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
           teamAPlayerNet[0] += (aArr[0] - a0Stroke);
         }
-        if (isNum(aArr[1])) {
+        if (isValidGross(aArr[1])) {
           teamAPlayerGross[1] += aArr[1];
           const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
           teamAPlayerNet[1] += (aArr[1] - a1Stroke);
         }
       }
       if (Array.isArray(bArr)) {
-        if (isNum(bArr[0])) {
+        if (isValidGross(bArr[0])) {
           teamBPlayerGross[0] += bArr[0];
           const b0Stroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
           teamBPlayerNet[0] += (bArr[0] - b0Stroke);
         }
-        if (isNum(bArr[1])) {
+        if (isValidGross(bArr[1])) {
           teamBPlayerGross[1] += bArr[1];
           const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
           teamBPlayerNet[1] += (bArr[1] - b1Stroke);
@@ -991,7 +1015,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if (Array.isArray(arr)) {
           const partnerIdx = pIdx === 0 ? 1 : 0;
           const partnerGross = arr[partnerIdx];
-          if (isNum(partnerGross)) {
+          if (isValidGross(partnerGross)) {
             const partnerStroke = clamp01(myTeamPlayers?.[partnerIdx]?.strokesReceived?.[holeNum - 1]);
             holeData.partnerNet = partnerGross - partnerStroke;
           } else {
@@ -1012,7 +1036,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         // Partner's gross score for comparison (shamble uses gross)
         if (Array.isArray(arr)) {
           const partnerIdx = pIdx === 0 ? 1 : 0;
-          holeData.partnerGross = isNum(arr[partnerIdx]) ? arr[partnerIdx] : null;
+          holeData.partnerGross = isValidGross(arr[partnerIdx]) ? arr[partnerIdx] : null;
         }
         const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
         holeData.driveUsed = driveVal === pIdx;
@@ -1168,7 +1192,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   if (Array.isArray(pB)) pB.forEach((p: any, idx: number) => writeFact(p, "teamB", idx, pA, pB));
 
   await batch.commit();
-});
+}));
 
 // ============================================================================
 // SKINS COMPUTATION
@@ -1176,7 +1200,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 // Stores pre-computed results in rounds/{roundId}/skinsResults/computed
 // ============================================================================
 
-export const computeRoundSkins = onDocumentWritten("matches/{matchId}", async (event) => {
+export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTriggerLogging("computeRoundSkins", async (event) => {
   const after = event.data?.after?.data();
   const before = event.data?.before?.data();
   
@@ -1484,7 +1508,7 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", async (e
   };
   
   await skinsResultRef.set(skinsResultDoc);
-});
+}));
 
 // ============================================================================
 // PLAYER STATS AGGREGATION
@@ -1660,7 +1684,7 @@ function buildStatsFromFacts(facts: FirebaseFirestore.QueryDocumentSnapshot[], i
   return statsDoc;
 }
 
-export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
+export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", withTriggerLogging("aggregatePlayerStats", async (event) => {
   const data = event.data?.after?.data() || event.data?.before?.data();
   if (!data?.playerId) return;
   
@@ -1726,7 +1750,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       await roundStatsRef.set(roundStats);
     }
   }
-});
+}));
 
 // ============================================================================
 // ADMIN CALLABLE FUNCTIONS
@@ -1747,26 +1771,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
  * - teamBPlayers: Array<{ playerId: string, handicapIndex: number }>
  */
 export const seedMatch = onCall(async (request) => {
-  // Auth check
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Must be logged in");
-  }
-
-  // Rate limiting check
-  const rateLimit = checkRateLimit(uid, "seedMatch", { maxCalls: 20, windowSeconds: 60 });
-  if (!rateLimit.allowed) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-    );
-  }
-
-  // Verify admin status
-  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+  await requireAdmin(request, "seedMatch", { maxCalls: 20, windowSeconds: 60 });
 
   // Extract data
   const { id, tournamentId, roundId, teeTime, teamAPlayers, teamBPlayers } = request.data;
@@ -1933,26 +1938,7 @@ export const seedMatch = onCall(async (request) => {
  * - teamBPlayers: Array<{ playerId: string, handicapIndex: number }>
  */
 export const editMatch = onCall(async (request) => {
-  // Auth check
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Must be logged in");
-  }
-
-  // Rate limiting check
-  const rateLimit = checkRateLimit(uid, "editMatch", { maxCalls: 30, windowSeconds: 60 });
-  if (!rateLimit.allowed) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-    );
-  }
-
-  // Verify admin status
-  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+  await requireAdmin(request, "editMatch", { maxCalls: 30, windowSeconds: 60 });
 
   // Extract data
   const { matchId, tournamentId, roundId, teeTime, teamAPlayers, teamBPlayers } = request.data;
@@ -2091,26 +2077,7 @@ export const editMatch = onCall(async (request) => {
  * - matchId: string - Match document ID
  */
 export const recalculateMatchStrokes = onCall(async (request) => {
-  // Auth check
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Must be logged in");
-  }
-
-  // Rate limiting check
-  const rateLimit = checkRateLimit(uid, "recalculateMatchStrokes", { maxCalls: 10, windowSeconds: 60 });
-  if (!rateLimit.allowed) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-    );
-  }
-
-  // Verify admin status
-  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+  await requireAdmin(request, "recalculateMatchStrokes", { maxCalls: 10, windowSeconds: 60 });
 
   // Extract data
   const { matchId } = request.data;
@@ -2237,26 +2204,8 @@ export const recalculateMatchStrokes = onCall(async (request) => {
  * - dryRun?: boolean - If true, only report what would be done (no changes)
  */
 export const recalculateAllStats = onCall(async (request) => {
-  // Auth check
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Must be logged in");
-  }
-
-  // Rate limiting check (very restrictive - this is expensive)
-  const rateLimit = checkRateLimit(uid, "recalculateAllStats", { maxCalls: 2, windowSeconds: 600 });
-  if (!rateLimit.allowed) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-    );
-  }
-
-  // Verify admin status
-  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+  // Very restrictive rate limit - this is expensive
+  await requireAdmin(request, "recalculateAllStats", { maxCalls: 2, windowSeconds: 600 });
 
   // Extract data
   const { dryRun = false } = request.data;
@@ -2349,26 +2298,7 @@ export const recalculateAllStats = onCall(async (request) => {
 
 export const computeRoundRecap = onCall(async (request) => {
   try {
-    // Auth check
-    const uid = request.auth?.uid;
-    if (!uid) {
-      throw new HttpsError("unauthenticated", "Must be logged in");
-    }
-
-    // Rate limiting (2 calls per 30 seconds)
-    const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
-    if (!rateLimit.allowed) {
-      throw new HttpsError(
-        "resource-exhausted",
-        `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-      );
-    }
-
-    // Verify admin status
-    const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-    if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-      throw new HttpsError("permission-denied", "Admin access required");
-    }
+    const { uid } = await requireAdmin(request, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
 
     // Extract data
     const { roundId } = request.data;
@@ -2923,3 +2853,20 @@ export const computeRoundRecap = onCall(async (request) => {
     );
   }
 });
+
+// ============================================================================
+// ADMIN OPS CALLABLES
+// Tournament/round/match/player management for the in-app Admin UI
+// ============================================================================
+
+export {
+  updateTournament,
+  createRound,
+  updateRound,
+  setMatchLock,
+  adminOverrideHoleScore,
+  deleteMatch,
+  createPlayer,
+  updatePlayerInfo,
+  linkAuthToPlayer,
+} from "./callables/adminOps.js";

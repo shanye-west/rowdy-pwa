@@ -2,7 +2,7 @@ LAST UPDATED ON FRI NOV 28 3:53PM
 
 What the app is
 
-A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Our webpage (for styling, etc. is www.rowdycup.com). Admins seed all setup data in Firestore (no admin UI). Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
+A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Our webpage (for styling, etc. is www.rowdycup.com). Admins manage setup data through the in-app Admin UI (`/admin`): tournaments, rounds, matches, players, handicaps, locks, and score corrections. Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
 
 If you want the longer spec you drafted earlier, it’s here: /mnt/data/Golf Tournament PWA - Project Blueprint (Final MVP).docx
 And the current “compute & stats” contract lives here (latest): Golf Pwa — Compute & Stats Contract V1 (Canvas)
@@ -13,7 +13,7 @@ Players: enter hole scores on phones; see live match status.
 
 Spectators: read-only live matches, leaderboard, roster by tier.
 
-Admin (pre-event only): seeds tournaments, rounds, matches, players, handicaps; may lock/unlock a match.
+Admin: manages tournaments (rosters, handicaps, captains, active flag), rounds (format, course, points, skins, lock/unlock), matches (create, edit, lock/unlock, score override, delete), and players (create, rename, link login accounts) — all from the in-app Admin UI. Courses are still seeded via Firestore console or scripts.
 
 Core behavior
 
@@ -109,7 +109,7 @@ Head-to-head totals (team formats count).
 
 Records by match type and by Tier (A/B/C/D).
 
-No in-app admin; all seeding via Firestore UI; templates/defaults reduce data entry.
+In-app admin (`/admin`, admin-only): tournament/round/match/player management, stroke and stats recalculation, round recaps. Admin operations run through server-side callables that verify `isAdmin` — the UI gate is convenience only. Course documents are the one remaining Firestore-console task.
 
 Step-by-step plan
 Phase 1 — Core UX (now)
@@ -142,15 +142,15 @@ Apply idempotent increments to playerStats (lifetime, by type, by tournament) an
 
 Player page (/player/:playerId): show lifetime record, per-type splits, head-to-head, by-tier slices.
 
-Phase 3 — Admin conveniences (optional)
+Phase 3 — Admin conveniences (DONE except where noted)
 
-In-UI Lock/Unlock control (admin-only) to toggle status.closed.
+✅ In-UI lock/unlock: per-round (Manage Rounds) and per-match (Match Controls); the per-match lock is also enforced in security rules.
 
-Seed validator script (Node/TS) to sanity-check Firestore docs before events:
+✅ Admin score override, match delete, tournament/round/player management — all in `/admin`.
 
-Valid strokes arrays; hole keys “1”..“18”; players exist; format present; pointsValue>0.
+✅ Rules tightened to rostered-player writes on the `holes` map only (admin writes go through callables, which bypass rules via the Admin SDK).
 
-Tighten rules to rostered-player writes only; add admin bypass.
+⬜ Seed validator script (Node/TS) to sanity-check Firestore docs before events: valid strokes arrays; hole keys “1”..“18”; players exist; format present; pointsValue>0.
 
 Phase 4 — PWA polish
 

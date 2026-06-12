@@ -27,6 +27,10 @@ const EditMatch = lazy(() => import("./routes/EditMatch"));
 const RecalculateMatchStrokes = lazy(() => import("./routes/RecalculateMatchStrokes"));
 const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTournamentStats"));
 const GenerateRoundRecap = lazy(() => import("./routes/GenerateRoundRecap"));
+const ManageTournament = lazy(() => import("./routes/ManageTournament"));
+const ManageRounds = lazy(() => import("./routes/ManageRounds"));
+const MatchControls = lazy(() => import("./routes/MatchControls"));
+const ManagePlayers = lazy(() => import("./routes/ManagePlayers"));
 
 // No loading fallback - CSS View Transitions handle page navigation smoothly
 const router = createBrowserRouter(
@@ -54,8 +58,12 @@ const router = createBrowserRouter(
         { path: "admin/match", element: <RequireAdmin><AddMatch /></RequireAdmin> },
         { path: "admin/match/edit", element: <RequireAdmin><EditMatch /></RequireAdmin> },
         { path: "admin/match/recalculate", element: <RequireAdmin><RecalculateMatchStrokes /></RequireAdmin> },
+        { path: "admin/match/controls", element: <RequireAdmin><MatchControls /></RequireAdmin> },
         { path: "admin/round/recap", element: <RequireAdmin><GenerateRoundRecap /></RequireAdmin> },
+        { path: "admin/rounds", element: <RequireAdmin><ManageRounds /></RequireAdmin> },
+        { path: "admin/tournament", element: <RequireAdmin><ManageTournament /></RequireAdmin> },
         { path: "admin/tournament/recalculate", element: <RequireAdmin><RecalculateTournamentStats /></RequireAdmin> },
+        { path: "admin/players", element: <RequireAdmin><ManagePlayers /></RequireAdmin> },
         { path: "*", element: <NotFound /> },
       ],
     },

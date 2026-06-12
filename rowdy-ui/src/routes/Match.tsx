@@ -142,6 +142,8 @@ export default function Match() {
   
   // --- LOCKING LOGIC ---
   const roundLocked = !!round?.locked;
+  // Admin per-match lock (set via Admin → Match Controls); rules enforce it too
+  const matchLocked = !!match?.locked;
   const isMatchClosed = !!match?.status?.closed;
   const matchThru = match?.status?.thru ?? 0;
   
@@ -571,9 +573,9 @@ export default function Match() {
   // Check if hole is locked (includes auth check)
   // Note: Post-match holes are NOT locked - players can continue scoring after match closes
   const isHoleLocked = useCallback((_holeNum: number) => {
-    // Can't edit if: round locked OR user can't edit
-    return roundLocked || !canEdit;
-  }, [roundLocked, canEdit]);
+    // Can't edit if: round locked OR match locked OR user can't edit
+    return roundLocked || matchLocked || !canEdit;
+  }, [roundLocked, matchLocked, canEdit]);
 
   // Helper to build new input object based on format
   const buildNewInput = useCallback((hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) => {

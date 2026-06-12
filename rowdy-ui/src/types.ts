@@ -214,6 +214,7 @@ export type MatchDoc = {
   tournamentId?: string;
   matchNumber?: number; // For ordering matches on Round page (like day for rounds)
   teeTime?: FirestoreTimestampLike; // tee time for the match (stored as Pacific Time UTC-8)
+  locked?: boolean; // Admin per-match lock (round.locked covers the whole round)
   completed?: boolean; // Auto-set when match closes and all 18 holes are scored
   holes?: Record<string, HoleData>;
   result?: { 

@@ -76,7 +76,11 @@ service cloud.firestore {
       }
 
       allow read: if true;
-      allow update: if (isAuthorizedPlayer() || isTournamentOpen()) && onlyHolesChanged();
+      // `locked != true` enforces the admin per-match lock (set via the
+      // setMatchLock callable); undefined/false on existing docs passes.
+      allow update: if (isAuthorizedPlayer() || isTournamentOpen())
+        && onlyHolesChanged()
+        && resource.data.get('locked', false) != true;
       allow create, delete: if false;
     }
 

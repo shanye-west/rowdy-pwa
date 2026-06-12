@@ -12,6 +12,15 @@ export const DEFAULT_COURSE_PAR = 72;
 /** Minimum drives required per player per round (6 = 3 per 9) */
 export const MIN_DRIVES_PER_ROUND = 6;
 
+/**
+ * Sanity bounds for a single-hole gross score. Security rules let rostered
+ * players write arbitrary values into `holes.{N}.input`; anything outside
+ * this range is treated as "not scored" rather than fed into match results
+ * and stats. 30 comfortably covers the worst real hole anyone will admit to.
+ */
+export const MIN_GROSS_SCORE = 1;
+export const MAX_GROSS_SCORE = 30;
+
 // =============================================================================
 // STAT BADGES & THRESHOLDS
 // =============================================================================

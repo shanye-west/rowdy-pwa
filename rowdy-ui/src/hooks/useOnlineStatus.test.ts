@@ -240,9 +240,11 @@ describe("offline scenarios - golf course usage", () => {
 describe("online status detection", () => {
   // These test the logic for determining online/offline status
   
-  function simulateOnlineStatus(navigatorOnLine: boolean): boolean {
-    // Simulates what useOnlineStatus does
-    return typeof navigator !== "undefined" ? navigatorOnLine : true;
+  // Simulates what useOnlineStatus does. `hasNavigator` is a parameter (not
+  // read from the environment) so the test doesn't depend on the Node version
+  // running it — Node 21+ defines a global `navigator`, older versions don't.
+  function simulateOnlineStatus(navigatorOnLine: boolean, hasNavigator = true): boolean {
+    return hasNavigator ? navigatorOnLine : true;
   }
 
   it("returns true when navigator.onLine is true", () => {
@@ -254,8 +256,9 @@ describe("online status detection", () => {
   });
 
   it("defaults to true in non-browser environment", () => {
-    // In SSR or testing, default to online
-    expect(true).toBe(true); // Placeholder - actual test would mock navigator
+    // In SSR or testing without a navigator, default to online
+    expect(simulateOnlineStatus(false, false)).toBe(true);
+    expect(simulateOnlineStatus(true, false)).toBe(true);
   });
 });
 

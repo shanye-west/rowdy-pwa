@@ -235,29 +235,30 @@ describe("decideHole", () => {
     });
   });
 
-  describe("valid score of 0 (eagle/hole-in-one)", () => {
-    it("treats 0 as valid score in scramble format", () => {
+  describe("score of 0 (below UI minimum of 1)", () => {
+    // The score picker only offers 1–15, so a 0 can only arrive via a direct
+    // Firestore write. Out-of-range values are treated as "not scored yet".
+    it("treats 0 as unscored in scramble format", () => {
       const match = createMatch({
         holes: { "1": { input: { teamAGross: 0, teamBGross: 2 } } },
       });
-      // 0 is a valid score (hole-in-one on par 3)
-      expect(decideHole("twoManScramble", 1, match)).toBe("teamA");
+      expect(decideHole("twoManScramble", 1, match)).toBeNull();
     });
 
-    it("treats 0 as valid score in singles format", () => {
+    it("treats 0 as unscored in singles format", () => {
       const match = createMatch({
         holes: { "1": { input: { teamAPlayerGross: 0, teamBPlayerGross: 2 } } },
       });
-      expect(decideHole("singles", 1, match)).toBe("teamA");
+      expect(decideHole("singles", 1, match)).toBeNull();
     });
 
-    it("treats 0 as valid score in best ball format", () => {
+    it("treats 0 as unscored in best ball format", () => {
       const match = createMatch({
         teamAPlayers: createTwoPlayerTeam(Array(18).fill(0), Array(18).fill(0)),
         teamBPlayers: createTwoPlayerTeam(Array(18).fill(0), Array(18).fill(0)),
         holes: { "1": { input: { teamAPlayersGross: [0, 4], teamBPlayersGross: [3, 4] } } },
       });
-      expect(decideHole("twoManBestBall", 1, match)).toBe("teamA");
+      expect(decideHole("twoManBestBall", 1, match)).toBeNull();
     });
   });
 
@@ -290,19 +291,41 @@ describe("decideHole", () => {
       expect(decideHole("twoManScramble", 1, match)).toBeNull();
     });
 
-    it("handles negative scores gracefully (calculates result)", () => {
-      // Negative scores shouldn't happen but if they do, math still works
+    it("rejects negative scores (treated as unscored)", () => {
+      // A negative score would win every hole; rules can't validate values,
+      // so the scoring layer rejects anything outside the sane range.
       const match = createMatch({
         holes: { "1": { input: { teamAGross: -1, teamBGross: 4 } } },
       });
-      expect(decideHole("twoManScramble", 1, match)).toBe("teamA"); // -1 < 4
+      expect(decideHole("twoManScramble", 1, match)).toBeNull();
     });
 
-    it("handles very large scores", () => {
+    it("rejects absurdly large scores (treated as unscored)", () => {
       const match = createMatch({
         holes: { "1": { input: { teamAGross: 99, teamBGross: 100 } } },
       });
+      expect(decideHole("twoManScramble", 1, match)).toBeNull();
+    });
+
+    it("rejects non-integer scores (treated as unscored)", () => {
+      const match = createMatch({
+        holes: { "1": { input: { teamAGross: 4.5, teamBGross: 4 } } },
+      });
+      expect(decideHole("twoManScramble", 1, match)).toBeNull();
+    });
+
+    it("accepts scores at the sanity bounds (1 and 30)", () => {
+      const match = createMatch({
+        holes: { "1": { input: { teamAGross: 1, teamBGross: 30 } } },
+      });
       expect(decideHole("twoManScramble", 1, match)).toBe("teamA");
+    });
+
+    it("rejects scores just outside the sanity bounds (31)", () => {
+      const match = createMatch({
+        holes: { "1": { input: { teamAGross: 31, teamBGross: 4 } } },
+      });
+      expect(decideHole("twoManScramble", 1, match)).toBeNull();
     });
   });
 
