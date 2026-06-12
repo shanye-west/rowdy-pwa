@@ -2860,13 +2860,19 @@ export const computeRoundRecap = onCall(async (request) => {
 // ============================================================================
 
 export {
+  createTournament,
   updateTournament,
   createRound,
   updateRound,
+  deleteRound,
   setMatchLock,
   adminOverrideHoleScore,
   deleteMatch,
   createPlayer,
   updatePlayerInfo,
   linkAuthToPlayer,
+  deletePlayer,
+  setPlayerAdmin,
 } from "./callables/adminOps.js";
+
+export { upsertCourse, deleteCourse } from "./callables/courseOps.js";

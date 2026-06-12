@@ -14,7 +14,13 @@ import type {
   CreatePlayerRequest,
   CreateRoundRequest,
   CreateRoundResult,
+  CreateTournamentRequest,
+  CreateTournamentResult,
+  DeleteCourseRequest,
   DeleteMatchRequest,
+  DeletePlayerRequest,
+  DeleteRoundRequest,
+  DeleteRoundResult,
   EditMatchRequest,
   LinkAuthToPlayerRequest,
   LinkAuthToPlayerResult,
@@ -26,11 +32,14 @@ import type {
   SeedMatchResult,
   SetMatchLockRequest,
   SetMatchLockResult,
+  SetPlayerAdminRequest,
   UpdatePlayerInfoRequest,
   UpdateRoundRequest,
   UpdateRoundResult,
   UpdateTournamentRequest,
   UpdateTournamentResult,
+  UpsertCourseRequest,
+  UpsertCourseResult,
 } from "./adminContracts";
 
 function call<Req, Res>(name: string) {
@@ -40,11 +49,13 @@ function call<Req, Res>(name: string) {
 
 export const adminApi = {
   // Tournament
+  createTournament: call<CreateTournamentRequest, CreateTournamentResult>("createTournament"),
   updateTournament: call<UpdateTournamentRequest, UpdateTournamentResult>("updateTournament"),
 
   // Round
   createRound: call<CreateRoundRequest, CreateRoundResult>("createRound"),
   updateRound: call<UpdateRoundRequest, UpdateRoundResult>("updateRound"),
+  deleteRound: call<DeleteRoundRequest, DeleteRoundResult>("deleteRound"),
 
   // Match
   seedMatch: call<SeedMatchRequest, SeedMatchResult>("seedMatch"),
@@ -58,6 +69,12 @@ export const adminApi = {
   createPlayer: call<CreatePlayerRequest, AdminResult>("createPlayer"),
   updatePlayerInfo: call<UpdatePlayerInfoRequest, AdminResult>("updatePlayerInfo"),
   linkAuthToPlayer: call<LinkAuthToPlayerRequest, LinkAuthToPlayerResult>("linkAuthToPlayer"),
+  deletePlayer: call<DeletePlayerRequest, AdminResult>("deletePlayer"),
+  setPlayerAdmin: call<SetPlayerAdminRequest, AdminResult>("setPlayerAdmin"),
+
+  // Course
+  upsertCourse: call<UpsertCourseRequest, UpsertCourseResult>("upsertCourse"),
+  deleteCourse: call<DeleteCourseRequest, AdminResult>("deleteCourse"),
 
   // Stats
   recalculateAllStats: call<RecalculateAllStatsRequest, RecalculateAllStatsResult>("recalculateAllStats"),

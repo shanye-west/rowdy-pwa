@@ -11,6 +11,12 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { requireAdmin } from "../helpers/adminAuth.js";
 import { isValidGross } from "../scoring/matchScoring.js";
+import {
+  describeRoundDeletionBlock,
+  isSelfDemotion,
+  playerTournamentReferences,
+  type TournamentRefs,
+} from "../helpers/adminValidation.js";
 import type { RoundFormat } from "../types.js";
 
 const ROUND_FORMATS: RoundFormat[] = [
@@ -140,6 +146,7 @@ export const updateTournament = onCall(async (request) => {
       case "active":
       case "openPublicEdits":
       case "test":
+      case "archived":
         if (typeof value !== "boolean") {
           throw new HttpsError("invalid-argument", `updates.${key} must be a boolean`);
         }
@@ -158,9 +165,11 @@ export const updateTournament = onCall(async (request) => {
   }
 
   // Preserve single-active invariant: activating this tournament deactivates
-  // every other tournament in the same batch.
+  // every other tournament in the same batch. An active tournament can never
+  // stay archived.
   const batch = db().batch();
   if (toMerge.active === true) {
+    toMerge.archived = false;
     const activeSnap = await db().collection("tournaments").where("active", "==", true).get();
     activeSnap.docs.forEach((d) => {
       if (d.id !== tournamentId) batch.update(d.ref, { active: false });
@@ -170,6 +179,67 @@ export const updateTournament = onCall(async (request) => {
   await batch.commit();
 
   return { success: true, tournamentId, updatedFields: Object.keys(toMerge) };
+});
+
+/**
+ * Create a tournament (replaces the seed-tournament.ts script for normal use).
+ * seedTournamentDefaults fills team skeletons, roundIds, etc.
+ *
+ * Data payload:
+ * - id?: string - optional custom document id
+ * - name: string, year: number, series: string
+ * - active?: boolean (default false — creating next year's event must not
+ *   hijack a live one), test?: boolean
+ * - teamA?/teamB?: same editable team shape as updateTournament
+ */
+export const createTournament = onCall(async (request) => {
+  await requireAdmin(request, "createTournament", { maxCalls: 10, windowSeconds: 60 });
+
+  const name = requireString(request.data?.name, "name");
+  const series = requireString(request.data?.series, "series");
+  const year = request.data?.year;
+  if (typeof year !== "number" || !Number.isInteger(year) || year < 2000 || year > 2100) {
+    throw new HttpsError("invalid-argument", "year must be a valid year");
+  }
+
+  const doc: Record<string, unknown> = { name, series, year, active: false, archived: false };
+  for (const key of ["active", "test"] as const) {
+    const value = request.data?.[key];
+    if (value !== undefined) {
+      if (typeof value !== "boolean") {
+        throw new HttpsError("invalid-argument", `${key} must be a boolean`);
+      }
+      doc[key] = value;
+    }
+  }
+  for (const key of ["teamA", "teamB"] as const) {
+    const value = request.data?.[key];
+    if (value !== undefined) {
+      if (typeof value !== "object" || value === null) {
+        throw new HttpsError("invalid-argument", `${key} must be an object`);
+      }
+      doc[key] = sanitizeTeamUpdates(value as Record<string, unknown>, key);
+    }
+  }
+
+  const ref = request.data?.id
+    ? db().collection("tournaments").doc(requireString(request.data.id, "id"))
+    : db().collection("tournaments").doc();
+  const existing = await ref.get();
+  if (existing.exists) {
+    throw new HttpsError("already-exists", `Tournament "${ref.id}" already exists`);
+  }
+
+  // Single-active invariant, same as updateTournament
+  const batch = db().batch();
+  if (doc.active === true) {
+    const activeSnap = await db().collection("tournaments").where("active", "==", true).get();
+    activeSnap.docs.forEach((d) => batch.update(d.ref, { active: false }));
+  }
+  batch.set(ref, { ...doc, _adminCreatedAt: FieldValue.serverTimestamp() });
+  await batch.commit();
+
+  return { success: true, tournamentId: ref.id };
 });
 
 // ============================================================================
@@ -288,6 +358,64 @@ export const updateRound = onCall(async (request) => {
   const fields = sanitizeRoundUpdates(updates);
   await ref.set({ ...fields, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return { success: true, roundId, updatedFields: Object.keys(fields) };
+});
+
+/**
+ * Delete a round and everything scoped to it. If the round still has matches,
+ * the call fails with failed-precondition unless force=true — the UI surfaces
+ * the match count and re-calls with force.
+ *
+ * Cascade order matters: matches are deleted first (each delete fires
+ * updateMatchFacts → stats cleanup and computeRoundSkins recompute, which need
+ * the round doc to still exist), then round-scoped artifacts, then the round.
+ *
+ * Data payload:
+ * - roundId: string
+ * - force?: boolean
+ */
+export const deleteRound = onCall(async (request) => {
+  await requireAdmin(request, "deleteRound", { maxCalls: 5, windowSeconds: 60 });
+
+  const roundId = requireString(request.data?.roundId, "roundId");
+  const force = request.data?.force === true;
+
+  const roundRef = db().collection("rounds").doc(roundId);
+  const roundSnap = await roundRef.get();
+  if (!roundSnap.exists) {
+    throw new HttpsError("not-found", "Round not found");
+  }
+  const tournamentId: string | undefined = roundSnap.data()?.tournamentId;
+
+  const matchesSnap = await db().collection("matches").where("roundId", "==", roundId).get();
+  const block = describeRoundDeletionBlock(matchesSnap.size, force);
+  if (block) {
+    throw new HttpsError("failed-precondition", block);
+  }
+
+  // Sequential so each trigger cascade resolves against a consistent round
+  for (const matchDoc of matchesSnap.docs) {
+    await matchDoc.ref.delete();
+  }
+
+  // Subcollection docs are not removed by deleting the parent
+  await roundRef.collection("skinsResults").doc("computed").delete();
+  await db().collection("roundRecaps").doc(roundId).delete();
+
+  // Inverse of the linkRoundToTournament trigger
+  if (tournamentId) {
+    const tRef = db().collection("tournaments").doc(tournamentId);
+    await db().runTransaction(async (tx) => {
+      const s = await tx.get(tRef);
+      if (!s.exists) return;
+      const list: string[] = Array.isArray(s.data()?.roundIds) ? s.data()!.roundIds : [];
+      if (list.includes(roundId)) {
+        tx.update(tRef, { roundIds: list.filter((id) => id !== roundId) });
+      }
+    });
+  }
+
+  await roundRef.delete();
+  return { success: true, roundId, matchesDeleted: matchesSnap.size };
 });
 
 // ============================================================================
@@ -546,4 +674,87 @@ export const linkAuthToPlayer = onCall(async (request) => {
 
   await ref.set({ authUid: authUser.uid, email, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return { success: true, playerId, authUid: authUser.uid };
+});
+
+/**
+ * Delete a player created by mistake. Hard-blocked when the player has match
+ * history (playerMatchFacts) or is still referenced by any tournament roster
+ * or handicap map. Open matches without facts are not queryable by nested
+ * playerId, so the roster scan is the practical guard for unplayed matches.
+ * The Firebase Auth account (if linked) is left untouched.
+ *
+ * Data payload:
+ * - playerId: string
+ */
+export const deletePlayer = onCall(async (request) => {
+  await requireAdmin(request, "deletePlayer", { maxCalls: 10, windowSeconds: 60 });
+
+  const playerId = requireString(request.data?.playerId, "playerId");
+  const ref = db().collection("players").doc(playerId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Player not found");
+  }
+
+  const factsSnap = await db()
+    .collection("playerMatchFacts")
+    .where("playerId", "==", playerId)
+    .limit(1)
+    .get();
+  if (!factsSnap.empty) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Player has match history (playerMatchFacts) and cannot be deleted."
+    );
+  }
+
+  const tournamentsSnap = await db().collection("tournaments").get();
+  const refs = playerTournamentReferences(
+    playerId,
+    tournamentsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as TournamentRefs))
+  );
+  if (refs.length > 0) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Player is on the roster or handicap list of: ${refs.join(", ")}. Remove them there first.`
+    );
+  }
+
+  // Defensive: clear any stats subtree, then the player doc
+  await db().recursiveDelete(db().collection("playerStats").doc(playerId));
+  await ref.delete();
+  return { success: true, playerId };
+});
+
+/**
+ * Grant or revoke the admin flag on a player. Self-demotion is rejected so a
+ * lone admin can't lock everyone out of the admin UI.
+ *
+ * Data payload:
+ * - playerId: string
+ * - isAdmin: boolean
+ */
+export const setPlayerAdmin = onCall(async (request) => {
+  const caller = await requireAdmin(request, "setPlayerAdmin", { maxCalls: 10, windowSeconds: 60 });
+
+  const playerId = requireString(request.data?.playerId, "playerId");
+  const isAdmin = request.data?.isAdmin;
+  if (typeof isAdmin !== "boolean") {
+    throw new HttpsError("invalid-argument", "isAdmin must be a boolean");
+  }
+  if (isSelfDemotion(caller.playerId, playerId, isAdmin)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "You cannot remove your own admin access. Have another admin do it."
+    );
+  }
+
+  const ref = db().collection("players").doc(playerId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Player not found");
+  }
+
+  await ref.set({ isAdmin, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  return { success: true, playerId, isAdmin };
 });

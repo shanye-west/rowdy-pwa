@@ -1,12 +1,20 @@
 /**
- * Request/response contracts for the admin callables in functions/.
+ * Request/response contracts for the admin callables.
  *
- * KEEP IN SYNC with functions/src/callables/contracts.ts — the two files are
+ * KEEP IN SYNC with rowdy-ui/src/api/adminContracts.ts — the two files are
  * mirrored by convention (functions and rowdy-ui have separate tsconfig
  * projects, so types are duplicated rather than shared).
  */
 
-import type { RoundFormat, TierMap } from "../types";
+import type { RoundFormat } from "../types.js";
+import type { CourseInput } from "../helpers/adminValidation.js";
+
+export type TierMap = {
+  A?: string[];
+  B?: string[];
+  C?: string[];
+  D?: string[];
+};
 
 /** Default success payload returned by most admin callables. */
 export interface AdminResult {
@@ -128,7 +136,7 @@ export interface SetMatchLockResult extends AdminResult {
 export interface AdminOverrideHoleScoreRequest {
   matchId: string;
   hole: number;
-  /** Format-specific hole input — see HoleInput variants in types.ts. */
+  /** Format-specific hole input. */
   input: Record<string, unknown>;
 }
 
@@ -146,7 +154,7 @@ export interface SeedMatchRequest {
   id: string;
   tournamentId: string;
   roundId: string;
-  /** ISO string; the server stores it as a Timestamp. */
+  /** ISO string; stored as a Timestamp. */
   teeTime?: string;
   teamAPlayers: MatchPlayerInput[];
   teamBPlayers: MatchPlayerInput[];
@@ -212,22 +220,9 @@ export interface SetPlayerAdminRequest {
 // COURSE
 // ============================================================================
 
-export interface CourseHoleInput {
-  number: number;
-  par: number;
-  hcpIndex: number;
-  yards?: number;
-}
-
-export interface UpsertCourseRequest {
+export interface UpsertCourseRequest extends CourseInput {
   /** Omit to create with an auto id; provide to create-with-id or update. */
   courseId?: string;
-  name: string;
-  tees?: string;
-  par: number;
-  rating: number;
-  slope: number;
-  holes: CourseHoleInput[];
 }
 
 export interface UpsertCourseResult extends AdminResult {
@@ -247,44 +242,6 @@ export interface RecalculateAllStatsRequest {
   dryRun?: boolean;
 }
 
-export interface RecalculateAllStatsDryRunResult {
-  success: boolean;
-  dryRun: true;
-  factsToDelete: number;
-  affectedPlayers: number;
-  tournamentsAffected: number;
-  matchesToRecalculate: number;
-  message: string;
-}
-
-export interface RecalculateAllStatsExecuteResult {
-  success: boolean;
-  dryRun: false;
-  factsDeleted: number;
-  statsAutoCleanedUp: number;
-  tournamentsRecalculated: number;
-  matchesRecalculated: number;
-  message: string;
-}
-
-export type RecalculateAllStatsResult =
-  | RecalculateAllStatsDryRunResult
-  | RecalculateAllStatsExecuteResult;
-
 export interface ComputeRoundRecapRequest {
   roundId: string;
-}
-
-export interface ComputeRoundRecapResult {
-  success: boolean;
-  roundId: string;
-  stats: {
-    playersAnalyzed: number;
-    vsAllMatchupsSimulated: number;
-    birdiesGrossLeader: string;
-    birdiesGrossCount: number;
-    eaglesGrossLeader: string;
-    eaglesGrossCount: number;
-  };
-  message: string;
 }
