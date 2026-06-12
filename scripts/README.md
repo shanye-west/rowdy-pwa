@@ -1,8 +1,16 @@
-LAST UPDATED ON FRI NOV 28, 2025 AT 3:47PM
+LAST UPDATED ON FRI JUN 12, 2026
 
 # Rowdy Cup Scripts
 
 Scripts for seeding and managing Firestore data for the Rowdy Cup PWA.
+
+> **⚠️ Emergency backup only.** Routine admin work now lives in the in-app
+> Admin UI (`/admin` — tournaments, rounds, matches, players, courses, auth
+> linking, handicaps). These scripts bypass the admin checks and rate limits
+> in the callables and write straight to Firestore with the service account,
+> so reserve them for break-glass situations (e.g. auth is down mid-tournament)
+> or bulk seeding the in-app UI can't do yet. The read-only `check-*` scripts
+> remain fine for diagnostics any time.
 
 ## Setup
 

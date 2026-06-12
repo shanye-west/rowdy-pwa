@@ -808,6 +808,18 @@ export default function Match() {
           onOpenStrokesInfo={() => setStrokesInfoModal(true)}
         />
 
+        {/* Admin deep-link: jump straight to this match's admin page */}
+        {player?.isAdmin && match?.tournamentId && (
+          <div className="text-right">
+            <Link
+              to={`/admin/t/${match.tournamentId}/match/${match.id}`}
+              className="inline-block text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+            >
+              ⚙ Manage Match
+            </Link>
+          </div>
+        )}
+
         {/* DRIVE_TRACKING: Drives Tracker Banner */}
         {trackDrives && drivesUsed && drivesNeeded && !isMatchClosed && (
           <DrivesTrackerBanner
