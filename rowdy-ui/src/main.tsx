@@ -1,6 +1,6 @@
 import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -21,16 +21,17 @@ const Player = lazy(() => import("./routes/Player"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
 const Tournament = lazy(() => import("./routes/Tournament"));
-const Admin = lazy(() => import("./routes/Admin"));
-const AddMatch = lazy(() => import("./routes/AddMatch"));
-const EditMatch = lazy(() => import("./routes/EditMatch"));
-const RecalculateMatchStrokes = lazy(() => import("./routes/RecalculateMatchStrokes"));
+const AdminDashboard = lazy(() => import("./routes/admin/AdminDashboard"));
+const AdminTournamentLayout = lazy(() => import("./routes/admin/AdminTournamentLayout"));
+const TournamentHome = lazy(() => import("./routes/admin/TournamentHome"));
+const TournamentSettings = lazy(() => import("./routes/admin/TournamentSettings"));
+const RoundAdmin = lazy(() => import("./routes/admin/RoundAdmin"));
+const MatchCreate = lazy(() => import("./routes/admin/MatchCreate"));
+const MatchAdmin = lazy(() => import("./routes/admin/MatchAdmin"));
+const PlayersAdmin = lazy(() => import("./routes/admin/PlayersAdmin"));
+const CoursesAdmin = lazy(() => import("./routes/admin/CoursesAdmin"));
+const CourseEdit = lazy(() => import("./routes/admin/CourseEdit"));
 const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTournamentStats"));
-const GenerateRoundRecap = lazy(() => import("./routes/GenerateRoundRecap"));
-const ManageTournament = lazy(() => import("./routes/ManageTournament"));
-const ManageRounds = lazy(() => import("./routes/ManageRounds"));
-const MatchControls = lazy(() => import("./routes/MatchControls"));
-const ManagePlayers = lazy(() => import("./routes/ManagePlayers"));
 
 // No loading fallback - CSS View Transitions handle page navigation smoothly
 const router = createBrowserRouter(
@@ -54,16 +55,31 @@ const router = createBrowserRouter(
         { path: "history", element: <History /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },
-        { path: "admin", element: <RequireAdmin><Admin /></RequireAdmin> },
-        { path: "admin/match", element: <RequireAdmin><AddMatch /></RequireAdmin> },
-        { path: "admin/match/edit", element: <RequireAdmin><EditMatch /></RequireAdmin> },
-        { path: "admin/match/recalculate", element: <RequireAdmin><RecalculateMatchStrokes /></RequireAdmin> },
-        { path: "admin/match/controls", element: <RequireAdmin><MatchControls /></RequireAdmin> },
-        { path: "admin/round/recap", element: <RequireAdmin><GenerateRoundRecap /></RequireAdmin> },
-        { path: "admin/rounds", element: <RequireAdmin><ManageRounds /></RequireAdmin> },
-        { path: "admin/tournament", element: <RequireAdmin><ManageTournament /></RequireAdmin> },
-        { path: "admin/tournament/recalculate", element: <RequireAdmin><RecalculateTournamentStats /></RequireAdmin> },
-        { path: "admin/players", element: <RequireAdmin><ManagePlayers /></RequireAdmin> },
+        { path: "admin", element: <RequireAdmin><AdminDashboard /></RequireAdmin> },
+        {
+          path: "admin/t/:tournamentId",
+          element: <RequireAdmin><AdminTournamentLayout /></RequireAdmin>,
+          children: [
+            { index: true, element: <TournamentHome /> },
+            { path: "settings", element: <TournamentSettings /> },
+            { path: "round/:roundId", element: <RoundAdmin /> },
+            { path: "round/:roundId/match/new", element: <MatchCreate /> },
+            { path: "match/:matchId", element: <MatchAdmin /> },
+          ],
+        },
+        { path: "admin/players", element: <RequireAdmin><PlayersAdmin /></RequireAdmin> },
+        { path: "admin/courses", element: <RequireAdmin><CoursesAdmin /></RequireAdmin> },
+        { path: "admin/courses/:courseId", element: <RequireAdmin><CourseEdit /></RequireAdmin> },
+        { path: "admin/recalculate", element: <RequireAdmin><RecalculateTournamentStats /></RequireAdmin> },
+        // Legacy task-page URLs from the pre-entity-centric admin
+        { path: "admin/match", element: <Navigate to="/admin" replace /> },
+        { path: "admin/match/edit", element: <Navigate to="/admin" replace /> },
+        { path: "admin/match/recalculate", element: <Navigate to="/admin" replace /> },
+        { path: "admin/match/controls", element: <Navigate to="/admin" replace /> },
+        { path: "admin/round/recap", element: <Navigate to="/admin" replace /> },
+        { path: "admin/rounds", element: <Navigate to="/admin" replace /> },
+        { path: "admin/tournament", element: <Navigate to="/admin" replace /> },
+        { path: "admin/tournament/recalculate", element: <Navigate to="/admin/recalculate" replace /> },
         { path: "*", element: <NotFound /> },
       ],
     },

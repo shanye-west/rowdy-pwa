@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
-import Layout from "../components/Layout";
-import StatusBanner from "../components/admin/StatusBanner";
-import { adminApi } from "../api/admin";
-import { getErrorMessage } from "../api/errors";
-import type { PlayerDoc } from "../types";
+import { db } from "../../firebase";
+import Layout from "../../components/Layout";
+import StatusBanner from "../../components/admin/StatusBanner";
+import AdminSection from "../../components/admin/AdminSection";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import { useAuth } from "../../contexts/AuthContext";
+import { adminApi } from "../../api/admin";
+import { getErrorMessage } from "../../api/errors";
+import type { PlayerDoc } from "../../types";
 
-export default function ManagePlayers() {
+/** Player management: create, rename, link logins, admin access, delete. */
+export default function PlayersAdmin() {
+  const { player: me } = useAuth();
   const [players, setPlayers] = useState<PlayerDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -23,8 +28,11 @@ export default function ManagePlayers() {
   const [selectedId, setSelectedId] = useState("");
   const [editName, setEditName] = useState("");
   const [linkEmail, setLinkEmail] = useState("");
+  const [confirmAdminChange, setConfirmAdminChange] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const selected = players.find((p) => p.id === selectedId);
+  const isSelf = selected?.id === me?.id;
 
   const fetchPlayers = useCallback(async () => {
     const snap = await getDocs(collection(db, "players"));
@@ -93,27 +101,49 @@ export default function ManagePlayers() {
     });
   };
 
+  const handleAdminToggle = () => {
+    setConfirmAdminChange(false);
+    runAction(async () => {
+      const next = !selected?.isAdmin;
+      await adminApi.setPlayerAdmin({ playerId: selectedId, isAdmin: next });
+      return next ? `${selectedId} is now an admin.` : `Admin access removed from ${selectedId}.`;
+    });
+  };
+
+  const handleDelete = () => {
+    setConfirmDelete(false);
+    runAction(async () => {
+      await adminApi.deletePlayer({ playerId: selectedId });
+      const deleted = selectedId;
+      setSelectedId("");
+      return `Player "${deleted}" deleted.`;
+    });
+  };
+
   if (loading) {
     return (
-      <Layout title="Manage Players" showBack>
+      <Layout title="Players" showBack>
         <div className="p-4">Loading...</div>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Manage Players" showBack>
+    <Layout title="Players" showBack>
       <div className="p-4 max-w-2xl mx-auto space-y-4">
         <StatusBanner error={error} success={success} />
 
         {/* Create player */}
-        <div className="card p-6">
-          <h2 className="font-bold mb-2">Add Player</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            ID convention: <span className="font-mono">pFirstLast</span> (e.g.{" "}
-            <span className="font-mono">pShanePeterson</span>). Tournament handicaps are set
-            per-tournament in Manage Tournament.
-          </p>
+        <AdminSection
+          title="Add Player"
+          description={
+            <>
+              ID convention: <span className="font-mono">pFirstLast</span> (e.g.{" "}
+              <span className="font-mono">pShanePeterson</span>). Tournament handicaps are set
+              per-tournament in Tournament Settings.
+            </>
+          }
+        >
           <form onSubmit={handleCreate} className="grid grid-cols-2 gap-3">
             <input
               type="text"
@@ -135,7 +165,7 @@ export default function ManagePlayers() {
               {busy ? "Working..." : "Create Player"}
             </button>
           </form>
-        </div>
+        </AdminSection>
 
         {/* Player list + editor */}
         <div className="card p-6">
@@ -204,14 +234,82 @@ export default function ManagePlayers() {
                 </div>
                 <div className="text-xs text-gray-500">
                   Note: existing matches keep their original authorized players — re-save those
-                  matches in Edit Match if this player needs access to them.
+                  matches in the match admin if this player needs access to them.
                 </div>
               </form>
+
+              {/* Admin access */}
+              <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                <div className="text-sm">
+                  <div className="font-semibold">Admin access</div>
+                  <div className="text-gray-500">
+                    {isSelf
+                      ? "You can't change your own admin access."
+                      : selected.isAdmin
+                        ? "Can manage tournaments, matches, players, and stats."
+                        : "Regular player — score entry only."}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmAdminChange(true)}
+                  disabled={busy || isSelf}
+                  className="btn btn-secondary disabled:opacity-40"
+                >
+                  {selected.isAdmin ? "Remove Admin" : "Make Admin"}
+                </button>
+              </div>
+
+              {/* Delete */}
+              <div className="flex items-center justify-between p-3 border border-red-200 rounded-lg">
+                <div className="text-sm">
+                  <div className="font-semibold text-red-700">Delete player</div>
+                  <div className="text-gray-500">
+                    Only possible if they have no match history and are off every roster.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={busy}
+                  className="btn bg-red-600 text-white disabled:opacity-40"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         <Link to="/admin" className="btn btn-secondary block text-center">Back to Admin</Link>
+
+        <ConfirmDialog
+          isOpen={confirmAdminChange}
+          title={selected?.isAdmin ? "Remove admin access?" : "Grant admin access?"}
+          confirmLabel={selected?.isAdmin ? "Remove Admin" : "Make Admin"}
+          danger={!!selected?.isAdmin}
+          busy={busy}
+          onConfirm={handleAdminToggle}
+          onCancel={() => setConfirmAdminChange(false)}
+        >
+          {selected?.isAdmin
+            ? `${selected.displayName ?? selected.id} will lose access to all admin pages and operations.`
+            : `${selected?.displayName ?? selected?.id} will be able to manage tournaments, matches, scores, players, and stats.`}
+        </ConfirmDialog>
+
+        <ConfirmDialog
+          isOpen={confirmDelete}
+          title="Delete player?"
+          confirmLabel="Delete Player"
+          danger
+          busy={busy}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        >
+          Permanently deletes <strong>{selected?.displayName ?? selected?.id}</strong>. The server
+          refuses if they have match history or are still on a tournament roster. Their login
+          account (if any) is not removed.
+        </ConfirmDialog>
       </div>
     </Layout>
   );

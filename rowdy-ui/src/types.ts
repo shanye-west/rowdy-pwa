@@ -135,6 +135,7 @@ export type TournamentDoc = {
   series: string;
   active: boolean;
   test?: boolean; // If true, only admins can see this tournament (for testing/dev)
+  archived?: boolean; // Hidden from default admin lists; never deleted (stats/history reference it)
   roundIds?: string[];
   tournamentLogo?: string;
   totalPointsAvailable?: number; // Total points available in tournament (for score tracker bar)
