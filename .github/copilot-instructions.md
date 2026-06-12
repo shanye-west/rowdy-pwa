@@ -132,7 +132,17 @@ VITE_STORAGE_BUCKET, VITE_MESSAGING_SENDER_ID, VITE_APP_ID
 \`\`\`
 
 ### Security Rules Pattern
-Public read; authenticated users can update \`matches\`. No admin UI—all setup via Firestore console.
+Public read on all app collections. Rostered players (in \`match.authorizedUids\`) — or anyone when
+the tournament has \`openPublicEdits: true\` — may update **only the \`holes\` map** of a match
+(enforced by \`affectedKeys().hasOnly(['holes'])\`); status/result/roster/handicaps are written by
+Cloud Functions via the Admin SDK, which bypasses rules. The \`players\` update rule is restricted to
+the account-linking fields (\`authUid\`/\`email\`) so a player can't self-grant \`isAdmin\`.
+
+Admin **reads** are not gated in rules: player docs are keyed by player id (e.g. \`pShane\`), not by
+auth uid, so \`get(/players/$(uid))\` never resolves and there is no working \`isAdmin()\` in rules.
+Admin-only writes are enforced server-side in the callable functions; the admin UI guard
+(\`RequireAdmin\`) is UX only. To gate reads on admin status (e.g. to hide \`test\` tournaments) you'd
+need a path-addressable admin registry (e.g. \`config/admins.uids\`) — not yet implemented.
 
 ## Styling
 - Tailwind CSS 4 via Vite plugin

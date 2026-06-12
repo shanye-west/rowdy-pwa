@@ -51,7 +51,7 @@ Tournament context (active tournament + roster) is shared globally via [rowdy-ui
 ## Don't touch lightly
 
 - **Scoring logic in [functions/src/scoring/](functions/src/scoring/) and [functions/src/helpers/](functions/src/helpers/)** — 4k+ lines of vitest tests cover edge cases (comebacks, dormie, vs-all simulations, ham-and-egg, jekyll-and-hyde). Any change must keep `cd functions && npm run test:run` green.
-- **[firestore.rules](firestore.rules)** — controls who can write scores. Misconfiguration here either locks out players mid-tournament or opens the DB to the public.
+- **[firestore.rules](firestore.rules)** — controls who can write scores. Misconfiguration here either locks out players mid-tournament or opens the DB to the public. All app collections are public-read (granted per-collection — there is deliberately no `/{document=**}` wildcard, which would override the narrower rules). Client match writes are restricted to the `holes` map only; everything else is written by Cloud Functions via the Admin SDK (rules don't apply to them). Note: rules have no working `isAdmin()` (player docs are keyed by player id, not auth uid), so admin access is enforced server-side in callables, not in rules.
 - **`computeMatchOnWrite` trigger** — runs on every match write. Performance regressions or infinite loops will rack up Cloud Functions charges fast.
 
 ## Where to look for more

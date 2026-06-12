@@ -1,53 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function: check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/players/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true;
-    }
-    
-    // Public read for all collections (except gated by specific rules below)
-    match /{document=**} {
-      allow read: if true;
-    }
-    
-    // Tournaments: test tournaments only readable by admins
+    // ------------------------------------------------------------------
+    // NOTE: There is intentionally NO catch-all `match /{document=**}`
+    // read rule. Firestore rules are additive (OR), so a wildcard
+    // `allow read: if true` would silently override every narrower rule
+    // below. Reads are granted per-collection instead.
+    //
+    // ADMIN GATING: player docs are keyed by player id (e.g. "pShane"),
+    // NOT by Firebase Auth uid, so rules cannot look an admin up by path
+    // (`get(/players/$(uid))` never resolves). There is therefore no
+    // working `isAdmin()` available to security rules. Admin-only writes
+    // are enforced server-side in callable Cloud Functions (which query
+    // players by `authUid` and check `isAdmin`). To gate *reads* on admin
+    // status (e.g. to hide `test` tournaments from the public) you would
+    // need a path-addressable admin registry, e.g. `config/admins.uids`,
+    // that rules can `get()`. Until that exists, tournaments are public.
+    // ------------------------------------------------------------------
+
+    // Tournaments: public read, server-only write.
+    // (The previous `test != true || isAdmin()` gate was a no-op: isAdmin()
+    // can't resolve in rules — see note above — so it only ever evaluated to
+    // `test != true`, and the old `/{document=**}` wildcard made it moot anyway.
+    // Kept public to avoid breaking the admin test-tournament listing.)
     match /tournaments/{tournamentId} {
-      allow read: if resource.data.test != true || isAdmin();
+      allow read: if true;
       allow write: if false; // Use Firestore console or seed scripts
     }
-    
-    // Players collection: public read
-    // Updates allowed for account setup (linking authUid)
+
+    // Players collection: public read (display names are shown app-wide).
+    // NOTE: player docs also contain `email`/`authUid`. Firestore read rules
+    // are document-level, so public read exposes those fields. If that becomes
+    // a concern, move email/authUid to a non-public location (follow-up).
     match /players/{playerId} {
       allow read: if true;
-      // Allow update if:
-      // 1. User is authenticated AND
-      // 2. Either setting authUid for first time (account setup) OR already owns this doc
-      allow update: if request.auth != null && (
-        // Account setup: user can set authUid if not already set
-        (resource.data.authUid == null && request.resource.data.authUid == request.auth.uid) ||
-        // Already owns this doc
-        resource.data.authUid == request.auth.uid
-      );
+      // Account setup only: an authenticated user may link their own authUid.
+      // Updates are restricted to the account-linking fields so a player can
+      // NOT escalate privileges by writing `isAdmin` (or editing roster/handicap
+      // fields) on their own doc.
+      allow update: if request.auth != null
+        && (
+             (resource.data.authUid == null && request.resource.data.authUid == request.auth.uid)
+             || resource.data.authUid == request.auth.uid
+           )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authUid', 'email']);
       allow create, delete: if false;
     }
-    
-    // Matches: authenticated users who are rostered can update
+
+    // Matches: public read; rostered players (or an open tournament) may edit
+    // ONLY the `holes` map — never status/result/authorizedUids/roster/handicaps.
+    // Cloud Functions write those via the Admin SDK, which bypasses these rules.
     match /matches/{matchId} {
       // Check if user is authorized using pre-computed authorizedUids array
       // This avoids expensive player document reads in security rules
       function isAuthorizedPlayer() {
-        return request.auth != null && 
+        return request.auth != null &&
                resource.data.keys().hasAny(['authorizedUids']) &&
                request.auth.uid in resource.data.authorizedUids;
       }
 
-      // Note: legacy roster-based checks removed. Matches should include `authorizedUids`.
-
-      // New: allow public edits if the tournament explicitly enables openPublicEdits
+      // Allow public edits if the tournament explicitly enables openPublicEdits
       function isTournamentOpen() {
         // Determine tournamentId from existing resource or incoming request without using 'if/else'
         let tid = resource.data.tournamentId != null ? resource.data.tournamentId : (request.resource != null && request.resource.data.tournamentId != null ? request.resource.data.tournamentId : null);
@@ -56,9 +68,61 @@ service cloud.firestore {
                get(/databases/$(database)/documents/tournaments/$(tid)).data.openPublicEdits == true;
       }
 
-      // Allow updates if user is authorized (matches with `authorizedUids`) OR the tournament allows public edits.
-      allow update: if isAuthorizedPlayer() || isTournamentOpen();
+      // Field-level guard: clients may only mutate the `holes` map.
+      // The score-entry UI writes `holes.{N}.input`; affectedKeys() reports the
+      // top-level key `holes` for nested writes.
+      function onlyHolesChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['holes']);
+      }
+
+      allow read: if true;
+      allow update: if (isAuthorizedPlayer() || isTournamentOpen()) && onlyHolesChanged();
       allow create, delete: if false;
+    }
+
+    // Rounds (+ skinsResults subcollection): public read, server-only write
+    match /rounds/{roundId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /rounds/{roundId}/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Courses: public read, server-only write
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Player match facts: public read, server-only write (computed by functions)
+    match /playerMatchFacts/{factId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Aggregated player stats (+ bySeries/byTournament/byRound subcollections):
+    // public read, server-only write.
+    match /playerStats/{playerId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /playerStats/{playerId}/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Collection-group read for the `byTournament` stats query used by Teams.tsx
+    // (collectionGroup queries require an explicit recursive-wildcard rule).
+    match /{path=**}/byTournament/{statId} {
+      allow read: if true;
+    }
+
+    // Round recaps: public read, server-only write
+    match /roundRecaps/{recapId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

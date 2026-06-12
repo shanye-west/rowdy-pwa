@@ -287,18 +287,38 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
 export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
   const matchId = event.params.matchId;
   const after = event.data?.after?.data();
-  
-  const tId = after?.tournamentId || "";
-  const rId = after?.roundId || "";
-  
+  const before = event.data?.before?.data();
+
+  // Only write facts when match is closed (status.closed === true)
+  const shouldWriteFacts = after?.status?.closed === true;
+
+  if (!after || !shouldWriteFacts) {
+    // playerMatchFacts only exist for matches that have been closed. If this
+    // match was not closed before this write either, there is nothing to clean
+    // up — skip the query entirely. This is the hot path: every score keystroke
+    // on an open match triggers this function, and previously each one ran a
+    // (near-always empty) playerMatchFacts query.
+    if (before?.status?.closed !== true) return;
+    // Match was closed and is now re-opened or deleted: remove its facts.
+    const snap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
+    if (snap.empty) return;
+    const b = db.batch();
+    snap.docs.forEach(d => b.delete(d.ref));
+    await b.commit();
+    return;
+  }
+
+  const tId = after.tournamentId || "";
+  const rId = after.roundId || "";
+
   // Reuse cached context from computeMatchOnWrite to avoid redundant fetches
   // This optimization reduces Firestore reads by 1 (round doc) per match close
-  const cachedData = after?._lastComputed || {};
+  const cachedData = after._lastComputed || {};
   let format: RoundFormat = (cachedData.format as RoundFormat) || "twoManBestBall";
   let points = cachedData.pointsValue ?? 1;
   let courseId = cachedData.courseId || "";
   let day = cachedData.day ?? 0;
-  
+
   // Only fetch round if cached data is incomplete (fallback for old matches)
   const needsRoundFetch = !cachedData.format || cachedData.pointsValue === undefined;
   if (needsRoundFetch && rId) {
@@ -310,19 +330,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       courseId = courseId || (rData?.courseId || "");
       day = rData?.day ?? day;
     }
-  }
-  
-  // Only write facts when match is closed (status.closed === true)
-  const shouldWriteFacts = after?.status?.closed === true;
-  
-  if (!after || !shouldWriteFacts) {
-    // Clean up facts if match not closed, re-opened, or deleted
-    const snap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
-    if (snap.empty) return;
-    const b = db.batch();
-    snap.docs.forEach(d => b.delete(d.ref));
-    await b.commit();
-    return;
   }
   
   // Extract course handicaps from match document
@@ -1079,6 +1086,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
     const factData: any = {
       playerId: p.playerId, matchId, tournamentId: tId, roundId: rId, format,
+      team,
       outcome, pointsEarned: pts,
       playerTier: myTier,
       playerTeamId: myTeamId,

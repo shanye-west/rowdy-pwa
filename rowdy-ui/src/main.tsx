@@ -9,6 +9,7 @@ import { LayoutProvider } from "./contexts/LayoutContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 import { LayoutShell } from "./components/Layout";
+import RequireAdmin from "./components/RequireAdmin";
 
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazy(() => import("./routes/Match"));
@@ -49,12 +50,12 @@ const router = createBrowserRouter(
         { path: "history", element: <History /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },
-        { path: "admin", element: <Admin /> },
-        { path: "admin/match", element: <AddMatch /> },
-        { path: "admin/match/edit", element: <EditMatch /> },
-        { path: "admin/match/recalculate", element: <RecalculateMatchStrokes /> },
-        { path: "admin/round/recap", element: <GenerateRoundRecap /> },
-        { path: "admin/tournament/recalculate", element: <RecalculateTournamentStats /> },
+        { path: "admin", element: <RequireAdmin><Admin /></RequireAdmin> },
+        { path: "admin/match", element: <RequireAdmin><AddMatch /></RequireAdmin> },
+        { path: "admin/match/edit", element: <RequireAdmin><EditMatch /></RequireAdmin> },
+        { path: "admin/match/recalculate", element: <RequireAdmin><RecalculateMatchStrokes /></RequireAdmin> },
+        { path: "admin/round/recap", element: <RequireAdmin><GenerateRoundRecap /></RequireAdmin> },
+        { path: "admin/tournament/recalculate", element: <RequireAdmin><RecalculateTournamentStats /></RequireAdmin> },
         { path: "*", element: <NotFound /> },
       ],
     },

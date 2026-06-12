@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Layout from "../components/Layout";
 
 export default function Login() {
-  const navigate = useNavigate();
   const { login, resetPassword, player } = useAuth();
   
   const [email, setEmail] = useState("");
@@ -15,10 +14,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // If already logged in, redirect home
+  // If already logged in, redirect home.
+  // Use <Navigate> rather than calling navigate() during render (which triggers
+  // a React "cannot update during render" warning / double render).
   if (player) {
-    navigate("/", { replace: true });
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   async function handleLogin(e: React.FormEvent) {
