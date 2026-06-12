@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 import Layout from "../components/Layout";
+import StatusBanner from "../components/admin/StatusBanner";
+import { useAdminTournaments } from "../hooks/admin/useAdminTournaments";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
 import type { TournamentDoc, PlayerDoc, TierMap } from "../types";
 
 const TIERS = ["A", "B", "C", "D"] as const;
@@ -51,7 +54,7 @@ function parseRoster(form: TeamFormState): TierMap {
 }
 
 export default function ManageTournament() {
-  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
+  const { tournaments, loading: tournamentsLoading, error: tournamentsError, refresh } = useAdminTournaments();
   const [players, setPlayers] = useState<PlayerDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -68,26 +71,22 @@ export default function ManageTournament() {
   const [teamB, setTeamB] = useState<TeamFormState>(teamToForm(undefined));
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPlayers = async () => {
       try {
-        const [tSnap, pSnap] = await Promise.all([
-          getDocs(query(collection(db, "tournaments"), orderBy("year", "desc"))),
-          getDocs(collection(db, "players")),
-        ]);
-        setTournaments(tSnap.docs.map((d) => ({ id: d.id, ...d.data() } as TournamentDoc)));
+        const pSnap = await getDocs(collection(db, "players"));
         setPlayers(
           pSnap.docs
             .map((d) => ({ id: d.id, ...d.data() } as PlayerDoc))
             .sort((a, b) => (a.displayName ?? a.id).localeCompare(b.displayName ?? b.id))
         );
       } catch (err) {
-        console.error("Error loading tournaments:", err);
-        setError(err instanceof Error ? err.message : "Failed to load tournaments");
+        console.error("Error loading players:", err);
+        setError(getErrorMessage(err, "Failed to load players"));
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchPlayers();
   }, []);
 
   const playerNameById = useMemo(() => {
@@ -158,22 +157,19 @@ export default function ManageTournament() {
         teamB: buildTeam(teamB),
       };
 
-      const fn = httpsCallable(functions, "updateTournament");
-      await fn({ tournamentId, updates });
+      await adminApi.updateTournament({ tournamentId, updates });
       setSuccess("Tournament updated.");
-      // Refresh local copy so re-selecting shows saved values
-      setTournaments((prev) =>
-        prev.map((t) => (t.id === tournamentId ? { ...t, ...updates, teamA: { ...t.teamA, ...updates.teamA }, teamB: { ...t.teamB, ...updates.teamB } } as TournamentDoc : (active && t.active && t.id !== tournamentId ? { ...t, active: false } : t)))
-      );
+      // Refresh the list so re-selecting shows saved values
+      await refresh();
     } catch (err) {
       console.error("Error updating tournament:", err);
-      setError(err instanceof Error ? err.message : "Failed to update tournament");
+      setError(getErrorMessage(err, "Failed to update tournament"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (loading || tournamentsLoading) {
     return (
       <Layout title="Manage Tournament" showBack>
         <div className="p-4">Loading...</div>
@@ -285,16 +281,7 @@ export default function ManageTournament() {
             seed-handicaps and toggle-open-public-edits scripts.
           </p>
 
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">✓ {success}</p>
-            </div>
-          )}
+          <StatusBanner error={error ?? tournamentsError} success={success} />
 
           <div className="mb-6">
             <label className="block text-sm font-semibold mb-2">Tournament</label>

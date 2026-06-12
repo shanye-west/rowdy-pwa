@@ -1,28 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
-
-type DryRunResult = {
-  success: boolean;
-  dryRun: boolean;
-  factsToDelete: number;
-  affectedPlayers: number;
-  tournamentsAffected: number;
-  matchesToRecalculate: number;
-  message: string;
-};
-
-type ExecuteResult = {
-  success: boolean;
-  dryRun: boolean;
-  factsDeleted: number;
-  statsAutoCleanedUp: number;
-  tournamentsRecalculated: number;
-  matchesRecalculated: number;
-  message: string;
-};
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
+import type {
+  RecalculateAllStatsDryRunResult as DryRunResult,
+  RecalculateAllStatsExecuteResult as ExecuteResult,
+} from "../api/adminContracts";
 
 export default function RecalculateTournamentStats() {
   const { player } = useAuth();
@@ -51,18 +36,12 @@ export default function RecalculateTournamentStats() {
     setError(null);
 
     try {
-      const functions = getFunctions();
-      const recalc = httpsCallable<{ dryRun: boolean }, DryRunResult>(
-        functions,
-        "recalculateAllStats"
-      );
-
-      const result = await recalc({ dryRun: true });
-      setDryRunResult(result.data);
+      const result = await adminApi.recalculateAllStats({ dryRun: true });
+      setDryRunResult(result as DryRunResult);
       setStep("preview");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Dry run failed:", err);
-      setError(err.message || "Failed to run preview");
+      setError(getErrorMessage(err, "Failed to run preview"));
     } finally {
       setLoading(false);
     }
@@ -74,18 +53,12 @@ export default function RecalculateTournamentStats() {
     setStep("executing");
 
     try {
-      const functions = getFunctions();
-      const recalc = httpsCallable<{}, ExecuteResult>(
-        functions,
-        "recalculateAllStats"
-      );
-
-      const result = await recalc({});
-      setExecuteResult(result.data);
+      const result = await adminApi.recalculateAllStats({});
+      setExecuteResult(result as ExecuteResult);
       setStep("complete");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Execution failed:", err);
-      setError(err.message || "Failed to recalculate stats");
+      setError(getErrorMessage(err, "Failed to recalculate stats"));
       setStep("preview");
     } finally {
       setLoading(false);

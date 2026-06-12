@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 import Layout from "../components/Layout";
-import type { TournamentDoc, RoundDoc, CourseDoc, RoundFormat } from "../types";
+import StatusBanner from "../components/admin/StatusBanner";
+import { useAdminTournaments } from "../hooks/admin/useAdminTournaments";
+import { useRounds } from "../hooks/admin/useRounds";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
+import type { CreateRoundRequest } from "../api/adminContracts";
+import type { RoundDoc, CourseDoc, RoundFormat } from "../types";
 
 const FORMAT_OPTIONS: { value: RoundFormat | ""; label: string }[] = [
   { value: "", label: "Format TBD" },
@@ -69,9 +74,8 @@ function formToUpdates(form: RoundFormState) {
 }
 
 export default function ManageRounds() {
-  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
+  const { tournaments, loading: tournamentsLoading, error: tournamentsError } = useAdminTournaments();
   const [courses, setCourses] = useState<CourseDoc[]>([]);
-  const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,40 +87,26 @@ export default function ManageRounds() {
   const [newRoundId, setNewRoundId] = useState("");
   const [form, setForm] = useState<RoundFormState>(emptyForm);
 
+  const { rounds, error: roundsError, refresh: refreshRounds } = useRounds(tournamentId);
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCourses = async () => {
       try {
-        const [tSnap, cSnap] = await Promise.all([
-          getDocs(query(collection(db, "tournaments"), orderBy("year", "desc"))),
-          getDocs(collection(db, "courses")),
-        ]);
-        setTournaments(tSnap.docs.map((d) => ({ id: d.id, ...d.data() } as TournamentDoc)));
+        const cSnap = await getDocs(collection(db, "courses"));
         setCourses(cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as CourseDoc)));
       } catch (err) {
-        console.error("Error loading data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load data");
+        console.error("Error loading courses:", err);
+        setError(getErrorMessage(err, "Failed to load courses"));
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
-
-  const fetchRounds = useCallback(async (tId: string) => {
-    const snap = await getDocs(query(collection(db, "rounds"), where("tournamentId", "==", tId)));
-    const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoundDoc));
-    setRounds(data.sort((a, b) => (a.day ?? 0) - (b.day ?? 0)));
+    fetchCourses();
   }, []);
 
   useEffect(() => {
     setRoundId("");
-    setRounds([]);
-    if (!tournamentId) return;
-    fetchRounds(tournamentId).catch((err) => {
-      console.error("Error fetching rounds:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch rounds");
-    });
-  }, [tournamentId, fetchRounds]);
+  }, [tournamentId]);
 
   const selectRound = (id: string) => {
     setRoundId(id);
@@ -138,28 +128,25 @@ export default function ManageRounds() {
     setSubmitting(true);
     try {
       if (roundId === "new") {
-        const fn = httpsCallable(functions, "createRound");
-        const payload: Record<string, unknown> = { tournamentId, ...formToUpdates(form) };
+        const payload: CreateRoundRequest = { tournamentId, ...formToUpdates(form) };
         if (newRoundId.trim()) payload.id = newRoundId.trim();
-        const res = await fn(payload);
-        const createdId = (res.data as { roundId?: string })?.roundId;
-        setSuccess(`Round created${createdId ? ` (${createdId})` : ""}.`);
+        const res = await adminApi.createRound(payload);
+        setSuccess(`Round created${res.roundId ? ` (${res.roundId})` : ""}.`);
       } else {
-        const fn = httpsCallable(functions, "updateRound");
-        await fn({ roundId, updates: formToUpdates(form) });
+        await adminApi.updateRound({ roundId, updates: formToUpdates(form) });
         setSuccess("Round updated.");
       }
-      await fetchRounds(tournamentId);
+      await refreshRounds();
       if (roundId === "new") setRoundId("");
     } catch (err) {
       console.error("Error saving round:", err);
-      setError(err instanceof Error ? err.message : "Failed to save round");
+      setError(getErrorMessage(err, "Failed to save round"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (loading || tournamentsLoading) {
     return (
       <Layout title="Manage Rounds" showBack>
         <div className="p-4">Loading...</div>
@@ -176,16 +163,7 @@ export default function ManageRounds() {
             round lock (locking a round freezes score entry for all its matches).
           </p>
 
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">✓ {success}</p>
-            </div>
-          )}
+          <StatusBanner error={error ?? tournamentsError ?? roundsError} success={success} />
 
           <div className="mb-4">
             <label className="block text-sm font-semibold mb-2">Tournament</label>

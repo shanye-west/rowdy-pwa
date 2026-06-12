@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { db } from "../firebase";
 import Layout from "../components/Layout";
+import StatusBanner from "../components/admin/StatusBanner";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
 import type { PlayerDoc } from "../types";
 
 export default function ManagePlayers() {
@@ -35,7 +37,7 @@ export default function ManagePlayers() {
 
   useEffect(() => {
     fetchPlayers()
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load players"))
+      .catch((err) => setError(getErrorMessage(err, "Failed to load players")))
       .finally(() => setLoading(false));
   }, [fetchPlayers]);
 
@@ -49,7 +51,7 @@ export default function ManagePlayers() {
       await fetchPlayers();
     } catch (err) {
       console.error("Player action failed:", err);
-      setError(err instanceof Error ? err.message : "Action failed");
+      setError(getErrorMessage(err, "Action failed"));
     } finally {
       setBusy(false);
     }
@@ -58,8 +60,7 @@ export default function ManagePlayers() {
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     runAction(async () => {
-      const fn = httpsCallable(functions, "createPlayer");
-      await fn({ id: newId.trim(), displayName: newName.trim() });
+      await adminApi.createPlayer({ id: newId.trim(), displayName: newName.trim() });
       const created = newId.trim();
       setNewId("");
       setNewName("");
@@ -79,8 +80,7 @@ export default function ManagePlayers() {
   const handleRename = (e: React.FormEvent) => {
     e.preventDefault();
     runAction(async () => {
-      const fn = httpsCallable(functions, "updatePlayerInfo");
-      await fn({ playerId: selectedId, displayName: editName.trim() });
+      await adminApi.updatePlayerInfo({ playerId: selectedId, displayName: editName.trim() });
       return "Player updated.";
     });
   };
@@ -88,8 +88,7 @@ export default function ManagePlayers() {
   const handleLink = (e: React.FormEvent) => {
     e.preventDefault();
     runAction(async () => {
-      const fn = httpsCallable(functions, "linkAuthToPlayer");
-      await fn({ playerId: selectedId, email: linkEmail.trim() });
+      await adminApi.linkAuthToPlayer({ playerId: selectedId, email: linkEmail.trim() });
       return `Linked ${linkEmail.trim()} to ${selectedId}.`;
     });
   };
@@ -105,16 +104,7 @@ export default function ManagePlayers() {
   return (
     <Layout title="Manage Players" showBack>
       <div className="p-4 max-w-2xl mx-auto space-y-4">
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800 text-sm">{error}</p>
-          </div>
-        )}
-        {success && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-800 text-sm">✓ {success}</p>
-          </div>
-        )}
+        <StatusBanner error={error} success={success} />
 
         {/* Create player */}
         <div className="card p-6">

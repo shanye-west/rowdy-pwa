@@ -1,71 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
 import Layout from "../components/Layout";
-import type { TournamentDoc, RoundDoc, MatchDoc, RoundFormat, HoleInputLoose } from "../types";
+import StatusBanner from "../components/admin/StatusBanner";
+import { useAdminTournaments } from "../hooks/admin/useAdminTournaments";
+import { useRounds } from "../hooks/admin/useRounds";
+import { useMatches } from "../hooks/admin/useMatches";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
+import { formToInput, inputToForm, type HoleFormState } from "../utils/holeInputForm";
+import type { MatchDoc, RoundFormat } from "../types";
 import { isSinglesFormat, isScrambleFormat, isDriveTrackingFormat } from "../types";
-
-/** Editable text state for one hole's inputs (all values as strings, "" = null) */
-interface HoleFormState {
-  aGross: string;      // singles player gross OR scramble team gross
-  bGross: string;
-  aGross2: string;     // second player (best ball / shamble)
-  bGross2: string;
-  aDrive: string;      // "" | "0" | "1"
-  bDrive: string;
-}
-
-function inputToForm(input: HoleInputLoose | undefined, format: RoundFormat): HoleFormState {
-  const str = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
-  if (isSinglesFormat(format)) {
-    return { aGross: str(input?.teamAPlayerGross), bGross: str(input?.teamBPlayerGross), aGross2: "", bGross2: "", aDrive: "", bDrive: "" };
-  }
-  if (isScrambleFormat(format)) {
-    return { aGross: str(input?.teamAGross), bGross: str(input?.teamBGross), aGross2: "", bGross2: "", aDrive: str(input?.teamADrive), bDrive: str(input?.teamBDrive) };
-  }
-  // best ball / shamble
-  return {
-    aGross: str(input?.teamAPlayersGross?.[0]),
-    aGross2: str(input?.teamAPlayersGross?.[1]),
-    bGross: str(input?.teamBPlayersGross?.[0]),
-    bGross2: str(input?.teamBPlayersGross?.[1]),
-    aDrive: str(input?.teamADrive),
-    bDrive: str(input?.teamBDrive),
-  };
-}
-
-function formToInput(form: HoleFormState, format: RoundFormat): Record<string, unknown> {
-  const num = (s: string) => (s === "" ? null : Number(s));
-  if (isSinglesFormat(format)) {
-    return { teamAPlayerGross: num(form.aGross), teamBPlayerGross: num(form.bGross) };
-  }
-  if (isScrambleFormat(format)) {
-    return {
-      teamAGross: num(form.aGross),
-      teamBGross: num(form.bGross),
-      teamADrive: num(form.aDrive),
-      teamBDrive: num(form.bDrive),
-    };
-  }
-  const input: Record<string, unknown> = {
-    teamAPlayersGross: [num(form.aGross), num(form.aGross2)],
-    teamBPlayersGross: [num(form.bGross), num(form.bGross2)],
-  };
-  if (isDriveTrackingFormat(format)) {
-    input.teamADrive = num(form.aDrive);
-    input.teamBDrive = num(form.bDrive);
-  }
-  return input;
-}
 
 export default function MatchControls() {
   const navigate = useNavigate();
-  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
-  const [rounds, setRounds] = useState<RoundDoc[]>([]);
-  const [matches, setMatches] = useState<MatchDoc[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -78,44 +25,23 @@ export default function MatchControls() {
   const [holeForm, setHoleForm] = useState<HoleFormState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
+  const { tournaments, loading, error: tournamentsError } = useAdminTournaments();
+  const { rounds } = useRounds(tournamentId);
+  const { matches, refresh: refreshMatches } = useMatches(roundId);
+
   const match = matches.find((m) => m.id === matchId);
   const round = rounds.find((r) => r.id === roundId);
   const format = (round?.format ?? "twoManBestBall") as RoundFormat;
 
-  useEffect(() => {
-    getDocs(query(collection(db, "tournaments"), orderBy("year", "desc")))
-      .then((snap) => setTournaments(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TournamentDoc))))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load tournaments"))
-      .finally(() => setLoading(false));
-  }, []);
-
+  // Clear selections that no longer apply when the parent selection changes
   useEffect(() => {
     setRoundId("");
-    setRounds([]);
-    if (!tournamentId) return;
-    getDocs(query(collection(db, "rounds"), where("tournamentId", "==", tournamentId)))
-      .then((snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoundDoc));
-        setRounds(data.sort((a, b) => (a.day ?? 0) - (b.day ?? 0)));
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load rounds"));
   }, [tournamentId]);
-
-  const fetchMatches = useCallback(async (rId: string) => {
-    const snap = await getDocs(query(collection(db, "matches"), where("roundId", "==", rId)));
-    const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as MatchDoc));
-    setMatches(data.sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0)));
-  }, []);
 
   useEffect(() => {
     setMatchId("");
-    setMatches([]);
     setHoleForm(null);
-    if (!roundId) return;
-    fetchMatches(roundId).catch((err) =>
-      setError(err instanceof Error ? err.message : "Failed to load matches")
-    );
-  }, [roundId, fetchMatches]);
+  }, [roundId]);
 
   // Load hole inputs into the form whenever the selected match/hole changes
   useEffect(() => {
@@ -133,10 +59,10 @@ export default function MatchControls() {
     try {
       const message = await action();
       setSuccess(message);
-      await fetchMatches(roundId);
+      await refreshMatches();
     } catch (err) {
       console.error("Match control action failed:", err);
-      setError(err instanceof Error ? err.message : "Action failed");
+      setError(getErrorMessage(err, "Action failed"));
     } finally {
       setBusy(false);
     }
@@ -144,9 +70,8 @@ export default function MatchControls() {
 
   const handleToggleLock = () =>
     runAction(async () => {
-      const fn = httpsCallable(functions, "setMatchLock");
       const next = !match?.locked;
-      await fn({ matchId, locked: next });
+      await adminApi.setMatchLock({ matchId, locked: next });
       return next ? "Match locked." : "Match unlocked.";
     });
 
@@ -154,16 +79,18 @@ export default function MatchControls() {
     e.preventDefault();
     if (!holeForm) return;
     runAction(async () => {
-      const fn = httpsCallable(functions, "adminOverrideHoleScore");
-      await fn({ matchId, hole: Number(holeNum), input: formToInput(holeForm, format) });
+      await adminApi.adminOverrideHoleScore({
+        matchId,
+        hole: Number(holeNum),
+        input: formToInput(holeForm, format),
+      });
       return `Hole ${holeNum} updated. Status and stats will recompute automatically.`;
     });
   };
 
   const handleDelete = () =>
     runAction(async () => {
-      const fn = httpsCallable(functions, "deleteMatch");
-      await fn({ matchId });
+      await adminApi.deleteMatch({ matchId });
       setMatchId("");
       setDeleteConfirm("");
       return "Match deleted. Facts, stats, and skins recompute automatically.";
@@ -217,16 +144,7 @@ export default function MatchControls() {
             Lock/unlock a match, fix a wrong score, or delete a match entirely.
           </p>
 
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm">✓ {success}</p>
-            </div>
-          )}
+          <StatusBanner error={error ?? tournamentsError} success={success} />
 
           <div className="space-y-4">
             <div>

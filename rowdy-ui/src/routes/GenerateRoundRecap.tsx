@@ -1,108 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { db } from "../firebase";
 import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
-
-type TournamentOption = {
-  id: string;
-  name: string;
-  year: number;
-};
-
-type RoundOption = {
-  id: string;
-  day: number;
-  format: string;
-};
-
-type ComputeResult = {
-  success: boolean;
-  roundId: string;
-  stats: {
-    playersAnalyzed: number;
-    vsAllMatchupsSimulated: number;
-    birdiesGrossLeader: string;
-    birdiesGrossCount: number;
-    eaglesGrossLeader: string;
-    eaglesGrossCount: number;
-  };
-  message: string;
-};
+import { useAdminTournaments } from "../hooks/admin/useAdminTournaments";
+import { useRounds } from "../hooks/admin/useRounds";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
+import type { ComputeRoundRecapResult } from "../api/adminContracts";
 
 export default function GenerateRoundRecap() {
   const { player } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
-  const [rounds, setRounds] = useState<RoundOption[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
   const [selectedRoundId, setSelectedRoundId] = useState<string>("");
-  const [result, setResult] = useState<ComputeResult | null>(null);
+  const [result, setResult] = useState<ComputeRoundRecapResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Load tournaments
-  useEffect(() => {
-    const loadTournaments = async () => {
-      setLoadingData(true);
-      try {
-        const tournamentsSnap = await getDocs(
-          query(collection(db, "tournaments"), orderBy("year", "desc"))
-        );
-        const tournamentOptions = tournamentsSnap.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || "Unnamed Tournament",
-          year: doc.data().year || 0,
-        }));
-        setTournaments(tournamentOptions);
-      } catch (err) {
-        console.error("Error loading tournaments:", err);
-        setError("Failed to load tournaments");
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    loadTournaments();
-  }, []);
-
-  // Load rounds when tournament is selected
-  useEffect(() => {
-    if (!selectedTournamentId) {
-      setRounds([]);
-      setSelectedRoundId("");
-      return;
-    }
-
-    const loadRounds = async () => {
-      setLoadingData(true);
-      try {
-        const roundsSnap = await getDocs(
-          query(
-            collection(db, "rounds"),
-            where("tournamentId", "==", selectedTournamentId),
-            orderBy("day", "asc")
-          )
-        );
-        const roundOptions = roundsSnap.docs.map((doc) => ({
-          id: doc.id,
-          day: doc.data().day || 0,
-          format: doc.data().format || "Unknown",
-        }));
-        setRounds(roundOptions);
-        setSelectedRoundId("");
-      } catch (err) {
-        console.error("Error loading rounds:", err);
-        setError("Failed to load rounds");
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    loadRounds();
-  }, [selectedTournamentId]);
+  const { tournaments, loading: tournamentsLoading, error: tournamentsError } = useAdminTournaments();
+  const { rounds, loading: roundsLoading, error: roundsError } = useRounds(selectedTournamentId);
+  const loadingData = tournamentsLoading || roundsLoading;
+  const loadError = tournamentsError ?? roundsError;
 
   const handleGenerate = async () => {
     if (!selectedRoundId) {
@@ -115,17 +32,11 @@ export default function GenerateRoundRecap() {
     setResult(null);
 
     try {
-      const functions = getFunctions();
-      const computeRecap = httpsCallable<{ roundId: string }, ComputeResult>(
-        functions,
-        "computeRoundRecap"
-      );
-
-      const response = await computeRecap({ roundId: selectedRoundId });
-      setResult(response.data);
-    } catch (err: any) {
+      const response = await adminApi.computeRoundRecap({ roundId: selectedRoundId });
+      setResult(response);
+    } catch (err) {
       console.error("Generate failed:", err);
-      setError(err.message || "Failed to generate recap");
+      setError(getErrorMessage(err, "Failed to generate recap"));
     } finally {
       setLoading(false);
     }
@@ -230,9 +141,9 @@ export default function GenerateRoundRecap() {
           <div className="card p-6">
             <h2 className="text-xl font-bold mb-4">Select Round</h2>
 
-            {error && (
+            {(error ?? loadError) && (
               <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg mb-4">
-                {error}
+                {error ?? loadError}
               </div>
             )}
 
@@ -245,7 +156,10 @@ export default function GenerateRoundRecap() {
                 <select
                   id="tournament"
                   value={selectedTournamentId}
-                  onChange={(e) => setSelectedTournamentId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedTournamentId(e.target.value);
+                    setSelectedRoundId("");
+                  }}
                   disabled={loadingData || loading}
                   className="w-full p-3 border rounded-lg"
                 >
@@ -274,7 +188,7 @@ export default function GenerateRoundRecap() {
                     <option value="">Select a round...</option>
                     {rounds.map((r) => (
                       <option key={r.id} value={r.id}>
-                        Day {r.day} - {r.format}
+                        Day {r.day} - {r.format || "Format TBD"}
                       </option>
                     ))}
                   </select>

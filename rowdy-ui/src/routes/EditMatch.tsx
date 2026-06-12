@@ -1,11 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, query, where, doc, getDoc, documentId } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import Layout from "../components/Layout";
+import StatusBanner from "../components/admin/StatusBanner";
 import { useAuth } from "../contexts/AuthContext";
-import type { TournamentDoc, RoundDoc, PlayerDoc, MatchDoc } from "../types";
+import { useAdminTournaments } from "../hooks/admin/useAdminTournaments";
+import { useRosterPlayers } from "../hooks/admin/useRosterPlayers";
+import { useRounds } from "../hooks/admin/useRounds";
+import { useMatches } from "../hooks/admin/useMatches";
+import { adminApi } from "../api/admin";
+import { getErrorMessage } from "../api/errors";
+import { tierPlayerIds } from "../utils/roster";
+import type { EditMatchRequest } from "../api/adminContracts";
+import type { TournamentDoc, MatchDoc } from "../types";
 import { toDateOrNull } from "../utils";
 
 type PlayerInput = {
@@ -18,12 +26,6 @@ export default function EditMatch() {
   const { player } = useAuth();
   const navigate = useNavigate();
 
-  // State - must declare all hooks before any conditional returns
-  const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
-  const [rounds, setRounds] = useState<RoundDoc[]>([]);
-  const [matches, setMatches] = useState<MatchDoc[]>([]);
-  const [players, setPlayers] = useState<PlayerDoc[]>([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -40,126 +42,14 @@ export default function EditMatch() {
   const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
   const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
 
-  // Fetch tournaments on mount (players fetched when tournament selected)
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch active tournaments and test tournaments, then merge (dedupe)
-        const activeSnap = await getDocs(query(collection(db, "tournaments"), where("active", "==", true)));
-        const testSnap = await getDocs(query(collection(db, "tournaments"), where("test", "==", true)));
-        const combinedDocs = [...activeSnap.docs, ...testSnap.docs];
-        const map = new Map<string, TournamentDoc>();
-        combinedDocs.forEach(d => map.set(d.id, ({ id: d.id, ...d.data() } as TournamentDoc)));
-        const tournamentsData = Array.from(map.values());
-        setTournaments(tournamentsData);
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load data");
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-  
-  // Get selected tournament data
-  const selectedTournament = useMemo(() => 
-    tournaments.find(t => t.id === tournamentId), 
+  const { tournaments, loading, error: loadError } = useAdminTournaments();
+  const selectedTournament = useMemo(
+    () => tournaments.find((t) => t.id === tournamentId) ?? null,
     [tournaments, tournamentId]
   );
-
-  // Fetch players ONLY for the selected tournament's roster (reduces reads from 100+ to ~24)
-  useEffect(() => {
-    if (!selectedTournament) {
-      setPlayers([]);
-      return;
-    }
-    
-    // Extract all player IDs from both teams' rosters
-    const teamARoster = selectedTournament.teamA?.rosterByTier || {};
-    const teamBRoster = selectedTournament.teamB?.rosterByTier || {};
-    const allIds = [
-      ...(teamARoster.A || []), ...(teamARoster.B || []), ...(teamARoster.C || []), ...(teamARoster.D || []),
-      ...(teamBRoster.A || []), ...(teamBRoster.B || []), ...(teamBRoster.C || []), ...(teamBRoster.D || []),
-    ];
-    
-    if (allIds.length === 0) {
-      setPlayers([]);
-      return;
-    }
-    
-    // Batch fetch only roster players (limit 30 per 'in' query)
-    const fetchRosterPlayers = async () => {
-      try {
-        const batches: string[][] = [];
-        for (let i = 0; i < allIds.length; i += 30) {
-          batches.push(allIds.slice(i, i + 30));
-        }
-        
-        const allPlayers: PlayerDoc[] = [];
-        await Promise.all(batches.map(async (batch) => {
-          const snap = await getDocs(query(collection(db, "players"), where(documentId(), "in", batch)));
-          snap.docs.forEach(d => {
-            allPlayers.push({ id: d.id, ...d.data() } as PlayerDoc);
-          });
-        }));
-        
-        setPlayers(allPlayers);
-      } catch (err) {
-        console.error("Error fetching roster players:", err);
-      }
-    };
-    
-    fetchRosterPlayers();
-  }, [selectedTournament]);
-
-  // Fetch rounds when tournament changes
-  useEffect(() => {
-    if (!tournamentId) {
-      setRounds([]);
-      setRoundId("");
-      setMatches([]);
-      setSelectedMatchId("");
-      return;
-    }
-
-    const fetchRounds = async () => {
-      try {
-        const roundsSnap = await getDocs(query(collection(db, "rounds"), where("tournamentId", "==", tournamentId)));
-        const roundsData = roundsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as RoundDoc));
-        setRounds(roundsData.sort((a, b) => (a.day || 0) - (b.day || 0)));
-      } catch (err) {
-        console.error("Error fetching rounds:", err);
-        setError("Failed to load rounds");
-      }
-    };
-
-    fetchRounds();
-  }, [tournamentId]);
-
-  // Fetch matches when round changes
-  useEffect(() => {
-    if (!roundId) {
-      setMatches([]);
-      setSelectedMatchId("");
-      return;
-    }
-
-    const fetchMatches = async () => {
-      try {
-        const matchesSnap = await getDocs(query(collection(db, "matches"), where("roundId", "==", roundId)));
-        const matchesData = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MatchDoc));
-        setMatches(matchesData.sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0)));
-      } catch (err) {
-        console.error("Error fetching matches:", err);
-        setError("Failed to load matches");
-      }
-    };
-
-    fetchMatches();
-  }, [roundId]);
+  const { players } = useRosterPlayers(selectedTournament);
+  const { rounds } = useRounds(tournamentId);
+  const { matches } = useMatches(roundId);
 
   // Load match details when a match is selected
   useEffect(() => {
@@ -181,10 +71,10 @@ export default function EditMatch() {
         }
 
         const matchData = matchSnap.data() as MatchDoc;
-        
+
         // Set form fields
         setMatchId(selectedMatchId);
-        
+
         // Convert teeTime to datetime-local format (Pacific Time)
         const teeTimeDate = toDateOrNull(matchData.teeTime);
         if (teeTimeDate) {
@@ -201,11 +91,11 @@ export default function EditMatch() {
         }
 
         // Fetch tournament to get handicap indexes
-        const tournamentSnap = matchData.tournamentId 
+        const tournamentSnap = matchData.tournamentId
           ? await getDoc(doc(db, "tournaments", matchData.tournamentId))
           : null;
         const tournament = tournamentSnap?.exists() ? tournamentSnap.data() as TournamentDoc : null;
-        
+
         // Set team A players
         if (matchData.teamAPlayers && matchData.teamAPlayers.length > 0) {
           const teamA = matchData.teamAPlayers.map((p, idx) => ({
@@ -232,9 +122,9 @@ export default function EditMatch() {
         }
 
         setMatchLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error loading match:", err);
-        setError(err.message || "Failed to load match");
+        setError(getErrorMessage(err, "Failed to load match"));
         setMatchLoading(false);
       }
     };
@@ -245,16 +135,14 @@ export default function EditMatch() {
   // Get available players for each team
   const teamAAvailablePlayers = useMemo(() => {
     if (!selectedTournament) return [];
-    const rosterByTier = selectedTournament.teamA?.rosterByTier || {};
-    const allIds = [...(rosterByTier.A || []), ...(rosterByTier.B || []), ...(rosterByTier.C || []), ...(rosterByTier.D || [])];
-    return players.filter(p => allIds.includes(p.id));
+    const allIds = tierPlayerIds(selectedTournament.teamA?.rosterByTier);
+    return players.filter((p) => allIds.includes(p.id));
   }, [selectedTournament, players]);
 
   const teamBAvailablePlayers = useMemo(() => {
     if (!selectedTournament) return [];
-    const rosterByTier = selectedTournament.teamB?.rosterByTier || {};
-    const allIds = [...(rosterByTier.A || []), ...(rosterByTier.B || []), ...(rosterByTier.C || []), ...(rosterByTier.D || [])];
-    return players.filter(p => allIds.includes(p.id));
+    const allIds = tierPlayerIds(selectedTournament.teamB?.rosterByTier);
+    return players.filter((p) => allIds.includes(p.id));
   }, [selectedTournament, players]);
 
   // Handle submit
@@ -270,43 +158,37 @@ export default function EditMatch() {
       }
 
       // Validate players
-      const validTeamA = teamAPlayers.filter(p => p.playerId);
-      const validTeamB = teamBPlayers.filter(p => p.playerId);
+      const validTeamA = teamAPlayers.filter((p) => p.playerId);
+      const validTeamB = teamBPlayers.filter((p) => p.playerId);
 
       if (validTeamA.length === 0 || validTeamB.length === 0) {
         throw new Error("Each team must have at least one player");
       }
 
-      // Call Cloud Function
-      const editMatchFn = httpsCallable(functions, "editMatch");
-      const payload: any = {
+      const payload: EditMatchRequest = {
         matchId,
         tournamentId,
         roundId,
-        teamAPlayers: validTeamA,
-        teamBPlayers: validTeamB,
+        teamAPlayers: validTeamA.map((p) => ({ playerId: p.playerId, handicapIndex: p.handicapIndex })),
+        teamBPlayers: validTeamB.map((p) => ({ playerId: p.playerId, handicapIndex: p.handicapIndex })),
       };
 
       // Include teeTime if provided - treat datetime-local as Pacific Time (UTC-8)
       if (teeTime) {
-        // Append timezone offset to force Pacific Time interpretation
-        const pacificDate = new Date(teeTime + '-08:00');
+        const pacificDate = new Date(teeTime + "-08:00");
         payload.teeTime = pacificDate.toISOString();
       }
 
-      const result = await editMatchFn(payload);
-
-      console.log("Match updated:", result.data);
+      await adminApi.editMatch(payload);
       setSuccess(true);
 
       // Navigate to match after short delay
       setTimeout(() => {
         navigate(`/match/${matchId}`);
       }, 1500);
-
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating match:", err);
-      setError(err.message || "Failed to update match");
+      setError(getErrorMessage(err, "Failed to update match"));
       setSubmitting(false);
     }
   };
@@ -607,13 +489,7 @@ export default function EditMatch() {
                 </div>
               )}
 
-              {/* Error */}
-              {error && (
-                <div className="card p-4 bg-red-50 border-red-200">
-                  <div className="text-red-800 font-semibold">Error</div>
-                  <div className="text-red-600 text-sm mt-1">{error}</div>
-                </div>
-              )}
+              <StatusBanner error={error ?? loadError} />
 
               {/* Submit */}
               <button
