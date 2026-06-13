@@ -65,6 +65,20 @@ export interface UseTournamentDataOptions {
   fetchActive?: boolean;
   /** Specific tournament ID to fetch */
   tournamentId?: string;
+  /**
+   * A tournament the caller already subscribes to (e.g. from TournamentContext).
+   * When provided, this hook uses it directly instead of opening a second
+   * subscription to the same document. `null` is a valid value (no active
+   * tournament); pass `undefined` (omit) to let the hook subscribe itself.
+   */
+  prefetchedTournament?: TournamentDoc | null;
+  /**
+   * Prefer the denormalized `round.pointTotals` (written server-side) for the
+   * aggregate stats. When every round carries totals, the hook skips the
+   * all-matches subscription entirely — a large read reduction for spectator
+   * views. Falls back to the matches subscription for rounds without totals.
+   */
+  preferDenormalizedTotals?: boolean;
 }
 
 // ============================================================================
@@ -72,7 +86,7 @@ export interface UseTournamentDataOptions {
 // ============================================================================
 
 export function useTournamentData(options: UseTournamentDataOptions = {}): UseTournamentDataResult {
-  const { fetchActive = false, tournamentId } = options;
+  const { fetchActive = false, tournamentId, prefetchedTournament, preferDenormalizedTotals = false } = options;
 
   // State
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
@@ -101,6 +115,14 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
     setRoundsLoaded(false);
     setMatchesLoaded(false);
     setError(null);
+
+    // #3: caller already subscribes to this tournament (e.g. TournamentContext).
+    // Use it directly rather than opening a duplicate subscription on the same doc.
+    if (prefetchedTournament !== undefined) {
+      setTournament(prefetchedTournament);
+      setTournamentLoaded(true);
+      return;
+    }
 
     if (fetchActive) {
       // Fetch the active tournament
@@ -148,7 +170,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       setRoundsLoaded(true);
       setMatchesLoaded(true);
     }
-  }, [fetchActive, tournamentId]);
+  }, [fetchActive, tournamentId, prefetchedTournament]);
 
   // -------------------------------------------------------------------------
   // 2) Subscribe to rounds when tournament is loaded
@@ -177,14 +199,33 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
     return () => unsub();
   }, [tournament?.id, tournamentLoaded]);
 
+  // Whether every loaded round carries denormalized totals. When so (and the
+  // caller opted in), aggregate stats come straight from the rounds collection
+  // and the matches subscription below is skipped entirely.
+  const allRoundsHaveTotals = rounds.length > 0 && rounds.every(r => r.pointTotals !== undefined);
+  const useDenormalized = preferDenormalizedTotals && allRoundsHaveTotals;
+
   // -------------------------------------------------------------------------
   // 3) Subscribe to matches for the tournament (grouped by roundId)
+  // Skipped when denormalized round totals are available — the big read win.
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!tournament?.id) {
       setMatchesByRound({});
       if (tournamentLoaded) setMatchesLoaded(true);
       return;
+    }
+
+    // When the caller prefers denormalized totals, wait until rounds are known
+    // before deciding whether to subscribe — this avoids an initial matches read
+    // burst that we'd immediately discard once totals are confirmed present.
+    if (preferDenormalizedTotals) {
+      if (!roundsLoaded) return; // still loading rounds; keep matches "not loaded"
+      if (useDenormalized) {
+        setMatchesByRound({});
+        setMatchesLoaded(true);
+        return;
+      }
     }
 
     const unsub = onSnapshot(
@@ -211,7 +252,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       }
     );
     return () => unsub();
-  }, [tournament?.id, tournamentLoaded]);
+  }, [tournament?.id, tournamentLoaded, preferDenormalizedTotals, roundsLoaded, useDenormalized]);
 
   // -------------------------------------------------------------------------
   // 4) Fetch courses needed by current tournament rounds (ONE-TIME, not subscription)
@@ -286,6 +327,32 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
     let totalPts = 0;
     const rStats: Record<string, RoundStats> = {};
 
+    // Denormalized path: read per-round totals straight off the round docs (no
+    // matches subscription needed). Mirrors the match-based math below exactly.
+    if (useDenormalized) {
+      rounds.forEach(r => {
+        const pt = r.pointTotals!;
+        rStats[r.id] = {
+          teamAConfirmed: pt.teamAConfirmed,
+          teamBConfirmed: pt.teamBConfirmed,
+          teamAPending: pt.teamAPending,
+          teamBPending: pt.teamBPending,
+        };
+        fA += pt.teamAConfirmed;
+        fB += pt.teamBConfirmed;
+        pA += pt.teamAPending;
+        pB += pt.teamBPending;
+        totalPts += (r.pointsValue ?? 1) * (pt.matchCount ?? 0);
+      });
+
+      const finalTotalPts = tournament?.totalPointsAvailable ?? totalPts;
+      return {
+        stats: { teamAConfirmed: fA, teamBConfirmed: fB, teamAPending: pA, teamBPending: pB },
+        roundStats: rStats,
+        totalPointsAvailable: finalTotalPts,
+      };
+    }
+
     // Build pointsValue lookup
     const roundPvLookup: Record<string, number> = {};
     rounds.forEach(r => {
@@ -339,7 +406,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       roundStats: rStats,
       totalPointsAvailable: finalTotalPts,
     };
-  }, [matchesByRound, rounds, tournament?.totalPointsAvailable]);
+  }, [matchesByRound, rounds, tournament?.totalPointsAvailable, useDenormalized]);
 
   return {
     loading,

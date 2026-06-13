@@ -40,8 +40,9 @@ export default function App() {
 
   // Get tournament from shared context (already subscribed in TournamentProvider)
   const { tournament, loading: tournamentLoading } = useTournamentContext();
-  
-  // Fetch rounds and matches only for the active tournament
+
+  // Reuse the context's tournament subscription (no duplicate) and read aggregate
+  // scores from denormalized round totals — this view never needs raw matches.
   const {
     loading: dataLoading,
     rounds,
@@ -49,7 +50,7 @@ export default function App() {
     stats,
     roundStats,
     totalPointsAvailable,
-  } = useTournamentData({ tournamentId: tournament?.id });
+  } = useTournamentData({ prefetchedTournament: tournament, preferDenormalizedTotals: true });
   
   const loading = tournamentLoading || dataLoading;
 

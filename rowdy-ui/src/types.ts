@@ -181,7 +181,21 @@ export type RoundDoc = {
   courseId?: string; // Reference to courses collection
   pointsValue?: number; // Points value for all matches in this round
   matchIds?: string[]; // Auto-populated when matches are linked
-  
+
+  // Denormalized point totals for this round, maintained server-side by the
+  // computeRoundTotals trigger. Lets aggregate views (home/tournament/history)
+  // read scores from the `rounds` collection instead of subscribing to every
+  // match. May be absent on rounds last scored before this field existed; the
+  // client falls back to a matches subscription in that case.
+  pointTotals?: {
+    teamAConfirmed: number;
+    teamBConfirmed: number;
+    teamAPending: number;
+    teamBPending: number;
+    matchCount: number;
+    _sig?: string;
+  };
+
   // SKINS: Optional skins game pots (only for singles/bestBall formats)
   skinsGrossPot?: number; // Total $ for gross skins; if > 0, gross skins active
   skinsNetPot?: number;   // Total $ for net skins; if > 0, net skins active

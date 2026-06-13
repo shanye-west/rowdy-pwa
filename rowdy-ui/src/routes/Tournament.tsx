@@ -27,7 +27,7 @@ function TournamentComponent() {
     stats,
     roundStats,
     totalPointsAvailable,
-  } = useTournamentData({ tournamentId });
+  } = useTournamentData({ tournamentId, preferDenormalizedTotals: true });
 
   if (loading) {
     return (

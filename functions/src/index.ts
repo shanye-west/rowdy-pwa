@@ -131,6 +131,11 @@ export const linkRoundToTournament = onDocumentWritten("rounds/{roundId}", async
   if (!after) return;
   const tId = after.tournamentId;
   if (!tId) return;
+  // The tournament link only needs (re)establishing when tournamentId is first
+  // set or changes. Skip the transaction on every other round write (e.g. the
+  // pointTotals updates from computeRoundTotals, lock toggles, seed merges).
+  const before = event.data?.before?.data();
+  if (before && before.tournamentId === tId) return;
   const tRef = db.collection("tournaments").doc(tId);
   await db.runTransaction(async (tx) => {
     const tSnap = await tx.get(tRef);
@@ -240,8 +245,27 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTr
 
   const roundId = after.roundId;
   if (!roundId) return;
-  const rSnap = await db.collection("rounds").doc(roundId).get();
-  const format = (rSnap.data()?.format as RoundFormat) || "twoManBestBall";
+
+  // Reuse cached round context (written to _lastComputed below on the first
+  // compute) to avoid a round read on every hole entry. Only fields that are
+  // immutable during scoring are cached; if any are missing we fall back to a
+  // fresh read. The round-edit admin path must re-touch matches to refresh this.
+  const cached = after._lastComputed;
+  const haveCachedRound = !!cached
+    && cached.roundId === roundId
+    && typeof cached.format === "string"
+    && cached.pointsValue !== undefined;
+
+  let roundData: any;
+  let format: RoundFormat;
+  if (haveCachedRound) {
+    format = cached.format as RoundFormat;
+    roundData = { courseId: cached.courseId, pointsValue: cached.pointsValue, day: cached.day };
+  } else {
+    const rSnap = await db.collection("rounds").doc(roundId).get();
+    roundData = rSnap.data() || {};
+    format = (roundData?.format as RoundFormat) || "twoManBestBall";
+  }
 
   // Use imported scoring functions
   const summary = summarize(format, after);
@@ -279,8 +303,8 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTr
   // Store computation signature and context for updateMatchFacts to avoid re-fetching
   // This denormalization reduces Firestore reads in updateMatchFacts by caching
   // frequently-needed round data that doesn't change during a match
-  const roundData = rSnap.data();
-  const updateData: any = { 
+  // (roundData is resolved above from the cache or a one-time read).
+  const updateData: any = {
     status, 
     result, 
     _computeSig: holesSig,
@@ -1200,11 +1224,21 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
 export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTriggerLogging("computeRoundSkins", async (event) => {
   const after = event.data?.after?.data();
   const before = event.data?.before?.data();
-  
+
   // Get round ID from after or before (handle deletion)
   const roundId = after?.roundId || before?.roundId;
   if (!roundId) return;
-  
+
+  // Skins depend only on holes data. Skip when holes are unchanged — this drops
+  // the wasted full recompute triggered by computeMatchOnWrite's status/result
+  // write-back (which fires this trigger again but never changes skins), and
+  // skips admin/metadata edits too. Match create/delete still pass through:
+  // one side's holes are undefined, so the comparison differs.
+  if (after && before &&
+      JSON.stringify(after.holes || {}) === JSON.stringify(before.holes || {})) {
+    return;
+  }
+
   // Fetch round to check if skins are enabled
   const roundSnap = await db.collection("rounds").doc(roundId).get();
   if (!roundSnap.exists) return;
@@ -1505,6 +1539,73 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTrig
   };
   
   await skinsResultRef.set(skinsResultDoc);
+}));
+
+// ============================================================================
+// ROUND POINT TOTALS (denormalized aggregate)
+// Maintains round.pointTotals so aggregate views (home, tournament, history) can
+// read per-round/tournament scores from the small `rounds` collection instead of
+// each client subscribing to every match in the tournament. The recompute is
+// from source (self-healing / idempotent) and only runs when a match's point
+// contribution could have changed — its winner, or its closed/started state —
+// not on every keystroke. Per-keystroke holes writes flow through
+// computeMatchOnWrite first; this trigger reacts to that status/result write-back.
+// ============================================================================
+
+export const computeRoundTotals = onDocumentWritten("matches/{matchId}", withTriggerLogging("computeRoundTotals", async (event) => {
+  const after = event.data?.after?.data();
+  const before = event.data?.before?.data();
+
+  // Points come from result.winner, gated by closed (confirmed) / started
+  // (pending) state. Recompute only when one of those — or the match's existence
+  // or round membership — changed. This skips the holes-only writes entirely.
+  const winnerChanged = before?.result?.winner !== after?.result?.winner;
+  const closedChanged = (before?.status?.closed === true) !== (after?.status?.closed === true);
+  const startedChanged = ((before?.status?.thru ?? 0) > 0) !== ((after?.status?.thru ?? 0) > 0);
+  const roundChanged = before?.roundId !== after?.roundId;
+  const created = !before && !!after;
+  const deleted = !!before && !after;
+  if (!winnerChanged && !closedChanged && !startedChanged && !roundChanged && !created && !deleted) {
+    return;
+  }
+
+  // A match can affect at most two rounds (if it was moved between them).
+  const affectedRoundIds = [
+    ...new Set([before?.roundId, after?.roundId].filter(Boolean) as string[]),
+  ];
+
+  for (const roundId of affectedRoundIds) {
+    const roundRef = db.collection("rounds").doc(roundId);
+    const roundSnap = await roundRef.get();
+    if (!roundSnap.exists) continue;
+    const pv = roundSnap.data()?.pointsValue ?? 1;
+
+    const matchesSnap = await db.collection("matches").where("roundId", "==", roundId).get();
+    let teamAConfirmed = 0, teamBConfirmed = 0, teamAPending = 0, teamBPending = 0, matchCount = 0;
+    for (const d of matchesSnap.docs) {
+      const m = d.data();
+      matchCount++;
+      const w = m.result?.winner;
+      const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
+      const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
+      const isClosed = m.status?.closed === true;
+      const isStarted = (m.status?.thru ?? 0) > 0;
+      if (isClosed) {
+        teamAConfirmed += ptsA;
+        teamBConfirmed += ptsB;
+      } else if (isStarted) {
+        teamAPending += ptsA;
+        teamBPending += ptsB;
+      }
+    }
+
+    const pointTotals = { teamAConfirmed, teamBConfirmed, teamAPending, teamBPending, matchCount };
+    const sig = JSON.stringify(pointTotals);
+    // Skip write when unchanged (avoids churn from no-op transitions).
+    if (roundSnap.data()?.pointTotals?._sig === sig) continue;
+
+    await roundRef.set({ pointTotals: { ...pointTotals, _sig: sig } }, { merge: true });
+  }
 }));
 
 // ============================================================================

@@ -22,11 +22,13 @@ function TeamsComponent() {
   const tournamentIdParam = searchParams.get("tournamentId");
   
   // Use shared tournament hook instead of creating a duplicate subscription
-  // This eliminates 1 real-time subscription per Teams page view
-  const tournamentOptions = useMemo(() => 
-    tournamentIdParam 
-      ? { tournamentId: tournamentIdParam } 
-      : { fetchActive: true },
+  // This eliminates 1 real-time subscription per Teams page view.
+  // This page only reads tournament + rounds (never matches/stats), so prefer
+  // denormalized round totals to skip the all-matches subscription as well.
+  const tournamentOptions = useMemo(() =>
+    tournamentIdParam
+      ? { tournamentId: tournamentIdParam, preferDenormalizedTotals: true }
+      : { fetchActive: true, preferDenormalizedTotals: true },
     [tournamentIdParam]
   );
   const { tournament, rounds, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
