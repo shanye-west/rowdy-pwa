@@ -91,6 +91,80 @@ function parseTeeTime(teeTime: unknown): Timestamp | null {
 }
 
 /**
+ * Builds a ready-to-write match document with computed strokes, course
+ * handicaps, and authorizedUids. Shared by `seedMatch` (writes the single
+ * returned doc) and `finalizePairingDraft` (builds many and batch-writes).
+ * Does not touch Firestore writes — the caller persists the returned object.
+ */
+export async function buildSeededMatchDoc(params: {
+  id: string;
+  tournamentId: string;
+  roundId: string;
+  teamAPlayers: PlayerPayload[];
+  teamBPlayers: PlayerPayload[];
+  teeTime?: unknown;
+  /** Explicit ordering; when omitted the lowest free positive int is used. */
+  matchNumber?: number;
+}): Promise<Record<string, unknown>> {
+  const { id, tournamentId, roundId, teamAPlayers, teamBPlayers, teeTime, matchNumber } = params;
+
+  const { course } = await fetchCourseForRound(roundId);
+  const { teamAHandicaps, teamBHandicaps } = await fetchTournamentHandicaps(tournamentId);
+
+  const { teamAPlayersWithStrokes, teamBPlayersWithStrokes, courseHandicaps } = computeTeamsWithStrokes(
+    resolveWithFallback(teamAPlayers, teamAHandicaps, teamBHandicaps),
+    resolveWithFallback(teamBPlayers, teamAHandicaps, teamBHandicaps),
+    course
+  );
+
+  const teeTimeTimestamp = parseTeeTime(teeTime);
+
+  // Determine matchNumber: if caller provided `matchNumber` use it, otherwise
+  // compute the lowest available positive integer for this round.
+  let matchNumberToUse: number = matchNumber ?? 0;
+  if (!matchNumberToUse || typeof matchNumberToUse !== "number" || matchNumberToUse <= 0) {
+    const existingSnaps = await db().collection("matches").where("roundId", "==", roundId).get();
+    const nums = existingSnaps.docs.map((d) => Number(d.data()?.matchNumber) || 0).filter((n) => n > 0);
+    let candidate = 1;
+    const numSet = new Set(nums);
+    while (numSet.has(candidate)) candidate++;
+    matchNumberToUse = candidate;
+  }
+
+  // Fetch player auth UIDs for security rules optimization
+  const allPlayerIds = [...teamAPlayers, ...teamBPlayers].map((p: PlayerPayload) => p.playerId);
+  const authorizedUids: string[] = [];
+  for (const playerId of allPlayerIds) {
+    const pSnap = await db().collection("players").doc(playerId).get();
+    if (pSnap.exists) {
+      const authUid = pSnap.data()?.authUid;
+      if (authUid) authorizedUids.push(authUid);
+    }
+  }
+
+  return {
+    id,
+    tournamentId,
+    roundId,
+    matchNumber: matchNumberToUse,
+    teeTime: teeTimeTimestamp,
+    teamAPlayers: teamAPlayersWithStrokes,
+    teamBPlayers: teamBPlayersWithStrokes,
+    courseHandicaps,
+    authorizedUids, // Store UIDs directly for efficient security rules
+    holes: {},
+    status: {
+      leader: null,
+      margin: 0,
+      thru: 0,
+      dormie: false,
+      closed: false,
+    },
+    result: {},
+  };
+}
+
+/**
  * Admin-only function to create a match with calculated strokesReceived.
  *
  * Data payload:
@@ -114,60 +188,15 @@ export const seedMatch = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "teamAPlayers and teamBPlayers must be arrays");
   }
 
-  const { course } = await fetchCourseForRound(roundId);
-  const { teamAHandicaps, teamBHandicaps } = await fetchTournamentHandicaps(tournamentId);
-
-  const { teamAPlayersWithStrokes, teamBPlayersWithStrokes, courseHandicaps } = computeTeamsWithStrokes(
-    resolveWithFallback(teamAPlayers, teamAHandicaps, teamBHandicaps),
-    resolveWithFallback(teamBPlayers, teamAHandicaps, teamBHandicaps),
-    course
-  );
-
-  const teeTimeTimestamp = parseTeeTime(teeTime);
-
-  // Determine matchNumber: if caller provided `matchNumber` use it, otherwise
-  // compute the lowest available positive integer for this round.
-  let matchNumberToUse: number = request.data?.matchNumber ?? 0;
-  if (!matchNumberToUse || typeof matchNumberToUse !== "number" || matchNumberToUse <= 0) {
-    const existingSnaps = await db().collection("matches").where("roundId", "==", roundId).get();
-    const nums = existingSnaps.docs.map((d) => Number(d.data()?.matchNumber) || 0).filter((n) => n > 0);
-    let candidate = 1;
-    const numSet = new Set(nums);
-    while (numSet.has(candidate)) candidate++;
-    matchNumberToUse = candidate;
-  }
-
-  // Fetch player auth UIDs for security rules optimization
-  const allPlayerIds = [...teamAPlayers, ...teamBPlayers].map((p: PlayerPayload) => p.playerId);
-  const authorizedUids: string[] = [];
-  for (const playerId of allPlayerIds) {
-    const pSnap = await db().collection("players").doc(playerId).get();
-    if (pSnap.exists) {
-      const authUid = pSnap.data()?.authUid;
-      if (authUid) authorizedUids.push(authUid);
-    }
-  }
-
-  const matchDoc = {
+  const matchDoc = await buildSeededMatchDoc({
     id,
     tournamentId,
     roundId,
-    matchNumber: matchNumberToUse,
-    teeTime: teeTimeTimestamp,
-    teamAPlayers: teamAPlayersWithStrokes,
-    teamBPlayers: teamBPlayersWithStrokes,
-    courseHandicaps,
-    authorizedUids, // Store UIDs directly for efficient security rules
-    holes: {},
-    status: {
-      leader: null,
-      margin: 0,
-      thru: 0,
-      dormie: false,
-      closed: false,
-    },
-    result: {},
-  };
+    teamAPlayers,
+    teamBPlayers,
+    teeTime,
+    matchNumber: request.data?.matchNumber,
+  });
 
   await db().collection("matches").doc(id).set(matchDoc);
 

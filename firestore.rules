@@ -128,5 +128,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // Pairings draft: NOT public — pairings are announced in person, so only
+    // the two teams' captains/co-captains and admins may read the live board.
+    // Like matches, the authorized auth uids are precomputed into an array on
+    // the doc (rules can't resolve captain/admin status by path). All writes
+    // go through the draft callables via the Admin SDK.
+    match /pairingDrafts/{roundId} {
+      function isAuthorized() {
+        return request.auth != null &&
+               resource.data.keys().hasAny(['authorizedUids']) &&
+               request.auth.uid in resource.data.authorizedUids;
+      }
+      // `resource == null` keeps a not-yet-created draft readable (empty), so
+      // admins/captains can tell "no draft yet" apart from "access denied".
+      // Once the doc exists, only authorizedUids may read it.
+      allow read: if resource == null || isAuthorized();
+      allow write: if false;
+    }
   }
 }

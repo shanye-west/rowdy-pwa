@@ -1882,3 +1882,16 @@ export {
 } from "./callables/adminOps.js";
 
 export { upsertCourse, deleteCourse } from "./callables/courseOps.js";
+
+// ============================================================================
+// PAIRINGS DRAFT CALLABLES
+// Live snake-draft for round pairings (pairingDrafts/{roundId}).
+// ============================================================================
+
+export {
+  createPairingDraft,
+  submitDraftPick,
+  undoDraftPick,
+  resetPairingDraft,
+  finalizePairingDraft,
+} from "./callables/draftOps.js";

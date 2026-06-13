@@ -14,6 +14,7 @@ import RequireAdmin from "./components/RequireAdmin";
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazy(() => import("./routes/Match"));
 const Round = lazy(() => import("./routes/Round"));
+const Pairings = lazy(() => import("./routes/Pairings"));
 const Skins = lazy(() => import("./routes/Skins"));
 const RoundRecap = lazy(() => import("./routes/RoundRecap"));
 const Teams = lazy(() => import("./routes/Teams"));
@@ -47,6 +48,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <App /> },
         { path: "round/:roundId", element: <Round /> },
+        { path: "round/:roundId/pairings", element: <Pairings /> },
         { path: "round/:roundId/skins", element: <Skins /> },
         { path: "round/:roundId/recap", element: <RoundRecap /> },
         { path: "match/:matchId", element: <Match /> },

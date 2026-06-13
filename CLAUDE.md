@@ -28,11 +28,11 @@ The frontend `build` runs `tsc -b` first — type errors block the build. Treat 
 
 ## Deployment posture
 
-There is **one production Firebase project** (`rowdy-pwa`) and a dev project (`dev-rowdy-pwa`, see [.firebaserc](.firebaserc)). All day-to-day development tests against **production data** by default. Before doing anything that could write to Firestore — especially anything in [scripts/](scripts/) or `firebase deploy` — confirm intent with the user. Reads, builds, lints, and tests are safe.
+**There is effectively only one Firebase project: production (`rowdy-pwa`).** A `dev` alias (`dev-rowdy-pwa`) exists in [.firebaserc](.firebaserc) but is **not used** — there is no separate dev environment. Every deploy and every test run hits **prod**, against **production data**. There is no staging to catch mistakes, so before anything that writes to Firestore or deploys — `firebase deploy`, anything in [scripts/](scripts/) — confirm intent with the user. Reads, builds, lints, and tests are safe.
 
-Deploy is manual:
-- `firebase deploy --only hosting` — frontend
-- `firebase deploy --only functions` — Cloud Functions
+Deploy is manual. `firebase.json` defines **no `predeploy` build hooks**, so build first:
+- `cd rowdy-ui && npm run build` then `firebase deploy --only hosting` — frontend
+- `cd functions && npm run build` then `firebase deploy --only functions` — Cloud Functions
 - `firebase deploy --only firestore:rules` — security rules
 
 ## Type safety conventions

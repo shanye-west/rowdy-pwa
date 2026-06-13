@@ -154,6 +154,15 @@ export default function RoundAdmin() {
 
         {!isNew && (
           <>
+            <AdminSection
+              title="Pairings Draft"
+              description="Run the live captains' snake draft to set this round's matchups, then create the matches automatically."
+            >
+              <Link to={`/round/${roundId}/pairings`} className="btn btn-primary">
+                Open pairings draft
+              </Link>
+            </AdminSection>
+
             <AdminSection title="Matches" description="Open a match to edit players, lock it, fix a score, or delete it.">
               <div className="space-y-2">
                 {matches.map((m) => (

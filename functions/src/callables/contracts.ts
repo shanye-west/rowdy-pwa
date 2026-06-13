@@ -245,3 +245,54 @@ export interface RecalculateAllStatsRequest {
 export interface ComputeRoundRecapRequest {
   roundId: string;
 }
+
+// ============================================================================
+// PAIRINGS / DRAFT
+// ============================================================================
+
+export type DraftTeam = "teamA" | "teamB";
+
+export interface CreatePairingDraftRequest {
+  roundId: string;
+  /** Player ids available this round, per team (each list belongs to that team's roster). */
+  availableTeamA: string[];
+  availableTeamB: string[];
+  /** Coin-flip outcome: which team nominates match 1. */
+  firstPickTeam: DraftTeam;
+  /** Overwrite an existing (non-finalized) draft for this round. */
+  reset?: boolean;
+}
+
+export interface CreatePairingDraftResult extends AdminResult {
+  roundId: string;
+  totalMatches: number;
+}
+
+export interface SubmitDraftPickRequest {
+  roundId: string;
+  /** The team the caller is acting for; must be captain/co-captain of it (or admin). */
+  team: DraftTeam;
+  /** Players being placed (length = players-per-side). */
+  playerIds: string[];
+}
+
+export interface UndoDraftPickRequest {
+  roundId: string;
+  /** The team the caller is acting for (captain/co-captain of it, or admin). */
+  team: DraftTeam;
+}
+
+export interface ResetPairingDraftRequest {
+  roundId: string;
+}
+
+export interface FinalizePairingDraftRequest {
+  roundId: string;
+  /** Create matches even if some already exist for the round. */
+  force?: boolean;
+}
+
+export interface FinalizePairingDraftResult extends AdminResult {
+  roundId: string;
+  matchIds: string[];
+}

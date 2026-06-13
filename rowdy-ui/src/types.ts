@@ -252,6 +252,46 @@ export type MatchDoc = {
   courseHandicaps?: number[]; // Course handicaps for all players in match order [teamA..., teamB...]
 };
 
+// ============================================================================
+// PAIRINGS DRAFT - Live snake-draft state for a round (pairingDrafts/{roundId})
+// ============================================================================
+
+export type DraftTeamKey = "teamA" | "teamB";
+
+/** One match being built during the draft. Player slots are null until placed. */
+export type DraftMatch = {
+  matchNumber: number;          // 1-based, equals draft order
+  nominatedBy: DraftTeamKey;
+  teamAPlayers: string[] | null; // playerIds
+  teamBPlayers: string[] | null;
+};
+
+/** Whose move it is. Null once the draft reaches review (snake complete). */
+export type DraftTurn = {
+  matchIndex: number;
+  awaiting: "nomination" | "response";
+  team: DraftTeamKey;
+};
+
+export type PairingDraftDoc = {
+  roundId: string;
+  tournamentId: string;
+  format: RoundFormat;
+  playersPerSide: number;
+  totalMatches: number;
+  available: { teamA: string[]; teamB: string[] };
+  firstPickTeam: DraftTeamKey;
+  phase: "drafting" | "review" | "finalized";
+  matches: DraftMatch[];
+  turn: DraftTurn | null;
+  tierByPlayer: Record<string, "A" | "B" | "C" | "D">;
+  authorizedUids: string[];
+  createdBy: string;
+  finalizedMatchIds?: string[];
+  createdAt?: FirestoreTimestampLike;
+  updatedAt?: FirestoreTimestampLike;
+};
+
 // Per-hole performance data for advanced queries
 export type HolePerformance = {
   hole: number;                           // 1-18

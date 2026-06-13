@@ -17,3 +17,22 @@ export function rosterPlayerIds(
     ...tierPlayerIds(tournament.teamB?.rosterByTier),
   ];
 }
+
+export type Tier = (typeof TIERS)[number];
+
+/** Flatten one team's rosterByTier into a playerId → tier map. */
+export function tierLookupForTeam(roster: TierMap | undefined): Record<string, Tier> {
+  const out: Record<string, Tier> = {};
+  for (const tier of TIERS) for (const pid of roster?.[tier] ?? []) out[pid] = tier;
+  return out;
+}
+
+/** playerId → tier across both teams of a tournament (used for the A/A·D/D rule). */
+export function playerTierLookup(
+  tournament: Pick<TournamentDoc, "teamA" | "teamB"> | null | undefined
+): Record<string, Tier> {
+  return {
+    ...tierLookupForTeam(tournament?.teamA?.rosterByTier),
+    ...tierLookupForTeam(tournament?.teamB?.rosterByTier),
+  };
+}
