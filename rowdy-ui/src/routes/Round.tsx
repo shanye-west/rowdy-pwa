@@ -6,6 +6,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { db } from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
@@ -22,6 +23,7 @@ import { cn } from "../lib/utils";
 
 function RoundComponent() {
   const { roundId } = useParams();
+  const { player } = useAuth();
   const [hasRecap, setHasRecap] = useState(false);
   const [checkingRecap, setCheckingRecap] = useState(true);
   
@@ -114,6 +116,18 @@ function RoundComponent() {
   const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
+
+  // Captains/co-captains and admins can run the live pairings draft. Show the
+  // entry point only to those roles (the page itself is captain/admin-gated),
+  // and only until the round's matches have been created.
+  const captainIds = [
+    tournament?.teamA?.captainId,
+    tournament?.teamA?.coCaptainId,
+    tournament?.teamB?.captainId,
+    tournament?.teamB?.coCaptainId,
+  ].filter(Boolean) as string[];
+  const canSeePairings =
+    !!player && (!!player.isAdmin || captainIds.includes(player.id)) && matches.length === 0;
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
@@ -225,6 +239,20 @@ function RoundComponent() {
             </CardContent>
           </Card>
         </section>
+
+        {canSeePairings && (
+          <section>
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 w-full rounded-xl bg-white/90 shadow-sm hover:bg-slate-50"
+            >
+              <ViewTransitionLink to={`/round/${round.id}/pairings`}>
+                ⛳ Set pairings (captains' draft)
+              </ViewTransitionLink>
+            </Button>
+          </section>
+        )}
 
         <section className="space-y-3">
             <div className="flex items-center px-1">
