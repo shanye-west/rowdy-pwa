@@ -1,6 +1,6 @@
 # Rowdy Cup PWA — Claude Code Guide
 
-A mobile-first PWA for a 12v12 Ryder-Cup–style golf tournament. Used in production for the December 2025 tournament; next event is in a few months. Players enter gross scores on phones; Cloud Functions compute net scores, hole winners, match status, and aggregated stats in real time. Public read; anonymous auth for score entry. Live URL: www.rowdycup.com.
+A mobile-first PWA for a 12v12 Ryder-Cup–style golf tournament. Used in production for the December 2025 tournament; next event is in a few months. Players enter gross scores on phones; Cloud Functions compute net scores, hole winners, match status, and aggregated stats in real time. Public read; anonymous auth for score entry. The PWA (this app) is served at **app.rowdycup.com**; www.rowdycup.com is just the marketing website, not this app.
 
 ## Monorepo layout
 
