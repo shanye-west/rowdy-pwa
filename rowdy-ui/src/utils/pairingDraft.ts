@@ -68,3 +68,22 @@ export function pairTierViolation(
   if (t1 === "D" && t2 === "D") return "Can't pair two D-tier players";
   return null;
 }
+
+/**
+ * Reason adding `candidateId` to the current `selected` set would be illegal, or
+ * null if the pick is allowed. Lets the picker pre-disable the second A (or
+ * second D) instead of only erroring after the fact. Only meaningful for
+ * 2-player sides; for any other size nothing is blocked here.
+ */
+export function wouldViolateTier(
+  selected: string[],
+  candidateId: string,
+  tierByPlayer: Record<string, "A" | "B" | "C" | "D">
+): string | null {
+  if (selected.includes(candidateId)) return null; // toggling off is always fine
+  const tier = tierByPlayer[candidateId];
+  if (tier !== "A" && tier !== "D") return null;
+  const clashes = selected.some((id) => tierByPlayer[id] === tier);
+  if (!clashes) return null;
+  return tier === "A" ? "Can't pair two A-tier players" : "Can't pair two D-tier players";
+}
