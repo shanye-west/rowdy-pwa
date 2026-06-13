@@ -1,6 +1,6 @@
 /* rowdy-ui/src/index.css */
-
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+/* Google Fonts (Fraunces + Space Grotesk) are loaded via <link> in index.html, not @import,
+   to avoid render-blocking the stylesheet. */
 
 /* Tailwind CSS */
 @import "tailwindcss";
@@ -83,6 +83,7 @@
 
     /* Dimensions */
     --header-height: 64px;
+    --bottom-nav-height: 56px;
     --max-width: 720px;
     --radius-lg: 18px;
     --radius-md: 14px;
@@ -190,8 +191,36 @@
 @layer components {
   /* App Shell */
   .app-container {
-    @apply w-full mx-auto pb-10 flex-1;
+    @apply w-full mx-auto flex-1;
     max-width: var(--max-width);
+    /* Clear the home indicator even when there's no bottom nav (admin/login). */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.5rem);
+  }
+  /* When the bottom tab bar is present, reserve room so the last row clears it + the home indicator. */
+  .app-container.has-bottom-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  /* Bottom tab bar — thumb-reachable primary nav, centered to the content column. */
+  .bottom-nav {
+    @apply fixed bottom-0 z-50 flex items-stretch justify-around
+           border-t border-slate-200/70 bg-white/90 backdrop-blur;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: var(--max-width);
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.06);
+  }
+  .bottom-nav-item {
+    @apply flex flex-1 flex-col items-center justify-center gap-0.5
+           text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400
+           transition-colors duration-150;
+  }
+  .bottom-nav-item[aria-current="page"] {
+    color: var(--brand-primary);
   }
 
   /* Sticky Header - extends into safe area (notch area) on mobile */

@@ -2,24 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" type="image/svg+xml" href="/images/rowdycup-logo.svg" />
+    <!-- Brand navy; kept in sync with the live theme at runtime (see Layout theme engine) -->
+    <meta name="theme-color" content="#132448" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Rowdy Cup</title>
-    
+
     <!-- Preconnect to Firebase origins for faster initial load -->
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://apis.google.com" crossorigin />
     <link rel="preconnect" href="https://www.googleapis.com" crossorigin />
     <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
     <link rel="dns-prefetch" href="https://apis.google.com" />
-    
+
+    <!-- Google Fonts: preconnect + non-blocking link (moved out of CSS @import) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
+
     <!-- iOS PWA support -->
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <!-- Standardized mobile web app meta (keep apple-prefixed for older iOS compatibility) -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent lets the dark gradient header bleed under the status bar (white text) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Rowdy Cup" />
   </head>
   <body>

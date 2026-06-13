@@ -277,36 +277,23 @@ function TeamsComponent() {
       <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
         
         {/* Team Selector Tabs */}
-        <div 
-          style={{ 
-            display: "grid", 
-            gridTemplateColumns: "1fr 1fr", 
-            borderRadius: 12, 
-            overflow: "hidden",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-            border: "1px solid var(--divider)",
-          }}
-        >
+        <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
           {/* Team A Tab */}
           <button
+            type="button"
             onClick={() => setSelectedTeam("A")}
+            aria-pressed={selectedTeam === "A"}
+            className="flex items-center justify-center gap-2.5 px-3 py-3.5 transition-all"
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              padding: "14px 12px",
-              border: "none",
-              cursor: "pointer",
-              background: selectedTeam === "A" 
-                ? `color-mix(in srgb, ${teamAColor} 15%, white)` 
-                : "white",
-              borderBottom: selectedTeam === "A" ? `3px solid ${teamAColor}` : "3px solid transparent",
-              transition: "all 0.2s ease",
+              background:
+                selectedTeam === "A"
+                  ? `color-mix(in srgb, ${teamAColor} 15%, white)`
+                  : "white",
+              borderBottom: `3px solid ${selectedTeam === "A" ? teamAColor : "transparent"}`,
             }}
           >
-            <OfflineImage 
-              src={teamALogo} 
+            <OfflineImage
+              src={teamALogo}
               alt={teamAName}
               fallbackIcon="🔵"
               style={{ width: 28, height: 28, objectFit: "contain" }}
@@ -314,37 +301,27 @@ function TeamsComponent() {
             <TeamName
               name={teamAName}
               variant="inline"
-              style={{
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                color: selectedTeam === 'A' ? teamAColor : 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.03em',
-              }}
+              className="text-[0.95rem] font-bold uppercase tracking-[0.03em]"
+              style={{ color: selectedTeam === "A" ? teamAColor : "var(--text-secondary)" }}
             />
           </button>
 
           {/* Team B Tab */}
           <button
+            type="button"
             onClick={() => setSelectedTeam("B")}
+            aria-pressed={selectedTeam === "B"}
+            className="flex items-center justify-center gap-2.5 border-l border-slate-200 px-3 py-3.5 transition-all"
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              padding: "14px 12px",
-              border: "none",
-              borderLeft: "1px solid var(--divider)",
-              cursor: "pointer",
-              background: selectedTeam === "B" 
-                ? `color-mix(in srgb, ${teamBColor} 15%, white)` 
-                : "white",
-              borderBottom: selectedTeam === "B" ? `3px solid ${teamBColor}` : "3px solid transparent",
-              transition: "all 0.2s ease",
+              background:
+                selectedTeam === "B"
+                  ? `color-mix(in srgb, ${teamBColor} 15%, white)`
+                  : "white",
+              borderBottom: `3px solid ${selectedTeam === "B" ? teamBColor : "transparent"}`,
             }}
           >
-            <OfflineImage 
-              src={teamBLogo} 
+            <OfflineImage
+              src={teamBLogo}
               alt={teamBName}
               fallbackIcon="🔴"
               style={{ width: 28, height: 28, objectFit: "contain" }}
@@ -352,13 +329,8 @@ function TeamsComponent() {
             <TeamName
               name={teamBName}
               variant="inline"
-              style={{
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                color: selectedTeam === 'B' ? teamBColor : 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.03em',
-              }}
+              className="text-[0.95rem] font-bold uppercase tracking-[0.03em]"
+              style={{ color: selectedTeam === "B" ? teamBColor : "var(--text-secondary)" }}
             />
           </button>
         </div>

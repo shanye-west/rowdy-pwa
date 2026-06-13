@@ -1,19 +1,18 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation, matchPath, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   ChevronLeft,
   Menu,
   X,
-  Home,
-  Users,
-  History,
   Shield,
   LogOut,
   LogIn,
   Wifi,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
+import BottomNav from "./BottomNav";
 import OfflineImage from "./OfflineImage";
+import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
@@ -38,6 +37,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
   const { config } = useLayout();
@@ -58,6 +58,15 @@ export function LayoutShell({ children }: LayoutShellProps) {
     }
   };
 
+  // Logout, gated behind a confirm dialog to prevent accidental taps.
+  const performLogout = async () => {
+    setConfirmLogout(false);
+    await logout();
+    setShowLogoutConfirm(true);
+    setTimeout(() => setShowLogoutConfirm(false), 3000);
+    navigate("/");
+  };
+
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
     const match = title.match(/^(\d{4})\s+(.+)$/);
@@ -69,11 +78,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
   // --- THEME ENGINE ---
   useEffect(() => {
-    if (series === "christmasClassic") {
-      document.body.classList.add("theme-christmas");
-    } else {
-      document.body.classList.remove("theme-christmas");
-    }
+    const isChristmas = series === "christmasClassic";
+    document.body.classList.toggle("theme-christmas", isChristmas);
+    // Keep the live status-bar / toolbar tint in sync with the active theme.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
   }, [series]);
 
   // Close menu when clicking outside
@@ -84,12 +93,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
     return () => document.removeEventListener("click", handleClick);
   }, [menuOpen]);
 
-  // Compute dynamic Team Rosters link: if current route is a specific tournament,
-  // point the Team Rosters menu entry at that tournament's rosters.
-  const tournamentMatch = matchPath({ path: "/tournament/:tournamentId" }, location.pathname);
-  const teamLink = tournamentMatch && (tournamentMatch.params as any)?.tournamentId
-    ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
-    : "/teams";
+  // Hide the bottom tab bar on admin/login routes (they have their own navigation context).
+  const hideBottomNav =
+    location.pathname.startsWith("/admin") || location.pathname === "/login";
   const closeMenu = () => setMenuOpen(false);
   
   // Simple page content - CSS View Transitions handle the animation
@@ -188,28 +194,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
                     </div>
                   )}
 
-                  <div className="h-px bg-slate-200/80" />
+                  {!authLoading && player && <div className="h-px bg-slate-200/80" />}
 
                   <div className="space-y-1 p-2">
-                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <ViewTransitionLink to="/" onClick={closeMenu}>
-                        <Home className="h-4 w-4 text-slate-500" />
-                        Home
-                      </ViewTransitionLink>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <ViewTransitionLink to={teamLink} onClick={closeMenu}>
-                        <Users className="h-4 w-4 text-slate-500" />
-                        Team Rosters
-                      </ViewTransitionLink>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <ViewTransitionLink to="/history" onClick={closeMenu}>
-                        <History className="h-4 w-4 text-slate-500" />
-                        History
-                      </ViewTransitionLink>
-                    </Button>
-
                     {player?.isAdmin && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
                         <ViewTransitionLink to="/admin" onClick={closeMenu}>
@@ -226,12 +213,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
                             type="button"
                             variant="ghost"
                             className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={async () => {
+                            onClick={() => {
                               closeMenu();
-                              await logout();
-                              setShowLogoutConfirm(true);
-                              setTimeout(() => setShowLogoutConfirm(false), 3000);
-                              navigate("/");
+                              setConfirmLogout(true);
                             }}
                           >
                             <LogOut className="h-4 w-4" />
@@ -274,8 +258,30 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         )}
 
-        <main className="app-container">{pageContent}</main>
+        <main className={`app-container${hideBottomNav ? "" : " has-bottom-nav"}`}>
+          {pageContent}
+        </main>
       </PullToRefresh>
+
+      {!hideBottomNav && <BottomNav />}
+
+      <Modal
+        isOpen={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        title="Log out?"
+        ariaLabel="Confirm logout"
+      >
+        <p className="mb-4 text-center text-sm text-slate-600">
+          You'll need to log back in to enter scores.
+        </p>
+        <ModalActions
+          primaryLabel="Log Out"
+          primaryClass="bg-red-600 hover:bg-red-700"
+          onPrimary={performLogout}
+          secondaryLabel="Cancel"
+          onSecondary={() => setConfirmLogout(false)}
+        />
+      </Modal>
     </>
   );
 }

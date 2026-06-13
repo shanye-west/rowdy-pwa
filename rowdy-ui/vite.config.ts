@@ -67,9 +67,13 @@ export default defineConfig({
         name: 'Rowdy Cup',
         short_name: 'Rowdy Cup',
         description: 'Live scoring for the Rowdy Cup tournament',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        id: '/',
+        lang: 'en',
+        categories: ['sports'],
+        theme_color: '#132448', // brand navy — matches the header gradient
+        background_color: '#f6f6f6', // matches --app-bg
         display: 'standalone', // Hides browser UI
+        orientation: 'portrait', // mobile-only scoring app; scorecard scrolls horizontally in portrait
         scope: '/',
         start_url: '/',
         icons: [
