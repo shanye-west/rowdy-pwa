@@ -16,6 +16,7 @@ import {
   applyUndo,
   lastPlacement,
   remainingIds,
+  isPairableRemainder,
   type DraftState,
   type DraftTeam,
 } from "./pairingDraft.js";
@@ -183,6 +184,59 @@ describe("applyPick — rejections", () => {
       tierByPlayer: { a1: "A", a2: "A", b1: "A", b2: "A" },
     });
     expect(() => applyPick(state, "teamA", ["a1"])).not.toThrow();
+  });
+});
+
+describe("isPairableRemainder", () => {
+  const t = { p1: "A", p2: "A", p3: "D", p4: "D", p5: "B", p6: "C" };
+
+  it("is true when #A and #D each fit within the remaining pairs", () => {
+    expect(isPairableRemainder(["p1", "p2", "p3", "p4"], 2, t)).toBe(true); // A-D, A-D
+    expect(isPairableRemainder(["p1", "p3"], 1, t)).toBe(true); // A-D
+    expect(isPairableRemainder(["p5", "p6"], 1, t)).toBe(true); // B-C
+    expect(isPairableRemainder([], 0, t)).toBe(true);
+  });
+
+  it("is false when a tier needs more than one slot per remaining pair", () => {
+    expect(isPairableRemainder(["p1", "p2"], 1, t)).toBe(false); // two A in one pair
+    expect(isPairableRemainder(["p3", "p4"], 1, t)).toBe(false); // two D in one pair
+    // three A-tier across two pairs: one pair is forced to be A/A
+    expect(isPairableRemainder(["p1", "p2", "pX", "p5"], 2, { ...t, pX: "A" })).toBe(false);
+  });
+});
+
+describe("applyPick — tier feasibility look-ahead (no stranding)", () => {
+  // teamA: two A-tier and two neutrals across 2 matches. Pairing the neutrals
+  // together is legal on its own but strands the two A's for the final match.
+  const tiers2 = {
+    a1: "B", a2: "C", a3: "A", a4: "A",
+    b1: "B", b2: "C", b3: "A", b4: "A",
+  };
+  const base = () =>
+    makeState({
+      playersPerSide: 2,
+      teamA: ["a1", "a2", "a3", "a4"],
+      teamB: ["b1", "b2", "b3", "b4"],
+      tierByPlayer: tiers2,
+    });
+
+  it("rejects a legal pair that would strand two A-tier players for the last match", () => {
+    expect(() => applyPick(base(), "teamA", ["a1", "a2"])).toThrow(/strand/);
+  });
+
+  it("allows a pair that keeps the remainder pairable", () => {
+    // A+B now leaves A+C for the last match — fine.
+    expect(() => applyPick(base(), "teamA", ["a3", "a1"])).not.toThrow();
+  });
+
+  it("does not strand-check singles or four-man (no tier rule)", () => {
+    const singles = makeState({
+      playersPerSide: 1,
+      teamA: ["a3", "a4"],
+      teamB: ["b3", "b4"],
+      tierByPlayer: tiers2, // both A — would be illegal as a pair, but irrelevant here
+    });
+    expect(() => applyPick(singles, "teamA", ["a3"])).not.toThrow();
   });
 });
 

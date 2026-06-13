@@ -20,6 +20,7 @@ import {
   applyPick,
   applyUndo,
   lastPlacement,
+  isPairableRemainder,
   type DraftState,
   type DraftTeam,
 } from "../helpers/pairingDraft.js";
@@ -115,6 +116,26 @@ export const createPairingDraft = onCall(async (request) => {
   const tierByPlayer: Record<string, string> = {};
   addTiers(t.teamA?.rosterByTier, tierByPlayer);
   addTiers(t.teamB?.rosterByTier, tierByPlayer);
+
+  // Reject rosters that can't be paired legally before the draft even starts —
+  // a team can hold at most one A-tier and one D-tier per match, so more than
+  // `totalMatches` of either tier is impossible. Fails here, not mid-draft.
+  if (playersPerSide === 2) {
+    const matchesPerTeam = teamAIds.length / playersPerSide;
+    for (const [ids, name] of [
+      [teamAIds, (t.teamA?.name as string) || "Team A"] as const,
+      [teamBIds, (t.teamB?.name as string) || "Team B"] as const,
+    ]) {
+      if (!isPairableRemainder(ids, matchesPerTeam, tierByPlayer)) {
+        const a = ids.filter((id) => tierByPlayer[id] === "A").length;
+        const d = ids.filter((id) => tierByPlayer[id] === "D").length;
+        throw new HttpsError(
+          "failed-precondition",
+          `${name} can't be paired legally — ${a} A-tier and ${d} D-tier across ${matchesPerTeam} matches (at most ${matchesPerTeam} of each). Bench or rebalance before drafting.`
+        );
+      }
+    }
+  }
 
   const draftRef = db().collection("pairingDrafts").doc(roundId);
   const existing = await draftRef.get();

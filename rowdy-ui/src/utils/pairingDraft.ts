@@ -87,3 +87,41 @@ export function wouldViolateTier(
   if (!clashes) return null;
   return tier === "A" ? "Can't pair two A-tier players" : "Can't pair two D-tier players";
 }
+
+/**
+ * Mirror of the server's feasibility check (helpers/pairingDraft.ts): can these
+ * remaining players still be split into legal pairs? `#A ≤ pairsLeft` and
+ * `#D ≤ pairsLeft`. Kept in sync so the picker can pre-disable cornering picks.
+ */
+export function isPairableRemainder(
+  remaining: string[],
+  pairsLeft: number,
+  tierByPlayer: Record<string, "A" | "B" | "C" | "D">
+): boolean {
+  let a = 0;
+  let d = 0;
+  for (const id of remaining) {
+    const t = tierByPlayer[id];
+    if (t === "A") a++;
+    else if (t === "D") d++;
+  }
+  return a <= pairsLeft && d <= pairsLeft;
+}
+
+/**
+ * Reason a proposed *complete* pick would leave the acting team unable to finish
+ * with legal pairs (too many A- or D-tier stranded for the remaining matches),
+ * or null if it's fine. Only applies to 2-player sides; mirrors the server
+ * look-ahead so the UI can disable a cornering pick before it's submitted.
+ */
+export function wouldStrandTeam(
+  draft: PairingDraftDoc,
+  team: DraftTeamKey,
+  proposedPick: string[]
+): string | null {
+  if (draft.playersPerSide !== 2) return null;
+  const picked = new Set(proposedPick);
+  const remainder = remainingPlayerIds(draft, team).filter((id) => !picked.has(id));
+  if (isPairableRemainder(remainder, remainder.length / 2, draft.tierByPlayer)) return null;
+  return "Leaves players who can't be paired legally later";
+}

@@ -113,6 +113,29 @@ export function assertPairTiersAllowed(playerIds: string[], tierByPlayer: Record
 }
 
 /**
+ * Can a team's remaining (unplaced) players still be split into legal pairs?
+ * Each pair allows at most one A-tier and at most one D-tier, so the remainder
+ * is completable iff neither tier needs more than one slot per remaining pair:
+ * `#A ≤ pairsLeft` and `#D ≤ pairsLeft`. (Necessary by pigeonhole; sufficient
+ * because A's and D's can always be paired against neutrals or each other.)
+ * Only meaningful for 2-player sides. Pure — adds no Firestore work.
+ */
+export function isPairableRemainder(
+  remaining: string[],
+  pairsLeft: number,
+  tierByPlayer: Record<string, string>
+): boolean {
+  let a = 0;
+  let d = 0;
+  for (const id of remaining) {
+    const t = tierByPlayer[id];
+    if (t === "A") a++;
+    else if (t === "D") d++;
+  }
+  return a <= pairsLeft && d <= pairsLeft;
+}
+
+/**
  * Validate a pick against the current turn and apply it, returning the next
  * state. Does not mutate the input. Throws DraftError on any violation.
  */
@@ -150,6 +173,19 @@ export function applyPick(state: DraftState, team: DraftTeam, playerIds: string[
   const matches = state.matches.map((m, i) =>
     i === matchIndex ? { ...m, [slotKey]: [...playerIds] } : m
   );
+
+  // Look-ahead: a pair that's legal on its own can still corner the team — e.g.
+  // leaving two A-tier (or two D-tier) players who'd be forced together in the
+  // last match. Reject any pick whose remainder can't be completed legally.
+  if (state.playersPerSide === 2) {
+    const remaining = remainingIds({ ...state, matches }, team);
+    if (!isPairableRemainder(remaining, remaining.length / 2, state.tierByPlayer)) {
+      throw new DraftError(
+        "tier-strand",
+        "That pick would strand players who can't be paired legally — too many A- or D-tier left for the remaining matches."
+      );
+    }
+  }
 
   let turn: DraftTurn | null;
   let phase: DraftPhase = state.phase;

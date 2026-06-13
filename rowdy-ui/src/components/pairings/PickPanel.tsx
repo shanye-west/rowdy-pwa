@@ -3,7 +3,7 @@ import { RotateCcw } from "lucide-react";
 import PlayerPickRow from "./PlayerPickRow";
 import { cn } from "../../lib/utils";
 import { tierStyle, TIER_ORDER } from "../../utils/tierColors";
-import { remainingPlayerIds, wouldViolateTier } from "../../utils/pairingDraft";
+import { remainingPlayerIds, wouldViolateTier, wouldStrandTeam } from "../../utils/pairingDraft";
 import type { DraftTeamKey, PairingDraftDoc } from "../../types";
 import type { PairingsMeta } from "./types";
 
@@ -103,6 +103,11 @@ export default function PickPanel({
                 if (!isSel && full) disabledReason = "Pick limit reached — deselect first";
                 else if (!isSel && perSide === 2) {
                   disabledReason = wouldViolateTier(selected, pid, draft.tierByPlayer) ?? undefined;
+                  // When this would complete the pair, also make sure what's left
+                  // can still be paired legally (mirrors the server look-ahead).
+                  if (!disabledReason && selected.length === perSide - 1) {
+                    disabledReason = wouldStrandTeam(draft, actingTeam, [...selected, pid]) ?? undefined;
+                  }
                 }
                 return (
                   <PlayerPickRow
