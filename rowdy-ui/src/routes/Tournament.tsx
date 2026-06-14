@@ -94,18 +94,12 @@ function TournamentComponent() {
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                 <div className="flex flex-col items-center gap-2">
                   <ViewTransitionLink to={teamLinkA} className="group flex flex-col items-center gap-2">
-                    <OfflineImage 
-                      src={tournament.teamA?.logo} 
+                    <OfflineImage
+                      src={tournament.teamA?.logo}
                       alt={tournament.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
-                      style={{ width: 40, height: 40, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain" }}
                     />
-                    <div
-                      className="text-sm font-semibold transition-opacity group-hover:opacity-90"
-                      style={{ color: teamAColor }}
-                    >
-                      {tournament.teamA?.name || "Team A"}
-                    </div>
                   </ViewTransitionLink>
                   <div
                     className="text-4xl font-semibold tracking-tight"
@@ -121,18 +115,12 @@ function TournamentComponent() {
 
                 <div className="flex flex-col items-center gap-2">
                   <ViewTransitionLink to={teamLinkB} className="group flex flex-col items-center gap-2">
-                    <OfflineImage 
-                      src={tournament.teamB?.logo} 
+                    <OfflineImage
+                      src={tournament.teamB?.logo}
                       alt={tournament.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
-                      style={{ width: 40, height: 40, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain" }}
                     />
-                    <div
-                      className="text-sm font-semibold transition-opacity group-hover:opacity-90"
-                      style={{ color: teamBColor }}
-                    >
-                      {tournament.teamB?.name || "Team B"}
-                    </div>
                   </ViewTransitionLink>
                   <div
                     className="text-4xl font-semibold tracking-tight"
