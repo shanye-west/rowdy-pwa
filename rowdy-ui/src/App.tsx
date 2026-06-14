@@ -242,7 +242,10 @@ export default function App() {
 
       {/* PWA Update Prompt */}
       {showUpdatePrompt && (
-        <div className="fixed bottom-6 left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2 animate-slide-up">
+        <div
+          className="fixed left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2 animate-slide-up"
+          style={{ bottom: 'calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem)' }}
+        >
             <Card className="border-white/20 bg-slate-900 text-white shadow-2xl">
               <CardContent className="flex items-center gap-3 py-4">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
