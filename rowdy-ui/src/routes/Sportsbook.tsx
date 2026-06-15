@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import BetOfferModal, { type BetOfferModalProps } from "../components/BetOfferModal";
@@ -21,7 +22,7 @@ import { betsApi } from "../api/bets";
 import CommentThread from "../components/CommentThread";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
-type Tab = "markets" | "mybets" | "ledger" | "chat";
+type Tab = "markets" | "mybets" | "chat";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide => (s === "teamA" ? "teamB" : "teamA");
@@ -124,6 +125,8 @@ export default function Sportsbook() {
   const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
   const ledger = computeLedger(bets);
   const h2h = headToHead(bets, player?.id);
+  const activeCount =
+    myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.pending.length + myBets.active.length;
 
   // ---- shared render helpers ----
   const sideBadge = (label: string) => (
@@ -141,6 +144,9 @@ export default function Sportsbook() {
   const openModalForFutures = () =>
     setModal({ market: "cupFuture", contextLabel: "Who wins the Cup?", sideLabels: teamNames });
 
+  const opponentName = (b: BetDoc): string =>
+    playerName(player && b.proposerId === player.id ? b.acceptorId : b.proposerId);
+
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-4 p-4">
@@ -150,7 +156,6 @@ export default function Sportsbook() {
             [
               { id: "markets", label: "Markets" },
               { id: "mybets", label: "My Bets" },
-              { id: "ledger", label: "Ledger" },
               ...(tournament.commentsEnabled ? [{ id: "chat", label: "Chat" }] : []),
             ] as { id: Tab; label: string }[]
           ).map((t) => (
@@ -244,167 +249,9 @@ export default function Sportsbook() {
             )}
           </div>
         ) : tab === "mybets" ? (
-          // ============================ MY BETS ============================
-          !player ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">🔒</div>
-              <div className="empty-state-text">
-                <Link to="/login" className="font-semibold text-blue-600 underline">
-                  Log in
-                </Link>{" "}
-                to place and track bets.
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <Section title="Incoming challenges" count={myBets.incomingChallenges.length}>
-                {myBets.incomingChallenges.map((b) => (
-                  <BetLine key={b.id} context={contextForBet(b)}>
-                    <div className="text-xs text-slate-500">
-                      {playerName(b.proposerId)} bets you {money(b.amount)} · you'd back{" "}
-                      {sideBadge(sideLabelsForBet(b)[mySide(b, player.id) ?? "teamB"])}
-                    </div>
-                    <div className="mt-2 flex gap-2">
-                      <SmallBtn
-                        variant="primary"
-                        onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Accepted — now confirm to lock it in.")}
-                      >
-                        Accept
-                      </SmallBtn>
-                      <SmallBtn
-                        variant="muted"
-                        onClick={() => runAction(() => betsApi.declineBet({ betId: b.id }), "Challenge declined.")}
-                      >
-                        Decline
-                      </SmallBtn>
-                    </div>
-                  </BetLine>
-                ))}
-              </Section>
-
-              <Section title="My open offers" count={myBets.myOpenOffers.length}>
-                {myBets.myOpenOffers.map((b) => (
-                  <BetLine key={b.id} context={contextForBet(b)}>
-                    <div className="text-xs text-slate-500">
-                      {money(b.amount)} · backing {sideBadge(sideLabelsForBet(b)[b.proposerSide])} ·{" "}
-                      {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}
-                    </div>
-                    <div className="mt-2">
-                      <SmallBtn
-                        variant="muted"
-                        onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Offer cancelled.")}
-                      >
-                        Cancel
-                      </SmallBtn>
-                    </div>
-                  </BetLine>
-                ))}
-              </Section>
-
-              <Section title="Awaiting confirmation" count={myBets.pending.length}>
-                {myBets.pending.map((b) => {
-                  const iConfirm = needsMyConfirm(b, player.id);
-                  const iAmAcceptor = b.acceptorId === player.id;
-                  const side = mySide(b, player.id);
-                  return (
-                    <BetLine key={b.id} context={contextForBet(b)}>
-                      <div className="text-xs text-slate-500">
-                        {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} ·{" "}
-                        vs {playerName(b.proposerId === player.id ? b.acceptorId : b.proposerId)}
-                      </div>
-                      <div className="mt-1 text-[0.7rem] font-semibold text-amber-600">
-                        {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
-                      </div>
-                      <div className="mt-2 flex gap-2">
-                        {iConfirm && (
-                          <SmallBtn
-                            variant="primary"
-                            onClick={() => runAction(() => betsApi.confirmBet({ betId: b.id }), "Confirmed.")}
-                          >
-                            Confirm
-                          </SmallBtn>
-                        )}
-                        {iAmAcceptor ? (
-                          <SmallBtn
-                            variant="muted"
-                            onClick={() => runAction(() => betsApi.withdrawAcceptance({ betId: b.id }), "Withdrawn.")}
-                          >
-                            Withdraw
-                          </SmallBtn>
-                        ) : (
-                          <SmallBtn
-                            variant="muted"
-                            onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Cancelled.")}
-                          >
-                            Cancel
-                          </SmallBtn>
-                        )}
-                      </div>
-                    </BetLine>
-                  );
-                })}
-              </Section>
-
-              <Section title="Active bets" count={myBets.active.length}>
-                {myBets.active.map((b) => {
-                  const side = mySide(b, player.id);
-                  return (
-                    <BetLine key={b.id} context={contextForBet(b)}>
-                      <div className="text-xs text-slate-500">
-                        {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} · vs{" "}
-                        {playerName(b.proposerId === player.id ? b.acceptorId : b.proposerId)}
-                      </div>
-                      <div className="mt-1 text-[0.7rem] font-semibold text-emerald-600">Locked in</div>
-                    </BetLine>
-                  );
-                })}
-              </Section>
-
-              {myBets.settled.length > 0 && (
-                <Section
-                  title="Settled"
-                  count={myBets.settled.length}
-                  trailing={
-                    <NetBadge net={myBets.settled.reduce((sum, b) => sum + settledDelta(b, player.id), 0)} />
-                  }
-                >
-                  {myBets.settled.map((b) => {
-                    const delta = settledDelta(b, player.id);
-                    return (
-                      <BetLine key={b.id} context={contextForBet(b)}>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-slate-500">
-                            vs {playerName(b.proposerId === player.id ? b.acceptorId : b.proposerId)}
-                          </div>
-                          <div
-                            className={`text-sm font-bold ${
-                              delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-400"
-                            }`}
-                          >
-                            {delta === 0 ? "Push" : money(delta)}
-                          </div>
-                        </div>
-                      </BetLine>
-                    );
-                  })}
-                </Section>
-              )}
-
-              {myBets.incomingChallenges.length === 0 &&
-                myBets.myOpenOffers.length === 0 &&
-                myBets.pending.length === 0 &&
-                myBets.active.length === 0 &&
-                myBets.settled.length === 0 && (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">🎟️</div>
-                    <div className="empty-state-text">No bets yet — find some action in Markets.</div>
-                  </div>
-                )}
-            </div>
-          )
-        ) : tab === "ledger" ? (
-          // ============================ LEDGER ============================
+          // ================== MY BETS (ledger + active/completed) ==================
           <div className="space-y-4">
+            {/* Ledger: your tab (head-to-head), then everyone's standings */}
             {player && h2h.length > 0 && (
               <Card className="p-4">
                 <div className="mb-2 text-sm font-bold text-slate-900">Your tab</div>
@@ -449,6 +296,162 @@ export default function Sportsbook() {
                   ))}
                 </ul>
               </Card>
+            )}
+
+            {/* Personal bets (login required) */}
+            {!player ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🔒</div>
+                <div className="empty-state-text">
+                  <Link to="/login" className="font-semibold text-blue-600 underline">
+                    Log in
+                  </Link>{" "}
+                  to place and track your bets.
+                </div>
+              </div>
+            ) : (
+              <>
+                <Collapsible title="Active Bets" count={activeCount} defaultOpen>
+                  <Section title="Incoming challenges" count={myBets.incomingChallenges.length}>
+                    {myBets.incomingChallenges.map((b) => (
+                      <BetLine key={b.id} context={contextForBet(b)}>
+                        <div className="text-xs text-slate-500">
+                          {playerName(b.proposerId)} bets you {money(b.amount)} · you'd back{" "}
+                          {sideBadge(sideLabelsForBet(b)[mySide(b, player.id) ?? "teamB"])}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <SmallBtn
+                            variant="primary"
+                            onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Accepted — now confirm to lock it in.")}
+                          >
+                            Accept
+                          </SmallBtn>
+                          <SmallBtn
+                            variant="muted"
+                            onClick={() => runAction(() => betsApi.declineBet({ betId: b.id }), "Challenge declined.")}
+                          >
+                            Decline
+                          </SmallBtn>
+                        </div>
+                      </BetLine>
+                    ))}
+                  </Section>
+
+                  <Section title="My open offers" count={myBets.myOpenOffers.length}>
+                    {myBets.myOpenOffers.map((b) => (
+                      <BetLine key={b.id} context={contextForBet(b)}>
+                        <div className="text-xs text-slate-500">
+                          {money(b.amount)} · backing {sideBadge(sideLabelsForBet(b)[b.proposerSide])} ·{" "}
+                          {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}
+                        </div>
+                        <div className="mt-2">
+                          <SmallBtn
+                            variant="muted"
+                            onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Offer cancelled.")}
+                          >
+                            Cancel
+                          </SmallBtn>
+                        </div>
+                      </BetLine>
+                    ))}
+                  </Section>
+
+                  <Section title="Awaiting confirmation" count={myBets.pending.length}>
+                    {myBets.pending.map((b) => {
+                      const iConfirm = needsMyConfirm(b, player.id);
+                      const iAmAcceptor = b.acceptorId === player.id;
+                      const side = mySide(b, player.id);
+                      return (
+                        <BetLine key={b.id} context={contextForBet(b)}>
+                          <div className="text-xs text-slate-500">
+                            {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} · vs{" "}
+                            {opponentName(b)}
+                          </div>
+                          <div className="mt-1 text-[0.7rem] font-semibold text-amber-600">
+                            {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
+                          </div>
+                          <div className="mt-2 flex gap-2">
+                            {iConfirm && (
+                              <SmallBtn
+                                variant="primary"
+                                onClick={() => runAction(() => betsApi.confirmBet({ betId: b.id }), "Confirmed.")}
+                              >
+                                Confirm
+                              </SmallBtn>
+                            )}
+                            {iAmAcceptor ? (
+                              <SmallBtn
+                                variant="muted"
+                                onClick={() => runAction(() => betsApi.withdrawAcceptance({ betId: b.id }), "Withdrawn.")}
+                              >
+                                Withdraw
+                              </SmallBtn>
+                            ) : (
+                              <SmallBtn
+                                variant="muted"
+                                onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Cancelled.")}
+                              >
+                                Cancel
+                              </SmallBtn>
+                            )}
+                          </div>
+                        </BetLine>
+                      );
+                    })}
+                  </Section>
+
+                  <Section title="Locked in" count={myBets.active.length}>
+                    {myBets.active.map((b) => {
+                      const side = mySide(b, player.id);
+                      return (
+                        <BetLine key={b.id} context={contextForBet(b)}>
+                          <div className="text-xs text-slate-500">
+                            {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} · vs{" "}
+                            {opponentName(b)}
+                          </div>
+                          <div className="mt-1 text-[0.7rem] font-semibold text-emerald-600">Locked in</div>
+                        </BetLine>
+                      );
+                    })}
+                  </Section>
+
+                  {activeCount === 0 && (
+                    <div className="px-1 text-xs text-slate-400">No active bets — find some action in Markets.</div>
+                  )}
+                </Collapsible>
+
+                <Collapsible
+                  title="Completed Bets"
+                  count={myBets.settled.length}
+                  trailing={
+                    myBets.settled.length > 0 ? (
+                      <NetBadge net={myBets.settled.reduce((sum, b) => sum + settledDelta(b, player.id), 0)} />
+                    ) : undefined
+                  }
+                >
+                  {myBets.settled.length === 0 ? (
+                    <div className="px-1 text-xs text-slate-400">No completed bets yet.</div>
+                  ) : (
+                    myBets.settled.map((b) => {
+                      const delta = settledDelta(b, player.id);
+                      return (
+                        <BetLine key={b.id} context={contextForBet(b)}>
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-slate-500">vs {opponentName(b)}</div>
+                            <div
+                              className={`text-sm font-bold ${
+                                delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-400"
+                              }`}
+                            >
+                              {delta === 0 ? "Push" : money(delta)}
+                            </div>
+                          </div>
+                        </BetLine>
+                      );
+                    })
+                  )}
+                </Collapsible>
+              </>
             )}
           </div>
         ) : (
@@ -551,25 +554,46 @@ function OfferList({
   );
 }
 
-function Section({
+/** A titled, collapsible group with a count and optional trailing node in the header. */
+function Collapsible({
   title,
   count,
+  defaultOpen = false,
   trailing,
   children,
 }: {
   title: string;
   count: number;
+  defaultOpen?: boolean;
   trailing?: ReactNode;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-lg px-1 py-1.5"
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? "" : "-rotate-90"}`} />
+          {title} ({count})
+        </span>
+        {trailing}
+      </button>
+      {open && <div className="space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   if (count === 0) return null;
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between px-1">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {title} ({count})
-        </div>
-        {trailing}
+      <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {title} ({count})
       </div>
       <div className="space-y-2">{children}</div>
     </div>
@@ -607,9 +631,7 @@ function SmallBtn({
   children: ReactNode;
 }) {
   const cls =
-    variant === "primary"
-      ? "bg-slate-900 text-white"
-      : "bg-slate-100 text-slate-600 hover:bg-slate-200";
+    variant === "primary" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200";
   return (
     <button
       type="button"
