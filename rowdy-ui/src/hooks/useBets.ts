@@ -76,10 +76,19 @@ export function rosterPlayerIds(tournament: TournamentDoc | null): string[] {
   return [...ids];
 }
 
-/** Batch-fetch player docs for a tournament's full roster (one-time). */
-export function useRosterPlayers(tournament: TournamentDoc | null): Record<string, PlayerDoc> {
+/**
+ * Batch-fetch player docs for a tournament's roster, plus any extra IDs
+ * (e.g. bet proposerId/acceptorId) that may not appear in rosterByTier.
+ */
+export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: readonly string[] = []): Record<string, PlayerDoc> {
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  const ids = useMemo(() => rosterPlayerIds(tournament).sort().join(","), [tournament]);
+  // Stable string dep so the effect only re-runs when the ID set actually changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const ids = useMemo(() => {
+    const set = new Set(rosterPlayerIds(tournament));
+    for (const id of extraIds) if (id) set.add(id);
+    return [...set].sort().join(",");
+  }, [tournament, extraIds.join(",")]);
 
   useEffect(() => {
     const idList = ids ? ids.split(",") : [];

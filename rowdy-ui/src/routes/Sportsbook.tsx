@@ -36,7 +36,11 @@ export default function Sportsbook() {
   const { showToast } = useToast();
   const { rounds, matchesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
-  const players = useRosterPlayers(tournament);
+  const betParticipantIds = useMemo(
+    () => [...new Set(bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]))],
+    [bets]
+  );
+  const players = useRosterPlayers(tournament, betParticipantIds);
 
   const [tab, setTab] = useState<Tab>("markets");
   const [modal, setModal] = useState<ModalConfig | null>(null);
