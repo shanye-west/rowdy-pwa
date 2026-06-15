@@ -74,6 +74,15 @@
         { "fieldPath": "tournamentId", "order": "ASCENDING" },
         { "fieldPath": "day", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "bets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournamentId", "order": "ASCENDING" },
+        { "fieldPath": "market", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

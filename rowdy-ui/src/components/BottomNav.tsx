@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Home, Users, History } from "lucide-react";
+import { Home, Users, History, DollarSign } from "lucide-react";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 
 type Tab = {
@@ -23,6 +23,12 @@ const TABS: Tab[] = [
     label: "Teams",
     Icon: Users,
     isActive: (p) => p.startsWith("/teams"),
+  },
+  {
+    to: "/sportsbook",
+    label: "Bets",
+    Icon: DollarSign,
+    isActive: (p) => p.startsWith("/sportsbook"),
   },
   {
     to: "/history",

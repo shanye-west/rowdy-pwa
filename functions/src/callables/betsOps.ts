@@ -1,0 +1,380 @@
+/**
+ * Callables for the sportsbook (peer-to-peer betting) feature.
+ *
+ * Every action is taken by an ordinary logged-in player (resolved via
+ * requirePlayer); only settleCupFutures is admin-only. All writes go through
+ * these callables — the `bets` collection is locked to clients by the security
+ * rules. Settlement math lives in scoring/betSettlement.ts (pure, tested);
+ * match-bet settlement runs in the settleMatchBets trigger (index.ts).
+ *
+ * Lifecycle: open -> pending -> active -> settled, with cancelled/declined/void
+ * off-ramps. A bet only becomes active once BOTH parties confirm.
+ */
+
+import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
+import { settleCupFutureBet } from "../scoring/betSettlement.js";
+import type { BetDoc, BetMarket, BetSide } from "../types.js";
+
+function db() {
+  return getFirestore();
+}
+
+const MAX_BET_AMOUNT = 1_000_000;
+
+function isSide(v: unknown): v is BetSide {
+  return v === "teamA" || v === "teamB";
+}
+
+function isMarket(v: unknown): v is BetMarket {
+  return v === "match" || v === "cupFuture";
+}
+
+function oppositeSide(side: BetSide): BetSide {
+  return side === "teamA" ? "teamB" : "teamA";
+}
+
+function requireBetId(data: unknown): string {
+  const betId = (data as { betId?: unknown } | null)?.betId;
+  if (!betId || typeof betId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing betId");
+  }
+  return betId;
+}
+
+function dedupe(ids: string[]): string[] {
+  return [...new Set(ids)];
+}
+
+/** Normalize a teeTime field (Timestamp | {_seconds} | ISO string) to epoch ms. */
+function teeTimeMillis(tee: unknown): number | null {
+  if (!tee) return null;
+  if (tee instanceof Timestamp) return tee.toMillis();
+  if (typeof tee === "string") {
+    const ms = Date.parse(tee);
+    return Number.isNaN(ms) ? null : ms;
+  }
+  if (typeof tee === "object" && tee !== null && "_seconds" in tee) {
+    const secs = (tee as { _seconds?: unknown })._seconds;
+    if (typeof secs === "number") return secs * 1000;
+  }
+  return null;
+}
+
+/** A match has begun once any hole is scored, it has closed, or its tee time passed. */
+function matchStartedPlay(m: FirebaseFirestore.DocumentData): boolean {
+  const thru = m.status?.thru ?? 0;
+  if (typeof thru === "number" && thru > 0) return true;
+  if (m.status?.closed === true) return true;
+  const teeMs = teeTimeMillis(m.teeTime);
+  return teeMs !== null && teeMs <= Date.now();
+}
+
+/** True once a tournament's play has begun — used to lock Cup-futures betting. */
+async function isTournamentStarted(tournamentId: string): Promise<boolean> {
+  const snap = await db().collection("matches").where("tournamentId", "==", tournamentId).get();
+  return snap.docs.some((d) => matchStartedPlay(d.data()));
+}
+
+/**
+ * Whether a bet's market is no longer open to wagering (match started/locked/gone,
+ * or tournament started for futures). Read outside transactions; the settlement
+ * trigger + confirm guard are the backstops against the small race window.
+ */
+async function marketClosed(bet: Pick<BetDoc, "market" | "matchId" | "tournamentId">): Promise<boolean> {
+  if (bet.market === "match") {
+    if (!bet.matchId) return true;
+    const snap = await db().collection("matches").doc(bet.matchId).get();
+    if (!snap.exists) return true;
+    const m = snap.data()!;
+    return matchStartedPlay(m) || m.locked === true;
+  }
+  return isTournamentStarted(bet.tournamentId);
+}
+
+/** Loads a tournament and asserts the sportsbook is enabled for it. */
+async function requireSportsbookTournament(tournamentId: string): Promise<void> {
+  const snap = await db().collection("tournaments").doc(tournamentId).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Tournament not found");
+  if (snap.data()?.sportsbookEnabled !== true) {
+    throw new HttpsError("failed-precondition", "Betting is not enabled for this tournament");
+  }
+}
+
+/** Shared create path for open offers and directed challenges. */
+async function createBet(
+  request: CallableRequest,
+  proposerId: string,
+  directed: boolean
+): Promise<{ success: true; betId: string }> {
+  const data = (request.data || {}) as Record<string, unknown>;
+  const { tournamentId, market, matchId, side, amount, targetId } = data;
+
+  if (!tournamentId || typeof tournamentId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing tournamentId");
+  }
+  if (!isMarket(market)) {
+    throw new HttpsError("invalid-argument", "market must be 'match' or 'cupFuture'");
+  }
+  if (!isSide(side)) {
+    throw new HttpsError("invalid-argument", "side must be 'teamA' or 'teamB'");
+  }
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_BET_AMOUNT) {
+    throw new HttpsError("invalid-argument", "amount must be a positive number");
+  }
+
+  await requireSportsbookTournament(tournamentId);
+
+  if (market === "match") {
+    if (!matchId || typeof matchId !== "string") {
+      throw new HttpsError("invalid-argument", "matchId is required for match bets");
+    }
+    const matchSnap = await db().collection("matches").doc(matchId).get();
+    if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");
+    const m = matchSnap.data()!;
+    if (m.tournamentId && m.tournamentId !== tournamentId) {
+      throw new HttpsError("invalid-argument", "Match is not in this tournament");
+    }
+    if (matchStartedPlay(m) || m.locked === true) {
+      throw new HttpsError("failed-precondition", "Betting on this match is closed — it has already started");
+    }
+  } else if (await isTournamentStarted(tournamentId)) {
+    throw new HttpsError("failed-precondition", "Cup futures betting is closed — the tournament has started");
+  }
+
+  let target: string | undefined;
+  if (directed) {
+    if (!targetId || typeof targetId !== "string") {
+      throw new HttpsError("invalid-argument", "targetId is required for a challenge");
+    }
+    if (targetId === proposerId) {
+      throw new HttpsError("invalid-argument", "You can't challenge yourself");
+    }
+    const targetSnap = await db().collection("players").doc(targetId).get();
+    if (!targetSnap.exists) throw new HttpsError("not-found", "Target player not found");
+    target = targetId;
+  }
+
+  const ref = db().collection("bets").doc();
+  const doc: Record<string, unknown> = {
+    id: ref.id,
+    tournamentId,
+    market,
+    kind: directed ? "challenge" : "offer",
+    status: "open",
+    amount,
+    proposerId,
+    proposerSide: side,
+    proposerConfirmed: false,
+    acceptorConfirmed: false,
+    participantIds: directed && target ? dedupe([proposerId, target]) : [proposerId],
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  if (market === "match" && typeof matchId === "string") doc.matchId = matchId;
+  if (target) doc.targetId = target;
+
+  await ref.set(doc);
+  return { success: true, betId: ref.id };
+}
+
+/** Post an open marketplace offer (anyone may take the other side). */
+export const createBetOffer = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "createBetOffer", { maxCalls: 30, windowSeconds: 60 });
+  return createBet(request, playerId, false);
+});
+
+/** Post a directed challenge to one specific player. */
+export const createBetChallenge = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "createBetChallenge", { maxCalls: 30, windowSeconds: 60 });
+  return createBet(request, playerId, true);
+});
+
+/**
+ * Take the other side of an open offer (or accept a directed challenge). Moves
+ * the bet to `pending` — it is NOT locked until both parties confirm. The
+ * transaction prevents two players grabbing the same offer.
+ */
+export const acceptBet = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "acceptBet", { maxCalls: 60, windowSeconds: 60 });
+  const betId = requireBetId(request.data);
+  const ref = db().collection("bets").doc(betId);
+
+  // Read current bet first so the market-open check can hit the right doc.
+  const pre = await ref.get();
+  if (!pre.exists) throw new HttpsError("not-found", "Bet not found");
+  const preBet = pre.data() as BetDoc;
+  if (await marketClosed(preBet)) {
+    throw new HttpsError("failed-precondition", "Betting is closed for this market");
+  }
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
+    const bet = snap.data() as BetDoc;
+    if (bet.status !== "open") throw new HttpsError("failed-precondition", "This bet is no longer available");
+    if (bet.proposerId === playerId) throw new HttpsError("failed-precondition", "You can't take your own bet");
+    if (bet.kind === "challenge" && bet.targetId !== playerId) {
+      throw new HttpsError("permission-denied", "This challenge was sent to someone else");
+    }
+    tx.update(ref, {
+      acceptorId: playerId,
+      acceptorSide: oppositeSide(bet.proposerSide),
+      status: "pending",
+      proposerConfirmed: false,
+      acceptorConfirmed: false,
+      acceptedAt: FieldValue.serverTimestamp(),
+      participantIds: dedupe([bet.proposerId, playerId]),
+    });
+  });
+
+  return { success: true };
+});
+
+/**
+ * Record one party's confirmation. When both proposer and acceptor have
+ * confirmed, the bet locks (`active`). If the market started in the meantime,
+ * the bet is voided instead of activated.
+ */
+export const confirmBet = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "confirmBet", { maxCalls: 60, windowSeconds: 60 });
+  const betId = requireBetId(request.data);
+  const ref = db().collection("bets").doc(betId);
+
+  const pre = await ref.get();
+  if (!pre.exists) throw new HttpsError("not-found", "Bet not found");
+  const closed = await marketClosed(pre.data() as BetDoc);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
+    const bet = snap.data() as BetDoc;
+    if (bet.status !== "pending") throw new HttpsError("failed-precondition", "This bet is not awaiting confirmation");
+    const isProposer = bet.proposerId === playerId;
+    const isAcceptor = bet.acceptorId === playerId;
+    if (!isProposer && !isAcceptor) throw new HttpsError("permission-denied", "You are not part of this bet");
+
+    const proposerConfirmed = isProposer ? true : bet.proposerConfirmed;
+    const acceptorConfirmed = isAcceptor ? true : bet.acceptorConfirmed;
+    const update: Record<string, unknown> = { proposerConfirmed, acceptorConfirmed };
+
+    if (proposerConfirmed && acceptorConfirmed) {
+      if (closed) {
+        update.status = "void";
+      } else {
+        update.status = "active";
+        update.lockedAt = FieldValue.serverTimestamp();
+      }
+    }
+    tx.update(ref, update);
+  });
+
+  return { success: true };
+});
+
+/**
+ * Acceptor backs out while pending. An open offer becomes available again; a
+ * directed challenge is cancelled.
+ */
+export const withdrawAcceptance = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "withdrawAcceptance", { maxCalls: 60, windowSeconds: 60 });
+  const betId = requireBetId(request.data);
+  const ref = db().collection("bets").doc(betId);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
+    const bet = snap.data() as BetDoc;
+    if (bet.status !== "pending") throw new HttpsError("failed-precondition", "This bet is not pending");
+    if (bet.acceptorId !== playerId) {
+      throw new HttpsError("permission-denied", "Only the player who took the bet can withdraw");
+    }
+    if (bet.kind === "offer") {
+      tx.update(ref, {
+        status: "open",
+        acceptorId: FieldValue.delete(),
+        acceptorSide: FieldValue.delete(),
+        acceptedAt: FieldValue.delete(),
+        proposerConfirmed: false,
+        acceptorConfirmed: false,
+        participantIds: [bet.proposerId],
+      });
+    } else {
+      tx.update(ref, { status: "cancelled" });
+    }
+  });
+
+  return { success: true };
+});
+
+/** Proposer pulls their own bet while it is still open or pending. */
+export const cancelBet = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "cancelBet", { maxCalls: 60, windowSeconds: 60 });
+  const betId = requireBetId(request.data);
+  const ref = db().collection("bets").doc(betId);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
+    const bet = snap.data() as BetDoc;
+    if (bet.proposerId !== playerId) throw new HttpsError("permission-denied", "Only the proposer can cancel this bet");
+    if (bet.status !== "open" && bet.status !== "pending") {
+      throw new HttpsError("failed-precondition", "This bet can no longer be cancelled");
+    }
+    tx.update(ref, { status: "cancelled" });
+  });
+
+  return { success: true };
+});
+
+/** Target declines a directed challenge before taking it. */
+export const declineBet = onCall(async (request) => {
+  const { playerId } = await requirePlayer(request, "declineBet", { maxCalls: 60, windowSeconds: 60 });
+  const betId = requireBetId(request.data);
+  const ref = db().collection("bets").doc(betId);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
+    const bet = snap.data() as BetDoc;
+    if (bet.kind !== "challenge") throw new HttpsError("failed-precondition", "Only challenges can be declined");
+    if (bet.status !== "open") throw new HttpsError("failed-precondition", "This challenge can no longer be declined");
+    if (bet.targetId !== playerId) throw new HttpsError("permission-denied", "This challenge was sent to someone else");
+    tx.update(ref, { status: "declined" });
+  });
+
+  return { success: true };
+});
+
+/**
+ * Admin: resolve the Cup-futures market for a tournament. v1 settles futures by
+ * explicit admin action (the app has no single authoritative "tournament over"
+ * signal). "push" refunds (no money) — used when the Cup is tied/retained.
+ */
+export const settleCupFutures = onCall(async (request) => {
+  await requireAdmin(request, "settleCupFutures", { maxCalls: 10, windowSeconds: 60 });
+  const data = (request.data || {}) as Record<string, unknown>;
+  const { tournamentId, winningTeam } = data;
+  if (!tournamentId || typeof tournamentId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing tournamentId");
+  }
+  if (winningTeam !== "teamA" && winningTeam !== "teamB" && winningTeam !== "push") {
+    throw new HttpsError("invalid-argument", "winningTeam must be 'teamA', 'teamB', or 'push'");
+  }
+
+  const snap = await db()
+    .collection("bets")
+    .where("tournamentId", "==", tournamentId)
+    .where("market", "==", "cupFuture")
+    .where("status", "==", "active")
+    .get();
+
+  const batch = db().batch();
+  snap.docs.forEach((d) => {
+    const result = settleCupFutureBet(d.data() as BetDoc, winningTeam);
+    batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+  });
+  await batch.commit();
+
+  return { success: true, settledCount: snap.size };
+});

@@ -129,6 +129,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Sportsbook bets: public read (the marketplace of open offers and the
+    // shared who-owes-whom ledger are visible to everyone; bet docs reference
+    // only playerIds). All mutations go through the betsOps callables via the
+    // Admin SDK — clients never write here directly.
+    match /bets/{betId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Pairings draft: NOT public — pairings are announced in person, so only
     // the two teams' captains/co-captains and admins may read the live board.
     // Like matches, the authorized auth uids are precomputed into an array on

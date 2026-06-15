@@ -41,3 +41,36 @@ export async function requireAdmin(
 
   return { uid, playerId: playerSnap.docs[0].id };
 }
+
+/**
+ * Verifies the caller is authenticated, within rate limits, and linked to a
+ * player document (any player — no admin requirement). Used by the sportsbook
+ * callables, where every action is taken by an ordinary logged-in player.
+ *
+ * @returns the caller's auth uid, matching player id, and admin flag
+ */
+export async function requirePlayer(
+  request: CallableRequest,
+  functionName: string,
+  limits: RateLimitConfig
+): Promise<{ uid: string; playerId: string; isAdmin: boolean }> {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  const rateLimit = checkRateLimit(uid, functionName, limits);
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
+  }
+
+  const playerSnap = await getFirestore().collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty) {
+    throw new HttpsError("permission-denied", "No player linked to this account");
+  }
+
+  return { uid, playerId: playerSnap.docs[0].id, isAdmin: !!playerSnap.docs[0].data().isAdmin };
+}

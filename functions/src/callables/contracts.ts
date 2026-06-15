@@ -6,7 +6,7 @@
  * projects, so types are duplicated rather than shared).
  */
 
-import type { RoundFormat } from "../types.js";
+import type { RoundFormat, BetMarket, BetSide } from "../types.js";
 import type { CourseInput } from "../helpers/adminValidation.js";
 
 export type TierMap = {
@@ -295,4 +295,45 @@ export interface FinalizePairingDraftRequest {
 export interface FinalizePairingDraftResult extends AdminResult {
   roundId: string;
   matchIds: string[];
+}
+
+// ============================================================================
+// SPORTSBOOK (PEER-TO-PEER BETTING)
+// ============================================================================
+
+/** Post an open marketplace offer (anyone may take the other side). */
+export interface CreateBetOfferRequest {
+  tournamentId: string;
+  market: BetMarket;
+  /** Required when market === "match". */
+  matchId?: string;
+  /** The team the proposer is backing to win. */
+  side: BetSide;
+  /** Even-money stake each side risks. */
+  amount: number;
+}
+
+/** Post a directed challenge to one specific player. */
+export interface CreateBetChallengeRequest extends CreateBetOfferRequest {
+  targetId: string;
+}
+
+export interface CreateBetResult extends AdminResult {
+  betId: string;
+}
+
+/** Shared payload for the single-bet lifecycle actions. */
+export interface BetActionRequest {
+  betId: string;
+}
+
+/** Admin: resolve the Cup-futures market for a tournament. */
+export interface SettleCupFuturesRequest {
+  tournamentId: string;
+  /** "push" retains/ties the Cup — all futures bets refund. */
+  winningTeam: BetSide | "push";
+}
+
+export interface SettleCupFuturesResult extends AdminResult {
+  settledCount: number;
 }

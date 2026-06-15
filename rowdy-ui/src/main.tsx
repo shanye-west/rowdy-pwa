@@ -20,6 +20,7 @@ const Skins = lazy(() => import("./routes/Skins"));
 const RoundRecap = lazy(() => import("./routes/RoundRecap"));
 const Teams = lazy(() => import("./routes/Teams"));
 const Leaderboard = lazy(() => import("./routes/Leaderboard"));
+const Sportsbook = lazy(() => import("./routes/Sportsbook"));
 const Player = lazy(() => import("./routes/Player"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
@@ -56,6 +57,7 @@ const router = createBrowserRouter(
         { path: "match/:matchId", element: <Match /> },
         { path: "teams", element: <Teams /> },
         { path: "leaderboard", element: <Leaderboard /> },
+        { path: "sportsbook", element: <Sportsbook /> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },

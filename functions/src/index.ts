@@ -17,7 +17,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
 // Import shared modules
-import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc } from "./types.js";
+import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, BetDoc, BetStatus } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateSkinsStrokes } from "./ghin.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
@@ -35,6 +35,7 @@ import {
   clamp01,
   isValidGross
 } from "./scoring/matchScoring.js";
+import { settleMatchBet } from "./scoring/betSettlement.js";
 
 initializeApp();
 const db = getFirestore();
@@ -1851,6 +1852,81 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
 }));
 
 // ============================================================================
+// SPORTSBOOK SETTLEMENT TRIGGER
+// Settles peer-to-peer match bets. Independent of computeMatchOnWrite /
+// updateMatchFacts (Firestore allows multiple triggers per path) and only ever
+// writes the `bets` collection — never the match. Off the hot path: it returns
+// immediately unless the match crossed a start/close boundary or was deleted.
+// ============================================================================
+
+/** A match has "started" (for betting purposes) once a hole is scored or it closes. */
+function matchStartedForBets(m: FirebaseFirestore.DocumentData | undefined): boolean {
+  if (!m) return false;
+  const thru = m.status?.thru;
+  return (typeof thru === "number" && thru > 0) || m.status?.closed === true;
+}
+
+/** Void every bet on `matchId` whose status is in `statuses` (small per-match set). */
+async function voidBetsForMatch(matchId: string, statuses: BetStatus[]): Promise<void> {
+  const snap = await db.collection("bets").where("matchId", "==", matchId).get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  let count = 0;
+  snap.docs.forEach((d) => {
+    if (statuses.includes(d.data().status as BetStatus)) {
+      batch.update(d.ref, { status: "void" });
+      count++;
+    }
+  });
+  if (count > 0) await batch.commit();
+}
+
+export const settleMatchBets = onDocumentWritten("matches/{matchId}", withTriggerLogging("settleMatchBets", async (event) => {
+  const matchId = event.params.matchId;
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+
+  // Match deleted: void every non-settled bet on it.
+  if (!after) {
+    if (!before) return;
+    await voidBetsForMatch(matchId, ["open", "pending", "active"]);
+    return;
+  }
+
+  const startedBefore = matchStartedForBets(before);
+  const startedAfter = matchStartedForBets(after);
+  const closedBefore = before?.status?.closed === true;
+  const closedAfter = after?.status?.closed === true;
+  const justClosed = !closedBefore && closedAfter;
+  const justStarted = !startedBefore && startedAfter;
+
+  // Hot path: nothing relevant changed (e.g. a mid-round score keystroke).
+  if (!justClosed && !justStarted) return;
+
+  if (justClosed) {
+    const winner = after.result?.winner as "teamA" | "teamB" | "AS" | undefined;
+    const snap = await db.collection("bets").where("matchId", "==", matchId).get();
+    if (snap.empty) return;
+    const batch = db.batch();
+    snap.docs.forEach((d) => {
+      const bet = d.data() as BetDoc;
+      if (bet.status === "active" && winner) {
+        const result = settleMatchBet(bet, winner);
+        batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+      } else if (bet.status === "open" || bet.status === "pending") {
+        // Never locked in before the match ended.
+        batch.update(d.ref, { status: "void" });
+      }
+    });
+    await batch.commit();
+    return;
+  }
+
+  // Match just started but is not closed: void anything not locked in yet.
+  await voidBetsForMatch(matchId, ["open", "pending"]);
+}));
+
+// ============================================================================
 // ADMIN MATCH & STATS CALLABLES
 // Implementations live in callables/matchOps.ts and callables/statsOps.ts.
 // Re-exported here so the deployed function names stay unchanged.
@@ -1895,3 +1971,19 @@ export {
   resetPairingDraft,
   finalizePairingDraft,
 } from "./callables/draftOps.js";
+
+// ============================================================================
+// SPORTSBOOK CALLABLES
+// Peer-to-peer betting (bets/{betId}). See callables/betsOps.ts.
+// ============================================================================
+
+export {
+  createBetOffer,
+  createBetChallenge,
+  acceptBet,
+  confirmBet,
+  withdrawAcceptance,
+  cancelBet,
+  declineBet,
+  settleCupFutures,
+} from "./callables/betsOps.js";

@@ -2,6 +2,8 @@
  * Shared types for Cloud Functions
  */
 
+import type { Timestamp, FieldValue } from "firebase-admin/firestore";
+
 export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "fourManScramble" | "singles";
 
 // ============================================================================
@@ -295,31 +297,106 @@ export interface RoundRecapDoc {
   courseId: string;
   courseName: string;
   coursePar: number;
-  
+
   // "vs All" simulation results
   vsAllRecords: VsAllRecord[];
-  
+
   // Hole-by-hole averages
   holeAverages: HoleAverageData[];
-  
+
   // Leaders
   leaders: {
     birdiesGross: BirdieEagleLeader[];
     birdiesNet: BirdieEagleLeader[];
     eaglesGross: BirdieEagleLeader[];
     eaglesNet: BirdieEagleLeader[];
-    
+
     // Scoring leaders (strokes vs par)
     scoringGross?: ScoringLeader[];
     scoringNet?: ScoringLeader[];
     scoringTeamGross?: ScoringLeader[]; // Team gross for shamble/scramble
     scoringTeamNet?: ScoringLeader[]; // Team net for bestBall
-    
+
     // Best/worst holes
     bestHole?: { holeNumber: number; avgStrokesUnderPar: number }; // Lowest avg vs par
     worstHole?: { holeNumber: number; avgStrokesOverPar: number }; // Highest avg vs par
   };
-  
+
   computedAt: any; // FieldValue.serverTimestamp()
   computedBy: string; // uid of admin who triggered
+}
+
+// ============================================================================
+// SPORTSBOOK (PEER-TO-PEER BETTING)
+// Greenfield feature: friendly, no-real-money wagers between two players on a
+// match outcome or the overall Cup winner. All writes go through the betsOps
+// callables + the settleMatchBets trigger via the Admin SDK; clients never write
+// the `bets` collection directly. See SPORTSBOOK plan for the full lifecycle.
+// ============================================================================
+
+/** Which betting market a wager belongs to. */
+export type BetMarket = "match" | "cupFuture";
+
+/** open marketplace offer (anyone may take) vs directed challenge (one target). */
+export type BetKind = "offer" | "challenge";
+
+/**
+ * Bet lifecycle:
+ *   open -> pending -> active -> settled
+ * with cancelled/declined/void as terminal off-ramps. A bet only ever pays out
+ * from the `active` state; both parties must confirm to reach it.
+ */
+export type BetStatus =
+  | "open"        // posted, no counterparty yet
+  | "pending"     // counterparty took it; awaiting both confirmations
+  | "active"      // both confirmed + locked; live until the result is known
+  | "settled"     // resolved; result populated
+  | "cancelled"   // proposer pulled it
+  | "declined"    // target declined a challenge
+  | "void";       // never locked before tee-off, or underlying match deleted
+
+/**
+ * The side a player backs. For `match` markets it is the team that wins the
+ * match; for `cupFuture` it is the team that wins the overall Cup.
+ */
+export type BetSide = "teamA" | "teamB";
+
+/** Settlement outcome written when a bet is resolved. */
+export interface BetResult {
+  outcome: "teamA" | "teamB" | "push"; // push = halved match (AS) — no money changes hands
+  winnerId?: string;                   // playerId owed the money (omitted on push)
+  loserId?: string;                    // playerId who pays (omitted on push)
+  payout: number;                      // === amount on a win, 0 on push
+}
+
+export interface BetDoc {
+  id: string;
+  tournamentId: string;
+  market: BetMarket;
+  matchId?: string;                    // present when market === "match"
+  kind: BetKind;
+  status: BetStatus;
+  amount: number;                      // even-money stake each side risks
+
+  proposerId: string;                  // playerId who posted
+  proposerSide: BetSide;
+  targetId?: string;                   // directed challenge only: playerId who must accept
+
+  acceptorId?: string;                 // filled when someone takes the offer
+  acceptorSide?: BetSide;              // always the opposite of proposerSide
+
+  // Two-phase mutual confirmation. Both must be true to transition pending -> active.
+  proposerConfirmed: boolean;
+  acceptorConfirmed: boolean;
+
+  result?: BetResult;                  // populated on settlement
+
+  // Denormalized union of the parties for "my bets" array-contains queries.
+  // open offer: [proposer]; challenge: [proposer, target]; pending/active: [proposer, acceptor].
+  participantIds: string[];
+
+  createdAt?: Timestamp | FieldValue;
+  acceptedAt?: Timestamp | FieldValue; // entered pending
+  lockedAt?: Timestamp | FieldValue;   // both confirmed -> active
+  settledAt?: Timestamp | FieldValue;
 }
