@@ -83,12 +83,12 @@ export function rosterPlayerIds(tournament: TournamentDoc | null): string[] {
 export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: readonly string[] = []): Record<string, PlayerDoc> {
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   // Stable string dep so the effect only re-runs when the ID set actually changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const extraKey = [...extraIds].sort().join(",");
   const ids = useMemo(() => {
     const set = new Set(rosterPlayerIds(tournament));
-    for (const id of extraIds) if (id) set.add(id);
+    for (const id of extraKey ? extraKey.split(",") : []) if (id) set.add(id);
     return [...set].sort().join(",");
-  }, [tournament, extraIds.join(",")]);
+  }, [tournament, extraKey]);
 
   useEffect(() => {
     const idList = ids ? ids.split(",") : [];

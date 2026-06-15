@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
-import BetOfferModal, { type BetOfferModalProps } from "../components/BetOfferModal";
+import BetOfferModal, { type BetEvent } from "../components/BetOfferModal";
 import { useAuth } from "../contexts/AuthContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { useToast } from "../contexts/ToastContext";
@@ -27,9 +27,6 @@ type Tab = "markets" | "mybets" | "chat";
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide => (s === "teamA" ? "teamB" : "teamA");
 
-// Modal config minus the always-present wiring props.
-type ModalConfig = Pick<BetOfferModalProps, "market" | "matchId" | "contextLabel" | "sideLabels">;
-
 export default function Sportsbook() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
@@ -43,7 +40,8 @@ export default function Sportsbook() {
   const players = useRosterPlayers(tournament, betParticipantIds);
 
   const [tab, setTab] = useState<Tab>("markets");
-  const [modal, setModal] = useState<ModalConfig | null>(null);
+  const [betModalOpen, setBetModalOpen] = useState(false);
+  const [initialEventKey, setInitialEventKey] = useState<string | undefined>(undefined);
 
   const playerName = (pid: string | undefined): string =>
     (pid && (players[pid]?.displayName || pid)) || "Unknown";
@@ -93,6 +91,31 @@ export default function Sportsbook() {
     [players, player?.id]
   );
 
+  // Everything a player can currently create a bet on: the Cup futures market
+  // (until the tournament starts) plus every match that hasn't teed off.
+  const betEvents = useMemo<BetEvent[]>(() => {
+    const events: BetEvent[] = [];
+    if (!tournamentStarted) {
+      events.push({ key: "cupFuture", market: "cupFuture", label: "🏆 Cup Winner", sideLabels: teamNames });
+    }
+    for (const r of rounds) {
+      for (const m of (matchesByRound[r.id] ?? []).filter((mm) => isMatchBettable(mm))) {
+        const labels = { teamA: sideNames(m.teamAPlayers), teamB: sideNames(m.teamBPlayers) };
+        const roundLabel = r.day ? `R${r.day}` : "Match";
+        events.push({
+          key: m.id,
+          market: "match",
+          matchId: m.id,
+          label: `${roundLabel}: ${labels.teamA} vs ${labels.teamB}`,
+          sideLabels: labels,
+        });
+      }
+    }
+    return events;
+    // sideNames/teamNames are stable enough; depend on the underlying data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rounds, matchesByRound, tournamentStarted, teamNames.teamA, teamNames.teamB, players]);
+
   async function runAction(fn: () => Promise<unknown>, successMsg: string) {
     try {
       await fn();
@@ -137,19 +160,25 @@ export default function Sportsbook() {
     <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">{label}</span>
   );
 
-  const openModalForMatch = (m: MatchDoc) =>
-    setModal({
-      market: "match",
-      matchId: m.id,
-      contextLabel: `${sideNames(m.teamAPlayers)} vs ${sideNames(m.teamBPlayers)}`,
-      sideLabels: { teamA: sideNames(m.teamAPlayers), teamB: sideNames(m.teamBPlayers) },
-    });
-
-  const openModalForFutures = () =>
-    setModal({ market: "cupFuture", contextLabel: "Who wins the Cup?", sideLabels: teamNames });
+  const openCreateBet = (eventKey?: string) => {
+    setInitialEventKey(eventKey);
+    setBetModalOpen(true);
+  };
 
   const opponentName = (b: BetDoc): string =>
     playerName(player && b.proposerId === player.id ? b.acceptorId : b.proposerId);
+
+  // Open marketplace offers grouped by what they're on, for the Markets tab.
+  const openOffersByEvent = (() => {
+    const groups = new Map<string, { label: string; offers: BetDoc[] }>();
+    for (const b of openOffers) {
+      const key = b.market === "cupFuture" ? "cupFuture" : b.matchId ?? "?";
+      const label = b.market === "cupFuture" ? "🏆 Cup Winner" : contextForBet(b);
+      if (!groups.has(key)) groups.set(key, { label, offers: [] });
+      groups.get(key)!.offers.push(b);
+    }
+    return [...groups.values()];
+  })();
 
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
@@ -182,79 +211,69 @@ export default function Sportsbook() {
           </div>
         ) : tab === "markets" ? (
           // ============================ MARKETS ============================
+          // Marketplace of open offers players have posted. Empty until someone
+          // creates one — bets are initiated from the My Bets tab.
           <div className="space-y-4">
-            {/* Cup futures */}
-            {!tournamentStarted && (
-              <Card className="p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">🏆 Cup Winner</div>
-                    <div className="text-xs text-slate-500">
-                      {teamNames.teamA} vs {teamNames.teamB}
-                    </div>
-                  </div>
-                  <PostButton player={player} onClick={openModalForFutures} />
-                </div>
-                <OfferList
-                  offers={openOffers.filter((b) => b.market === "cupFuture")}
-                  bettorName={playerName}
-                  labelFor={(b) => sideLabelsForBet(b)}
-                  meId={player?.id}
-                  onTake={(b) =>
-                    runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                  }
-                />
-              </Card>
-            )}
-
-            {/* Match markets, grouped by round */}
-            {rounds.map((r) => {
-              const bettable = (matchesByRound[r.id] ?? []).filter((m) => isMatchBettable(m));
-              if (bettable.length === 0) return null;
-              return (
-                <div key={r.id} className="space-y-2">
-                  <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {r.day ? `Round ${r.day}` : "Round"}
-                  </div>
-                  {bettable.map((m) => (
-                    <Card key={m.id} className="p-4">
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-slate-900">
-                            {sideNames(m.teamAPlayers)}
-                          </div>
-                          <div className="text-[0.65rem] font-semibold uppercase text-slate-400">vs</div>
-                          <div className="truncate text-sm font-semibold text-slate-900">
-                            {sideNames(m.teamBPlayers)}
-                          </div>
-                        </div>
-                        <PostButton player={player} onClick={() => openModalForMatch(m)} />
-                      </div>
-                      <OfferList
-                        offers={openOffers.filter((b) => b.market === "match" && b.matchId === m.id)}
-                        bettorName={playerName}
-                        labelFor={(b) => sideLabelsForBet(b)}
-                        meId={player?.id}
-                        onTake={(b) =>
-                          runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                        }
-                      />
-                    </Card>
-                  ))}
-                </div>
-              );
-            })}
-
-            {openOffers.length === 0 && rounds.every((r) => (matchesByRound[r.id] ?? []).every((m) => !isMatchBettable(m))) && tournamentStarted && (
+            {openOffersByEvent.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">⛳</div>
-                <div className="empty-state-text">No open markets — every match has started.</div>
+                <div className="empty-state-icon">🎲</div>
+                <div className="empty-state-text">
+                  No open bets yet.{" "}
+                  {player ? (
+                    <button
+                      type="button"
+                      onClick={() => openCreateBet()}
+                      className="font-semibold text-blue-600 underline"
+                    >
+                      Create one
+                    </button>
+                  ) : (
+                    <Link to="/login" className="font-semibold text-blue-600 underline">
+                      Log in
+                    </Link>
+                  )}{" "}
+                  to get the action going.
+                </div>
               </div>
+            ) : (
+              openOffersByEvent.map((group) => (
+                <Card key={group.label} className="p-4">
+                  <div className="mb-2 text-sm font-bold text-slate-900">{group.label}</div>
+                  <OfferList
+                    offers={group.offers}
+                    bettorName={playerName}
+                    labelFor={(b) => sideLabelsForBet(b)}
+                    meId={player?.id}
+                    onTake={(b) =>
+                      runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
+                    }
+                  />
+                </Card>
+              ))
             )}
           </div>
         ) : tab === "mybets" ? (
-          // ================== MY BETS (ledger + active/completed) ==================
+          // ================== MY BETS (create + ledger + active/completed) ==================
           <div className="space-y-4">
+            {/* Create bet — the single entry point for offers and challenges */}
+            {player ? (
+              <button
+                type="button"
+                onClick={() => openCreateBet()}
+                disabled={betEvents.length === 0}
+                className="w-full rounded-lg bg-green-600 py-3 px-4 text-base font-semibold text-white transition-transform active:scale-95 hover:bg-green-700 disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {betEvents.length === 0 ? "Nothing bettable right now" : "+ Create bet"}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="block w-full rounded-lg bg-slate-900 py-3 px-4 text-center text-base font-semibold text-white"
+              >
+                Log in to bet
+              </Link>
+            )}
+
             {/* Ledger: your tab (head-to-head), then everyone's standings */}
             {player && h2h.length > 0 && (
               <Card className="p-4">
@@ -469,17 +488,15 @@ export default function Sportsbook() {
         )}
       </div>
 
-      {modal && tournament && (
+      {betModalOpen && tournament && (
         <BetOfferModal
-          isOpen={!!modal}
-          onClose={() => setModal(null)}
+          isOpen={betModalOpen}
+          onClose={() => setBetModalOpen(false)}
           tournamentId={tournament.id}
-          market={modal.market}
-          matchId={modal.matchId}
-          contextLabel={modal.contextLabel}
-          sideLabels={modal.sideLabels}
+          events={betEvents}
+          initialEventKey={initialEventKey}
           rosterOptions={rosterOptions}
-          onPosted={() => setModal(null)}
+          onPosted={() => setBetModalOpen(false)}
         />
       )}
     </Layout>
@@ -489,25 +506,6 @@ export default function Sportsbook() {
 // ============================================================================
 // SMALL PRESENTATIONAL HELPERS
 // ============================================================================
-
-function PostButton({ player, onClick }: { player: PlayerDoc | null; onClick: () => void }) {
-  if (!player) {
-    return (
-      <Link to="/login" className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-        Log in to bet
-      </Link>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-transform active:scale-95"
-    >
-      Post bet
-    </button>
-  );
-}
 
 function OfferList({
   offers,
