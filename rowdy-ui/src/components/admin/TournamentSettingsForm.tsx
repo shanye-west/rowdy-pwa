@@ -64,6 +64,7 @@ export default function TournamentSettingsForm({
   const [year, setYear] = useState(String(tournament.year ?? ""));
   const [active, setActive] = useState(!!tournament.active);
   const [openPublicEdits, setOpenPublicEdits] = useState(!!tournament.openPublicEdits);
+  const [sportsbookEnabled, setSportsbookEnabled] = useState(!!tournament.sportsbookEnabled);
   const [test, setTest] = useState(!!tournament.test);
   const [teamA, setTeamA] = useState<TeamFormState>(teamToForm(tournament.teamA));
   const [teamB, setTeamB] = useState<TeamFormState>(teamToForm(tournament.teamB));
@@ -114,6 +115,7 @@ export default function TournamentSettingsForm({
         year: Number(year),
         active,
         openPublicEdits,
+        sportsbookEnabled,
         test,
         teamA: buildTeam(teamA),
         teamB: buildTeam(teamB),
@@ -259,6 +261,11 @@ export default function TournamentSettingsForm({
           <input type="checkbox" checked={openPublicEdits} onChange={(e) => setOpenPublicEdits(e.target.checked)} />
           <span className="font-semibold">Open public edits</span>
           <span className="text-gray-500">(anyone can enter scores, no login)</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={sportsbookEnabled} onChange={(e) => setSportsbookEnabled(e.target.checked)} />
+          <span className="font-semibold">Sportsbook</span>
+          <span className="text-gray-500">(enable peer-to-peer betting)</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} />

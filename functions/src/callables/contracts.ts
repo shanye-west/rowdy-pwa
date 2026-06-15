@@ -42,6 +42,7 @@ export interface TournamentUpdates {
   series?: string;
   active?: boolean;
   openPublicEdits?: boolean;
+  sportsbookEnabled?: boolean;
   test?: boolean;
   archived?: boolean;
   teamA?: TeamUpdates;

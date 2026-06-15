@@ -107,7 +107,7 @@ function sanitizeTeamUpdates(team: Record<string, unknown>, label: string): Reco
  * Data payload:
  * - tournamentId: string
  * - updates: {
- *     name?, year?, active?, openPublicEdits?, test?,
+ *     name?, year?, active?, openPublicEdits?, sportsbookEnabled?, test?,
  *     teamA?: { name?, color?, logo?, captainId?, coCaptainId?, rosterByTier?, handicapByPlayer? },
  *     teamB?: { ...same }
  *   }
@@ -145,6 +145,7 @@ export const updateTournament = onCall(async (request) => {
         break;
       case "active":
       case "openPublicEdits":
+      case "sportsbookEnabled":
       case "test":
       case "archived":
         if (typeof value !== "boolean") {
