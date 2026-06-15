@@ -138,6 +138,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Comments: public read (match threads + the sportsbook trash-talk feed are
+    // visible to everyone). All mutations go through the commentOps callables via
+    // the Admin SDK — clients never write here directly.
+    match /comments/{commentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Pairings draft: NOT public — pairings are announced in person, so only
     // the two teams' captains/co-captains and admins may read the live board.
     // Like matches, the authorized auth uids are precomputed into an array on

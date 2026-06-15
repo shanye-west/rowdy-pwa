@@ -164,6 +164,9 @@ export type TournamentDoc = {
   // Sportsbook feature toggle: when true, the peer-to-peer betting UI is enabled
   // for this tournament. Defaults off so the feature ships dark.
   sportsbookEnabled?: boolean;
+  // Comments feature toggle: when true, match comment threads and the sportsbook
+  // trash-talk feed are enabled for this tournament. Defaults off (ships dark).
+  commentsEnabled?: boolean;
 };
 
 // NEW: Hole definition (static data)
@@ -678,4 +681,26 @@ export type BetDoc = {
   acceptedAt?: FirestoreTimestampLike; // entered pending
   lockedAt?: FirestoreTimestampLike;   // both confirmed -> active
   settledAt?: FirestoreTimestampLike;
+};
+
+// ============================================================================
+// COMMENTS (match threads + sportsbook trash-talk feed)
+// One generic collection serves both surfaces via a (threadType, threadId)
+// discriminator. Public-read / server-write only; all mutations go through the
+// commentOps callables. Keep this block in sync with functions/src/types.ts.
+// ============================================================================
+
+/** Which surface a comment thread belongs to. */
+export type CommentThreadType = "match" | "sportsbook";
+
+export type CommentDoc = {
+  id: string;
+  tournamentId: string;            // scoping + commentsEnabled gate
+  threadType: CommentThreadType;   // "match" | "sportsbook"
+  threadId: string;                // matchId for match threads; `sb_${tournamentId}` for the feed
+  authorId: string;                // player doc id, e.g. "pShane"
+  authorName: string;              // denormalized display name at post time
+  text: string;
+  reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
+  createdAt?: FirestoreTimestampLike;
 };

@@ -1987,3 +1987,11 @@ export {
   declineBet,
   settleCupFutures,
 } from "./callables/betsOps.js";
+
+// ============================================================================
+// COMMENTS CALLABLES
+// Match threads + the sportsbook trash-talk feed (comments/{commentId}).
+// See callables/commentOps.ts.
+// ============================================================================
+
+export { postComment, deleteComment, toggleReaction } from "./callables/commentOps.js";

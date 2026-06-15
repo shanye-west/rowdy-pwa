@@ -35,6 +35,7 @@ export interface TournamentUpdates {
   active?: boolean;
   openPublicEdits?: boolean;
   sportsbookEnabled?: boolean;
+  commentsEnabled?: boolean;
   test?: boolean;
   archived?: boolean;
   teamA?: TeamUpdates;
@@ -380,4 +381,32 @@ export interface SettleCupFuturesRequest {
 
 export interface SettleCupFuturesResult extends AdminResult {
   settledCount: number;
+}
+
+// ============================================================================
+// COMMENTS (match threads + sportsbook trash-talk feed)
+// ============================================================================
+
+/** Post a comment to a match thread or the sportsbook feed. */
+export interface PostCommentRequest {
+  tournamentId: string;
+  threadType: "match" | "sportsbook";
+  /** matchId for match threads; `sb_${tournamentId}` for the feed. */
+  threadId: string;
+  text: string;
+}
+
+export interface PostCommentResult extends AdminResult {
+  commentId: string;
+}
+
+/** Delete a comment (author or admin). */
+export interface DeleteCommentRequest {
+  commentId: string;
+}
+
+/** Toggle the caller's emoji reaction on a comment. */
+export interface ToggleReactionRequest {
+  commentId: string;
+  emoji: string;
 }

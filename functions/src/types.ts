@@ -400,3 +400,24 @@ export interface BetDoc {
   lockedAt?: Timestamp | FieldValue;   // both confirmed -> active
   settledAt?: Timestamp | FieldValue;
 }
+
+// ============================================================================
+// COMMENTS (match threads + sportsbook trash-talk feed)
+// Public-read / server-write only; all mutations go through the commentOps
+// callables. Keep this block in sync with rowdy-ui/src/types.ts.
+// ============================================================================
+
+/** Which surface a comment thread belongs to. */
+export type CommentThreadType = "match" | "sportsbook";
+
+export interface CommentDoc {
+  id: string;
+  tournamentId: string;            // scoping + commentsEnabled gate
+  threadType: CommentThreadType;   // "match" | "sportsbook"
+  threadId: string;                // matchId for match threads; `sb_${tournamentId}` for the feed
+  authorId: string;                // player doc id, e.g. "pShane"
+  authorName: string;              // denormalized display name at post time
+  text: string;
+  reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
+  createdAt?: Timestamp | FieldValue;
+}

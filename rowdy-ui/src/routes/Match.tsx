@@ -37,6 +37,7 @@ import { useToast } from "../contexts/ToastContext";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import ComponentErrorBoundary from "../components/ComponentErrorBoundary";
+import CommentThread from "../components/CommentThread";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
@@ -1117,6 +1118,13 @@ export default function Match() {
               teamBName={tournament?.teamB?.name}
               marginHistory={match.status?.marginHistory}
             />
+          </ComponentErrorBoundary>
+        )}
+
+        {/* MATCH COMMENTS */}
+        {tournament?.commentsEnabled && matchId && (
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Comments unavailable</div>}>
+            <CommentThread threadType="match" threadId={matchId} tournamentId={tournament.id} />
           </ComponentErrorBoundary>
         )}
 

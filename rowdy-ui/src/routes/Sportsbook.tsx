@@ -18,9 +18,10 @@ import {
   headToHead,
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
+import CommentThread from "../components/CommentThread";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
-type Tab = "markets" | "mybets" | "ledger";
+type Tab = "markets" | "mybets" | "ledger" | "chat";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide => (s === "teamA" ? "teamB" : "teamA");
@@ -150,7 +151,8 @@ export default function Sportsbook() {
               { id: "markets", label: "Markets" },
               { id: "mybets", label: "My Bets" },
               { id: "ledger", label: "Ledger" },
-            ] as const
+              ...(tournament.commentsEnabled ? [{ id: "chat", label: "Chat" }] : []),
+            ] as { id: Tab; label: string }[]
           ).map((t) => (
             <button
               key={t.id}
@@ -400,7 +402,7 @@ export default function Sportsbook() {
                 )}
             </div>
           )
-        ) : (
+        ) : tab === "ledger" ? (
           // ============================ LEDGER ============================
           <div className="space-y-4">
             {player && h2h.length > 0 && (
@@ -449,6 +451,14 @@ export default function Sportsbook() {
               </Card>
             )}
           </div>
+        ) : (
+          // ============================ CHAT ============================
+          <CommentThread
+            threadType="sportsbook"
+            threadId={`sb_${tournament.id}`}
+            tournamentId={tournament.id}
+            title="Trash talk"
+          />
         )}
       </div>
 
