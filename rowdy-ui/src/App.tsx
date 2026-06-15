@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { ArrowRight, Flag, RefreshCw, Trophy, X } from "lucide-react";
+import { ArrowRight, Flag, RefreshCw, X } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
@@ -161,23 +161,6 @@ export default function App() {
                 </div>
               </CardContent>
             </Card>
-          </section>
-
-          <section>
-            <ViewTransitionLink to="/leaderboard" className="card-link-hover block">
-              <Card className="border-slate-200/80 bg-white/80">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                    <Trophy className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-slate-900">Player Leaderboard</div>
-                    <div className="text-xs text-muted-foreground">See the MVP race &amp; individual stats</div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-slate-400" />
-                </CardContent>
-              </Card>
-            </ViewTransitionLink>
           </section>
 
           <section className="space-y-3">

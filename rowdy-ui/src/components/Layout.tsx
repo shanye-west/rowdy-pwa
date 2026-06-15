@@ -5,6 +5,7 @@ import {
   Menu,
   X,
   Shield,
+  Trophy,
   LogOut,
   LogIn,
   Wifi,
@@ -194,6 +195,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
                   {!authLoading && player && <div className="h-px bg-slate-200/80" />}
 
                   <div className="space-y-1 p-2">
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <ViewTransitionLink to="/leaderboard" onClick={closeMenu}>
+                        <Trophy className="h-4 w-4 text-slate-500" />
+                        Player Leaderboard
+                      </ViewTransitionLink>
+                    </Button>
+
                     {player?.isAdmin && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
                         <ViewTransitionLink to="/admin" onClick={closeMenu}>
