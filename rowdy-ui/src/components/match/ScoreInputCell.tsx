@@ -18,6 +18,8 @@ export interface ScoreInputCellProps {
   isPostMatch?: boolean;
   /** When true, player is winning a skin on this hole (no ties) */
   hasSkinWin?: boolean;
+  /** When true, this hole's last save failed — show a retry affordance. */
+  hasError?: boolean;
   /** Unique cell identifier for popover targeting (e.g., 'teamA-p0-h1') */
   cellId?: string;
 }
@@ -36,6 +38,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   onChange,
   isPostMatch = false,
   hasSkinWin = false,
+  hasError = false,
   cellId,
 }: ScoreInputCellProps) {
   // Generate unique popover ID based on cellId (or fall back to holeKey)
@@ -88,17 +91,19 @@ export const ScoreInputCell = memo(function ScoreInputCell({
       {/* Score display cell - tap to open picker */}
       <button
         type="button"
-        aria-label={`Score for hole ${holeNum}${value ? `: ${value}` : ''}`}
+        aria-label={`Score for hole ${holeNum}${value ? `: ${value}` : ''}${hasError ? ' — not saved, tap to retry' : ''}`}
         popoverTarget={popoverId}
         className={`
           w-11 h-11 text-center text-base font-semibold rounded-md border
           transition-colors duration-100 select-none
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1
           ${isPostMatch
             ? "bg-slate-50 text-slate-400 border-slate-200"
-            : locked 
-              ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
+            : locked
+              ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
               : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
           }
+          ${hasError ? " ring-2 ring-red-500 ring-offset-1" : ""}
         `}
         disabled={locked}
         style={lowScoreStyle}

@@ -33,6 +33,7 @@ import {
 import { useMatchData } from "../hooks/useMatchData";
 import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
+import { useToast } from "../contexts/ToastContext";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import ComponentErrorBoundary from "../components/ComponentErrorBoundary";
@@ -340,19 +341,47 @@ export default function Match() {
     };
   }, [holes, format, match]);
 
-  // Memoized save function (used for immediate saves like drive selection)
-  const saveHole = useCallback(async (k: string, nextInput: any) => {
+  const { showToast } = useToast();
+
+  // Immediate, throwing save primitive. Rejects on real failures so the debounce
+  // hook (and saveHoleNow) can surface them instead of silently dropping writes.
+  const saveHole = useCallback(async (k: string, nextInput: HoleInputLoose) => {
     if (!match?.id || roundLocked || !canEdit) return;
-    try {
-      await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
-    } catch (e) {
-      console.error("Save failed", e);
-    }
+    await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
   }, [match?.id, roundLocked, canEdit]);
+
+  // Immediate save with a user-facing error toast + retry (drive picks, match close).
+  const saveHoleNow = useCallback(async (k: string, nextInput: HoleInputLoose) => {
+    try {
+      await saveHole(k, nextInput);
+    } catch {
+      showToast({
+        variant: "error",
+        message: `Couldn't save hole ${k}. Check your connection.`,
+        action: { label: "Retry", onClick: () => { void saveHole(k, nextInput).catch(() => {}); } },
+      });
+    }
+  }, [saveHole, showToast]);
 
   // Debounced save for score inputs - prevents Firestore writes on every keystroke
   // Uses 400ms delay so typing "45" only fires one save with "45", not two saves
-  const { debouncedSave: debouncedSaveHole, saveStatus, flushAll } = useDebouncedSave(saveHole, 400);
+  const { debouncedSave: debouncedSaveHole, saveStatus, flushAll, erroredKeys, retry: retrySaveHole } =
+    useDebouncedSave(saveHole, 400);
+
+  // Surface a retry toast the first time each hole's debounced save fails.
+  const prevErroredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    erroredKeys.forEach((k) => {
+      if (!prevErroredRef.current.has(k)) {
+        showToast({
+          variant: "error",
+          message: `Couldn't save hole ${k}. Tap to retry.`,
+          action: { label: "Retry", onClick: () => retrySaveHole(k) },
+        });
+      }
+    });
+    prevErroredRef.current = erroredKeys;
+  }, [erroredKeys, showToast, retrySaveHole]);
   
   // Flush all pending saves when app goes to background (critical for offline reliability)
   useVisibilityFlush(flushAll);
@@ -376,7 +405,7 @@ export default function Match() {
         teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
         teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
       };
-      saveHole(k, newInput);
+      void saveHoleNow(k, newInput);
     } else if (format === "fourManScramble") {
       const newInput = {
         teamAGross: input?.teamAGross ?? null,
@@ -384,7 +413,7 @@ export default function Match() {
         teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
         teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
       };
-      saveHole(k, newInput);
+      void saveHoleNow(k, newInput);
     } else if (format === "twoManShamble") {
       const newInput = {
         teamAPlayersGross: input?.teamAPlayersGross ?? [null, null],
@@ -392,9 +421,9 @@ export default function Match() {
         teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
         teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
       };
-      saveHole(k, newInput);
+      void saveHoleNow(k, newInput);
     }
-  }, [format, saveHole]);
+  }, [format, saveHoleNow]);
 
   // DRIVE_TRACKING: Handle modal selection
   const handleDriveSelect = useCallback((playerIdx: 0 | 1 | 2 | 3 | null) => {
@@ -658,9 +687,9 @@ export default function Match() {
     if (!confirmCloseModal) return;
     
     // Save immediately (no debounce) since user confirmed
-    await saveHole(confirmCloseModal.holeKey, confirmCloseModal.pendingInput);
+    await saveHoleNow(confirmCloseModal.holeKey, confirmCloseModal.pendingInput);
     setConfirmCloseModal(null);
-  }, [confirmCloseModal, saveHole]);
+  }, [confirmCloseModal, saveHoleNow]);
 
   // Handle cancel close - don't save, clear modal
   const handleCancelClose = useCallback(() => {
@@ -881,6 +910,7 @@ export default function Match() {
                 {playerRows.filter(pr => pr.team === "A").map((pr, rowIdx, teamRows) => (
                   <PlayerScoreRow
                     key={`row-${pr.team}-${pr.pIdx}`}
+                    erroredKeys={erroredKeys}
                     team={pr.team}
                     pIdx={pr.pIdx}
                     label={pr.label}
@@ -1010,6 +1040,7 @@ export default function Match() {
                 {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => (
                   <PlayerScoreRow
                     key={`row-${pr.team}-${pr.pIdx}`}
+                    erroredKeys={erroredKeys}
                     team={pr.team}
                     pIdx={pr.pIdx}
                     label={pr.label}

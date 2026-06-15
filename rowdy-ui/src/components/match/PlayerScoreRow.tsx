@@ -29,6 +29,8 @@ export interface PlayerScoreRowProps {
   getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
   getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
   hasSkinWin: (holeKey: string) => boolean;
+  /** Hole keys whose last save failed — flags the whole column for retry. */
+  erroredKeys?: Set<string>;
   onCellChange: (holeKey: string, value: number | null) => void;
   outTotal: number | null;
   inTotal: number | null;
@@ -53,6 +55,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
   getDriveValue,
   getLowScoreStatus,
   hasSkinWin,
+  erroredKeys,
   onCellChange,
   outTotal,
   inTotal,
@@ -90,6 +93,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
             <ScoreInputCell
               holeKey={h.k}
               holeNum={h.num}
+              hasError={!!erroredKeys?.has(h.k)}
               value={getCellValue(h.k)}
               par={h.par}
               locked={isHoleLocked(h.num)}
@@ -127,6 +131,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
             <ScoreInputCell
               holeKey={h.k}
               holeNum={h.num}
+              hasError={!!erroredKeys?.has(h.k)}
               value={getCellValue(h.k)}
               par={h.par}
               locked={isHoleLocked(h.num)}

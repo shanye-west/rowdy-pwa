@@ -6,6 +6,7 @@ import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
 import { LayoutProvider } from "./contexts/LayoutContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 import { LayoutShell } from "./components/Layout";
@@ -18,6 +19,7 @@ const Pairings = lazy(() => import("./routes/Pairings"));
 const Skins = lazy(() => import("./routes/Skins"));
 const RoundRecap = lazy(() => import("./routes/RoundRecap"));
 const Teams = lazy(() => import("./routes/Teams"));
+const Leaderboard = lazy(() => import("./routes/Leaderboard"));
 const Player = lazy(() => import("./routes/Player"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
@@ -53,6 +55,7 @@ const router = createBrowserRouter(
         { path: "round/:roundId/recap", element: <RoundRecap /> },
         { path: "match/:matchId", element: <Match /> },
         { path: "teams", element: <Teams /> },
+        { path: "leaderboard", element: <Leaderboard /> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
@@ -98,7 +101,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <AuthProvider>
       <TournamentProvider>
         <LayoutProvider>
-          <RouterProvider router={router} />
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
         </LayoutProvider>
       </TournamentProvider>
     </AuthProvider>

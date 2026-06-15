@@ -6,14 +6,24 @@ type TimeoutId = ReturnType<typeof setTimeout>;
 /** Save status for UI feedback */
 export type SaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
+/** Light haptic feedback, matching the score picker's idiom. */
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
 /**
  * A hook that provides debounced save functionality per unique key.
  * Each key (e.g., hole number) has its own debounce timer, so typing
  * on different holes doesn't cancel each other's saves.
- * 
- * @param saveFn - The actual save function to call after debounce
+ *
+ * On failure the pending data is **kept** (not dropped) and the key is marked
+ * errored so the UI can flag it and offer a retry — a buzz confirms success,
+ * a distinct buzz signals failure.
+ *
+ * @param saveFn - The actual save function to call after debounce. Must reject on failure.
  * @param delay - Debounce delay in milliseconds (default 400ms)
- * @returns A debounced save function that accepts (key, data), plus save status
  */
 export function useDebouncedSave<T>(
   saveFn: (key: string, data: T) => void | Promise<void>,
@@ -21,96 +31,124 @@ export function useDebouncedSave<T>(
 ) {
   // Map of key -> timeout ID for per-key debouncing
   const timersRef = useRef<Map<string, TimeoutId>>(new Map());
-  // Map of key -> pending data (for cleanup/flush)
+  // Map of key -> pending data (retained until a save succeeds)
   const pendingRef = useRef<Map<string, T>>(new Map());
   // Track if component is mounted
   const mountedRef = useRef(true);
-  // Save status for UI feedback
+  // Aggregate save status for the small inline indicator
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  // Timer to reset status back to idle
+  // Keys whose most recent save failed (sticky until retried/re-edited)
+  const [erroredKeys, setErroredKeys] = useState<Set<string>>(() => new Set());
+  // Timer to reset aggregate status back to idle
   const statusTimerRef = useRef<TimeoutId | null>(null);
 
-  // Cleanup on unmount - flush all pending saves
+  // Cleanup on unmount - flush all pending saves to prevent data loss
   useEffect(() => {
     mountedRef.current = true;
+    // Capture the (stable) ref maps so the cleanup uses the same instances.
+    const timers = timersRef.current;
+    const pending = pendingRef.current;
     return () => {
       mountedRef.current = false;
-      // Clear status timer
       if (statusTimerRef.current) {
         clearTimeout(statusTimerRef.current);
       }
-      // Clear all timers and flush pending saves
-      timersRef.current.forEach((timer, key) => {
+      timers.forEach((timer, key) => {
         clearTimeout(timer);
-        const pendingData = pendingRef.current.get(key);
+        const pendingData = pending.get(key);
         if (pendingData !== undefined) {
-          // Fire immediately on unmount to prevent data loss
-          saveFn(key, pendingData);
+          // Fire immediately on unmount; swallow errors since we can't surface them.
+          Promise.resolve(saveFn(key, pendingData)).catch(() => {});
         }
       });
-      timersRef.current.clear();
-      pendingRef.current.clear();
+      timers.clear();
+      pending.clear();
     };
   }, [saveFn]);
-  
-  // Helper to update status with auto-reset to idle
+
+  // Add/remove a key from the errored set, preserving reference when unchanged.
+  const markErrored = useCallback((key: string, errored: boolean) => {
+    setErroredKeys((prev) => {
+      if (errored === prev.has(key)) return prev;
+      const next = new Set(prev);
+      if (errored) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+
+  // Update aggregate status with auto-reset to idle after a terminal state.
   const updateStatus = useCallback((status: SaveStatus) => {
     if (!mountedRef.current) return;
-    
-    // Clear any existing reset timer
     if (statusTimerRef.current) {
       clearTimeout(statusTimerRef.current);
       statusTimerRef.current = null;
     }
-    
     setSaveStatus(status);
-    
-    // Auto-reset to idle after "saved" or "error"
     if (status === "saved" || status === "error") {
       statusTimerRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          setSaveStatus("idle");
-        }
+        if (mountedRef.current) setSaveStatus("idle");
       }, 2000);
     }
   }, []);
 
-  const debouncedSave = useCallback(
-    (key: string, data: T) => {
-      // Store the pending data
-      pendingRef.current.set(key, data);
-      updateStatus("pending");
-
-      // Clear existing timer for this key
-      const existingTimer = timersRef.current.get(key);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
+  // Run saveFn for a key using its current pending data.
+  const attempt = useCallback(
+    async (key: string) => {
+      if (!mountedRef.current) return;
+      const data = pendingRef.current.get(key);
+      if (data === undefined) return;
+      updateStatus("saving");
+      try {
+        await saveFn(key, data);
+        if (!mountedRef.current) return;
+        pendingRef.current.delete(key);
+        markErrored(key, false);
+        updateStatus("saved");
+        vibrate(10);
+      } catch {
+        if (!mountedRef.current) return;
+        // Keep pending data so the user (or visibility flush) can retry.
+        markErrored(key, true);
+        updateStatus("error");
+        vibrate([40, 30, 40]);
       }
-
-      // Set new timer
-      const timer = setTimeout(async () => {
-        if (mountedRef.current) {
-          const dataToSave = pendingRef.current.get(key);
-          if (dataToSave !== undefined) {
-            updateStatus("saving");
-            try {
-              await saveFn(key, dataToSave);
-              updateStatus("saved");
-            } catch {
-              updateStatus("error");
-            }
-            pendingRef.current.delete(key);
-          }
-        }
-        timersRef.current.delete(key);
-      }, delay);
-
-      timersRef.current.set(key, timer);
     },
-    [saveFn, delay, updateStatus]
+    [saveFn, updateStatus, markErrored]
   );
 
-  // Allow immediate flush of a specific key (e.g., on blur)
+  const debouncedSave = useCallback(
+    (key: string, data: T) => {
+      pendingRef.current.set(key, data);
+      markErrored(key, false); // re-editing clears a prior error for this key
+      updateStatus("pending");
+
+      const existingTimer = timersRef.current.get(key);
+      if (existingTimer) clearTimeout(existingTimer);
+
+      const timer = setTimeout(() => {
+        timersRef.current.delete(key);
+        void attempt(key);
+      }, delay);
+      timersRef.current.set(key, timer);
+    },
+    [attempt, delay, markErrored, updateStatus]
+  );
+
+  // Manually retry a failed (or still-pending) key immediately.
+  const retry = useCallback(
+    (key: string) => {
+      const timer = timersRef.current.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        timersRef.current.delete(key);
+      }
+      void attempt(key);
+    },
+    [attempt]
+  );
+
+  // Immediate flush of a specific key (e.g., on blur)
   const flush = useCallback(
     (key: string) => {
       const timer = timersRef.current.get(key);
@@ -118,27 +156,17 @@ export function useDebouncedSave<T>(
         clearTimeout(timer);
         timersRef.current.delete(key);
       }
-      const pendingData = pendingRef.current.get(key);
-      if (pendingData !== undefined) {
-        saveFn(key, pendingData);
-        pendingRef.current.delete(key);
-      }
+      if (pendingRef.current.has(key)) void attempt(key);
     },
-    [saveFn]
+    [attempt]
   );
 
   // Flush all pending saves
   const flushAll = useCallback(() => {
-    timersRef.current.forEach((timer, key) => {
-      clearTimeout(timer);
-      const pendingData = pendingRef.current.get(key);
-      if (pendingData !== undefined) {
-        saveFn(key, pendingData);
-      }
-    });
+    timersRef.current.forEach((timer) => clearTimeout(timer));
     timersRef.current.clear();
-    pendingRef.current.clear();
-  }, [saveFn]);
+    pendingRef.current.forEach((_data, key) => void attempt(key));
+  }, [attempt]);
 
-  return { debouncedSave, flush, flushAll, saveStatus };
+  return { debouncedSave, flush, flushAll, retry, saveStatus, erroredKeys };
 }

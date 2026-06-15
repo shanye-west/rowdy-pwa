@@ -118,7 +118,7 @@ export default function ScoreTrackerBar({
                   bottom: 0,
                   width: `${box.teamAFill * 100}%`,
                   background: teamAColor,
-                  opacity: box.teamAConfirmed ? 1 : 0.4,
+                  opacity: box.teamAConfirmed ? 1 : 0.55,
                 }}
               />
             )}
@@ -133,7 +133,7 @@ export default function ScoreTrackerBar({
                   bottom: 0,
                   width: `${box.teamBFill * 100}%`,
                   background: teamBColor,
-                  opacity: box.teamBConfirmed ? 1 : 0.4,
+                  opacity: box.teamBConfirmed ? 1 : 0.55,
                 }}
               />
             )}

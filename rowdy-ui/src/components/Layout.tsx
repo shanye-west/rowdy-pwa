@@ -18,6 +18,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
 import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/useViewTransition";
+import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -46,6 +47,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
   
   // Track navigation direction for CSS View Transitions
   useViewTransitionDirection();
+  // PUSH → top, POP → restore previous scroll position.
+  useScrollRestoration();
 
   // Handle back navigation with view transition
   const handleBack = () => {
@@ -100,12 +103,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
   
   // Simple page content - CSS View Transitions handle the animation
   const pageContent = children ?? <Outlet />;
-
-  useEffect(() => {
-    try {
-      window.scrollTo({ top: 0, left: 0 });
-    } catch (error) {}
-  }, [location.pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
