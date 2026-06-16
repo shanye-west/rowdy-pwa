@@ -218,7 +218,7 @@ export default function Sportsbook() {
         <div className="flex gap-1.5">
           {(
             [
-              { id: "markets", label: "Markets" },
+              { id: "markets", label: "Open Bets" },
               { id: "mybets", label: "My Bets" },
               ...(tournament.commentsEnabled ? [{ id: "chat", label: "Chat" }] : []),
             ] as { id: Tab; label: string }[]
@@ -241,10 +241,11 @@ export default function Sportsbook() {
             <div className="spinner-lg" />
           </div>
         ) : tab === "markets" ? (
-          // ============================ MARKETS ============================
+          // ========================== OPEN BETS ===========================
           // Each bettable event is a card you bet on in place: tap a team to
           // bet it, set the stake, post an open offer or challenge a player.
-          // Existing open offers are listed on each card to take.
+          // Existing open offers are listed on each card to take. The shared
+          // ledger (everyone's standings) lives at the bottom.
           <div className="space-y-4">
             {/* Cup futures — bettable until the tournament starts */}
             {!tournamentStarted && (
@@ -311,11 +312,43 @@ export default function Sportsbook() {
                 })}
               </div>
             )}
+
+            {/* Shared ledger — everyone's settled-bet standings */}
+            <div className="space-y-2">
+              <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Standings</div>
+              {ledger.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">💸</div>
+                  <div className="empty-state-text">No settled bets yet — the ledger fills in as matches finish.</div>
+                </div>
+              ) : (
+                <Card className="overflow-hidden p-0">
+                  <ul className="divide-y divide-slate-100">
+                    {ledger.map((row, i) => (
+                      <li key={row.playerId} className="flex items-center gap-3 px-4 py-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold text-slate-900">{playerName(row.playerId)}</div>
+                          <div className="text-xs text-slate-500">
+                            {row.wins}W · {row.losses}L{row.pushes > 0 ? ` · ${row.pushes}P` : ""}
+                          </div>
+                        </div>
+                        <div className={`text-lg font-bold ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-slate-400"}`}>
+                          {money(row.net)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+            </div>
           </div>
         ) : tab === "mybets" ? (
-          // ================== MY BETS (ledger + active/completed) ==================
+          // ============== MY BETS (your tab + active/completed) ===============
           <div className="space-y-4">
-            {/* Ledger: your tab (head-to-head), then everyone's standings */}
+            {/* Your tab: head-to-head balances with each opponent */}
             {player && h2h.length > 0 && (
               <Card className="p-4">
                 <div className="mb-2 text-sm font-bold text-slate-900">Your tab</div>
@@ -328,34 +361,6 @@ export default function Sportsbook() {
                       <span className={`font-bold ${row.net > 0 ? "text-emerald-600" : "text-red-600"}`}>
                         {money(Math.abs(row.net))}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {ledger.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">💸</div>
-                <div className="empty-state-text">No settled bets yet — the ledger fills in as matches finish.</div>
-              </div>
-            ) : (
-              <Card className="overflow-hidden p-0">
-                <ul className="divide-y divide-slate-100">
-                  {ledger.map((row, i) => (
-                    <li key={row.playerId} className="flex items-center gap-3 px-4 py-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold text-slate-900">{playerName(row.playerId)}</div>
-                        <div className="text-xs text-slate-500">
-                          {row.wins}W · {row.losses}L{row.pushes > 0 ? ` · ${row.pushes}P` : ""}
-                        </div>
-                      </div>
-                      <div className={`text-lg font-bold ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-slate-400"}`}>
-                        {money(row.net)}
-                      </div>
                     </li>
                   ))}
                 </ul>
