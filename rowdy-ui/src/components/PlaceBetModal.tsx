@@ -98,7 +98,7 @@ export default function PlaceBetModal({
 
         {/* Side picker — colored by team */}
         <div>
-          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">You're backing</div>
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">You're betting</div>
           <div className="flex items-stretch gap-2">
             {(["teamA", "teamB"] as const).map((s) => {
               const selected = side === s;

@@ -22,6 +22,7 @@ import { betsApi } from "../api/bets";
 import { toDateOrNull } from "../utils";
 import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
+import SideLabel from "../components/SideLabel";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
@@ -98,7 +99,7 @@ export default function Sportsbook() {
     const labels = sideLabelsForBet(b);
     return `${labels.teamA} vs ${labels.teamB}`;
   };
-  /** The team `playerId` is backing on this bet. */
+  /** The team `playerId` is betting on this bet. */
   const mySide = (b: BetDoc, playerId: string): BetSide | null => {
     if (b.proposerId === playerId) return b.proposerSide;
     if (b.acceptorId === playerId) return b.acceptorSide ?? oppositeSide(b.proposerSide);
@@ -183,9 +184,10 @@ export default function Sportsbook() {
 
   // ---- shared render helpers ----
   const sideBadge = (label: string) => (
-    <span className="inline-block max-w-[11rem] truncate rounded bg-slate-100 px-1.5 py-0.5 align-bottom text-xs font-semibold text-slate-700">
-      {label}
-    </span>
+    <SideLabel
+      label={label}
+      className="inline-block max-w-[11rem] rounded bg-slate-100 px-1.5 py-0.5 align-middle text-xs font-semibold leading-tight text-slate-700"
+    />
   );
 
   const opponentName = (b: BetDoc): string =>
@@ -223,7 +225,7 @@ export default function Sportsbook() {
         ) : tab === "markets" ? (
           // ============================ MARKETS ============================
           // Each bettable event is a card you bet on in place: tap a team to
-          // back it, set the stake, post an open offer or challenge a player.
+          // bet it, set the stake, post an open offer or challenge a player.
           // Existing open offers are listed on each card to take.
           <div className="space-y-4">
             {/* Cup futures — bettable until the tournament starts */}
@@ -271,10 +273,12 @@ export default function Sportsbook() {
                         {group.offers.map((b) => (
                           <BetOfferRow
                             key={b.id}
-                            dotColor={teamColors[b.proposerSide]}
+                            teamALabel={labels.teamA}
+                            teamBLabel={labels.teamB}
+                            teamAColor={teamColors.teamA}
+                            teamBColor={teamColors.teamB}
+                            proposerSide={b.proposerSide}
                             proposerName={playerName(b.proposerId)}
-                            backsLabel={labels[b.proposerSide]}
-                            takeLabel={labels[oppositeSide(b.proposerSide)]}
                             amount={b.amount}
                             mine={player?.id === b.proposerId}
                             loggedIn={!!player}
@@ -359,7 +363,7 @@ export default function Sportsbook() {
                       <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
                         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
                           <span className="font-semibold text-slate-700">{playerName(b.proposerId)}</span>
-                          <span>challenges you · you'd back</span>
+                          <span>challenges you · you'd bet</span>
                           {sideBadge(sideLabelsForBet(b)[mySide(b, player.id) ?? "teamB"])}
                         </div>
                         <div className="mt-2 flex gap-2">
@@ -384,7 +388,7 @@ export default function Sportsbook() {
                     {myBets.myOpenOffers.map((b) => (
                       <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
                         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                          <span>backing</span>
+                          <span>betting</span>
                           {sideBadge(sideLabelsForBet(b)[b.proposerSide])}
                           <span>· {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}</span>
                         </div>
@@ -416,7 +420,7 @@ export default function Sportsbook() {
                       return (
                         <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
                           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                            <span>you back</span>
+                            <span>you bet</span>
                             {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
                             <span>· vs {opponentName(b)}</span>
                           </div>
@@ -438,7 +442,7 @@ export default function Sportsbook() {
                                 onClick={() =>
                                   confirmThen({
                                     title: "Withdraw from this bet?",
-                                    body: `Back out of this $${b.amount} bet with ${opponentName(b)}? It isn't locked in yet.`,
+                                    body: `Withdraw from this $${b.amount} bet with ${opponentName(b)}? It isn't locked in yet.`,
                                     confirmLabel: "Withdraw",
                                     run: () => betsApi.withdrawAcceptance({ betId: b.id }),
                                     success: "Withdrawn.",
@@ -476,7 +480,7 @@ export default function Sportsbook() {
                       return (
                         <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
                           <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                            <span>you back</span>
+                            <span>you bet</span>
                             {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
                             <span>· vs {opponentName(b)}</span>
                           </div>

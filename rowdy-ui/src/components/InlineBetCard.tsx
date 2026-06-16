@@ -1,6 +1,6 @@
 /**
  * A single bettable event (a match, or the Cup) rendered as a card with inline
- * bet creation — no modal. Tapping a team selects the side you're backing and
+ * bet creation — no modal. Tapping a team selects the side you're betting and
  * expands a stake stepper + Open offer / Challenge controls right in the card.
  * Existing open offers on this event are listed with a Take button.
  */
@@ -16,7 +16,6 @@ import type { BetDoc, BetMarket, BetSide } from "../types";
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 const STEP = 5;
-const oppositeSide = (s: BetSide): BetSide => (s === "teamA" ? "teamB" : "teamA");
 
 export interface InlineBetCardProps {
   tournamentId: string;
@@ -113,7 +112,7 @@ export default function InlineBetCard({
     <Card className="p-4">
       {title && <div className="mb-2 text-sm font-bold text-slate-900">{title}</div>}
 
-      {/* Team buttons — tap one to back it. Colored by team identity. */}
+      {/* Team buttons — tap one to bet it. Colored by team identity. */}
       <div className="flex items-stretch gap-2">
         {(["teamA", "teamB"] as const).map((s) => {
           const selected = side === s;
@@ -165,7 +164,7 @@ export default function InlineBetCard({
         <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: teamColors[side] }} />
-            You're backing{" "}
+            You're betting{" "}
             <span className="text-slate-900">
               {sideLabels[side]}
               {teamTags[side] && teamTags[side] !== sideLabels[side] ? ` (${teamTags[side]})` : ""}
@@ -284,10 +283,12 @@ export default function InlineBetCard({
           {openOffers.map((b) => (
             <BetOfferRow
               key={b.id}
-              dotColor={teamColors[b.proposerSide]}
+              teamALabel={sideLabels.teamA}
+              teamBLabel={sideLabels.teamB}
+              teamAColor={teamColors.teamA}
+              teamBColor={teamColors.teamB}
+              proposerSide={b.proposerSide}
               proposerName={bettorName(b.proposerId)}
-              backsLabel={sideLabels[b.proposerSide]}
-              takeLabel={sideLabels[oppositeSide(b.proposerSide)]}
               amount={b.amount}
               mine={meId === b.proposerId}
               loggedIn={loggedIn}
