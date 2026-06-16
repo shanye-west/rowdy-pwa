@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, doc, query, where, documentId, onSnapshot, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
-import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
-import { useTournamentContextOptional } from "../contexts/TournamentContext";
+import { useTournamentContextOptional, usePlayers } from "../contexts/TournamentContext";
 
 interface UseRoundDataResult {
   loading: boolean;
@@ -38,8 +37,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
-  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  
+
   // Cache refs to avoid re-fetching
   const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
@@ -47,7 +45,6 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   const [roundLoaded, setRoundLoaded] = useState(false);
   const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
-  const [playersLoaded, setPlayersLoaded] = useState(false);
 
   // 1) Subscribe to round document
   useEffect(() => {
@@ -62,7 +59,6 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     setRoundLoaded(false);
     setTournamentLoaded(false);
     setMatchesLoaded(false);
-    setPlayersLoaded(false);
     // Clear stale data from previous round
     setRound(null);
     setMatches([]);
@@ -229,66 +225,19 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => unsub?.();
   }, [roundId, round?.locked]);
 
-  // 5) Fetch players when matches are loaded
-  useEffect(() => {
-    // Don't run until matches have actually been loaded
-    if (!matchesLoaded) {
-      return;
-    }
-
-    if (matches.length === 0) {
-      setPlayers({});
-      setPlayersLoaded(true);
-      return;
-    }
-
-    const playerIds = new Set<string>();
-    matches.forEach(m => {
-      m.teamAPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
-      m.teamBPlayers?.forEach(p => p.playerId && playerIds.add(p.playerId));
+  // 5) Resolve player docs for the round's matches from the shared cache. These
+  // overlap the tournament roster, so they're usually already warmed (no read).
+  const roundPlayerIds = useMemo(() => {
+    const ids = new Set<string>();
+    matches.forEach((m) => {
+      m.teamAPlayers?.forEach((p) => p.playerId && ids.add(p.playerId));
+      m.teamBPlayers?.forEach((p) => p.playerId && ids.add(p.playerId));
     });
-
-    if (playerIds.size === 0) {
-      setPlayers({});
-      setPlayersLoaded(true);
-      return;
-    }
-
-    // Set loading state while fetching players
-    setPlayersLoaded(false);
-
-    const pIds = Array.from(playerIds);
-    // Firestore 'in' query limit
-    const chunks: string[][] = [];
-    for (let i = 0; i < pIds.length; i += FIRESTORE_IN_QUERY_LIMIT) {
-      chunks.push(pIds.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
-    }
-
-    // Fetch all player chunks at once (one-time read)
-    Promise.all(
-      chunks.map(chunk => {
-        return getDocs(
-          query(collection(db, "players"), where(documentId(), "in", chunk))
-        );
-      })
-    )
-      .then(snapshots => {
-        const allPlayers: Record<string, PlayerDoc> = {};
-        snapshots.forEach(snap => {
-          snap.forEach(d => {
-            allPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-          });
-        });
-        setPlayers(allPlayers);
-        setPlayersLoaded(true);
-      })
-      .catch(err => {
-        console.error("Players fetch error:", err);
-        setPlayersLoaded(true);
-      });
-
-    return () => {};
-  }, [matches, matchesLoaded]);
+    return Array.from(ids);
+  }, [matches]);
+  const { players, loaded: playersResolved } = usePlayers(roundPlayerIds);
+  // Wait for the match list before declaring players ready for the coordinated loader.
+  const playersLoaded = matchesLoaded && playersResolved;
 
   // Coordinated loading state - wait for round, tournament, matches, and players
   useEffect(() => {

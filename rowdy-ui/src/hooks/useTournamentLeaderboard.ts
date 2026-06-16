@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, collectionGroup, documentId, getDocs, query, where } from "firebase/firestore";
+import { collectionGroup, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import type { PlayerDoc, TournamentDoc } from "../types";
+import { usePlayers } from "../contexts/TournamentContext";
+import type { TournamentDoc } from "../types";
 
 export interface LeaderboardRow {
   playerId: string;
@@ -38,36 +39,20 @@ export function useTournamentLeaderboard(tournament: TournamentDoc | null) {
   const rosterKey = rosterIds.join(",");
   const tournamentId = tournament?.id;
 
-  const [nameById, setNameById] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Player display names (chunked `in` query — Firestore caps `in` at 30).
-  // Empty roster flows through to an empty map via the resolved promise.
-  useEffect(() => {
-    let cancelled = false;
-    const chunks: string[][] = [];
-    for (let i = 0; i < rosterIds.length; i += 30) chunks.push(rosterIds.slice(i, i + 30));
-    Promise.all(
-      chunks.map((c) => getDocs(query(collection(db, "players"), where(documentId(), "in", c))))
-    )
-      .then((snaps) => {
-        if (cancelled) return;
-        const map: Record<string, string> = {};
-        snaps.forEach((snap) =>
-          snap.forEach((d) => {
-            map[d.id] = (d.data() as PlayerDoc).displayName || "Unknown";
-          })
-        );
-        setNameById(map);
-      })
-      .catch(() => {
-        if (!cancelled) setNameById({});
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [rosterKey]); // eslint-disable-line react-hooks/exhaustive-deps -- rosterKey encodes rosterIds
+  // Player display names come from the shared cache (roster is warmed once per
+  // session), so this no longer issues its own chunked `in` query.
+  const { players } = usePlayers(rosterIds);
+  const nameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const id of rosterIds) {
+      const p = players[id];
+      if (p) map[id] = p.displayName || "Unknown";
+    }
+    return map;
+  }, [players, rosterKey]); // eslint-disable-line react-hooks/exhaustive-deps -- rosterKey encodes rosterIds
 
   // byTournament aggregates for this tournament.
   useEffect(() => {

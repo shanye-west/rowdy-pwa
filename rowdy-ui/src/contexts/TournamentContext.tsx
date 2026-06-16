@@ -6,11 +6,30 @@
  * from creating duplicate Firestore subscriptions to the same tournament document.
  */
 
-import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from "react";
-import { doc, onSnapshot, collection, query, where, limit } from "firebase/firestore";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useMemo, type ReactNode } from "react";
+import { doc, onSnapshot, collection, query, where, limit, documentId, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
-import type { TournamentDoc, CourseDoc } from "../types";
+import type { TournamentDoc, CourseDoc, PlayerDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
+import { rosterPlayerIds } from "../utils/roster";
+import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
+
+export type PlayerLookup = Record<string, PlayerDoc>;
+
+/** Batch-fetch player docs by id, chunked to Firestore's `in` limit (one-time read). */
+async function fetchPlayersByIds(ids: string[]): Promise<PlayerLookup> {
+  const out: PlayerLookup = {};
+  if (ids.length === 0) return out;
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += FIRESTORE_IN_QUERY_LIMIT) {
+    batches.push(ids.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
+  }
+  const snaps = await Promise.all(
+    batches.map((batch) => getDocs(query(collection(db, "players"), where(documentId(), "in", batch))))
+  );
+  snaps.forEach((snap) => snap.forEach((d) => { out[d.id] = { id: d.id, ...d.data() } as PlayerDoc; }));
+  return out;
+}
 
 // ============================================================================
 // TYPES
@@ -27,6 +46,12 @@ interface TournamentContextValue {
   courses: Record<string, CourseDoc>;
   /** Add a course to the shared cache */
   addCourse: (course: CourseDoc) => void;
+  /** Shared player cache (by id) - avoids re-fetching the roster on every route */
+  players: PlayerLookup;
+  /** Ids whose fetch has been attempted (found or not), so callers can tell when loading is done */
+  resolvedPlayerIds: Record<string, true>;
+  /** Fetch + cache any of `ids` not already loaded/in-flight (deduped, batched) */
+  ensurePlayers: (ids: string[]) => void;
   /** Get or subscribe to a specific tournament by ID (for non-active tournaments) */
   getTournamentById: (id: string) => TournamentDoc | null;
   /** Add a tournament to the shared cache (for historical tournaments) */
@@ -53,6 +78,34 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
   
   // Cache for tournaments fetched by ID (for historical/non-active tournaments)
   const [tournamentsById, setTournamentsById] = useState<Record<string, TournamentDoc>>({});
+
+  // Shared player cache. Populated lazily via ensurePlayers and shared across every
+  // route, so the roster is fetched ~once per session instead of once per navigation.
+  const [players, setPlayers] = useState<PlayerLookup>({});
+  const [resolvedPlayerIds, setResolvedPlayerIds] = useState<Record<string, true>>({});
+  // Ids already fetched or in-flight — dedupes concurrent requests without a re-render.
+  const requestedPlayerIdsRef = useRef<Set<string>>(new Set());
+
+  const ensurePlayers = useCallback((ids: string[]) => {
+    const missing = ids.filter((id) => id && !requestedPlayerIdsRef.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => requestedPlayerIdsRef.current.add(id));
+    fetchPlayersByIds(missing)
+      .then((fetched) => {
+        if (Object.keys(fetched).length > 0) setPlayers((prev) => ({ ...prev, ...fetched }));
+        // Mark every requested id resolved (even ones with no doc) so loaded flags settle.
+        setResolvedPlayerIds((prev) => {
+          const next = { ...prev };
+          for (const id of missing) next[id] = true;
+          return next;
+        });
+      })
+      .catch((err) => {
+        console.error("ensurePlayers fetch error:", err);
+        // Un-mark so a later request can retry.
+        for (const id of missing) requestedPlayerIdsRef.current.delete(id);
+      });
+  }, []);
 
   // Subscribe to the active tournament (or specific one if tournamentId provided)
   useEffect(() => {
@@ -106,6 +159,14 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
     }
   }, [tournamentId]);
 
+  // Warm the cache with the active tournament's roster as soon as it loads, so
+  // player names are ready before any route that needs them mounts. ensurePlayers
+  // dedupes, so re-running on tournament updates is a cheap no-op.
+  const rosterKey = tournament ? rosterPlayerIds(tournament).join(",") : "";
+  useEffect(() => {
+    if (rosterKey) ensurePlayers(rosterKey.split(","));
+  }, [rosterKey, ensurePlayers]);
+
   // Utility to add courses to shared cache
   const addCourse = (course: CourseDoc) => {
     if (course.id) {
@@ -132,8 +193,8 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
   };
 
   const value = useMemo(
-    () => ({ tournament, loading, error, courses, addCourse, getTournamentById, addTournament }),
-    [tournament, loading, error, courses, tournamentsById]
+    () => ({ tournament, loading, error, courses, addCourse, getTournamentById, addTournament, players, resolvedPlayerIds, ensurePlayers }),
+    [tournament, loading, error, courses, tournamentsById, players, resolvedPlayerIds, ensurePlayers]
   );
 
   return (
@@ -165,4 +226,60 @@ export function useTournamentContext(): TournamentContextValue {
  */
 export function useTournamentContextOptional(): TournamentContextValue | null {
   return useContext(TournamentContext);
+}
+
+/**
+ * Resolve player docs for `ids` from the shared cache, fetching any that are
+ * missing. Returns the requested subset plus `loaded` (true once every id has
+ * been fetched — found or not). Falls back to a local one-time fetch when used
+ * outside a TournamentProvider (e.g. isolated tests).
+ */
+export function usePlayers(ids: readonly string[]): { players: PlayerLookup; loaded: boolean } {
+  const ctx = useContext(TournamentContext);
+
+  // Stable, de-duped, sorted key so the effect only re-runs when the id set changes.
+  const key = useMemo(() => [...new Set(ids.filter(Boolean))].sort().join(","), [ids]);
+  const idList = useMemo(() => (key ? key.split(",") : []), [key]);
+
+  const ensurePlayers = ctx?.ensurePlayers;
+  const ctxPlayers = ctx?.players;
+  const ctxResolved = ctx?.resolvedPlayerIds;
+
+  // Local fallback state, only used when rendered outside a provider.
+  const [localPlayers, setLocalPlayers] = useState<PlayerLookup>({});
+  const [localLoaded, setLocalLoaded] = useState(false);
+
+  useEffect(() => {
+    if (ensurePlayers) {
+      ensurePlayers(idList);
+      return;
+    }
+    if (idList.length === 0) {
+      setLocalPlayers({});
+      setLocalLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setLocalLoaded(false);
+    fetchPlayersByIds(idList)
+      .then((fetched) => { if (!cancelled) { setLocalPlayers(fetched); setLocalLoaded(true); } })
+      .catch(() => { if (!cancelled) setLocalLoaded(true); });
+    return () => { cancelled = true; };
+    // idList is derived from key; depend on key to avoid array-identity churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ensurePlayers]);
+
+  const players = useMemo(() => {
+    const src = ctx ? (ctxPlayers ?? {}) : localPlayers;
+    const out: PlayerLookup = {};
+    for (const id of idList) { const p = src[id]; if (p) out[id] = p; }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, ctxPlayers, localPlayers, ctx]);
+
+  const loaded = ctx
+    ? idList.every((id) => !!ctxResolved?.[id])
+    : idList.length === 0 || localLoaded;
+
+  return { players, loaded };
 }

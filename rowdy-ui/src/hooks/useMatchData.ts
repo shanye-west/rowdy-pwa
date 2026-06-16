@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { doc, onSnapshot, getDoc, getDocs, collection, where, query, documentId } from "firebase/firestore";
+import { doc, onSnapshot, getDoc, getDocs, collection, where, query } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
-import { useTournamentContextOptional } from "../contexts/TournamentContext";
+import { useTournamentContextOptional, usePlayers } from "../contexts/TournamentContext";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
@@ -34,7 +34,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [round, setRound] = useState<RoundDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
-  const [players, setPlayers] = useState<PlayerLookup>({});
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +42,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [roundLoaded, setRoundLoaded] = useState(false);
   const [courseLoaded, setCourseLoaded] = useState(false);
   const [tournamentLoaded, setTournamentLoaded] = useState(false);
-  const [playersLoaded, setPlayersLoaded] = useState(false);
   const [factsLoaded, setFactsLoaded] = useState(false);
 
   // Try to get tournament from shared context
@@ -67,7 +65,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setRoundLoaded(false);
     setCourseLoaded(false);
     setTournamentLoaded(false);
-    setPlayersLoaded(false);
     setFactsLoaded(false);
     
     setError(null);
@@ -78,7 +75,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setMatch(null);
     setRound(null);
     setCourse(null);
-    setPlayers({});
     setMatchFacts([]);
 
     let unsub: (() => void) | undefined;
@@ -133,70 +129,22 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => unsub?.();
   }, [matchId]);
 
-  // 2. Subscribe to players once match loads
-  // Use stable player IDs string to avoid re-fetching on every match update
-  const playerIdsString = match ? 
-    Array.from(new Set([
-      ...(match.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
-      ...(match.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
-    ])).sort().join(',') : '';
-  
-  useEffect(() => {
-    // Don't mark as loaded until match is loaded
-    if (!matchLoaded) return;
-    
-    if (!match || !playerIdsString) {
-      // Match loaded but has no players - this is the "loaded with no players" case
-      setPlayersLoaded(true);
-      return;
-    }
-
-    // Extract unique player IDs from both teams
-    const ids = playerIdsString.split(',').filter(Boolean);
-    
-    if (ids.length === 0) {
-      setPlayersLoaded(true);
-      return;
-    }
-    
-    setPlayersLoaded(false);
-
-    // Batch subscribe to players using onSnapshot for offline cache benefit
-    // Split into batches of 10 (Firestore 'in' query limit)
-    const batches: string[][] = [];
-    for (let i = 0; i < ids.length; i += 10) {
-      batches.push(ids.slice(i, i + 10));
-    }
-    
-    // Track if effect has been cleaned up to prevent stale state updates
-    let cancelled = false;
-    
-    // Fetch all player batches at once (one-time read)
-    Promise.all(
-      batches.map(batch => {
-        const q = query(collection(db, "players"), where(documentId(), "in", batch));
-        return getDocs(q);
-      })
-    )
-      .then(snapshots => {
-        if (cancelled) return; // Prevent stale updates if matchId changed
-        const allPlayers: Record<string, PlayerDoc> = {};
-        snapshots.forEach(snap => {
-          snap.forEach(d => {
-            allPlayers[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-          });
-        });
-        setPlayers(allPlayers);
-        setPlayersLoaded(true);
-      })
-      .catch(err => {
-        if (cancelled) return;
-        setError(`Failed to load players: ${err.message}`);
-        setPlayersLoaded(true);
-      });
-    
-    return () => { cancelled = true; };
-  }, [playerIdsString, matchLoaded]);
+  // 2. Resolve player docs from the shared cache once the match loads. The
+  // match's players are usually already warmed from the tournament roster, so
+  // this typically resolves from cache without a read.
+  const matchPlayerIds = useMemo(
+    () =>
+      match
+        ? Array.from(
+            new Set([
+              ...(match.teamAPlayers || []).map((p) => p.playerId).filter(Boolean),
+              ...(match.teamBPlayers || []).map((p) => p.playerId).filter(Boolean),
+            ])
+          )
+        : [],
+    [match]
+  );
+  const { players, loaded: playersLoaded } = usePlayers(matchPlayerIds);
 
   // 3. Listen to ROUND (real-time for score updates)
   const roundId = match?.roundId;

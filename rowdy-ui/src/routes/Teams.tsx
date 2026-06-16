@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo, memo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { collection, query, where, documentId, getDocs, collectionGroup } from "firebase/firestore";
+import { query, where, getDocs, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import TeamName from "../components/TeamName";
-import type { PlayerDoc, TierMap } from "../types";
+import type { TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
+import { usePlayers } from "../contexts/TournamentContext";
+import { rosterPlayerIds } from "../utils/roster";
 
 // We define a local type for the aggregated tournament stats
 type TournamentStat = {
@@ -32,22 +34,25 @@ function TeamsComponent() {
     [tournamentIdParam]
   );
   const { tournament, rounds, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
-  
+
+  // Roster player docs from the shared cache (warmed once per session) instead of
+  // a per-view fetch.
+  const rosterIds = useMemo(() => rosterPlayerIds(tournament), [tournament]);
+  const { players, loaded: playersLoaded } = usePlayers(rosterIds);
+
   // Create a stable trigger for refetching stats when rounds lock
   // This will change when any round.locked value changes
-  const roundsLockState = useMemo(() => 
+  const roundsLockState = useMemo(() =>
     rounds.map(r => `${r.id}:${r.locked ? '1' : '0'}`).join(','),
     [rounds]
   );
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
 
   // Track loading states
-  const [playersLoaded, setPlayersLoaded] = useState(false);
   const [factsLoaded, setFactsLoaded] = useState(false);
 
   // Sync error from tournament hook
@@ -55,57 +60,7 @@ function TeamsComponent() {
     if (tournamentError) setError(tournamentError);
   }, [tournamentError]);
 
-  // 2) Fetch players when tournament loads (one-time read, refreshes on tournament update)
-  useEffect(() => {
-    if (!tournament) {
-      setPlayers({});
-      setPlayersLoaded(true);
-      return;
-    }
-
-    const teamAIds = Object.values(tournament.teamA?.rosterByTier || {}).flat();
-    const teamBIds = Object.values(tournament.teamB?.rosterByTier || {}).flat();
-    const allIds = [...teamAIds, ...teamBIds];
-
-    if (allIds.length === 0) {
-      setPlayers({});
-      setPlayersLoaded(true);
-      return;
-    }
-
-    // Mark as loading while fetching
-    setPlayersLoaded(false);
-
-    // Firestore 'in' limit is 30, so we need to chunk
-    // Using getDocs instead of onSnapshot to reduce active listeners
-    const chunks: string[][] = [];
-    for (let i = 0; i < allIds.length; i += 30) {
-      chunks.push(allIds.slice(i, i + 30));
-    }
-
-    // Fetch all chunks in parallel
-    Promise.all(
-      chunks.map(chunk => 
-        getDocs(query(collection(db, "players"), where(documentId(), "in", chunk)))
-      )
-    )
-      .then(snapshots => {
-        const merged: Record<string, PlayerDoc> = {};
-        snapshots.forEach(snap => {
-          snap.forEach(d => {
-            merged[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-          });
-        });
-        setPlayers(merged);
-        setPlayersLoaded(true);
-      })
-      .catch(err => {
-        console.error("Players fetch error:", err);
-        setPlayersLoaded(true);
-      });
-  }, [tournament]); // Refetch when tournament updates (triggers when rounds lock via useTournamentData subscription)
-
-  // 3) Fetch pre-aggregated byTournament stats using collection group query (one-time read)
+  // Fetch pre-aggregated byTournament stats using collection group query (one-time read)
   useEffect(() => {
     if (!tournament?.id) {
       setStats({});

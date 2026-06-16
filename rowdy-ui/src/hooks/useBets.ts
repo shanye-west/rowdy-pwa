@@ -1,17 +1,23 @@
 /**
  * Sportsbook data hooks.
  *
- * A tournament's bet volume is small (a couple dozen players), so a single
- * onSnapshot subscription to all of its bets backs the whole feature; the
- * markets / my-bets / ledger views are derived client-side with the pure
- * selectors below. No aggregation trigger is needed for v1.
+ * A tournament's bet volume is small (a couple dozen players), so client-side
+ * selectors back the whole feature. To keep reads bounded, the realtime listener
+ * only carries the actionable bets (open/pending/active) — the ever-growing
+ * settled history is loaded once with a one-time read (refreshed only when a bet
+ * settles), and terminal noise (void/cancelled/declined) is never read at all.
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { collection, query, where, onSnapshot, documentId, getDocs } from "firebase/firestore";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { toDateOrNull } from "../utils";
+import { rosterPlayerIds } from "../utils/roster";
+import { usePlayers } from "../contexts/TournamentContext";
 import type { BetDoc, PlayerDoc, TournamentDoc } from "../types";
+
+/** Bet statuses a player can still act on — the only ones worth a realtime listener. */
+const LIVE_BET_STATUSES = ["open", "pending", "active"] as const;
 
 // ============================================================================
 // SUBSCRIPTION
@@ -23,25 +29,34 @@ export interface UseBetsResult {
   error: string | null;
 }
 
-/** Subscribe to every bet in a tournament, newest first. */
+/**
+ * Back the sportsbook with a bounded realtime listener over the actionable bets
+ * (open/pending/active) plus a one-time read of settled bets for the Standings /
+ * head-to-head / completed views. Returns the merged set, newest first.
+ */
 export function useBets(tournamentId: string | undefined): UseBetsResult {
-  const [bets, setBets] = useState<BetDoc[]>([]);
+  const [liveBets, setLiveBets] = useState<BetDoc[]>([]);
+  const [settledBets, setSettledBets] = useState<BetDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Realtime listener over the small, actively-changing set of bets. Drops the
+  // settled history and terminal noise (void/cancelled/declined) from the listener.
   useEffect(() => {
     if (!tournamentId) {
-      setBets([]);
+      setLiveBets([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     const unsub = onSnapshot(
-      query(collection(db, "bets"), where("tournamentId", "==", tournamentId)),
+      query(
+        collection(db, "bets"),
+        where("tournamentId", "==", tournamentId),
+        where("status", "in", [...LIVE_BET_STATUSES])
+      ),
       (snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc));
-        rows.sort((a, b) => betMillis(b) - betMillis(a));
-        setBets(rows);
+        setLiveBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc)));
         setLoading(false);
       },
       (err) => {
@@ -52,6 +67,42 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
     );
     return () => unsub();
   }, [tournamentId]);
+
+  // Settled bets are terminal, so a one-time read beats a permanent listener.
+  const refreshSettled = useCallback(() => {
+    if (!tournamentId) {
+      setSettledBets([]);
+      return;
+    }
+    getDocs(
+      query(collection(db, "bets"), where("tournamentId", "==", tournamentId), where("status", "==", "settled"))
+    )
+      .then((snap) => setSettledBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc))))
+      .catch((err) => console.error("Settled bets fetch error:", err));
+  }, [tournamentId]);
+
+  // Track the prior live-bet id set so we can refresh settled when a bet leaves it
+  // (i.e. just settled) — keeping Standings live without a permanent settled listener.
+  const liveIdsRef = useRef<string>("");
+  useEffect(() => {
+    liveIdsRef.current = "";
+    refreshSettled();
+  }, [refreshSettled]);
+  useEffect(() => {
+    const prev = liveIdsRef.current;
+    const current = new Set(liveBets.map((b) => b.id));
+    const ids = [...current].sort().join(",");
+    if (prev && ids !== prev) {
+      const settledOff = prev.split(",").some((id) => id && !current.has(id));
+      if (settledOff) refreshSettled();
+    }
+    liveIdsRef.current = ids;
+  }, [liveBets, refreshSettled]);
+
+  const bets = useMemo(
+    () => [...liveBets, ...settledBets].sort((a, b) => betMillis(b) - betMillis(a)),
+    [liveBets, settledBets]
+  );
 
   return { bets, loading, error };
 }
@@ -64,73 +115,21 @@ function betMillis(b: BetDoc): number {
 // ROSTER PLAYER LOOKUP (for names + the challenge picker)
 // ============================================================================
 
-/** Flatten both teams' rosterByTier into a unique playerId list. */
-export function rosterPlayerIds(tournament: TournamentDoc | null): string[] {
-  if (!tournament) return [];
-  const ids = new Set<string>();
-  for (const team of [tournament.teamA, tournament.teamB]) {
-    for (const tier of ["A", "B", "C", "D"] as const) {
-      for (const pid of team?.rosterByTier?.[tier] ?? []) ids.add(pid);
-    }
-  }
-  return [...ids];
-}
-
 /**
- * Batch-fetch player docs for a tournament's roster, plus any extra IDs
- * (e.g. bet proposerId/acceptorId) that may not appear in rosterByTier.
+ * Resolve player docs for a tournament's roster, plus any extra IDs (e.g. bet
+ * proposerId/acceptorId that may not be on the roster). Backed by the shared
+ * player cache in TournamentContext, so the roster is fetched ~once per session
+ * instead of on every Sportsbook/Round mount; only genuinely-missing ids fetch.
+ * `loading` stays true until the requested names have resolved, so callers can
+ * hold a spinner rather than flashing raw player IDs.
  */
 export function useRosterPlayers(
   tournament: TournamentDoc | null,
   extraIds: readonly string[] = []
 ): { players: Record<string, PlayerDoc>; loading: boolean } {
-  const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
-  // `loading` is true while the name lookup is in flight so callers can hold a
-  // spinner until display names resolve, rather than flashing raw player IDs.
-  const [loading, setLoading] = useState(true);
-  // Stable string dep so the effect only re-runs when the ID set actually changes.
-  const extraKey = [...extraIds].sort().join(",");
-  const ids = useMemo(() => {
-    const set = new Set(rosterPlayerIds(tournament));
-    for (const id of extraKey ? extraKey.split(",") : []) if (id) set.add(id);
-    return [...set].sort().join(",");
-  }, [tournament, extraKey]);
-
-  useEffect(() => {
-    const idList = ids ? ids.split(",") : [];
-    if (idList.length === 0) {
-      setPlayers({});
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const batches: string[][] = [];
-        for (let i = 0; i < idList.length; i += 30) batches.push(idList.slice(i, i + 30));
-        const result: Record<string, PlayerDoc> = {};
-        await Promise.all(
-          batches.map(async (batch) => {
-            const snap = await getDocs(query(collection(db, "players"), where(documentId(), "in", batch)));
-            snap.docs.forEach((d) => {
-              result[d.id] = { id: d.id, ...d.data() } as PlayerDoc;
-            });
-          })
-        );
-        if (!cancelled) setPlayers(result);
-      } catch (err) {
-        console.error("Roster players fetch error:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ids]);
-
-  return { players, loading };
+  const ids = [...new Set([...rosterPlayerIds(tournament), ...extraIds.filter(Boolean)])];
+  const { players, loaded } = usePlayers(ids);
+  return { players, loading: !loaded };
 }
 
 // ============================================================================
