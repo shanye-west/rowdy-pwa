@@ -22,7 +22,7 @@ import { betsApi } from "../api/bets";
 import { toDateOrNull } from "../utils";
 import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
-import SideLabel from "../components/SideLabel";
+import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
@@ -183,12 +183,30 @@ export default function Sportsbook() {
     myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.pending.length + myBets.active.length;
 
   // ---- shared render helpers ----
-  const sideBadge = (label: string) => (
-    <SideLabel
-      label={label}
-      className="inline-block max-w-[11rem] rounded bg-slate-100 px-1.5 py-0.5 align-middle text-xs font-semibold leading-tight text-slate-700"
-    />
-  );
+  /** Head-to-head tile data for a bet (Team A left / Team B right), filling `highlightSide`. */
+  const matchupSides = (b: BetDoc, highlightSide: BetSide | null): { teamA: MatchupSide; teamB: MatchupSide } => {
+    const labels = sideLabelsForBet(b);
+    const nameOn = (key: BetSide): string | null => {
+      if (b.proposerSide === key) return playerName(b.proposerId);
+      if (b.acceptorId) return playerName(b.acceptorId);
+      if (b.targetId) return playerName(b.targetId);
+      return null; // unfilled side of an open offer
+    };
+    const side = (key: BetSide, color: string): MatchupSide => {
+      const name = nameOn(key);
+      return {
+        label: labels[key],
+        color,
+        filled: highlightSide === key,
+        content: name ? (
+          <span className="block truncate">{name}</span>
+        ) : (
+          <span className="text-slate-400">Open</span>
+        ),
+      };
+    };
+    return { teamA: side("teamA", teamColors.teamA), teamB: side("teamB", teamColors.teamB) };
+  };
 
   const opponentName = (b: BetDoc): string =>
     playerName(player && b.proposerId === player.id ? b.acceptorId : b.proposerId);
@@ -359,75 +377,72 @@ export default function Sportsbook() {
               <>
                 <Collapsible title="Active Bets" count={activeCount} defaultOpen>
                   <Section title="Incoming challenges" count={myBets.incomingChallenges.length}>
-                    {myBets.incomingChallenges.map((b) => (
-                      <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                          <span className="font-semibold text-slate-700">{playerName(b.proposerId)}</span>
-                          <span>challenges you · you'd bet</span>
-                          {sideBadge(sideLabelsForBet(b)[mySide(b, player.id) ?? "teamB"])}
-                        </div>
-                        <div className="mt-2 flex gap-2">
-                          <SmallBtn
-                            variant="primary"
-                            onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Accepted — now confirm to lock it in.")}
-                          >
-                            Accept
-                          </SmallBtn>
-                          <SmallBtn
-                            variant="muted"
-                            onClick={() => runAction(() => betsApi.declineBet({ betId: b.id }), "Challenge declined.")}
-                          >
-                            Decline
-                          </SmallBtn>
-                        </div>
-                      </BetLine>
-                    ))}
+                    {myBets.incomingChallenges.map((b) => {
+                      const sides = matchupSides(b, b.proposerSide);
+                      return (
+                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                          <div className="text-[0.7rem] font-semibold text-slate-500">
+                            {playerName(b.proposerId)} challenges you
+                          </div>
+                          <div className="flex gap-2">
+                            <SmallBtn
+                              variant="primary"
+                              onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Accepted — now confirm to lock it in.")}
+                            >
+                              Accept
+                            </SmallBtn>
+                            <SmallBtn
+                              variant="muted"
+                              onClick={() => runAction(() => betsApi.declineBet({ betId: b.id }), "Challenge declined.")}
+                            >
+                              Decline
+                            </SmallBtn>
+                          </div>
+                        </BetCard>
+                      );
+                    })}
                   </Section>
 
                   <Section title="My open offers" count={myBets.myOpenOffers.length}>
-                    {myBets.myOpenOffers.map((b) => (
-                      <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                          <span>betting</span>
-                          {sideBadge(sideLabelsForBet(b)[b.proposerSide])}
-                          <span>· {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}</span>
-                        </div>
-                        <div className="mt-2">
-                          <SmallBtn
-                            variant="muted"
-                            onClick={() =>
-                              confirmThen({
-                                title: "Cancel this offer?",
-                                body: `This removes your $${b.amount} offer from the marketplace. No one has taken it yet.`,
-                                confirmLabel: "Cancel offer",
-                                run: () => betsApi.cancelBet({ betId: b.id }),
-                                success: "Offer cancelled.",
-                              })
-                            }
-                          >
-                            Cancel
-                          </SmallBtn>
-                        </div>
-                      </BetLine>
-                    ))}
+                    {myBets.myOpenOffers.map((b) => {
+                      const sides = matchupSides(b, b.proposerSide);
+                      return (
+                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[0.7rem] font-semibold text-slate-500">
+                              {b.kind === "challenge" ? `Challenge to ${playerName(b.targetId)}` : "Open to anyone"}
+                            </span>
+                            <SmallBtn
+                              variant="muted"
+                              onClick={() =>
+                                confirmThen({
+                                  title: "Cancel this offer?",
+                                  body: `This removes your $${b.amount} offer from the marketplace. No one has taken it yet.`,
+                                  confirmLabel: "Cancel offer",
+                                  run: () => betsApi.cancelBet({ betId: b.id }),
+                                  success: "Offer cancelled.",
+                                })
+                              }
+                            >
+                              Cancel
+                            </SmallBtn>
+                          </div>
+                        </BetCard>
+                      );
+                    })}
                   </Section>
 
                   <Section title="Awaiting confirmation" count={myBets.pending.length}>
                     {myBets.pending.map((b) => {
                       const iConfirm = needsMyConfirm(b, player.id);
                       const iAmAcceptor = b.acceptorId === player.id;
-                      const side = mySide(b, player.id);
+                      const sides = matchupSides(b, mySide(b, player.id));
                       return (
-                        <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                            <span>you bet</span>
-                            {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
-                            <span>· vs {opponentName(b)}</span>
-                          </div>
-                          <div className="mt-1 text-[0.7rem] font-semibold text-amber-600">
+                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                          <div className="text-[0.7rem] font-semibold text-amber-600">
                             {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
                           </div>
-                          <div className="mt-2 flex gap-2">
+                          <div className="flex gap-2">
                             {iConfirm && (
                               <SmallBtn
                                 variant="primary"
@@ -468,23 +483,18 @@ export default function Sportsbook() {
                               </SmallBtn>
                             )}
                           </div>
-                        </BetLine>
+                        </BetCard>
                       );
                     })}
                   </Section>
 
                   <Section title="Locked in" count={myBets.active.length}>
                     {myBets.active.map((b) => {
-                      const side = mySide(b, player.id);
+                      const sides = matchupSides(b, mySide(b, player.id));
                       const cancellable = canCancelLocked(b);
                       return (
-                        <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
-                            <span>you bet</span>
-                            {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
-                            <span>· vs {opponentName(b)}</span>
-                          </div>
-                          <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                          <div className="flex items-center justify-between gap-2">
                             <span className="text-[0.7rem] font-semibold text-emerald-600">Locked in</span>
                             {cancellable && (
                               <SmallBtn
@@ -504,11 +514,11 @@ export default function Sportsbook() {
                             )}
                           </div>
                           {cancellable && (
-                            <div className="mt-1 text-[0.65rem] text-slate-400">
+                            <div className="text-[0.65rem] text-slate-400">
                               Either player can cancel until the match starts.
                             </div>
                           )}
-                        </BetLine>
+                        </BetCard>
                       );
                     })}
                   </Section>
@@ -532,19 +542,22 @@ export default function Sportsbook() {
                   ) : (
                     myBets.settled.map((b) => {
                       const delta = settledDelta(b, player.id);
+                      const sides = matchupSides(b, mySide(b, player.id));
                       return (
-                        <BetLine key={b.id} context={contextForBet(b)}>
+                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between">
-                            <div className="text-xs text-slate-500">vs {opponentName(b)}</div>
-                            <div
+                            <span className="text-[0.7rem] font-semibold text-slate-500">
+                              {delta > 0 ? "You won" : delta < 0 ? "You lost" : "Push — no money"}
+                            </span>
+                            <span
                               className={`text-sm font-bold ${
                                 delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-400"
                               }`}
                             >
                               {delta === 0 ? "Push" : money(delta)}
-                            </div>
+                            </span>
                           </div>
-                        </BetLine>
+                        </BetCard>
                       );
                     })
                   )}
@@ -636,17 +649,21 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
-function BetLine({ context, amount, children }: { context: string; amount?: number; children: ReactNode }) {
+/** A My-Bets entry: the head-to-head matchup tile, plus status/action children below it. */
+function BetCard({
+  teamA,
+  teamB,
+  amount,
+  children,
+}: {
+  teamA: MatchupSide;
+  teamB: MatchupSide;
+  amount: number;
+  children?: ReactNode;
+}) {
   return (
-    <Card className="p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 text-sm font-semibold text-slate-900">{context}</div>
-        {amount != null && (
-          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-sm font-bold tabular-nums text-slate-700">
-            ${amount}
-          </span>
-        )}
-      </div>
+    <Card className="space-y-2 p-3">
+      <BetMatchup teamA={teamA} teamB={teamB} amount={amount} />
       {children}
     </Card>
   );
