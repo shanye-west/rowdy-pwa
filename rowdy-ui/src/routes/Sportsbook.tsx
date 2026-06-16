@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
@@ -43,7 +43,27 @@ export default function Sportsbook() {
   );
   const { players, loading: playersLoading } = useRosterPlayers(tournament, betParticipantIds);
 
-  const [tab, setTab] = useState<Tab>("markets");
+  // Back the active tab with a URL search param so it survives navigation: tap
+  // into a match scorecard and the browser Back button returns to the same tab,
+  // not a freshly-mounted default. `replace` keeps tab switches out of history.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: Tab =
+    tabParam === "mybets"
+      ? "mybets"
+      : tabParam === "chat" && tournament?.commentsEnabled
+        ? "chat"
+        : "markets";
+  const setTab = (t: Tab) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (t === "markets") next.delete("tab");
+        else next.set("tab", t);
+        return next;
+      },
+      { replace: true }
+    );
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
   // (read via state to keep Date.now() out of the render path).
   const [nowMs, setNowMs] = useState(() => Date.now());
