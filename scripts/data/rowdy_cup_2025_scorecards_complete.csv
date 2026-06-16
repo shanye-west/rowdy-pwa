@@ -1,0 +1,307 @@
+ROW_TYPE,ROUND,FORMAT,MATCH_NO,COURSE,TEAM,PLAYER,HDCP_INDEX,COURSE_HDCP,PLAYING_HDCP,ACTUAL_SHOTS_REC,MATCHPLAY_SHOTS_REC,RESULT_WINNER,RESULT_SCORE,HOLES_PLAYED,SCORE_TOTAL,H1,H2,H3,H4,H5,H6,H7,H8,H9,H10,H11,H12,H13,H14,H15,H16,H17,H18
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Cassady/Euckert,6&4,14,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,AVIATORS,Cassady/Euckert,,,,,,Cassady/Euckert,6&4,14,53,5,3,3,3,4,4,2,5,5,5,3,4,5,2,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,AVIATORS,Dan Cassady,6.1,8.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,AVIATORS,Todd Euckert,10.8,14.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,PRODUCERS,Barnes/Oliver,,,,,,Cassady/Euckert,6&4,14,60,5,3,4,3,6,5,2,3,5,5,4,6,6,3,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,PRODUCERS,Dan Barnes,10.7,13.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,The Idaho Club,PRODUCERS,Garrick Oliver,11.3,14.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Kushner/Horan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,AVIATORS,Kushner/Horan,,,,,,Kushner/Horan,1 UP,18,71,3,3,5,3,5,4,3,2,5,5,4,5,4,3,5,4,3,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,AVIATORS,Jake Kushner,3.5,4.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,AVIATORS,Sean Horan,16.3,21,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,PRODUCERS,Salazar/Reinwasser,,,,,,Kushner/Horan,1 UP,18,74,4,2,4,2,5,4,3,5,4,6,4,5,4,4,5,4,4,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,PRODUCERS,Phil Salazar,3.5,4.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,The Idaho Club,PRODUCERS,Adam Reinwasser,12.8,16.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Saar/Macksoud,1&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,AVIATORS,Connell/Furden,,,,,,Saar/Macksoud,1&1,17,70,3,3,5,3,5,5,3,4,5,5,5,6,4,2,4,4,4,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,AVIATORS,Pj Connell,7.3,9.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,AVIATORS,Dennis Furden,10.9,14.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,PRODUCERS,Saar/Macksoud,,,,,,Saar/Macksoud,1&1,17,69,4,3,4,4,4,4,4,3,5,5,4,4,4,4,5,3,5,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,PRODUCERS,JP Saar,2.2,3.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,The Idaho Club,PRODUCERS,Alex Macksoud,17.7,22.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Bodmer/Mazzarese,2 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,AVIATORS,Bodmer/Mazzarese,,,,,,Bodmer/Mazzarese,2 UP,18,71,6,3,4,4,4,4,4,3,4,4,4,5,4,3,5,2,4,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,AVIATORS,Steve Bodmer,7.9,10.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,AVIATORS,Lou Mazzarese,11.1,14.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,PRODUCERS,Sloan/Herndon,,,,,,Bodmer/Mazzarese,2 UP,18,73,4,2,4,3,6,4,3,4,5,5,4,5,4,3,4,3,5,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,PRODUCERS,Steve Sloan,6.6,8.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,The Idaho Club,PRODUCERS,Ryan Herndon,12.9,16.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Peterson/Dugan,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,AVIATORS,Fabozzi/Mulcahey,,,,,,Peterson/Dugan,3&2,16,69,3,3,4,3,5,4,5,5,5,6,5,4,4,4,5,4,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,AVIATORS,Jacob Fabozzi,5.9,7.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,AVIATORS,Dave Mulcahey,13.5,17.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,PRODUCERS,Peterson/Dugan,,,,,,Peterson/Dugan,3&2,16,66,4,2,3,3,5,5,4,4,5,6,5,5,4,3,5,3,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,PRODUCERS,Shane Peterson,6.2,8.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,The Idaho Club,PRODUCERS,Jason Dugan,10.6,13.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,AVIATORS vs PRODUCERS,,,,,,,Benko/Mower,5&3,15,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,,,,,,,,,,,,4,3,4,3,5,4,3,4,5,5,4,5,4,3,4,3,4,4
+SI,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,,,,,,,,,,,,3,15,7,17,5,13,9,11,1,8,6,10,12,18,2,16,14,4
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,AVIATORS,Benko/Mower,,,,,,Benko/Mower,5&3,15,59,4,4,4,3,5,5,4,3,5,4,4,3,4,3,4,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,AVIATORS,Ryan Benko,4,5.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,AVIATORS,Dave Mower,13.5,17.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,PRODUCERS,Lardeur/Davie,,,,,,Benko/Mower,5&3,15,67,5,3,4,4,4,4,4,3,7,6,4,5,5,4,5,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,PRODUCERS,Jared Lardeur,3.2,4.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,The Idaho Club,PRODUCERS,Luke Davie,13.8,17.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Cassady/Horan,7&6,12,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Cassady/Horan,,,,,,Cassady/Horan,7&6,12,55,5,4,4,5,7,4,4,5,5,4,3,5,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Dan Cassady,6.1,7,7,7,4,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Sean Horan,16.3,19.4,19,19,16,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Dan Cassady,,,,,,,,,60,6,4,4,6,7,4,4,5,6,4,4,6,,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Dan Cassady,,,,,,,,,,0,0,0,1,0,0,0,0,1,0,0,1,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Sean Horan,,,,,,,,,58,5,5,4,5,7,4,4,5,5,6,3,5,,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,AVIATORS,Sean Horan,,,,,,,,,,1,1,1,1,1,1,0,1,1,1,1,1,,,,,,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Lardeur/Herndon,,,,,,Cassady/Horan,7&6,12,59,5,5,5,4,7,4,4,4,5,6,4,6,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Jared Lardeur,3.2,3.5,3,3,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Ryan Herndon,12.9,15.2,15,15,12,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Jared Lardeur,,,,,,,,,61,5,5,5,4,7,5,5,4,5,6,4,6,,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Jared Lardeur,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Ryan Herndon,,,,,,,,,65,5,6,5,5,8,4,4,7,5,6,4,6,,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,Circling Raven Golf Club,PRODUCERS,Ryan Herndon,,,,,,,,,,1,1,0,1,1,0,0,1,1,0,1,1,,,,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Salazar/Dugan,4&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Connell/Mower,,,,,,Salazar/Dugan,4&2,16,73,5,4,4,4,6,4,5,4,5,5,5,5,3,4,6,4,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Pj Connell,7.3,8.5,8,8,4,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Dave Mower,13.5,16,16,16,12,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Pj Connell,,,,,,,,,74,5,4,5,4,6,4,5,4,5,5,5,5,3,4,6,4,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Pj Connell,,,,,,,,,,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Dave Mower,,,,,,,,,85,7,5,4,6,6,5,5,6,5,5,6,5,5,4,6,5,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,AVIATORS,Dave Mower,,,,,,,,,,1,1,0,1,1,0,0,1,1,0,1,1,1,0,1,0,,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Salazar/Dugan,,,,,,Salazar/Dugan,4&2,16,64,6,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Phil Salazar,3.5,3.8,4,4,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Jason Dugan,10.6,12.5,12,12,8,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Phil Salazar,,,,,,,,,64,6,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Phil Salazar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Jason Dugan,,,,,,,,,75,7,4,5,5,5,5,3,4,5,5,4,6,5,4,4,4,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,Circling Raven Golf Club,PRODUCERS,Jason Dugan,,,,,,,,,,1,0,0,1,1,0,0,0,1,0,1,1,0,0,1,0,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Saar/Davie,4&3,15,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Fabozzi/Mazzarese,,,,,,Saar/Davie,4&3,15,67,5,5,4,4,5,4,4,4,4,3,4,6,5,5,5,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Jacob Fabozzi,5.9,6.8,7,7,5,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Lou Mazzarese,11.1,13.1,13,13,11,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Jacob Fabozzi,,,,,,,,,67,5,5,4,4,5,4,4,4,4,3,4,6,5,5,5,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Jacob Fabozzi,,,,,,,,,,0,0,0,1,1,0,0,0,1,0,0,1,0,0,0,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Lou Mazzarese,,,,,,,,,72,5,6,4,4,5,4,4,4,4,5,5,6,5,5,6,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,AVIATORS,Lou Mazzarese,,,,,,,,,,1,1,0,1,1,0,0,1,1,0,1,1,0,0,1,,,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,Saar/Davie,,,,,,Saar/Davie,4&3,15,63,4,5,3,5,4,3,4,4,5,3,5,5,4,4,5,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,JP Saar,2.2,2.3,2,2,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,Luke Davie,13.8,16.3,16,16,14,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,JP Saar,,,,,,,,,66,4,5,3,5,4,5,4,4,5,3,5,5,5,4,5,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,JP Saar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,Luke Davie,,,,,,,,,70,4,5,3,5,5,3,4,5,6,4,5,5,4,6,6,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,Circling Raven Golf Club,PRODUCERS,Luke Davie,,,,,,,,,,1,1,0,1,1,1,0,1,1,1,1,1,1,0,1,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Barnes/Sloan,2 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Bodmer/Mulcahey,,,,,,Barnes/Sloan,2 UP,18,84,8,6,5,5,5,5,4,5,5,3,4,5,4,4,4,4,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Steve Bodmer,7.9,9.2,9,9,1,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Dave Mulcahey,13.5,16,16,16,8,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Steve Bodmer,,,,,,,,,90,8,8,5,6,6,5,4,5,5,3,4,5,4,4,5,4,5,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Steve Bodmer,,,,,,,,,,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Dave Mulcahey,,,,,,,,,92,8,6,5,5,5,5,5,5,6,4,6,6,5,5,4,4,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,AVIATORS,Dave Mulcahey,,,,,,,,,,1,0,0,1,1,0,0,0,1,0,1,1,0,0,1,0,1,0
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Barnes/Sloan,,,,,,Barnes/Sloan,2 UP,18,77,5,4,5,5,6,4,2,5,5,5,4,5,3,4,5,4,4,2
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Dan Barnes,10.7,12.6,13,13,5,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Steve Sloan,6.6,7.6,8,8,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Dan Barnes,,,,,,,,,88,6,5,6,6,6,4,2,5,5,5,4,6,3,5,6,5,5,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Dan Barnes,,,,,,,,,,0,0,0,1,1,0,0,0,1,0,0,1,0,0,0,0,1,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Steve Sloan,,,,,,,,,79,5,4,5,5,7,4,3,5,5,5,4,5,3,4,5,4,4,2
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,Circling Raven Golf Club,PRODUCERS,Steve Sloan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Benko/Euckert,,,,,,HALVED,AS,18,78,6,4,4,5,5,5,3,4,4,4,4,5,5,3,4,4,5,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Ryan Benko,4,4.4,4,4,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Todd Euckert,10.8,12.7,13,13,9,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Ryan Benko,,,,,,,,,79,6,4,4,5,5,5,3,4,4,4,4,5,5,3,4,4,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Ryan Benko,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Todd Euckert,,,,,,,,,90,7,6,4,5,6,6,5,4,5,5,4,5,5,3,4,5,7,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,AVIATORS,Todd Euckert,,,,,,,,,,1,0,0,1,1,0,0,1,1,0,1,1,0,0,1,0,1,0
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Peterson/Reinwasser,,,,,,HALVED,AS,18,79,5,4,4,4,5,5,4,4,4,5,4,5,3,4,6,3,5,5
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Shane Peterson,6.2,7.1,7,7,3,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Adam Reinwasser,12.8,15.1,15,15,11,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Shane Peterson,,,,,,,,,84,5,4,5,4,5,6,4,4,4,5,4,5,5,4,6,3,5,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Shane Peterson,,,,,,,,,,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Adam Reinwasser,,,,,,,,,87,6,6,4,6,6,5,4,4,5,5,5,6,3,5,6,,6,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,Circling Raven Golf Club,PRODUCERS,Adam Reinwasser,,,,,,,,,,1,1,0,1,1,0,0,1,1,0,1,1,0,0,1,,1,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Kushner/Furden,2 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Kushner/Furden,,,,,,Kushner/Furden,2 UP,18,77,6,4,4,4,5,3,4,4,5,5,4,5,4,4,5,3,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Jake Kushner,3.5,3.8,4,4,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Dennis Furden,10.9,12.8,13,13,9,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Jake Kushner,,,,,,,,,77,6,4,4,4,5,3,4,4,5,5,4,5,4,4,5,3,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Jake Kushner,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Dennis Furden,,,,,,,,,86,6,5,4,5,6,4,4,4,6,5,4,5,4,5,5,3,5,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,AVIATORS,Dennis Furden,,,,,,,,,,1,0,0,1,1,0,0,1,1,0,1,1,0,0,1,0,1,0
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Oliver/Macksoud,,,,,,Kushner/Furden,2 UP,18,88,8,4,4,5,5,5,4,5,5,5,5,5,4,5,4,3,6,6
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Garrick Oliver,11.3,13.3,13,13,9,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Alex Macksoud,17.7,21.1,21,21,17,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Garrick Oliver,,,,,,,,,90,8,4,4,5,5,5,5,5,5,5,5,5,4,5,4,3,7,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Garrick Oliver,,,,,,,,,,1,0,0,1,1,0,0,1,1,0,1,1,0,0,1,0,1,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Alex Macksoud,,,,,,,,,100,8,7,4,5,7,5,4,5,6,6,7,6,5,5,4,4,6,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,Circling Raven Golf Club,PRODUCERS,Alex Macksoud,,,,,,,,,,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,Salazar/Herndon,5&3,15,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Cassady/Furden,,,,,,Salazar/Herndon,5&3,15,61,5,4,3,4,3,3,4,5,6,4,5,3,3,3,6,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dan Cassady,6.1,6.3,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dennis Furden,10.9,11.7,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dan Cassady,,,,,,,,,62,5,4,3,4,3,3,4,5,6,5,5,3,3,3,6,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dan Cassady,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dennis Furden,,,,,,,,,64,5,5,3,4,3,4,5,5,6,4,5,3,3,3,6,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,AVIATORS,Dennis Furden,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Salazar/Herndon,,,,,,Salazar/Herndon,5&3,15,54,5,4,3,4,2,3,4,4,5,5,4,2,3,3,3,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Phil Salazar,3.5,3.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Ryan Herndon,12.9,13.9,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Phil Salazar,,,,,,,,,62,5,4,3,4,2,3,5,4,6,5,6,3,3,4,5,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Phil Salazar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Ryan Herndon,,,,,,,,,60,5,5,3,6,3,4,4,4,5,5,4,2,4,3,3,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,The Coeur d'Alene Resort Golf Course,PRODUCERS,Ryan Herndon,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Kushner/Mower,,,,,,HALVED,AS,18,71,4,5,3,4,3,3,4,5,4,4,5,4,4,2,5,4,3,5
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Jake Kushner,3.5,3.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mower,13.5,14.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Jake Kushner,,,,,,,,,71,4,5,3,4,3,3,4,5,4,4,5,4,4,2,5,4,3,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Jake Kushner,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mower,,,,,,,,,79,4,5,3,4,3,3,5,5,4,6,5,4,6,3,5,5,4,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mower,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Lardeur/Sloan,,,,,,HALVED,AS,18,71,4,3,3,4,3,3,3,4,4,5,6,3,5,4,4,5,4,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jared Lardeur,3.2,3.1,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Steve Sloan,6.6,6.9,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jared Lardeur,,,,,,,,,80,4,5,3,4,4,3,3,5,5,6,6,3,5,4,6,5,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jared Lardeur,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Steve Sloan,,,,,,,,,76,5,3,3,5,3,4,3,4,4,5,6,3,6,4,4,5,4,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,The Coeur d'Alene Resort Golf Course,PRODUCERS,Steve Sloan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,Peterson/Davie,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Bodmer/Mazzarese,,,,,,Peterson/Davie,3&2,16,67,5,4,4,4,3,4,4,4,5,4,5,4,4,3,5,5,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Steve Bodmer,7.9,8.3,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Lou Mazzarese,11.1,11.9,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Steve Bodmer,,,,,,,,,68,5,5,4,4,3,4,4,4,5,4,5,4,4,3,5,5,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Steve Bodmer,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Lou Mazzarese,,,,,,,,,68,6,4,4,4,3,4,4,4,5,4,5,4,4,3,5,5,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,AVIATORS,Lou Mazzarese,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Peterson/Davie,,,,,,Peterson/Davie,3&2,16,64,5,5,3,3,3,3,4,4,5,4,5,3,3,4,6,4,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Shane Peterson,6.2,6.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Luke Davie,13.8,14.9,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Shane Peterson,,,,,,,,,65,5,5,3,4,3,3,4,4,5,4,5,3,3,4,6,4,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Shane Peterson,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Luke Davie,,,,,,,,,65,5,5,3,3,3,3,4,4,5,4,5,3,4,4,6,4,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,The Coeur d'Alene Resort Golf Course,PRODUCERS,Luke Davie,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,Benko/Horan,2 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Benko/Horan,,,,,,Benko/Horan,2 UP,18,66,4,4,3,4,3,3,4,4,5,4,4,2,4,2,4,5,4,3
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Ryan Benko,4,4,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Sean Horan,16.3,17.6,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Ryan Benko,,,,,,,,,67,4,4,3,4,3,3,4,4,5,4,4,2,5,2,4,5,4,3
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Ryan Benko,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Sean Horan,,,,,,,,,78,4,4,3,5,3,4,4,6,6,5,5,2,4,3,5,5,5,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,AVIATORS,Sean Horan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,Saar/Reinwasser,,,,,,Benko/Horan,2 UP,18,68,4,4,3,4,3,3,3,4,4,4,5,3,4,2,5,5,4,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,JP Saar,2.2,2,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,Adam Reinwasser,12.8,13.8,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,JP Saar,,,,,,,,,69,4,4,3,4,3,3,3,4,4,4,5,3,5,2,5,5,4,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,JP Saar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,Adam Reinwasser,,,,,,,,,80,5,5,3,5,3,4,4,5,6,5,5,3,4,3,5,5,5,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,The Coeur d'Alene Resort Golf Course,PRODUCERS,Adam Reinwasser,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,Fabozzi/Euckert,4&3,15,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Fabozzi/Euckert,,,,,,Fabozzi/Euckert,4&3,15,62,5,4,3,4,4,3,4,5,5,5,6,3,3,3,5,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Jacob Fabozzi,5.9,6.1,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Todd Euckert,10.8,11.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Jacob Fabozzi,,,,,,,,,65,6,5,3,4,4,3,4,5,5,5,7,3,3,3,5,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Jacob Fabozzi,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Todd Euckert,,,,,,,,,67,5,4,3,5,5,3,4,6,6,5,6,3,4,3,5,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,AVIATORS,Todd Euckert,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Barnes/Macksoud,,,,,,Fabozzi/Euckert,4&3,15,66,5,4,3,3,2,3,6,6,5,4,7,4,4,4,6,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Dan Barnes,10.7,11.4,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Alex Macksoud,17.7,19.2,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Dan Barnes,,,,,,,,,66,5,4,3,3,2,3,6,6,5,4,7,4,4,4,6,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Dan Barnes,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Alex Macksoud,,,,,,,,,74,5,5,3,5,2,3,6,6,7,5,7,4,6,4,6,,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,The Coeur d'Alene Resort Golf Course,PRODUCERS,Alex Macksoud,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS vs PRODUCERS,,,,,,,Connell/Mulcahey,4&3,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Connell/Mulcahey,,,,,,Connell/Mulcahey,4&3,18,77,5,4,3,5,4,4,4,4,5,5,5,3,4,3,5,5,4,5
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Pj Connell,7.3,7.7,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mulcahey,13.5,14.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Pj Connell,,,,,,,,,80,5,5,3,5,4,4,4,5,5,5,5,3,4,3,6,5,4,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Pj Connell,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mulcahey,,,,,,,,,83,5,4,3,5,4,5,5,4,5,6,6,4,4,3,5,5,5,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,AVIATORS,Dave Mulcahey,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Oliver/Dugan,,,,,,Connell/Mulcahey,4&3,18,81,6,4,2,4,4,4,5,5,5,6,6,2,5,3,6,5,4,5
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Garrick Oliver,11.3,12.1,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jason Dugan,10.6,11.3,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Garrick Oliver,,,,,,,,,83,6,4,2,4,4,4,5,5,5,6,7,2,5,3,7,5,4,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Garrick Oliver,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jason Dugan,,,,,,,,,86,6,5,3,4,4,6,5,6,5,6,6,2,5,3,6,5,4,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,The Coeur d'Alene Resort Golf Course,PRODUCERS,Jason Dugan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Kushner/Connell,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,AVIATORS,Kushner/Connell,,,,,,Kushner/Connell,1 UP,18,61,4,3,2,3,4,3,3,3,4,3,4,4,3,3,4,3,4,4
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,AVIATORS,Jake Kushner,3.5,3.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,AVIATORS,Pj Connell,7.3,8.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,PRODUCERS,Salazar/Barnes,,,,,,Kushner/Connell,1 UP,18,62,4,3,3,4,4,4,3,3,4,3,3,4,3,3,3,3,4,4
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,PRODUCERS,Phil Salazar,3.5,3.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club,PRODUCERS,Dan Barnes,10.7,12.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Lardeur/Sloan,2&1,18,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,AVIATORS,Cassady/Bodmer,,,,,,Lardeur/Sloan,2&1,18,65,4,3,4,3,4,4,3,4,4,3,4,3,3,3,4,3,5,4
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,AVIATORS,Dan Cassady,6.1,7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,AVIATORS,Steve Bodmer,7.9,9.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,PRODUCERS,Lardeur/Sloan,,,,,,Lardeur/Sloan,2&1,18,63,4,3,4,4,5,3,3,3,3,4,4,3,3,3,3,3,4,4
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,PRODUCERS,Jared Lardeur,3.2,3.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club,PRODUCERS,Steve Sloan,6.6,7.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,AVIATORS vs PRODUCERS,,,,,,,Saar/Peterson,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,AVIATORS,Benko/Fabozzi,,,,,,Saar/Peterson,2&1,17,60,4,3,3,4,4,4,3,3,4,3,4,4,3,4,3,3,4,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,AVIATORS,Ryan Benko,4,4.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,AVIATORS,Jacob Fabozzi,5.9,6.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,PRODUCERS,Saar/Peterson,,,,,,Saar/Peterson,2&1,17,58,4,3,3,3,4,4,3,4,4,4,3,3,3,3,4,2,4,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,PRODUCERS,JP Saar,2.2,2.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club,PRODUCERS,Shane Peterson,6.2,7.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
