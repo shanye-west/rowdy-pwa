@@ -23,17 +23,26 @@ export interface BetMatchupProps {
   teamA: MatchupSide;
   teamB: MatchupSide;
   amount: number;
+  /** Optional strip below the head-to-head row — e.g. live match status. */
+  footer?: ReactNode;
 }
 
-export default function BetMatchup({ teamA, teamB, amount }: BetMatchupProps) {
+export default function BetMatchup({ teamA, teamB, amount, footer }: BetMatchupProps) {
   return (
-    <div className="flex items-stretch overflow-hidden rounded-lg ring-1 ring-slate-200">
-      <SideCell side={teamA} align="left" />
-      <div className="flex shrink-0 flex-col items-center justify-center bg-slate-50 px-2.5 py-2">
-        <span className="text-[0.55rem] font-bold uppercase tracking-wide text-slate-400">Bet</span>
-        <span className="text-sm font-bold tabular-nums text-slate-900">${amount}</span>
+    <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+      <div className="flex items-stretch">
+        <SideCell side={teamA} align="left" />
+        <div className="flex shrink-0 flex-col items-center justify-center bg-slate-50 px-2.5 py-2">
+          <span className="text-[0.55rem] font-bold uppercase tracking-wide text-slate-400">Bet</span>
+          <span className="text-sm font-bold tabular-nums text-slate-900">${amount}</span>
+        </div>
+        <SideCell side={teamB} align="right" />
       </div>
-      <SideCell side={teamB} align="right" />
+      {footer && (
+        <div className="border-t border-slate-200 bg-slate-50/60 px-3 py-1.5 text-[0.7rem] font-semibold">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }

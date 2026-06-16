@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import InlineBetCard from "../components/InlineBetCard";
@@ -19,7 +20,7 @@ import {
   headToHead,
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
-import { toDateOrNull } from "../utils";
+import { toDateOrNull, formatTeeTime } from "../utils";
 import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
@@ -217,6 +218,19 @@ export default function Sportsbook() {
   const opponentName = (b: BetDoc): string =>
     playerName(player && b.proposerId === player.id ? b.acceptorId : b.proposerId);
 
+  /**
+   * Live match tracking for a match bet: a scorecard link plus a status strip
+   * (tee time → live score from the bettor's perspective → final result).
+   * Returns `{}` for Cup futures or matches we haven't loaded yet.
+   */
+  const matchTrack = (b: BetDoc): { to?: string; status?: ReactNode } => {
+    if (b.market !== "match" || !b.matchId) return {};
+    const m = matchesById[b.matchId];
+    if (!m) return {};
+    const pick = player ? mySide(b, player.id) : null;
+    return { to: `/match/${b.matchId}`, status: <MatchTrackLine match={m} pick={pick} /> };
+  };
+
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-4 p-4">
@@ -391,7 +405,7 @@ export default function Sportsbook() {
                     {myBets.incomingChallenges.map((b) => {
                       const sides = matchupSides(b, b.proposerSide);
                       return (
-                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="text-[0.7rem] font-semibold text-slate-500">
                             {playerName(b.proposerId)} challenges you
                           </div>
@@ -418,7 +432,7 @@ export default function Sportsbook() {
                     {myBets.myOpenOffers.map((b) => {
                       const sides = matchupSides(b, b.proposerSide);
                       return (
-                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[0.7rem] font-semibold text-slate-500">
                               {b.kind === "challenge" ? `Challenge to ${playerName(b.targetId)}` : "Open to anyone"}
@@ -449,7 +463,7 @@ export default function Sportsbook() {
                       const iAmAcceptor = b.acceptorId === player.id;
                       const sides = matchupSides(b, mySide(b, player.id));
                       return (
-                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="text-[0.7rem] font-semibold text-amber-600">
                             {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
                           </div>
@@ -504,7 +518,7 @@ export default function Sportsbook() {
                       const sides = matchupSides(b, mySide(b, player.id));
                       const cancellable = canCancelLocked(b);
                       return (
-                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[0.7rem] font-semibold text-emerald-600">Locked in</span>
                             {cancellable && (
@@ -555,7 +569,7 @@ export default function Sportsbook() {
                       const delta = settledDelta(b, player.id);
                       const sides = matchupSides(b, mySide(b, player.id));
                       return (
-                        <BetCard key={b.id} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between">
                             <span className="text-[0.7rem] font-semibold text-slate-500">
                               {delta > 0 ? "You won" : delta < 0 ? "You lost" : "Push — no money"}
@@ -660,23 +674,103 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
-/** A My-Bets entry: the head-to-head matchup tile, plus status/action children below it. */
+/**
+ * A My-Bets entry: the head-to-head matchup tile, plus status/action children
+ * below it. For match bets, `status` shows live scoring inside the tile and `to`
+ * makes the whole tile tap to the match scorecard. Action buttons live in
+ * `children`, outside the link, so they never trip navigation.
+ */
 function BetCard({
   teamA,
   teamB,
   amount,
+  to,
+  status,
   children,
 }: {
   teamA: MatchupSide;
   teamB: MatchupSide;
   amount: number;
+  to?: string;
+  status?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <Card className="space-y-2 p-3">
-      <BetMatchup teamA={teamA} teamB={teamB} amount={amount} />
+      {to ? (
+        <ViewTransitionLink to={to} className="block rounded-lg active:opacity-80">
+          <BetMatchup teamA={teamA} teamB={teamB} amount={amount} footer={status} />
+        </ViewTransitionLink>
+      ) : (
+        <BetMatchup teamA={teamA} teamB={teamB} amount={amount} footer={status} />
+      )}
       {children}
     </Card>
+  );
+}
+
+/**
+ * The live-tracking strip inside a match bet's tile. Reads from the bettor's
+ * perspective (`pick`): tee time before the off, "You're 2 up · Thru 5" while
+ * live (green when ahead, red when behind), and the final result when closed.
+ * A chevron signals the tile taps through to the scorecard.
+ */
+function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null }) {
+  const st = match.status;
+  const thru = st?.thru ?? 0;
+  const closed = st?.closed === true;
+  const leader = st?.leader ?? null;
+  const margin = st?.margin ?? 0;
+
+  let dot: ReactNode = null;
+  let text: string;
+  let tone: "win" | "lose" | "neutral" = "neutral";
+
+  if (closed) {
+    const winner = match.result?.winner ?? leader ?? "AS";
+    if (winner === "AS" || !leader) {
+      text = "Halved · Final";
+    } else {
+      const marginText = thru >= 18 ? `${margin} UP` : `${margin}&${18 - thru}`;
+      if (pick) {
+        const won = winner === pick;
+        text = `${won ? "Won" : "Lost"} ${marginText} · Final`;
+        tone = won ? "win" : "lose";
+      } else {
+        text = `${marginText} · Final`;
+      }
+    }
+  } else if (thru > 0) {
+    // Live — a pulsing dot plus the score from the bettor's point of view.
+    dot = <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-500" />;
+    if (!leader) {
+      text = `All square · Thru ${thru}`;
+    } else if (pick) {
+      const up = leader === pick;
+      text = `You're ${margin} ${up ? "up" : "down"} · Thru ${thru}`;
+      tone = up ? "win" : "lose";
+    } else {
+      text = `${margin} up · Thru ${thru}`;
+    }
+  } else {
+    const tee = formatTeeTime(match.teeTime);
+    text = tee ? `Tees off ${tee}` : "Not started";
+  }
+
+  const toneClass =
+    tone === "win" ? "text-emerald-600" : tone === "lose" ? "text-red-600" : "text-slate-500";
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className={`flex min-w-0 items-center gap-1.5 ${toneClass}`}>
+        {dot}
+        <span className="truncate">{text}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-0.5 text-slate-400">
+        <span className="text-[0.6rem] uppercase tracking-wide">Scorecard</span>
+        <ChevronRight className="h-3.5 w-3.5" />
+      </span>
+    </div>
   );
 }
 

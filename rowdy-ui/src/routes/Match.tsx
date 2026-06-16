@@ -492,10 +492,16 @@ export default function Match() {
 
   const createHasStroke = useCallback((team: "A" | "B", pIdx: number) => {
     return (holeIdx: number): boolean => {
+      // Scramble and Shamble are gross-only formats — holes are decided on gross
+      // scores, so net strokes don't apply. Showing stroke dots here is confusing,
+      // so only net formats (singles, best ball) display them.
+      if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
+        return false;
+      }
       const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
       return (roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0) > 0;
     };
-  }, [match?.teamAPlayers, match?.teamBPlayers]);
+  }, [format, match?.teamAPlayers, match?.teamBPlayers]);
 
   const createGetDriveValue = useCallback((team: "A" | "B") => {
     return (holeKey: string): 0 | 1 | 2 | 3 | null => {
