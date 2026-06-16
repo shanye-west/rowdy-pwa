@@ -40,7 +40,7 @@ export default function Sportsbook() {
     () => [...new Set(bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]))],
     [bets]
   );
-  const players = useRosterPlayers(tournament, betParticipantIds);
+  const { players, loading: playersLoading } = useRosterPlayers(tournament, betParticipantIds);
 
   const [tab, setTab] = useState<Tab>("markets");
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
@@ -51,8 +51,10 @@ export default function Sportsbook() {
     return () => clearInterval(id);
   }, []);
 
+  // Never fall back to the raw player ID — show a neutral placeholder if a name
+  // hasn't resolved (the loading gate below normally prevents this from showing).
   const playerName = (pid: string | undefined): string =>
-    (pid && (players[pid]?.displayName || pid)) || "Unknown";
+    (pid && players[pid]?.displayName) || "Unknown";
   const sideNames = (side?: { playerId: string }[]): string =>
     (side ?? []).map((p) => playerName(p.playerId)).join(" & ") || "TBD";
 
@@ -163,7 +165,11 @@ export default function Sportsbook() {
     );
   }
 
-  const loading = tdLoading || betsLoading;
+  // Hold the spinner until display names are ready so player IDs never flash in.
+  // Only gate on the *initial* name fetch (no roster cached yet) — once we have
+  // names, a later real-time bet update shouldn't blank the whole page.
+  const namesPending = playersLoading && Object.keys(players).length === 0;
+  const loading = tdLoading || betsLoading || namesPending;
   const myBets = selectMyBets(bets, player?.id);
   const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
 

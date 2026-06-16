@@ -80,8 +80,14 @@ export function rosterPlayerIds(tournament: TournamentDoc | null): string[] {
  * Batch-fetch player docs for a tournament's roster, plus any extra IDs
  * (e.g. bet proposerId/acceptorId) that may not appear in rosterByTier.
  */
-export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: readonly string[] = []): Record<string, PlayerDoc> {
+export function useRosterPlayers(
+  tournament: TournamentDoc | null,
+  extraIds: readonly string[] = []
+): { players: Record<string, PlayerDoc>; loading: boolean } {
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
+  // `loading` is true while the name lookup is in flight so callers can hold a
+  // spinner until display names resolve, rather than flashing raw player IDs.
+  const [loading, setLoading] = useState(true);
   // Stable string dep so the effect only re-runs when the ID set actually changes.
   const extraKey = [...extraIds].sort().join(",");
   const ids = useMemo(() => {
@@ -94,9 +100,11 @@ export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: rea
     const idList = ids ? ids.split(",") : [];
     if (idList.length === 0) {
       setPlayers({});
+      setLoading(false);
       return;
     }
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         const batches: string[][] = [];
@@ -113,6 +121,8 @@ export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: rea
         if (!cancelled) setPlayers(result);
       } catch (err) {
         console.error("Roster players fetch error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -120,7 +130,7 @@ export function useRosterPlayers(tournament: TournamentDoc | null, extraIds: rea
     };
   }, [ids]);
 
-  return players;
+  return { players, loading };
 }
 
 // ============================================================================

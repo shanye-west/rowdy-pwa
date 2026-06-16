@@ -61,7 +61,7 @@ function RoundComponent() {
   }, [roundId]);
 
   // Sportsbook: full roster (for the challenge-a-player picker) + the open popup.
-  const rosterPlayers = useRosterPlayers(tournament);
+  const { players: rosterPlayers } = useRosterPlayers(tournament);
   const rosterOptions = useMemo(
     () =>
       Object.values(rosterPlayers)
