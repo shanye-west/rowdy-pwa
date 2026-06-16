@@ -1,14 +1,18 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import {
   AlertTriangle,
+  Dices,
 } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
+import { useRosterPlayers, isMatchBettable } from "../hooks/useBets";
+import PlaceBetModal from "../components/PlaceBetModal";
 import { formatRoundType } from "../utils";
+import type { BetSide } from "../types";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import TeamName from "../components/TeamName";
@@ -40,7 +44,7 @@ function RoundComponent() {
 
   useEffect(() => {
     if (!roundId) return;
-    
+
     const checkRecap = async () => {
       try {
         const recapSnap = await getDoc(doc(db, "roundRecaps", roundId));
@@ -52,9 +56,25 @@ function RoundComponent() {
         setCheckingRecap(false);
       }
     };
-    
+
     checkRecap();
   }, [roundId]);
+
+  // Sportsbook: full roster (for the challenge-a-player picker) + the open popup.
+  const rosterPlayers = useRosterPlayers(tournament);
+  const rosterOptions = useMemo(
+    () =>
+      Object.values(rosterPlayers)
+        .filter((p) => p.id !== player?.id)
+        .map((p) => ({ id: p.id, name: p.displayName || p.id })),
+    [rosterPlayers, player?.id]
+  );
+  const [betCtx, setBetCtx] = useState<{
+    matchId: string;
+    side: BetSide;
+    contextLabel: string;
+    sideLabels: { teamA: string; teamB: string };
+  } | null>(null);
 
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
@@ -116,6 +136,9 @@ function RoundComponent() {
   const skinsEnabled = (round.format === "singles" || round.format === "twoManBestBall") && (hasGross || hasNet);
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
+  const teamAName = tournament?.teamA?.name || "Team A";
+  const teamBName = tournament?.teamB?.name || "Team B";
+  const sportsbookEnabled = !!tournament?.sportsbookEnabled && !!player;
 
   // Captains/co-captains and admins can run the live pairings draft. Show the
   // entry point only to those roles (the page itself is captain/admin-gated),
@@ -278,6 +301,14 @@ function RoundComponent() {
                 );
                 const teamANames = (match.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
                 const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
+                const showBet = sportsbookEnabled && isMatchBettable(match);
+                const openBet = (side: BetSide) =>
+                  setBetCtx({
+                    matchId: match.id,
+                    side,
+                    contextLabel: `${teamANames} vs ${teamBNames}`,
+                    sideLabels: { teamA: teamANames, teamB: teamBNames },
+                  });
 
                 return (
                   <div key={match.id} role="listitem">
@@ -298,6 +329,16 @@ function RoundComponent() {
                                   {getPlayerShortName(player.playerId)}
                                 </div>
                               ))}
+                              {showBet && (
+                                <BetMeButton
+                                  color={teamAColor}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openBet("teamA");
+                                  }}
+                                />
+                              )}
                             </div>
 
                             <MatchStatusBadge
@@ -318,6 +359,16 @@ function RoundComponent() {
                                   {getPlayerShortName(player.playerId)}
                                 </div>
                               ))}
+                              {showBet && (
+                                <BetMeButton
+                                  color={teamBColor}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openBet("teamB");
+                                  }}
+                                />
+                              )}
                             </div>
                           </div>
                         </CardContent>
@@ -343,7 +394,56 @@ function RoundComponent() {
           <LastUpdated />
         </div>
       </div>
+
+      {betCtx && tournament && (
+        <PlaceBetModal
+          isOpen={!!betCtx}
+          onClose={() => setBetCtx(null)}
+          tournamentId={tournament.id}
+          market="match"
+          matchId={betCtx.matchId}
+          contextLabel={betCtx.contextLabel}
+          sideLabels={betCtx.sideLabels}
+          teamTags={{ teamA: teamAName, teamB: teamBName }}
+          teamColors={{ teamA: teamAColor, teamB: teamBColor }}
+          initialSide={betCtx.side}
+          rosterOptions={rosterOptions}
+          onPosted={() => setBetCtx(null)}
+        />
+      )}
     </Layout>
+  );
+}
+
+/**
+ * Small "Bet Me" pill shown inside a match card, under a team's names. Rendered
+ * as a role=button span (not a <button>) because it lives inside the card's
+ * navigation link; the handler stops the click from navigating to the match.
+ */
+function BetMeButton({
+  color,
+  onClick,
+}: {
+  color: string;
+  onClick: (e: React.MouseEvent | React.KeyboardEvent) => void;
+}) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick(e);
+        }
+      }}
+      style={{ borderColor: color, color }}
+      className="mt-1.5 inline-flex cursor-pointer items-center gap-1 rounded-full border bg-white/90 px-2 py-0.5 text-[0.65rem] font-semibold shadow-sm transition-transform active:scale-95"
+    >
+      <Dices className="h-3 w-3" />
+      Bet Me
+    </span>
   );
 }
 

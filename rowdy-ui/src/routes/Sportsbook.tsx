@@ -11,7 +11,6 @@ import { useTournamentData } from "../hooks/useTournamentData";
 import {
   useBets,
   useRosterPlayers,
-  isMatchBettable,
   selectMyBets,
   needsMyConfirm,
   settledDelta,
@@ -20,7 +19,6 @@ import {
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
 import CommentThread from "../components/CommentThread";
-import { formatRoundType } from "../utils";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
@@ -32,7 +30,7 @@ export default function Sportsbook() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
   const { showToast } = useToast();
-  const { rounds, matchesByRound, coursesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
+  const { matchesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
   const betParticipantIds = useMemo(
     () => [...new Set(bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]))],
@@ -128,6 +126,17 @@ export default function Sportsbook() {
   const loading = tdLoading || betsLoading;
   const myBets = selectMyBets(bets, player?.id);
   const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
+
+  // Open match offers grouped by match, for the Markets marketplace.
+  const matchOfferGroups = (() => {
+    const groups = new Map<string, BetDoc[]>();
+    for (const b of openOffers) {
+      if (b.market !== "match" || !b.matchId) continue;
+      if (!groups.has(b.matchId)) groups.set(b.matchId, []);
+      groups.get(b.matchId)!.push(b);
+    }
+    return [...groups.entries()].map(([matchId, offers]) => ({ matchId, offers }));
+  })();
   const ledger = computeLedger(bets);
   const h2h = headToHead(bets, player?.id);
   const activeCount =
@@ -197,73 +206,77 @@ export default function Sportsbook() {
               />
             )}
 
-            {/* Match markets, grouped by round */}
-            {rounds.map((r) => {
-              const bettable = (matchesByRound[r.id] ?? []).filter((m) => isMatchBettable(m));
-              if (bettable.length === 0) return null;
-              const courseName = coursesByRound[r.id]?.name || r.course?.name;
-              const meta = [r.format ? formatRoundType(r.format) : null, courseName].filter(Boolean).join(" · ");
-              return (
-                <div key={r.id} className="space-y-2">
-                  <div className="px-1">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      {r.day ? `Round ${r.day}` : "Round"}
-                    </div>
-                    {meta && <div className="text-[0.7rem] text-slate-400">{meta}</div>}
-                  </div>
-                  {bettable.map((m) => (
-                    <InlineBetCard
-                      key={m.id}
-                      tournamentId={tournament.id}
-                      market="match"
-                      matchId={m.id}
-                      sideLabels={{ teamA: sideNames(m.teamAPlayers), teamB: sideNames(m.teamBPlayers) }}
-                      teamTags={teamNames}
-                      teamColors={teamColors}
-                      openOffers={openOffers.filter((b) => b.market === "match" && b.matchId === m.id)}
-                      loggedIn={!!player}
-                      meId={player?.id}
-                      rosterOptions={rosterOptions}
-                      bettorName={playerName}
-                      onTake={(b) =>
-                        runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                      }
-                      onPosted={() => undefined}
-                    />
-                  ))}
+            {/* Open match bets — take an offer someone posted. Match bets are
+                created from the Rounds / scorecard pages ("Bet Me"). */}
+            {matchOfferGroups.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🎲</div>
+                <div className="empty-state-text">
+                  No open match bets right now. Open a round and tap{" "}
+                  <span className="font-semibold">Bet Me</span> under a match to start one.
                 </div>
-              );
-            })}
-
-            {tournamentStarted &&
-              rounds.every((r) => (matchesByRound[r.id] ?? []).every((m) => !isMatchBettable(m))) && (
-                <div className="empty-state">
-                  <div className="empty-state-icon">⛳</div>
-                  <div className="empty-state-text">No open markets — every match has started.</div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Open match bets
                 </div>
-              )}
+                {matchOfferGroups.map((group) => {
+                  const labels = sideLabelsForBet(group.offers[0]);
+                  return (
+                    <Card key={group.matchId} className="p-4">
+                      <div className="mb-2 text-sm font-bold text-slate-900">{contextForBet(group.offers[0])}</div>
+                      <ul className="space-y-1.5">
+                        {group.offers.map((b) => {
+                          const takeSide = oppositeSide(b.proposerSide);
+                          const mine = player?.id === b.proposerId;
+                          return (
+                            <li
+                              key={b.id}
+                              className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
+                            >
+                              <div className="flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                  style={{ backgroundColor: teamColors[b.proposerSide] }}
+                                />
+                                <span className="truncate">
+                                  <span className="font-semibold text-slate-800">{playerName(b.proposerId)}</span>{" "}
+                                  backs <span className="font-semibold">{labels[b.proposerSide]}</span> · {`$${b.amount}`}
+                                </span>
+                              </div>
+                              {player ? (
+                                <button
+                                  type="button"
+                                  disabled={mine}
+                                  onClick={() =>
+                                    runAction(
+                                      () => betsApi.acceptBet({ betId: b.id }),
+                                      "Taken — confirm it in My Bets."
+                                    )
+                                  }
+                                  className="shrink-0 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
+                                >
+                                  {mine ? "Yours" : `Take ${labels[takeSide]}`}
+                                </button>
+                              ) : (
+                                <Link to="/login" className="shrink-0 text-xs font-semibold text-blue-600">
+                                  Log in
+                                </Link>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : tab === "mybets" ? (
           // ================== MY BETS (ledger + active/completed) ==================
           <div className="space-y-4">
-            {/* Place bets from Markets */}
-            {player ? (
-              <button
-                type="button"
-                onClick={() => setTab("markets")}
-                className="w-full rounded-lg bg-green-600 py-3 px-4 text-base font-semibold text-white transition-transform active:scale-95 hover:bg-green-700"
-              >
-                + Place a bet
-              </button>
-            ) : (
-              <Link
-                to="/login"
-                className="block w-full rounded-lg bg-slate-900 py-3 px-4 text-center text-base font-semibold text-white"
-              >
-                Log in to bet
-              </Link>
-            )}
-
             {/* Ledger: your tab (head-to-head), then everyone's standings */}
             {player && h2h.length > 0 && (
               <Card className="p-4">
