@@ -117,11 +117,6 @@ export default function Sportsbook() {
     const m = b.matchId ? matchesById[b.matchId] : undefined;
     return { teamA: sideNames(m?.teamAPlayers), teamB: sideNames(m?.teamBPlayers) };
   };
-  const contextForBet = (b: BetDoc): string => {
-    if (b.market === "cupFuture") return "Cup Winner";
-    const labels = sideLabelsForBet(b);
-    return `${labels.teamA} vs ${labels.teamB}`;
-  };
   /** The team `playerId` is betting on this bet. */
   const mySide = (b: BetDoc, playerId: string): BetSide | null => {
     if (b.proposerId === playerId) return b.proposerSide;
@@ -327,7 +322,10 @@ export default function Sportsbook() {
                   const labels = sideLabelsForBet(group.offers[0]);
                   return (
                     <Card key={group.matchId} className="p-4">
-                      <div className="mb-2 text-sm font-bold text-slate-900">{contextForBet(group.offers[0])}</div>
+                      <div className="mb-2 text-sm font-bold text-slate-900">
+                        <span className="block">{labels.teamA} vs</span>
+                        <span className="block">{labels.teamB}</span>
+                      </div>
                       <ul className="space-y-1.5">
                         {group.offers.map((b) => (
                           <BetOfferRow
