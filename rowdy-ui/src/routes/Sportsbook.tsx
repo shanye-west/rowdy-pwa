@@ -322,9 +322,13 @@ export default function Sportsbook() {
                   const labels = sideLabelsForBet(group.offers[0]);
                   return (
                     <Card key={group.matchId} className="p-4">
-                      <div className="mb-2 text-sm font-bold text-slate-900">
-                        <span className="block">{labels.teamA} vs</span>
-                        <span className="block">{labels.teamB}</span>
+                      <div className="mb-2 text-sm font-bold">
+                        <span className="block" style={{ color: teamColors.teamA }}>
+                          {labels.teamA} <span className="text-slate-400">vs</span>
+                        </span>
+                        <span className="block" style={{ color: teamColors.teamB }}>
+                          {labels.teamB}
+                        </span>
                       </div>
                       <ul className="space-y-1.5">
                         {group.offers.map((b) => (
