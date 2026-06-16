@@ -100,20 +100,28 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Split vendor chunks for better caching
-        manualChunks: {
-          // Firebase SDK in its own chunk (~300KB) - rarely changes
-          firebase: [
-            'firebase/app',
-            'firebase/auth', 
-            'firebase/firestore',
-          ],
-          // React ecosystem in its own chunk
-          'react-vendor': [
-            'react',
-            'react-dom',
-            'react-router-dom',
-          ],
+        // Split *stable* vendor code into its own long-lived chunks so that
+        // shipping app changes doesn't bust their cache. The object form used
+        // to miss `react-dom/client` (the actual 500KB renderer), which then
+        // rode along in the app `index` chunk and got re-downloaded on every
+        // deploy. The function form matches by resolved module path, so it
+        // catches all entry points of each package.
+        //
+        // Only well-known, eagerly-used vendors are pinned here. Everything
+        // else returns undefined so Rollup keeps lazy-route-only deps inside
+        // their own lazy chunk (don't force them eager).
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          // React core (incl. react-dom/client) + its scheduler
+          if (/node_modules\/(react-dom|react|scheduler)\//.test(id)) return 'react-vendor';
+          // Router changes rarely; keep it cacheable on its own
+          if (id.includes('node_modules/react-router')) return 'router';
+          // Firebase SDK (~130KB gzip) - rarely changes
+          if (/node_modules\/(@firebase|firebase|idb)\//.test(id)) return 'firebase';
+          // clsx + tailwind-merge back the `cn()` helper used app-wide; eager
+          // and stable, so cache them apart from app code.
+          if (/node_modules\/(tailwind-merge|clsx|class-variance-authority)\//.test(id)) return 'ui-vendor';
+          return undefined;
         },
       },
     },
