@@ -21,6 +21,7 @@ import {
 import { betsApi } from "../api/bets";
 import { toDateOrNull } from "../utils";
 import CommentThread from "../components/CommentThread";
+import ConfirmDialog from "../components/admin/ConfirmDialog";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
@@ -121,6 +122,23 @@ export default function Sportsbook() {
       showToast({ variant: "error", message: e instanceof Error ? e.message : "Something went wrong" });
     }
   }
+
+  // Cancel/withdraw actions confirm first — pulling a bet shouldn't be a stray tap.
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    run: () => Promise<unknown>;
+    success: string;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const confirmThen = (opts: {
+    title: string;
+    body: string;
+    confirmLabel: string;
+    run: () => Promise<unknown>;
+    success: string;
+  }) => setConfirmState(opts);
 
   // ---- gating ----
   if (!tournament) {
@@ -373,7 +391,15 @@ export default function Sportsbook() {
                         <div className="mt-2">
                           <SmallBtn
                             variant="muted"
-                            onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Offer cancelled.")}
+                            onClick={() =>
+                              confirmThen({
+                                title: "Cancel this offer?",
+                                body: `This removes your $${b.amount} offer from the marketplace. No one has taken it yet.`,
+                                confirmLabel: "Cancel offer",
+                                run: () => betsApi.cancelBet({ betId: b.id }),
+                                success: "Offer cancelled.",
+                              })
+                            }
                           >
                             Cancel
                           </SmallBtn>
@@ -409,14 +435,30 @@ export default function Sportsbook() {
                             {iAmAcceptor ? (
                               <SmallBtn
                                 variant="muted"
-                                onClick={() => runAction(() => betsApi.withdrawAcceptance({ betId: b.id }), "Withdrawn.")}
+                                onClick={() =>
+                                  confirmThen({
+                                    title: "Withdraw from this bet?",
+                                    body: `Back out of this $${b.amount} bet with ${opponentName(b)}? It isn't locked in yet.`,
+                                    confirmLabel: "Withdraw",
+                                    run: () => betsApi.withdrawAcceptance({ betId: b.id }),
+                                    success: "Withdrawn.",
+                                  })
+                                }
                               >
                                 Withdraw
                               </SmallBtn>
                             ) : (
                               <SmallBtn
                                 variant="muted"
-                                onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Cancelled.")}
+                                onClick={() =>
+                                  confirmThen({
+                                    title: "Cancel this bet?",
+                                    body: `${opponentName(b)} has taken this $${b.amount} bet but it isn't locked in yet. Cancelling removes it.`,
+                                    confirmLabel: "Cancel bet",
+                                    run: () => betsApi.cancelBet({ betId: b.id }),
+                                    success: "Cancelled.",
+                                  })
+                                }
                               >
                                 Cancel
                               </SmallBtn>
@@ -443,7 +485,15 @@ export default function Sportsbook() {
                             {cancellable && (
                               <SmallBtn
                                 variant="muted"
-                                onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Bet cancelled.")}
+                                onClick={() =>
+                                  confirmThen({
+                                    title: "Cancel this bet?",
+                                    body: `This calls off your locked-in $${b.amount} bet with ${opponentName(b)}. Neither of you wins or loses. This can't be undone once the match starts.`,
+                                    confirmLabel: "Cancel bet",
+                                    run: () => betsApi.cancelBet({ betId: b.id }),
+                                    success: "Bet cancelled.",
+                                  })
+                                }
                               >
                                 Cancel
                               </SmallBtn>
@@ -508,6 +558,26 @@ export default function Sportsbook() {
           />
         )}
       </div>
+
+      {confirmState && (
+        <ConfirmDialog
+          isOpen
+          danger
+          busy={confirmBusy}
+          title={confirmState.title}
+          confirmLabel={confirmState.confirmLabel}
+          cancelLabel="Keep it"
+          onConfirm={async () => {
+            setConfirmBusy(true);
+            await runAction(confirmState.run, confirmState.success);
+            setConfirmBusy(false);
+            setConfirmState(null);
+          }}
+          onCancel={() => setConfirmState(null)}
+        >
+          {confirmState.body}
+        </ConfirmDialog>
+      )}
     </Layout>
   );
 }

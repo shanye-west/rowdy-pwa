@@ -7,6 +7,8 @@ export interface ConfirmDialogProps {
   /** Body content — a string or richer JSX (e.g. a match count warning). */
   children: ReactNode;
   confirmLabel?: string;
+  /** Label for the dismiss button (defaults to "Cancel"). */
+  cancelLabel?: string;
   /** Use for destructive actions to get a red confirm button. */
   danger?: boolean;
   busy?: boolean;
@@ -20,6 +22,7 @@ export default function ConfirmDialog({
   title,
   children,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   danger = false,
   busy = false,
   onConfirm,
@@ -32,7 +35,7 @@ export default function ConfirmDialog({
         primaryLabel={busy ? "Working..." : confirmLabel}
         onPrimary={busy ? () => {} : onConfirm}
         primaryClass={danger ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-        secondaryLabel="Cancel"
+        secondaryLabel={cancelLabel}
         onSecondary={onCancel}
       />
     </Modal>
