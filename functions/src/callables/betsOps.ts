@@ -307,20 +307,47 @@ export const withdrawAcceptance = onCall(async (request) => {
   return { success: true };
 });
 
-/** Proposer pulls their own bet while it is still open or pending. */
+/**
+ * Pull a bet out of play.
+ *  - `open` / `pending`: only the proposer can cancel (it isn't locked yet).
+ *  - `active` (locked in): either party may call it off, but only while the
+ *    market is still open — i.e. before the match (or, for futures, the
+ *    tournament) has started. Once play begins the bet stands.
+ */
 export const cancelBet = onCall(async (request) => {
   const { playerId } = await requirePlayer(request, "cancelBet", { maxCalls: 60, windowSeconds: 60 });
   const betId = requireBetId(request.data);
   const ref = db().collection("bets").doc(betId);
 
+  // Read first so an active bet can be checked against its (started?) market
+  // outside the transaction; the small race is acceptable for a cancel.
+  const pre = await ref.get();
+  if (!pre.exists) throw new HttpsError("not-found", "Bet not found");
+  const preBet = pre.data() as BetDoc;
+  const marketIsClosed = preBet.status === "active" ? await marketClosed(preBet) : false;
+
   await db().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
     const bet = snap.data() as BetDoc;
-    if (bet.proposerId !== playerId) throw new HttpsError("permission-denied", "Only the proposer can cancel this bet");
-    if (bet.status !== "open" && bet.status !== "pending") {
+
+    if (bet.status === "open" || bet.status === "pending") {
+      if (bet.proposerId !== playerId) {
+        throw new HttpsError("permission-denied", "Only the proposer can cancel this bet");
+      }
+    } else if (bet.status === "active") {
+      const isParticipant = bet.proposerId === playerId || bet.acceptorId === playerId;
+      if (!isParticipant) throw new HttpsError("permission-denied", "You are not part of this bet");
+      if (marketIsClosed) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Play has started — this bet is locked in and can no longer be cancelled"
+        );
+      }
+    } else {
       throw new HttpsError("failed-precondition", "This bet can no longer be cancelled");
     }
+
     tx.update(ref, { status: "cancelled" });
   });
 

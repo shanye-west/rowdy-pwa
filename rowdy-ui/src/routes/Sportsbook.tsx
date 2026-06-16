@@ -1,9 +1,10 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import InlineBetCard from "../components/InlineBetCard";
+import BetOfferRow from "../components/BetOfferRow";
 import { useAuth } from "../contexts/AuthContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { useToast } from "../contexts/ToastContext";
@@ -18,6 +19,7 @@ import {
   headToHead,
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
+import { toDateOrNull } from "../utils";
 import CommentThread from "../components/CommentThread";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
@@ -39,6 +41,13 @@ export default function Sportsbook() {
   const players = useRosterPlayers(tournament, betParticipantIds);
 
   const [tab, setTab] = useState<Tab>("markets");
+  // Wall-clock used to tell whether a match has teed off; refreshed periodically
+  // (read via state to keep Date.now() out of the render path).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const playerName = (pid: string | undefined): string =>
     (pid && (players[pid]?.displayName || pid)) || "Unknown";
@@ -55,6 +64,18 @@ export default function Sportsbook() {
     () => allMatches.some((m) => (m.status?.thru ?? 0) > 0 || m.status?.closed === true),
     [allMatches]
   );
+
+  /** Mirror of the backend's matchStartedPlay: scored, closed, locked, or teed off. */
+  const matchHasStarted = (m: MatchDoc | undefined): boolean => {
+    if (!m) return true; // unknown match -> treat as locked, hide cancel
+    if (m.locked === true || m.status?.closed === true) return true;
+    if ((m.status?.thru ?? 0) > 0) return true;
+    const tee = toDateOrNull(m.teeTime);
+    return tee !== null && tee.getTime() <= nowMs;
+  };
+  /** A locked-in bet can still be called off until its market starts. */
+  const canCancelLocked = (b: BetDoc): boolean =>
+    b.market === "cupFuture" ? !tournamentStarted : !matchHasStarted(b.matchId ? matchesById[b.matchId] : undefined);
 
   const teamNames = {
     teamA: tournament?.teamA?.name || "Team A",
@@ -144,7 +165,9 @@ export default function Sportsbook() {
 
   // ---- shared render helpers ----
   const sideBadge = (label: string) => (
-    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">{label}</span>
+    <span className="inline-block max-w-[11rem] truncate rounded bg-slate-100 px-1.5 py-0.5 align-bottom text-xs font-semibold text-slate-700">
+      {label}
+    </span>
   );
 
   const opponentName = (b: BetDoc): string =>
@@ -227,46 +250,21 @@ export default function Sportsbook() {
                     <Card key={group.matchId} className="p-4">
                       <div className="mb-2 text-sm font-bold text-slate-900">{contextForBet(group.offers[0])}</div>
                       <ul className="space-y-1.5">
-                        {group.offers.map((b) => {
-                          const takeSide = oppositeSide(b.proposerSide);
-                          const mine = player?.id === b.proposerId;
-                          return (
-                            <li
-                              key={b.id}
-                              className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
-                            >
-                              <div className="flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
-                                <span
-                                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                  style={{ backgroundColor: teamColors[b.proposerSide] }}
-                                />
-                                <span className="truncate">
-                                  <span className="font-semibold text-slate-800">{playerName(b.proposerId)}</span>{" "}
-                                  backs <span className="font-semibold">{labels[b.proposerSide]}</span> · {`$${b.amount}`}
-                                </span>
-                              </div>
-                              {player ? (
-                                <button
-                                  type="button"
-                                  disabled={mine}
-                                  onClick={() =>
-                                    runAction(
-                                      () => betsApi.acceptBet({ betId: b.id }),
-                                      "Taken — confirm it in My Bets."
-                                    )
-                                  }
-                                  className="shrink-0 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
-                                >
-                                  {mine ? "Yours" : `Take ${labels[takeSide]}`}
-                                </button>
-                              ) : (
-                                <Link to="/login" className="shrink-0 text-xs font-semibold text-blue-600">
-                                  Log in
-                                </Link>
-                              )}
-                            </li>
-                          );
-                        })}
+                        {group.offers.map((b) => (
+                          <BetOfferRow
+                            key={b.id}
+                            dotColor={teamColors[b.proposerSide]}
+                            proposerName={playerName(b.proposerId)}
+                            backsLabel={labels[b.proposerSide]}
+                            takeLabel={labels[oppositeSide(b.proposerSide)]}
+                            amount={b.amount}
+                            mine={player?.id === b.proposerId}
+                            loggedIn={!!player}
+                            onTake={() =>
+                              runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
+                            }
+                          />
+                        ))}
                       </ul>
                     </Card>
                   );
@@ -340,9 +338,10 @@ export default function Sportsbook() {
                 <Collapsible title="Active Bets" count={activeCount} defaultOpen>
                   <Section title="Incoming challenges" count={myBets.incomingChallenges.length}>
                     {myBets.incomingChallenges.map((b) => (
-                      <BetLine key={b.id} context={contextForBet(b)}>
-                        <div className="text-xs text-slate-500">
-                          {playerName(b.proposerId)} bets you {money(b.amount)} · you'd back{" "}
+                      <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
+                          <span className="font-semibold text-slate-700">{playerName(b.proposerId)}</span>
+                          <span>challenges you · you'd back</span>
                           {sideBadge(sideLabelsForBet(b)[mySide(b, player.id) ?? "teamB"])}
                         </div>
                         <div className="mt-2 flex gap-2">
@@ -365,10 +364,11 @@ export default function Sportsbook() {
 
                   <Section title="My open offers" count={myBets.myOpenOffers.length}>
                     {myBets.myOpenOffers.map((b) => (
-                      <BetLine key={b.id} context={contextForBet(b)}>
-                        <div className="text-xs text-slate-500">
-                          {money(b.amount)} · backing {sideBadge(sideLabelsForBet(b)[b.proposerSide])} ·{" "}
-                          {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}
+                      <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
+                          <span>backing</span>
+                          {sideBadge(sideLabelsForBet(b)[b.proposerSide])}
+                          <span>· {b.kind === "challenge" ? `to ${playerName(b.targetId)}` : "open to anyone"}</span>
                         </div>
                         <div className="mt-2">
                           <SmallBtn
@@ -388,10 +388,11 @@ export default function Sportsbook() {
                       const iAmAcceptor = b.acceptorId === player.id;
                       const side = mySide(b, player.id);
                       return (
-                        <BetLine key={b.id} context={contextForBet(b)}>
-                          <div className="text-xs text-slate-500">
-                            {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} · vs{" "}
-                            {opponentName(b)}
+                        <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
+                            <span>you back</span>
+                            {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
+                            <span>· vs {opponentName(b)}</span>
                           </div>
                           <div className="mt-1 text-[0.7rem] font-semibold text-amber-600">
                             {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
@@ -429,13 +430,30 @@ export default function Sportsbook() {
                   <Section title="Locked in" count={myBets.active.length}>
                     {myBets.active.map((b) => {
                       const side = mySide(b, player.id);
+                      const cancellable = canCancelLocked(b);
                       return (
-                        <BetLine key={b.id} context={contextForBet(b)}>
-                          <div className="text-xs text-slate-500">
-                            {money(b.amount)} · you back {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])} · vs{" "}
-                            {opponentName(b)}
+                        <BetLine key={b.id} context={contextForBet(b)} amount={b.amount}>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500">
+                            <span>you back</span>
+                            {sideBadge(sideLabelsForBet(b)[side ?? "teamA"])}
+                            <span>· vs {opponentName(b)}</span>
                           </div>
-                          <div className="mt-1 text-[0.7rem] font-semibold text-emerald-600">Locked in</div>
+                          <div className="mt-1.5 flex items-center justify-between gap-2">
+                            <span className="text-[0.7rem] font-semibold text-emerald-600">Locked in</span>
+                            {cancellable && (
+                              <SmallBtn
+                                variant="muted"
+                                onClick={() => runAction(() => betsApi.cancelBet({ betId: b.id }), "Bet cancelled.")}
+                              >
+                                Cancel
+                              </SmallBtn>
+                            )}
+                          </div>
+                          {cancellable && (
+                            <div className="mt-1 text-[0.65rem] text-slate-400">
+                              Either player can cancel until the match starts.
+                            </div>
+                          )}
                         </BetLine>
                       );
                     })}
@@ -544,10 +562,17 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
-function BetLine({ context, children }: { context: string; children: ReactNode }) {
+function BetLine({ context, amount, children }: { context: string; amount?: number; children: ReactNode }) {
   return (
     <Card className="p-3">
-      <div className="text-sm font-semibold text-slate-900">{context}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 text-sm font-semibold text-slate-900">{context}</div>
+        {amount != null && (
+          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-sm font-bold tabular-nums text-slate-700">
+            ${amount}
+          </span>
+        )}
+      </div>
       {children}
     </Card>
   );

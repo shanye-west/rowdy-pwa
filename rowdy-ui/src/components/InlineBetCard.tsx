@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus } from "lucide-react";
 import { Card } from "./ui/card";
+import BetOfferRow from "./BetOfferRow";
 import { useToast } from "../contexts/ToastContext";
 import { betsApi } from "../api/bets";
 import type { BetDoc, BetMarket, BetSide } from "../types";
@@ -280,38 +281,19 @@ export default function InlineBetCard({
       {/* Existing open offers on this event */}
       {openOffers.length > 0 && (
         <ul className="mt-3 space-y-1.5">
-          {openOffers.map((b) => {
-            const takeSide = oppositeSide(b.proposerSide);
-            const mine = meId === b.proposerId;
-            return (
-              <li key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                <div className="flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: teamColors[b.proposerSide] }}
-                  />
-                  <span className="truncate">
-                    <span className="font-semibold text-slate-800">{bettorName(b.proposerId)}</span> backs{" "}
-                    <span className="font-semibold">{sideLabels[b.proposerSide]}</span> · {`$${b.amount}`}
-                  </span>
-                </div>
-                {loggedIn ? (
-                  <button
-                    type="button"
-                    disabled={mine}
-                    onClick={() => onTake(b)}
-                    className="shrink-0 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
-                  >
-                    {mine ? "Yours" : `Take ${sideLabels[takeSide]}`}
-                  </button>
-                ) : (
-                  <Link to="/login" className="shrink-0 text-xs font-semibold text-blue-600">
-                    Log in
-                  </Link>
-                )}
-              </li>
-            );
-          })}
+          {openOffers.map((b) => (
+            <BetOfferRow
+              key={b.id}
+              dotColor={teamColors[b.proposerSide]}
+              proposerName={bettorName(b.proposerId)}
+              backsLabel={sideLabels[b.proposerSide]}
+              takeLabel={sideLabels[oppositeSide(b.proposerSide)]}
+              amount={b.amount}
+              mine={meId === b.proposerId}
+              loggedIn={loggedIn}
+              onTake={() => onTake(b)}
+            />
+          ))}
         </ul>
       )}
     </Card>
