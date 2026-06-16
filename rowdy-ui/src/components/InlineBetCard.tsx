@@ -24,7 +24,12 @@ export interface InlineBetCardProps {
   matchId?: string;
   /** Heading shown above the team buttons (e.g. "🏆 Cup Winner"); omit for matches. */
   title?: string;
+  /** Player names (matches) or team names (Cup) for each side. */
   sideLabels: { teamA: string; teamB: string };
+  /** Team display names, always shown as a colored tag on each side. */
+  teamTags: { teamA: string; teamB: string };
+  /** Team brand colors (hex/CSS) for each side. */
+  teamColors: { teamA: string; teamB: string };
   /** Existing open offers on this event. */
   openOffers: BetDoc[];
   loggedIn: boolean;
@@ -44,6 +49,8 @@ export default function InlineBetCard({
   matchId,
   title,
   sideLabels,
+  teamTags,
+  teamColors,
   openOffers,
   loggedIn,
   meId,
@@ -105,10 +112,12 @@ export default function InlineBetCard({
     <Card className="p-4">
       {title && <div className="mb-2 text-sm font-bold text-slate-900">{title}</div>}
 
-      {/* Team buttons — tap one to back it */}
+      {/* Team buttons — tap one to back it. Colored by team identity. */}
       <div className="flex items-stretch gap-2">
         {(["teamA", "teamB"] as const).map((s) => {
           const selected = side === s;
+          const color = teamColors[s];
+          const showTag = teamTags[s] && teamTags[s] !== sideLabels[s];
           return (
             <button
               key={s}
@@ -116,13 +125,26 @@ export default function InlineBetCard({
               onClick={() => tapTeam(s)}
               disabled={!loggedIn}
               aria-pressed={selected}
-              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
+              style={
                 selected
-                  ? "border-green-600 bg-green-600 text-white"
-                  : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50 disabled:hover:bg-white"
+                  ? { backgroundColor: color, borderColor: color }
+                  : { borderLeftColor: color, borderLeftWidth: 4 }
+              }
+              className={`flex-1 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-default ${
+                selected ? "text-white" : "border-slate-200 bg-white hover:bg-slate-50 disabled:hover:bg-white"
               }`}
             >
-              {sideLabels[s]}
+              {showTag && (
+                <span
+                  className="block text-[0.6rem] font-bold uppercase tracking-wide"
+                  style={selected ? { color: "rgba(255,255,255,0.85)" } : { color }}
+                >
+                  {teamTags[s]}
+                </span>
+              )}
+              <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-slate-800"}`}>
+                {sideLabels[s]}
+              </span>
             </button>
           );
         })}
@@ -140,8 +162,13 @@ export default function InlineBetCard({
       {/* Inline builder (after a team is tapped) */}
       {loggedIn && side && (
         <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3">
-          <div className="text-xs font-semibold text-slate-600">
-            You're backing <span className="text-slate-900">{sideLabels[side]}</span>
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: teamColors[side] }} />
+            You're backing{" "}
+            <span className="text-slate-900">
+              {sideLabels[side]}
+              {teamTags[side] && teamTags[side] !== sideLabels[side] ? ` (${teamTags[side]})` : ""}
+            </span>
           </div>
 
           {/* Stake stepper + presets */}
@@ -258,9 +285,15 @@ export default function InlineBetCard({
             const mine = meId === b.proposerId;
             return (
               <li key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                <div className="min-w-0 text-xs text-slate-600">
-                  <span className="font-semibold text-slate-800">{bettorName(b.proposerId)}</span> backs{" "}
-                  <span className="font-semibold">{sideLabels[b.proposerSide]}</span> · {`$${b.amount}`}
+                <div className="flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: teamColors[b.proposerSide] }}
+                  />
+                  <span className="truncate">
+                    <span className="font-semibold text-slate-800">{bettorName(b.proposerId)}</span> backs{" "}
+                    <span className="font-semibold">{sideLabels[b.proposerSide]}</span> · {`$${b.amount}`}
+                  </span>
                 </div>
                 {loggedIn ? (
                   <button

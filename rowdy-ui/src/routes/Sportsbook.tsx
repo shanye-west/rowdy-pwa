@@ -20,6 +20,7 @@ import {
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
 import CommentThread from "../components/CommentThread";
+import { formatRoundType } from "../utils";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
@@ -31,7 +32,7 @@ export default function Sportsbook() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
   const { showToast } = useToast();
-  const { rounds, matchesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
+  const { rounds, matchesByRound, coursesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
   const betParticipantIds = useMemo(
     () => [...new Set(bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]))],
@@ -60,6 +61,10 @@ export default function Sportsbook() {
   const teamNames = {
     teamA: tournament?.teamA?.name || "Team A",
     teamB: tournament?.teamB?.name || "Team B",
+  };
+  const teamColors = {
+    teamA: tournament?.teamA?.color || "var(--team-a-default, #1e40af)",
+    teamB: tournament?.teamB?.color || "var(--team-b-default, #b91c1c)",
   };
 
   /** Labels for a bet's two sides — player names for matches, team names for futures. */
@@ -178,6 +183,8 @@ export default function Sportsbook() {
                 market="cupFuture"
                 title="🏆 Cup Winner"
                 sideLabels={teamNames}
+                teamTags={teamNames}
+                teamColors={teamColors}
                 openOffers={openOffers.filter((b) => b.market === "cupFuture")}
                 loggedIn={!!player}
                 meId={player?.id}
@@ -194,10 +201,15 @@ export default function Sportsbook() {
             {rounds.map((r) => {
               const bettable = (matchesByRound[r.id] ?? []).filter((m) => isMatchBettable(m));
               if (bettable.length === 0) return null;
+              const courseName = coursesByRound[r.id]?.name || r.course?.name;
+              const meta = [r.format ? formatRoundType(r.format) : null, courseName].filter(Boolean).join(" · ");
               return (
                 <div key={r.id} className="space-y-2">
-                  <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {r.day ? `Round ${r.day}` : "Round"}
+                  <div className="px-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      {r.day ? `Round ${r.day}` : "Round"}
+                    </div>
+                    {meta && <div className="text-[0.7rem] text-slate-400">{meta}</div>}
                   </div>
                   {bettable.map((m) => (
                     <InlineBetCard
@@ -206,6 +218,8 @@ export default function Sportsbook() {
                       market="match"
                       matchId={m.id}
                       sideLabels={{ teamA: sideNames(m.teamAPlayers), teamB: sideNames(m.teamBPlayers) }}
+                      teamTags={teamNames}
+                      teamColors={teamColors}
                       openOffers={openOffers.filter((b) => b.market === "match" && b.matchId === m.id)}
                       loggedIn={!!player}
                       meId={player?.id}
