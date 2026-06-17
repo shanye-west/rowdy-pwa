@@ -31,8 +31,9 @@ function sortRows(a: LeaderboardRow, b: LeaderboardRow): number {
 /**
  * Individual leaderboard for the current tournament. Reuses the same one-time
  * `byTournament` collection-group query that Teams.tsx runs (no new index), plus
- * a chunked player-name fetch. Names + roster ids are returned so callers can
- * also drive an all-time (bySeries) view via useSeriesLeaderboard.
+ * a chunked player-name fetch. Names + roster ids are returned for the
+ * current-tournament tab; the all-time (bySeries) view is driven separately by
+ * useAllTimeLeaderboard, which spans players beyond the current roster.
  */
 export function useTournamentLeaderboard(tournament: TournamentDoc | null) {
   const rosterIds = useMemo(() => rosterIdsOf(tournament), [tournament]);

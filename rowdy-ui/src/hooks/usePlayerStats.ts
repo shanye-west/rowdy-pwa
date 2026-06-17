@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, onSnapshot, query, getDoc } from "firebase/firestore";
+import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
@@ -98,18 +98,21 @@ export function usePlayerStatsBySeries(playerId: string | undefined) {
 }
 
 /**
- * Fetch stats for multiple players in a specific series (for leaderboards)
- * 
- * OPTIMIZED: Uses batch getDocs queries instead of N individual subscriptions.
- * This reduces Firestore reads from O(n) real-time subscriptions to O(n/10) one-time queries.
- * For 24 players, this reduces from 24 WebSocket connections to 3 batch queries.
+ * All-time leaderboard for a series across EVERY player who has ever played in
+ * it — not limited to the current tournament roster (retired players, guests,
+ * and anyone no longer on a team still appear).
+ *
+ * Uses a single collection-group query on `bySeries` filtered by the `series`
+ * field (backed by the COLLECTION_GROUP index in firestore.indexes.json), so it
+ * costs one query regardless of how many players exist. `enabled` lets callers
+ * defer the read until the all-time tab is actually opened.
  */
-export function useSeriesLeaderboard(series: TournamentSeries, playerIds: string[]) {
+export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enabled: boolean) {
   const [leaderboard, setLeaderboard] = useState<PlayerStatsBySeries[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!series || playerIds.length === 0) {
+    if (!series || !enabled) {
       setLeaderboard([]);
       setLoading(false);
       return;
@@ -117,44 +120,32 @@ export function useSeriesLeaderboard(series: TournamentSeries, playerIds: string
 
     setLoading(true);
     let cancelled = false;
-    
-    // Batch fetch all player stats using getDocs instead of N onSnapshot subscriptions
-    // Split into chunks of 10 (Firestore 'in' query limit)
-    async function fetchLeaderboard() {
-      try {
-        const stats: PlayerStatsBySeries[] = [];
-        
-        // Fetch each player's stats document (no collection-group query for subcollections with specific doc IDs)
-        const fetchPromises = playerIds.map(async (playerId) => {
-          const docRef = doc(db, "playerStats", playerId, "bySeries", series);
-          const snap = await getDoc(docRef);
-          if (snap.exists()) {
-            return { ...snap.data(), playerId, series } as PlayerStatsBySeries;
-          }
-          return null;
-        });
-        
-        const results = await Promise.all(fetchPromises);
+
+    getDocs(query(collectionGroup(db, "bySeries"), where("series", "==", series)))
+      .then((snap) => {
         if (cancelled) return;
-        
-        results.forEach(stat => {
-          if (stat) stats.push(stat);
+        const stats: PlayerStatsBySeries[] = snap.docs.map((d) => {
+          const data = d.data();
+          // Prefer the stored playerId; fall back to the parent doc id
+          // (playerStats/{playerId}/bySeries/{series}).
+          const playerId = (data.playerId as string) || d.ref.parent.parent?.id || "";
+          return { ...data, playerId, series } as PlayerStatsBySeries;
         });
-        
         // Sort by points descending
         stats.sort((a, b) => b.points - a.points);
         setLeaderboard(stats);
         setLoading(false);
-      } catch (err) {
-        console.error("Error fetching leaderboard:", err);
-        if (!cancelled) setLoading(false);
-      }
-    }
-    
-    fetchLeaderboard();
-    
+      })
+      .catch((err) => {
+        console.error("Error fetching all-time leaderboard:", err);
+        if (!cancelled) {
+          setLeaderboard([]);
+          setLoading(false);
+        }
+      });
+
     return () => { cancelled = true; };
-  }, [series, playerIds.join(",")]);
+  }, [series, enabled]);
 
   return { leaderboard, loading };
 }
