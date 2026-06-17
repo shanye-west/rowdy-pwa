@@ -754,7 +754,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
     }
     
     // Drive tracking - only for match holes
-    if ((format === "twoManScramble" || format === "twoManShamble") && isMatchHole) {
+    if ((format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") && isMatchHole) {
       const aDrive = h.teamADrive;
       const bDrive = h.teamBDrive;
       if (aDrive === 0) teamADrivesUsed[0]++;
@@ -764,7 +764,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
     }
     
     // Scoring stats by format - tracks ALL holes (including post-match)
-    if (format === "twoManScramble") {
+    if (format === "twoManScramble" || format === "fourManScramble") {
       const aGross = h.teamAGross;
       const bGross = h.teamBGross;
       if (isValidGross(aGross)) teamATotalGross += aGross;
@@ -900,8 +900,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
     
     // Drive stats
     let drivesUsed: number | null = null;
-    if (format === "twoManScramble" || format === "twoManShamble") {
-      drivesUsed = team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx];
+    if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
+      // Drive-tracking arrays are sized for the 2 players who hit drives; for
+      // fourManScramble's extra roster slots (pIdx 2-3) the lookup is undefined,
+      // which Firestore rejects — default to 0 (drives aren't tracked there).
+      drivesUsed = (team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx]) ?? 0;
     }
     
     // Ham & Egg stats (team-level count, same for both players on a team)
@@ -947,7 +950,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
       totalNet = null;
       strokesVsParGross = null;
       strokesVsParNet = null;
-    } else if (format === "twoManScramble" || format === "twoManShamble") {
+    } else if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
       teamStrokesVsParGross = teamTotalGross - coursePar;
     }
@@ -1068,8 +1071,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTrigg
           if (diff === -1) birdies++;
           else if (diff <= -2) eagles++;
         }
-      } else if (format === "twoManScramble") {
-        // Scramble: team gross, has driveUsed
+      } else if (format === "twoManScramble" || format === "fourManScramble") {
+        // Scramble (2- or 4-man): team gross, has driveUsed
         const gross = team === "teamA" ? h.teamAGross : h.teamBGross;
         holeData.gross = gross ?? null;
         const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
@@ -1643,6 +1646,7 @@ function buildStatsFromFacts(facts: FirebaseFirestore.QueryDocumentSnapshot[], i
     twoManBestBall: { wins: 0, losses: 0, halves: 0, matches: 0 },
     twoManShamble: { wins: 0, losses: 0, halves: 0, matches: 0 },
     twoManScramble: { wins: 0, losses: 0, halves: 0, matches: 0 },
+    fourManScramble: { wins: 0, losses: 0, halves: 0, matches: 0 },
   };
 
   facts.forEach(d => {

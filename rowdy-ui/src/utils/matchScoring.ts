@@ -67,7 +67,8 @@ export function decideHole(
 ): HoleResult {
   if (!input) return null;
   
-  if (format === "twoManScramble") {
+  if (format === "twoManScramble" || format === "fourManScramble") {
+    // Scramble (2- or 4-man): one team gross score per hole — same input shape.
     const a = input.teamAGross;
     const b = input.teamBGross;
     if (!isNum(a) || !isNum(b)) return null;

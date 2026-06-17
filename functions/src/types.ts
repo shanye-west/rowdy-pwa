@@ -149,8 +149,9 @@ export interface PlayerStatsBySeries {
     twoManBestBall?: { wins: number; losses: number; halves: number; matches: number };
     twoManShamble?: { wins: number; losses: number; halves: number; matches: number };
     twoManScramble?: { wins: number; losses: number; halves: number; matches: number };
+    fourManScramble?: { wins: number; losses: number; halves: number; matches: number };
   };
-  
+
   // Scoring stats (individual formats only: singles, bestBall)
   totalGross?: number;        // Cumulative gross strokes
   totalNet?: number;          // Cumulative net strokes

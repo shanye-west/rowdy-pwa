@@ -32,6 +32,7 @@
     "singleProjectMode": true
   },
   "hosting": {
+    "site": "rowdy-pwa",
     "public": "rowdy-ui/dist",
     "ignore": [
       "firebase.json",

@@ -341,7 +341,7 @@ export function PostMatchStats({
   // Format-specific flags
   const isBestBall = format === "twoManBestBall";
   const isShamble = format === "twoManShamble";
-  const isScramble = format === "twoManScramble";
+  const isScramble = format === "twoManScramble" || format === "fourManScramble";
   
   // What to show
   const showIndividualScoring = isBestBall; // Gross/Net per player

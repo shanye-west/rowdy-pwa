@@ -15,12 +15,13 @@ const SERIES_LABELS: Record<string, string> = {
   christmasClassic: "Christmas Classic",
 };
 
-const FORMAT_ORDER = ["singles", "twoManBestBall", "twoManShamble", "twoManScramble"] as const;
+const FORMAT_ORDER = ["singles", "twoManBestBall", "twoManShamble", "twoManScramble", "fourManScramble"] as const;
 const FORMAT_LABELS: Record<string, string> = {
   singles: "Singles",
   twoManBestBall: "Best Ball",
   twoManShamble: "Shamble",
-  twoManScramble: "Scramble",
+  twoManScramble: "2-Man Scramble",
+  fourManScramble: "4-Man Scramble",
 };
 
 const num = (v: number | undefined): number =>

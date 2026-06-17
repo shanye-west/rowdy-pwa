@@ -33,8 +33,9 @@ export function holesRange(obj: Record<string, any>) {
 export function decideHole(format: RoundFormat, i: number, match: MatchData): "teamA" | "teamB" | "AS" | null {
   const h = match.holes?.[String(i)]?.input ?? {};
   
-  if (format === "twoManScramble") {
-    // Scramble: one gross score per team
+  if (format === "twoManScramble" || format === "fourManScramble") {
+    // Scramble (2- or 4-man): one gross score per team — identical input shape,
+    // so 4-man reuses the same team-gross logic as 2-man.
     const a = h.teamAGross;
     const b = h.teamBGross;
     if (!isValidGross(a) || !isValidGross(b)) return null;
