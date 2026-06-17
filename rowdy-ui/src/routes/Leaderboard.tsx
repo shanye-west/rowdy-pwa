@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import { useTournamentContext } from "../contexts/TournamentContext";
@@ -106,20 +105,13 @@ export default function Leaderboard() {
           <Card className="overflow-hidden p-0">
             <ul className="divide-y divide-slate-100">
               {rows.map((r, i) => {
-                const isLeader = i === 0;
                 return (
                   <li key={r.playerId}>
                     <Link
                       to={`/player/${r.playerId}`}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 ${
-                        isLeader ? "bg-amber-50" : ""
-                      }`}
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
                     >
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                          isLeader ? "bg-amber-400 text-white" : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
                         {i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -127,9 +119,6 @@ export default function Leaderboard() {
                           <span className="truncate font-semibold text-slate-900">
                             {names[r.playerId] || "Unknown"}
                           </span>
-                          {isLeader && (
-                            <Crown className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />
-                          )}
                         </div>
                         <div className="text-xs text-slate-500">
                           {r.wins}-{r.losses}-{r.halves} · {r.matchesPlayed} {r.matchesPlayed === 1 ? "match" : "matches"}
