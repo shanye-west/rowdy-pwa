@@ -172,6 +172,11 @@ export type TournamentDoc = {
   // means the tournament was won in regulation, ended in an unbroken tie, or
   // isn't over yet. Drives the champions banner on the home and tournament views.
   tiebreakerWinner?: "teamA" | "teamB";
+  // Pre-draft pool of available players, keyed by playerId -> current handicap
+  // index (e.g. 7.4). Populated before the captains' draft, while players aren't
+  // yet assigned to teamA/teamB. Drives the public Draft Pool dashboard; its
+  // presence (non-empty) is what gates that page + the Home card / menu link.
+  draftPool?: Record<string, number>;
 };
 
 // NEW: Hole definition (static data)

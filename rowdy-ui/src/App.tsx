@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { ArrowRight, Flag, RefreshCw, X } from "lucide-react";
+import { ArrowRight, ClipboardList, Flag, RefreshCw, X } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
@@ -69,6 +69,8 @@ export default function App() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
   const showPoints = totalPointsAvailable > 0;
+  // Pre-draft: surface the available-player pool when one has been posted.
+  const draftPoolCount = tournament?.draftPool ? Object.keys(tournament.draftPool).length : 0;
 
   return (
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
@@ -91,6 +93,28 @@ export default function App() {
       ) : (
         <div className="space-y-6 px-4 py-6">
           <ChampionBanner tournament={tournament} />
+
+          {draftPoolCount > 0 && (
+            <section>
+              <ViewTransitionLink to="/draft" className="card-link-hover block">
+                <Card className="border-slate-200/80 bg-white/80">
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ClipboardList className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-slate-900">Draft Pool</div>
+                      <div className="text-xs text-muted-foreground">
+                        {draftPoolCount} players available for the draft
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </ViewTransitionLink>
+            </section>
+          )}
+
           <section>
             <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />

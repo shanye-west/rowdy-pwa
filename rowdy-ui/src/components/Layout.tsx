@@ -6,6 +6,7 @@ import {
   X,
   Shield,
   Trophy,
+  ClipboardList,
   LogOut,
   LogIn,
   Wifi,
@@ -16,6 +17,7 @@ import OfflineImage from "./OfflineImage";
 import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useAuth } from "../contexts/AuthContext";
+import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
 import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/useViewTransition";
@@ -41,6 +43,10 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
+  const tournamentCtx = useTournamentContextOptional();
+  const draftPoolCount = tournamentCtx?.tournament?.draftPool
+    ? Object.keys(tournamentCtx.tournament.draftPool).length
+    : 0;
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
@@ -195,6 +201,15 @@ export function LayoutShell({ children }: LayoutShellProps) {
                   {!authLoading && player && <div className="h-px bg-slate-200/80" />}
 
                   <div className="space-y-1 p-2">
+                    {draftPoolCount > 0 && (
+                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                        <ViewTransitionLink to="/draft" onClick={closeMenu}>
+                          <ClipboardList className="h-4 w-4 text-slate-500" />
+                          Draft Pool
+                        </ViewTransitionLink>
+                      </Button>
+                    )}
+
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
                       <ViewTransitionLink to="/leaderboard" onClick={closeMenu}>
                         <Trophy className="h-4 w-4 text-slate-500" />
