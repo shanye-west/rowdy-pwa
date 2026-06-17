@@ -5,8 +5,11 @@ import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
+import { getTournamentWinner } from "../utils";
 // TeamName removed from history list (only logos shown)
-import type { TournamentDoc } from "../types";
+import type { TournamentDoc, RoundDoc } from "../types";
+
+type TournamentWinner = { winnerKey: "teamA" | "teamB"; viaTiebreaker: boolean } | null;
 
 type TournamentSeries = "rowdyCup" | "christmasClassic";
 
@@ -19,6 +22,7 @@ const SERIES_CONFIG: Record<TournamentSeries, { label: string; icon: string; col
 export default function History() {
   const [loading, setLoading] = useState(true);
   const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
+  const [winnersByTournament, setWinnersByTournament] = useState<Record<string, TournamentWinner>>({});
   const [selectedSeries, setSelectedSeries] = useState<TournamentSeries>("rowdyCup");
 
   // Fetch all non-active tournaments (one-time read - historical data doesn't change)
@@ -52,6 +56,57 @@ export default function History() {
     fetchHistory();
     return () => { cancelled = true; };
   }, []);
+
+  // Determine each tournament's champion from denormalized round point totals.
+  // Historical data is static, so a one-time read is fine; we batch all listed
+  // tournaments into `in` queries (Firestore caps `in` at 30 values) so this is
+  // a couple of reads rather than one per tournament.
+  useEffect(() => {
+    if (tournaments.length === 0) return;
+    let cancelled = false;
+
+    async function fetchWinners() {
+      try {
+        const ids = tournaments.map(t => t.id);
+        const batches: string[][] = [];
+        for (let i = 0; i < ids.length; i += 30) batches.push(ids.slice(i, i + 30));
+
+        // Accumulate confirmed points + available points per tournament.
+        const acc: Record<string, { aConf: number; bConf: number; totalPts: number }> = {};
+        for (const t of tournaments) acc[t.id] = { aConf: 0, bConf: 0, totalPts: 0 };
+
+        await Promise.all(batches.map(async (batch) => {
+          const snap = await getDocs(
+            query(collection(db, "rounds"), where("tournamentId", "in", batch))
+          );
+          snap.docs.forEach(d => {
+            const r = { id: d.id, ...d.data() } as RoundDoc;
+            const bucket = r.tournamentId ? acc[r.tournamentId] : undefined;
+            const pt = r.pointTotals;
+            if (!bucket || !pt) return;
+            bucket.aConf += pt.teamAConfirmed;
+            bucket.bConf += pt.teamBConfirmed;
+            bucket.totalPts += (r.pointsValue ?? 1) * (pt.matchCount ?? 0);
+          });
+        }));
+
+        if (cancelled) return;
+
+        const winners: Record<string, TournamentWinner> = {};
+        for (const t of tournaments) {
+          const a = acc[t.id];
+          const totalPts = t.totalPointsAvailable ?? a.totalPts;
+          winners[t.id] = getTournamentWinner(t.tiebreakerWinner, a.aConf, a.bConf, totalPts);
+        }
+        setWinnersByTournament(winners);
+      } catch (err) {
+        console.error("History winners fetch error:", err);
+      }
+    }
+
+    fetchWinners();
+    return () => { cancelled = true; };
+  }, [tournaments]);
 
   // Filter tournaments by selected series
   const filteredTournaments = useMemo(() => {
@@ -185,27 +240,38 @@ export default function History() {
           </div>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
-            {filteredTournaments.map(t => (
-              <ViewTransitionLink 
+            {filteredTournaments.map(t => {
+              const winner = winnersByTournament[t.id];
+              // Golden halo tracing the logo silhouette — no clipping box.
+              const championGlow = {
+                filter: "drop-shadow(0 0 6px rgba(251,191,36,0.95)) drop-shadow(0 0 14px rgba(245,158,11,0.5))",
+              };
+              return (
+              <ViewTransitionLink
                 key={t.id}
                 to={`/tournament/${t.id}`}
                 className="card card-hover"
-                style={{ 
-                  display: "grid", 
-                  gridTemplateColumns: "auto 1fr auto", 
-                  alignItems: "center", 
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr auto",
+                  alignItems: "center",
                   gap: 12,
                   padding: "16px 20px",
                 }}
               >
                 {/* Team A - show only logo (bigger) */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <OfflineImage 
-                    src={t.teamA?.logo} 
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <OfflineImage
+                    src={t.teamA?.logo}
                     alt={t.teamA?.name || "Team A"}
                     fallbackIcon="🔵"
-                    style={{ width: 56, height: 56, objectFit: "contain" }}
+                    style={{ width: 56, height: 56, objectFit: "contain", ...(winner?.winnerKey === "teamA" ? championGlow : {}) }}
                   />
+                  {winner?.winnerKey === "teamA" && (
+                    <span style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#b45309" }}>
+                      🏆 Champs
+                    </span>
+                  )}
                 </div>
 
                 {/* Year / Name */}
@@ -221,16 +287,22 @@ export default function History() {
                 </div>
 
                 {/* Team B - show only logo (bigger) */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-                  <OfflineImage 
-                    src={t.teamB?.logo} 
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <OfflineImage
+                    src={t.teamB?.logo}
                     alt={t.teamB?.name || "Team B"}
                     fallbackIcon="🔴"
-                    style={{ width: 56, height: 56, objectFit: "contain" }}
+                    style={{ width: 56, height: 56, objectFit: "contain", ...(winner?.winnerKey === "teamB" ? championGlow : {}) }}
                   />
+                  {winner?.winnerKey === "teamB" && (
+                    <span style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#b45309" }}>
+                      🏆 Champs
+                    </span>
+                  )}
                 </div>
               </ViewTransitionLink>
-            ))}
+              );
+            })}
           </div>
         )}
 

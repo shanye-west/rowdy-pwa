@@ -1,6 +1,40 @@
 import { Timestamp } from "firebase/firestore";
 import type { FirestoreTimestampLike, MatchDoc } from "./types";
 
+/**
+ * Determine the champion of a tournament from its confirmed point totals.
+ *
+ * A winner exists when either:
+ *   - a team has clinched on points (confirmed >= points-to-win, i.e. a majority
+ *     the other team can no longer catch), or
+ *   - the tournament finished tied after regulation and the admin designated a
+ *     winner via `tournament.tiebreakerWinner`.
+ *
+ * Returns `null` while the tournament is undecided or ended in an unbroken tie.
+ * Shared by the home/tournament Total Score tiles and the History list so the
+ * "who won" logic lives in exactly one place.
+ */
+export function getTournamentWinner(
+  tiebreakerWinner: "teamA" | "teamB" | undefined,
+  teamAConfirmed: number,
+  teamBConfirmed: number,
+  totalPointsAvailable: number,
+): { winnerKey: "teamA" | "teamB"; viaTiebreaker: boolean } | null {
+  if (tiebreakerWinner === "teamA" || tiebreakerWinner === "teamB") {
+    // Admin-designated winner of a regulation tie takes precedence.
+    return { winnerKey: tiebreakerWinner, viaTiebreaker: true };
+  }
+
+  // Majority needed to clinch: half the points plus a half-point.
+  if (totalPointsAvailable > 0) {
+    const pointsToWin = totalPointsAvailable / 2 + 0.5;
+    if (teamAConfirmed >= pointsToWin) return { winnerKey: "teamA", viaTiebreaker: false };
+    if (teamBConfirmed >= pointsToWin) return { winnerKey: "teamB", viaTiebreaker: false };
+  }
+
+  return null;
+}
+
 export function formatRoundType(format: string | null | undefined): string {
   if (!format) return "Format TBD";
   const formatMap: Record<string, string> = {

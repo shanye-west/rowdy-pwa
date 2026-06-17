@@ -1,4 +1,5 @@
 import OfflineImage from "./OfflineImage";
+import { getTournamentWinner } from "../utils";
 import type { TournamentDoc } from "../types";
 
 interface ChampionBannerProps {
@@ -26,23 +27,15 @@ export default function ChampionBanner({
   teamBConfirmed,
   totalPointsAvailable,
 }: ChampionBannerProps) {
-  const tiebreaker = tournament.tiebreakerWinner;
-  // Majority needed to clinch: half the points plus a half-point.
-  const pointsToWin = totalPointsAvailable > 0 ? totalPointsAvailable / 2 + 0.5 : null;
+  const winner = getTournamentWinner(
+    tournament.tiebreakerWinner,
+    teamAConfirmed,
+    teamBConfirmed,
+    totalPointsAvailable,
+  );
 
-  let winnerKey: "teamA" | "teamB" | null = null;
-  let viaTiebreaker = false;
-
-  if (tiebreaker === "teamA" || tiebreaker === "teamB") {
-    // Admin-designated winner of a regulation tie takes precedence.
-    winnerKey = tiebreaker;
-    viaTiebreaker = true;
-  } else if (pointsToWin !== null) {
-    if (teamAConfirmed >= pointsToWin) winnerKey = "teamA";
-    else if (teamBConfirmed >= pointsToWin) winnerKey = "teamB";
-  }
-
-  if (!winnerKey) return null;
+  if (!winner) return null;
+  const { winnerKey, viaTiebreaker } = winner;
 
   const team = winnerKey === "teamA" ? tournament.teamA : tournament.teamB;
   const fallbackColor = winnerKey === "teamA" ? "var(--team-a-default)" : "var(--team-b-default)";

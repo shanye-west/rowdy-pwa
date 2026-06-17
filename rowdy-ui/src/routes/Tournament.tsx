@@ -6,11 +6,10 @@ import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
-import ChampionBanner from "../components/ChampionBanner";
 import OfflineImage from "../components/OfflineImage";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
-import { formatRoundType } from "../utils";
+import { formatRoundType, getTournamentWinner } from "../utils";
 // RedirectCountdown removed; show Go Home button instead
 
 /**
@@ -60,15 +59,23 @@ function TournamentComponent() {
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
   const showPoints = totalPointsAvailable > 0;
 
+  const winner = getTournamentWinner(
+    tournament.tiebreakerWinner,
+    stats.teamAConfirmed,
+    stats.teamBConfirmed,
+    totalPointsAvailable,
+  );
+  const championLabel = winner?.viaTiebreaker ? "🏆 Tiebreaker Champions" : "🏆 Champions";
+  // Golden halo that traces the logo's silhouette (no clipping box around it).
+  const championGlow = {
+    filter: "drop-shadow(0 0 7px rgba(251,191,36,0.95)) drop-shadow(0 0 18px rgba(245,158,11,0.55))",
+  };
+  const championPillClass =
+    "whitespace-nowrap rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-1 text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-white shadow-sm";
+
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
-        <ChampionBanner
-          tournament={tournament}
-          teamAConfirmed={stats.teamAConfirmed}
-          teamBConfirmed={stats.teamBConfirmed}
-          totalPointsAvailable={totalPointsAvailable}
-        />
         <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
 
@@ -105,7 +112,7 @@ function TournamentComponent() {
                       src={tournament.teamA?.logo}
                       alt={tournament.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
-                      style={{ width: 96, height: 96, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain", ...(winner?.winnerKey === "teamA" ? championGlow : {}) }}
                     />
                   </ViewTransitionLink>
                   <div
@@ -114,6 +121,13 @@ function TournamentComponent() {
                   >
                     {stats.teamAConfirmed}
                   </div>
+                  {winner && (
+                    <div className="flex h-6 items-center">
+                      {winner.winnerKey === "teamA" && (
+                        <div className={championPillClass}>{championLabel}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex h-12 items-center justify-center">
@@ -126,7 +140,7 @@ function TournamentComponent() {
                       src={tournament.teamB?.logo}
                       alt={tournament.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
-                      style={{ width: 96, height: 96, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain", ...(winner?.winnerKey === "teamB" ? championGlow : {}) }}
                     />
                   </ViewTransitionLink>
                   <div
@@ -135,6 +149,13 @@ function TournamentComponent() {
                   >
                     {stats.teamBConfirmed}
                   </div>
+                  {winner && (
+                    <div className="flex h-6 items-center">
+                      {winner.winnerKey === "teamB" && (
+                        <div className={championPillClass}>{championLabel}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
