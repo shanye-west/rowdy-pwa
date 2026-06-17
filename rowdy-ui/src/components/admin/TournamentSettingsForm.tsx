@@ -67,6 +67,9 @@ export default function TournamentSettingsForm({
   const [sportsbookEnabled, setSportsbookEnabled] = useState(!!tournament.sportsbookEnabled);
   const [commentsEnabled, setCommentsEnabled] = useState(!!tournament.commentsEnabled);
   const [test, setTest] = useState(!!tournament.test);
+  const [tiebreakerWinner, setTiebreakerWinner] = useState<"" | "teamA" | "teamB">(
+    tournament.tiebreakerWinner ?? ""
+  );
   const [teamA, setTeamA] = useState<TeamFormState>(teamToForm(tournament.teamA));
   const [teamB, setTeamB] = useState<TeamFormState>(teamToForm(tournament.teamB));
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export default function TournamentSettingsForm({
         sportsbookEnabled,
         commentsEnabled,
         test,
+        tiebreakerWinner: tiebreakerWinner === "" ? null : tiebreakerWinner,
         teamA: buildTeam(teamA),
         teamB: buildTeam(teamB),
       });
@@ -278,6 +282,23 @@ export default function TournamentSettingsForm({
           <input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} />
           <span className="font-semibold">Test tournament</span>
         </label>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold mb-1">Tiebreaker winner</label>
+        <select
+          value={tiebreakerWinner}
+          onChange={(e) => setTiebreakerWinner(e.target.value as "" | "teamA" | "teamB")}
+          className="w-full p-2 border border-gray-300 rounded-lg"
+        >
+          <option value="">None (decided in regulation / unbroken tie)</option>
+          <option value="teamA">{teamA.name || "Team A"} won the tiebreaker</option>
+          <option value="teamB">{teamB.name || "Team B"} won the tiebreaker</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          Set only when regulation ended tied and a tiebreaker decided the Cup. Shows a champions
+          banner on the home and tournament pages.
+        </p>
       </div>
 
       {renderTeamSection("teamA", teamA, "Team A")}

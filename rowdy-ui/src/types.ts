@@ -167,6 +167,11 @@ export type TournamentDoc = {
   // Comments feature toggle: when true, match comment threads and the sportsbook
   // trash-talk feed are enabled for this tournament. Defaults off (ships dark).
   commentsEnabled?: boolean;
+  // When a tournament ends tied after regulation (e.g. 12–12) and is decided by a
+  // sudden-death/tiebreaker, the admin designates the winning team here. Absent
+  // means the tournament was won in regulation, ended in an unbroken tie, or
+  // isn't over yet. Drives the champions banner on the home and tournament views.
+  tiebreakerWinner?: "teamA" | "teamB";
 };
 
 // NEW: Hole definition (static data)

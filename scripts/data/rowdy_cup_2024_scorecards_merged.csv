@@ -1,0 +1,307 @@
+ROW_TYPE,ROUND,FORMAT,MATCH_NO,COURSE,TEAM,PLAYER,HDCP_INDEX,COURSE_HDCP,PLAYING_HDCP,ACTUAL_SHOTS_REC,MATCHPLAY_SHOTS_REC,RESULT_WINNER,RESULT_SCORE,HOLES_PLAYED,SCORE_TOTAL,H1,H2,H3,H4,H5,H6,H7,H8,H9,H10,H11,H12,H13,H14,H15,H16,H17,H18
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Kushner/Herndon,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Kushner/Herndon,,,,,,Kushner/Herndon,2&1,17,66,5,4,4,4,4,4,3,4,4,4,4,4,3,4,3,4,4,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jake Kushner,4.9,5.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Herndon,13.8,16.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Barnes/Houser,,,,,,Kushner/Herndon,2&1,17,68,5,4,3,4,4,4,4,4,4,4,4,4,4,4,4,3,5,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Barnes,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Joe Houser,14,16.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Cassady/Mazzarese,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sloan/Lardeur,,,,,,Cassady/Mazzarese,1 UP,18,70,5,5,3,3,5,4,3,4,5,4,3,5,4,3,3,3,5,3
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Steve Sloan,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jared Lardeur,8.4,9.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Cassady/Mazzarese,,,,,,Cassady/Mazzarese,1 UP,18,68,5,5,3,3,4,4,3,3,4,5,4,3,4,4,3,3,5,3
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Cassady,4.9,5.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Lou Mazzarese,9.9,11.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mcdermaid/Euckert,,,,,,HALVED,AS,18,71,6,4,3,4,4,4,4,3,4,4,4,4,3,4,4,3,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mike Mcdermaid,6,6.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Todd Euckert,12.1,14.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Smiley/Dugan,,,,,,HALVED,AS,18,70,6,5,4,4,4,3,2,4,4,4,4,4,3,4,4,3,5,3
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Sean Smiley,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jason Dugan,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Peterson/Mulcahey,,,,,,HALVED,AS,18,72,5,4,3,4,4,5,3,5,4,4,5,4,4,4,3,3,4,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Shane Peterson,6.4,7.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mulcahey,15.6,18.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Warner/Reinwasser,,,,,,HALVED,AS,18,72,4,3,3,5,5,5,4,4,4,4,5,5,3,4,4,2,4,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,raymond Warner,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Adam Reinwasser,14.1,16.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Salazar/Horan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Salazar/Horan,,,,,,Salazar/Horan,1 UP,18,69,4,5,2,4,5,4,3,4,4,4,4,4,2,4,4,3,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Phil Salazar,0.8,0.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sean Horan,16.4,19.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Fabozzi/Mulqueen,,,,,,Salazar/Horan,1 UP,18,71,4,5,4,4,5,3,3,3,4,4,5,5,3,4,4,2,4,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jacob Fabozzi,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Kevin Mulqueen,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Benko/Mower,,,,,,HALVED,AS,18,67,4,4,3,3,4,4,2,4,5,5,4,4,2,4,3,3,4,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Benko,4.5,5.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mower,18.9,22.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Saar/Davie,,,,,,HALVED,AS,18,67,4,3,3,4,4,4,2,3,4,5,5,4,3,4,4,3,4,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,JP Saar,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Luke Davie,15,17.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Saar/Dugan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Salazar/Peterson,,,,,,Saar/Dugan,1 UP,18,71,5,4,3,4,3,5,4,5,4,5,4,3,4,3,4,4,3,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Phil Salazar,0.8,0.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Shane Peterson,6.4,6.7,0,0,6,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Phil Salazar,,,,,0,,,,78,5,4,3,5,3,5,4,5,4,5,7,3,4,4,4,4,5,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Phil Salazar,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Shane Peterson,,,,,6,,,,83,5,5,4,5,4,5,4,5,5,6,5,3,5,3,5,6,3,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,SWINGERS,Shane Peterson,,,,,6,,,,,0,1,0,1,0,0,0,0,1,1,1,0,0,0,0,0,0,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,Saar/Dugan,,,,,,Saar/Dugan,1 UP,18,68,5,3,3,4,3,3,4,4,5,3,4,3,5,3,4,4,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,JP Saar,9,9.6,0,0,9,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jason Dugan,9,9.6,0,0,9,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,JP Saar,,,,,9,,,,83,6,5,4,5,3,3,4,5,6,5,8,3,5,3,4,5,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,JP Saar,,,,,9,,,,,1,1,0,1,0,0,0,1,1,1,1,0,0,0,0,1,0,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jason Dugan,,,,,9,,,,82,6,4,3,5,4,3,4,5,6,4,5,3,5,3,4,7,5,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jason Dugan,,,,,9,,,,,1,1,0,1,0,0,0,1,1,1,1,0,0,0,0,1,0,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Sloan/Mulcahey,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Sloan/Mulcahey,,,,,,Sloan/Mulcahey,2&1,17,66,5,3,2,4,2,3,4,4,5,3,5,3,6,3,6,5,3,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Steve Sloan,9,9.6,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mulcahey,15.6,16.9,0,0,7,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Steve Sloan,,,,,0,,,,76,6,4,4,4,3,3,5,5,5,5,5,3,7,3,6,5,3,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Steve Sloan,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mulcahey,,,,,7,,,,77,6,4,2,5,2,4,4,4,6,4,6,3,6,3,6,6,6,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mulcahey,,,,,7,,,,,1,1,0,1,0,0,0,0,1,1,1,0,0,0,0,0,0,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Houser/Mulqueen,,,,,,Sloan/Mulcahey,2&1,17,68,6,4,3,4,4,3,4,5,3,5,4,4,4,2,5,4,4,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Joe Houser,14,15.1,0,0,6,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Kevin Mulqueen,9,9.6,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Joe Houser,,,,,6,,,,75,6,5,3,5,4,3,5,5,4,6,6,4,4,2,5,4,4,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Joe Houser,,,,,6,,,,,0,1,0,1,0,0,0,0,1,1,1,0,0,0,0,0,0,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Kevin Mulqueen,,,,,0,,,,76,6,4,5,4,5,3,4,5,5,5,4,4,4,4,5,5,4,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,The Coeur d'Alene Resort Golf Course,DEGENERATES,Kevin Mulqueen,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Mcdermaid/Mower,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Mcdermaid/Mower,,,,,,Mcdermaid/Mower,1 UP,18,73,6,4,4,4,4,5,4,4,4,4,4,2,3,3,6,5,4,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Mike Mcdermaid,6,6.2,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mower,18.9,20.5,0,0,14,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Mike Mcdermaid,,,,,0,,,,84,6,4,4,5,4,5,5,6,4,5,5,2,4,5,6,5,5,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Mike Mcdermaid,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mower,,,,,14,,,,94,7,6,5,5,5,5,5,5,7,5,5,5,4,4,6,7,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,SWINGERS,Dave Mower,,,,,14,,,,,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,0,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Fabozzi/Mazzarese,,,,,,Mcdermaid/Mower,1 UP,18,72,5,3,3,5,4,3,5,4,4,4,5,3,4,3,4,6,4,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jacob Fabozzi,9,9.6,0,0,3,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Lou Mazzarese,9.9,10.6,0,0,4,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jacob Fabozzi,,,,,3,,,,80,5,5,3,5,5,3,5,4,6,4,6,3,5,3,4,7,4,3
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Jacob Fabozzi,,,,,3,,,,,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Lou Mazzarese,,,,,4,,,,87,7,4,3,5,4,4,5,5,5,5,6,4,4,4,6,6,6,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,The Coeur d'Alene Resort Golf Course,DEGENERATES,Lou Mazzarese,,,,,4,,,,,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Benko/Herndon,6&5,13,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Benko/Herndon,,,,,,Benko/Herndon,6&5,13,50,5,4,3,3,3,3,4,4,4,4,5,3,5,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Benko,4.5,4.6,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Herndon,13.8,14.9,0,0,10,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Benko,,,,,0,,,,55,5,4,3,4,3,3,6,4,5,5,5,3,5,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Benko,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Herndon,,,,,10,,,,66,7,6,4,4,4,4,4,6,5,5,8,4,5,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,SWINGERS,Ryan Herndon,,,,,10,,,,,1,1,0,1,0,0,0,1,1,1,1,0,0,,,,,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Cassady/Reinwasser,,,,,,Benko/Herndon,6&5,13,57,6,4,2,5,4,3,5,4,5,4,5,4,6,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Cassady,4.9,5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Adam Reinwasser,14.1,15.2,0,0,11,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Cassady,,,,,0,,,,62,6,4,2,5,5,3,5,5,6,6,5,4,6,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Cassady,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Adam Reinwasser,,,,,11,,,,70,7,5,5,6,4,4,6,5,6,5,7,4,6,,,,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,The Coeur d'Alene Resort Golf Course,DEGENERATES,Adam Reinwasser,,,,,11,,,,,1,1,0,1,0,0,1,1,1,1,1,0,0,,,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Kushner/Horan,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Kushner/Horan,,,,,,Kushner/Horan,3&2,16,58,4,3,3,3,3,3,4,5,3,5,5,2,3,4,4,4,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Jake Kushner,4.7,4.8,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Sean Horan,16.4,17.7,0,0,13,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Jake Kushner,,,,,0,,,,66,4,3,4,5,4,3,4,5,3,5,6,3,4,4,4,5,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Jake Kushner,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Sean Horan,,,,,13,,,,76,6,5,3,4,4,3,5,6,6,6,6,2,4,5,6,5,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,SWINGERS,Sean Horan,,,,,13,,,,,1,1,0,1,1,0,1,1,1,1,1,0,1,1,0,1,,
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,Barnes/Warner,,,,,,Kushner/Horan,3&2,16,61,4,4,3,2,3,4,4,4,4,4,5,3,4,3,5,5,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Barnes,9,9.6,0,0,5,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,raymond Warner,9,9.6,0,0,5,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Barnes,,,,,5,,,,69,4,6,4,3,3,4,4,4,5,5,6,3,4,3,6,5,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,Dan Barnes,,,,,5,,,,,0,1,0,1,0,0,0,0,1,0,1,0,0,0,0,0,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,raymond Warner,,,,,5,,,,68,5,5,3,4,3,4,4,4,5,4,7,3,4,3,5,5,,
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,The Coeur d'Alene Resort Golf Course,DEGENERATES,raymond Warner,,,,,5,,,,,0,1,0,1,0,0,0,0,1,0,1,0,0,0,0,0,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS vs DEGENERATES,,,,,,,Lardeur/Euckert,2&1,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,5,4,3,4,3,3,4,4,5,4,5,3,4,3,5,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,,,,,,,,,,,,7,3,17,5,13,15,11,9,1,6,2,14,12,10,16,8,18,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Lardeur/Euckert,,,,,,Lardeur/Euckert,2&1,18,70,5,4,2,4,4,3,4,3,4,4,3,3,5,4,6,4,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Jared Lardeur,8.4,8.9,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Todd Euckert,12.1,13,0,0,4,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Jared Lardeur,,,,,0,,,,74,5,6,3,4,4,4,4,3,4,4,3,3,5,4,6,4,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Jared Lardeur,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Todd Euckert,,,,,4,,,,85,7,5,2,4,4,3,5,4,6,6,7,3,5,4,6,4,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,SWINGERS,Todd Euckert,,,,,4,,,,,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Smiley/Davie,,,,,,Lardeur/Euckert,2&1,18,74,5,3,4,4,3,4,4,4,4,4,5,4,4,4,5,5,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Sean Smiley,9,9.6,0,0,1,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Luke Davie,15,16.2,0,0,7,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Sean Smiley,,,,,1,,,,79,5,4,4,4,3,4,4,4,6,6,5,4,4,4,5,5,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Sean Smiley,,,,,1,,,,,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Luke Davie,,,,,7,,,,83,6,4,4,5,3,4,4,4,5,5,7,4,5,4,5,5,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,The Coeur d'Alene Resort Golf Course,DEGENERATES,Luke Davie,,,,,7,,,,,1,1,0,1,0,0,0,0,1,1,1,0,0,0,0,0,0,1
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Kushner/Lardeur,5&3,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Kushner/Lardeur,,,,,,Kushner/Lardeur,5&3,18,70,5,3,3,4,4,4,3,5,4,3,4,5,4,4,3,3,5,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jake Kushner,4.7,5.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jared Lardeur,8.4,9.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jake Kushner,,,,,,,,,70,5,3,3,4,4,4,3,5,4,3,4,5,4,4,3,3,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jake Kushner,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jared Lardeur,,,,,,,,,70,5,3,3,4,4,4,3,5,4,3,4,5,4,4,3,3,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jared Lardeur,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Smiley/Mulqueen,,,,,,Kushner/Lardeur,5&3,18,75,6,4,3,4,5,4,4,4,5,4,4,4,4,4,4,3,5,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Sean Smiley,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Kevin Mulqueen,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Sean Smiley,,,,,,,,,75,6,4,3,4,5,4,4,4,5,4,4,4,4,4,4,3,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Sean Smiley,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Kevin Mulqueen,,,,,,,,,75,6,4,3,4,5,4,4,4,5,4,4,4,4,4,4,3,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Kevin Mulqueen,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Cassady/Mazzarese,3&2,17,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Peterson/Mulcahey,,,,,,Cassady/Mazzarese,3&2,17,70,5,3,3,4,4,4,4,3,4,5,5,5,4,4,5,3,5,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Shane Peterson,6.4,7.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mulcahey,15.6,18.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Shane Peterson,,,,,,,,,71,5,3,3,4,4,4,4,3,5,5,5,5,4,4,5,3,5,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Shane Peterson,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mulcahey,,,,,,,,,79,8,5,3,4,5,5,4,3,4,5,5,6,4,5,5,3,5,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mulcahey,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Cassady/Mazzarese,,,,,,Cassady/Mazzarese,3&2,17,65,4,4,3,4,5,4,2,5,4,3,4,5,3,4,4,3,4,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Cassady,4.9,5.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Lou Mazzarese,9.9,11.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Cassady,,,,,,,,,66,4,4,3,5,5,4,2,5,4,3,4,5,3,4,4,3,4,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Cassady,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Lou Mazzarese,,,,,,,,,72,4,4,3,4,5,4,2,5,6,3,5,6,4,4,5,4,4,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Lou Mazzarese,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Fabozzi/Davie,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sloan/Herndon,,,,,,Fabozzi/Davie,2&1,17,73,5,5,3,4,4,4,3,5,5,5,4,4,4,4,5,3,6,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Steve Sloan,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Herndon,13.8,16.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Steve Sloan,,,,,,,,,76,5,5,3,4,5,4,3,5,5,5,4,5,4,5,5,3,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Steve Sloan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Herndon,,,,,,,,,76,5,5,4,4,4,5,3,5,5,5,4,4,4,4,6,3,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Herndon,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Fabozzi/Davie,,,,,,Fabozzi/Davie,2&1,17,71,4,4,4,4,4,5,3,5,4,4,4,5,3,5,5,2,6,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jacob Fabozzi,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Luke Davie,15,17.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jacob Fabozzi,,,,,,,,,72,4,4,4,4,5,5,3,5,4,4,4,5,3,5,5,2,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jacob Fabozzi,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Luke Davie,,,,,,,,,72,5,4,4,4,4,5,3,5,4,4,4,5,3,5,5,2,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Luke Davie,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Saar/Reinwasser,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Euckert/Mcdermaid,,,,,,Saar/Reinwasser,3&2,16,68,6,4,4,4,4,5,3,5,5,5,4,5,3,4,4,3,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Todd Euckert,12.1,14.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mike Mcdermaid,6,6.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Todd Euckert,,,,,,,,,70,6,5,4,4,4,5,3,5,5,5,4,5,3,4,5,3,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Todd Euckert,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mike Mcdermaid,,,,,,,,,70,7,4,4,4,4,5,3,5,5,5,4,5,3,5,4,3,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mike Mcdermaid,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Saar/Reinwasser,,,,,,Saar/Reinwasser,3&2,16,64,4,4,4,6,4,4,4,4,4,4,4,3,4,4,4,3,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,JP Saar,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Adam Reinwasser,14.1,16.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,JP Saar,,,,,,,,,66,4,4,4,6,4,4,4,4,4,4,4,5,4,4,4,3,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,JP Saar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Adam Reinwasser,,,,,,,,,67,5,5,4,6,4,4,4,4,4,4,4,3,4,4,5,3,,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,4,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Adam Reinwasser,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Benko/Horan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Benko/Horan,,,,,,Benko/Horan,1 UP,18,75,5,4,4,4,5,4,3,5,5,3,4,5,4,4,4,3,5,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Benko,4.5,5.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sean Horan,16.4,19.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Benko,,,,,,,,,79,5,4,4,5,6,4,3,5,5,4,4,5,4,4,4,3,5,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Benko,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sean Horan,,,,,,,,,77,5,4,4,4,5,4,3,5,5,3,5,5,4,5,4,3,5,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Sean Horan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Houser/Dugan,,,,,,Benko/Horan,1 UP,18,76,5,3,4,5,5,5,3,4,4,4,4,5,3,5,4,3,6,4
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Joe Houser,14,16.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jason Dugan,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Joe Houser,,,,,,,,,81,5,4,4,5,5,5,3,5,5,5,4,5,3,5,4,3,6,5
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Joe Houser,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jason Dugan,,,,,,,,,76,5,3,4,5,5,5,3,4,4,4,4,5,3,5,4,3,6,4
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,5,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jason Dugan,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Warner/Barnes,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Salazar/Mower,,,,,,Warner/Barnes,2&1,17,67,5,4,3,4,4,4,3,5,4,3,4,4,4,4,4,3,5,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Phil Salazar,0.8,0.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mower,18.9,22.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Phil Salazar,,,,,,,,,67,5,4,3,4,4,4,3,5,4,3,4,4,4,4,4,3,5,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Phil Salazar,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mower,,,,,,,,,73,5,5,3,5,5,4,3,5,4,4,4,4,4,4,5,3,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Dave Mower,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Warner/Barnes,,,,,,Warner/Barnes,2&1,17,65,5,4,3,5,4,4,3,4,4,4,3,4,4,3,4,2,5,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,raymond Warner,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Barnes,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,raymond Warner,,,,,,,,,67,5,4,4,5,4,4,3,4,4,4,3,4,4,4,4,2,5,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,raymond Warner,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+PLAYER_SCORE,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Barnes,,,,,,,,,72,5,4,3,5,5,4,3,4,5,5,4,4,4,3,5,3,6,
+PLAYER_STROKES,R3 - 2-Man Shamble,Shamble,6,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Barnes,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Kushner/Peterson,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Kushner/Peterson,,,,,,Kushner/Peterson,3&2,16,52,4,3,2,3,4,3,2,4,4,3,4,4,3,4,3,2,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Jake Kushner,4.7,5.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Shane Peterson,6.4,7.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Cassady/Fabozzi,,,,,,Kushner/Peterson,3&2,16,55,4,4,3,3,5,3,2,3,4,4,3,4,3,4,4,2,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Cassady,4.9,5.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Jacob Fabozzi,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,Saar/Barnes,1&4,14,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Salazar/Mcdermaid,,,,,,Saar/Barnes,1&4,14,48,5,3,3,3,4,3,3,3,4,3,3,4,3,4,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Phil Salazar,0.8,0.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Mike Mcdermaid,6,6.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Saar/Barnes,,,,,,Saar/Barnes,1&4,14,47,4,3,3,3,5,3,3,4,3,3,3,4,2,4,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,JP Saar,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Dan Barnes,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS vs DEGENERATES,,,,,,,HALVED,AS,17,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,5,4,3,4,5,4,3,4,4,4,4,5,3,4,4,3,5,4
+SI,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,,,,,,,,,,,,7,11,15,1,5,13,17,9,3,14,6,2,12,18,8,16,4,10
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Benko/Sloan,,,,,,HALVED,AS,17,58,4,3,3,4,4,4,3,3,4,3,3,4,3,3,4,2,4,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Ryan Benko,4.5,5.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,SWINGERS,Steve Sloan,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Warner/Smiley,,,,,,HALVED,AS,17,58,3,4,3,4,4,4,3,3,4,3,4,4,2,3,4,2,4,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,raymond Warner,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,Circling Raven Golf Club at Coeur D'Alene Casino,DEGENERATES,Sean Smiley,9,10.5,0,0,,,,,,,,,,,,,,,,,,,,,,,

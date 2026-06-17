@@ -38,6 +38,8 @@ export interface TournamentUpdates {
   commentsEnabled?: boolean;
   test?: boolean;
   archived?: boolean;
+  // "teamA" | "teamB" designates the tiebreaker winner; null clears it.
+  tiebreakerWinner?: "teamA" | "teamB" | null;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }

@@ -108,6 +108,7 @@ function sanitizeTeamUpdates(team: Record<string, unknown>, label: string): Reco
  * - tournamentId: string
  * - updates: {
  *     name?, year?, active?, openPublicEdits?, sportsbookEnabled?, commentsEnabled?, test?,
+ *     tiebreakerWinner?: "teamA" | "teamB" | null,  // null clears it
  *     teamA?: { name?, color?, logo?, captainId?, coCaptainId?, rosterByTier?, handicapByPlayer? },
  *     teamB?: { ...same }
  *   }
@@ -153,6 +154,16 @@ export const updateTournament = onCall(async (request) => {
           throw new HttpsError("invalid-argument", `updates.${key} must be a boolean`);
         }
         toMerge[key] = value;
+        break;
+      case "tiebreakerWinner":
+        // null/"" clears a previously-set tiebreaker; otherwise must name a team.
+        if (value === null || value === "") {
+          toMerge.tiebreakerWinner = FieldValue.delete();
+        } else if (value === "teamA" || value === "teamB") {
+          toMerge.tiebreakerWinner = value;
+        } else {
+          throw new HttpsError("invalid-argument", 'updates.tiebreakerWinner must be "teamA", "teamB", or null');
+        }
         break;
       case "teamA":
       case "teamB":

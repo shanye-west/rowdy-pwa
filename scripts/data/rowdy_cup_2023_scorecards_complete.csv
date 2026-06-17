@@ -1,0 +1,259 @@
+ROW_TYPE,ROUND,FORMAT,MATCH_NO,COURSE,TEAM,PLAYER,HDCP_INDEX,COURSE_HDCP,PLAYING_HDCP,ACTUAL_SHOTS_REC,MATCHPLAY_SHOTS_REC,RESULT_WINNER,RESULT_SCORE,HOLES_PLAYED,SCORE_TOTAL,H1,H2,H3,H4,H5,H6,H7,H8,H9,H10,H11,H12,H13,H14,H15,H16,H17,H18
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Sloan/Bodmer,3&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Sloan/Bodmer,,,,,,Sloan/Bodmer,3&1,17,66,5,5,3,4,3,4,4,4,3,5,4,4,4,2,4,4,4,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,9.2,7.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Bodmer,14.9,14,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Barnes/Mower,,,,,,Sloan/Bodmer,3&1,17,69,4,6,3,4,3,5,4,5,4,5,3,4,4,2,3,5,5,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Dan Barnes,7.9,6.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Dave Mower,18.9,18.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Davie/Euckert,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Lardeur/Houser,,,,,,Davie/Euckert,1 UP,18,75,4,5,3,4,3,4,4,5,4,6,4,4,4,3,4,5,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,10.2,8.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Joe Houser,13.6,12.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,Davie/Euckert,,,,,,Davie/Euckert,1 UP,18,73,4,4,3,5,4,4,4,5,3,5,4,4,4,4,4,3,6,3
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,Luke Davie,11.4,10.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,Todd Euckert,13,11.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Saar/Dugan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Salazar/Pletcher,,,,,,Saar/Dugan,1 UP,18,72,5,4,4,5,3,3,4,5,4,6,3,4,3,2,4,4,4,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,1.5,-0.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Cody Pletcher,12.3,11.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,Saar/Dugan,,,,,,Saar/Dugan,1 UP,18,70,4,5,3,5,3,4,4,5,4,4,3,4,3,3,3,4,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,JP Saar,4.5,2.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,Jason Dugan,15.4,14.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Fabozzi/Mulcahey,2&1,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Fabozzi/Mulcahey,,,,,,Fabozzi/Mulcahey,2&1,18,72,4,5,2,3,3,5,4,5,4,4,4,4,5,3,3,5,4,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,3.9,1.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,17,16.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,86ERS,Pierro/Robinson,,,,,,Fabozzi/Mulcahey,2&1,18,74,4,6,3,4,3,5,4,4,4,5,4,4,4,3,3,4,5,5
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,86ERS,Anthony Pierro,7,5.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,4,We-Ko-Pa Golf Club,86ERS,Todd Robinson,12.5,11.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Benko/Horan,3&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Benko/Horan,,,,,,Benko/Horan,3&1,17,62,4,5,2,3,2,4,4,5,4,5,3,4,4,3,3,3,4,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,4.2,2.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Sean Horan,16,15.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,86ERS,Kushner/Reinwasser,,,,,,Benko/Horan,3&1,17,66,4,5,3,4,4,4,4,5,4,4,3,5,4,2,3,3,5,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,86ERS,Jake Kushner,3.5,1.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,5,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,15.1,14.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Warner/Mcdermaid,4&3,18,,,,,,,,,,,,,,,,,,,
+PAR,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Mazzarese/Herndon,,,,,,Warner/Mcdermaid,4&3,18,73,4,5,3,3,3,5,3,4,5,5,3,5,4,3,4,5,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Lou Mazzarese,10.1,8.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Herndon,13.3,12.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,86ERS,Warner/Mcdermaid,,,,,,Warner/Mcdermaid,4&3,18,67,3,5,4,3,2,3,3,4,4,5,4,4,4,3,3,4,5,4
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,86ERS,raymond Warner,5.2,3.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R1 - 2-Man Scramble,Scramble,6,We-Ko-Pa Golf Club,86ERS,Mike Mcdermaid,6.5,4.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Warner/Reinwasser,2 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Bodmer/Mazzarese,,,,,,Warner/Reinwasser,2 UP,18,75,6,5,4,5,3,5,4,6,3,4,4,3,4,5,3,3,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Bodmer,14.9,14.3,0,0,11,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Lou Mazzarese,10.1,9,0,0,5,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Bodmer,,,,,11,,,,102,8,9,5,9,3,7,4,7,3,5,5,7,7,7,3,3,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Bodmer,,,,,11,,,,,1,1,1,1,0,1,0,1,0,0,0,1,1,1,0,0,1,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Lou Mazzarese,,,,,5,,,,84,7,5,4,6,4,5,4,7,4,4,4,3,4,6,4,4,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Lou Mazzarese,,,,,5,,,,,1,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,Warner/Reinwasser,,,,,,Warner/Reinwasser,2 UP,18,73,3,5,3,5,3,4,4,5,3,3,5,6,5,5,4,3,4,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,raymond Warner,5.2,3.6,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,15.1,14.5,0,0,11,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,raymond Warner,,,,,0,,,,74,3,5,3,6,3,4,4,5,3,3,5,6,5,5,4,3,4,3
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,raymond Warner,,,,,0,,,,,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,,,,,11,,,,101,7,6,6,6,4,7,4,8,3,4,5,7,7,7,4,5,5,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,1,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,,,,,11,,,,,1,1,1,1,0,1,0,1,0,0,0,1,1,1,0,0,1,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Mulcahey/Sloan,3&2,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Mulcahey/Sloan,,,,,,Mulcahey/Sloan,3&2,18,63,5,4,3,7,3,4,,,,4,3,5,4,4,3,6,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,17,16.6,0,0,10,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,9.2,8,0,0,1,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,,,,,10,,,,76,6,4,4,8,3,6,,,,4,5,6,5,6,3,6,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,,,,,10,,,,,1,0,1,1,0,1,,,,0,0,1,1,1,0,0,1,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,,,,,1,,,,71,5,4,6,8,4,4,,,,5,3,5,4,4,3,6,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,,,,,1,,,,,0,0,0,1,0,0,,,,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Davie/Barnes,,,,,,Mulcahey/Sloan,3&2,18,70,5,4,6,6,4,5,,,,5,3,4,4,4,4,6,5,5
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Luke Davie,11.4,10.4,0,0,4,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Dan Barnes,7.9,6.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Luke Davie,,,,,4,,,,77,5,4,6,7,5,6,,,,5,3,5,4,5,4,6,6,6
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Luke Davie,,,,,4,,,,,0,0,0,1,0,0,,,,0,0,0,0,1,0,0,0,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Dan Barnes,,,,,0,,,,75,5,4,6,7,4,5,,,,5,4,4,4,6,4,7,5,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,2,We-Ko-Pa Golf Club,86ERS,Dan Barnes,,,,,0,,,,,0,0,0,0,0,0,,,,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Saar/Mower,4&2,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Fabozzi/Herndon,,,,,,Saar/Mower,4&2,18,68,4,3,4,4,3,5,4,5,,4,4,4,4,6,4,4,3,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,3.9,2.1,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Herndon,13.3,12.5,0,0,10,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,,,,,0,,,,76,4,3,4,5,3,6,4,5,,5,4,4,4,7,4,5,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,,,,,0,,,,,0,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Herndon,,,,,10,,,,85,5,6,6,5,3,6,7,6,,4,4,5,5,7,4,4,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Herndon,,,,,10,,,,,1,0,1,1,0,1,0,1,,0,0,1,1,1,0,0,1,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,Saar/Mower,,,,,,Saar/Mower,4&2,18,65,5,3,3,4,3,4,4,4,,4,3,5,4,5,4,3,3,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,JP Saar,4.5,2.8,0,0,1,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,Dave Mower,18.9,18.7,0,0,17,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,JP Saar,,,,,1,,,,69,5,3,3,5,3,4,4,6,,4,3,5,4,5,4,3,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,JP Saar,,,,,1,,,,,0,0,0,1,0,0,0,0,,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,Dave Mower,,,,,17,,,,108,8,6,7,6,4,5,5,5,,9,6,6,8,7,7,7,4,8
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,3,We-Ko-Pa Golf Club,86ERS,Dave Mower,,,,,17,,,,,1,1,1,1,1,1,1,1,,1,0,1,1,1,1,1,1,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Pierro/Euckert,3&2,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Lardeur/Salazar,,,,,,Pierro/Euckert,3&2,18,54,4,5,4,5,3,,,,,3,2,3,4,5,4,4,4,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,10.2,9.1,0,0,10,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,1.5,-0.5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,,,,,10,,,,68,6,5,5,7,3,,,,,3,4,4,5,6,4,4,7,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,,,,,10,,,,,1,0,1,1,0,,,,,0,0,1,1,1,0,0,1,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,,,,,0,,,,64,4,6,6,5,3,,,,,4,2,6,4,6,4,5,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,,,,,0,,,,,0,0,0,0,0,,,,,0,0,0,0,0,0,0,0,0
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Pierro/Euckert,,,,,,Pierro/Euckert,3&2,18,49,3,4,4,4,3,,,,,4,2,4,4,5,3,3,3,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Anthony Pierro,7,5.5,0,0,6,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Todd Euckert,13,12.2,0,0,13,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Anthony Pierro,,,,,6,,,,68,6,4,6,5,4,,,,,4,2,6,4,6,3,5,6,7
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Anthony Pierro,,,,,6,,,,,1,0,0,1,0,,,,,0,0,1,0,1,0,0,0,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Todd Euckert,,,,,13,,,,63,4,5,5,5,3,,,,,5,3,5,6,6,4,4,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,4,We-Ko-Pa Golf Club,86ERS,Todd Euckert,,,,,13,,,,,1,1,1,1,0,,,,,0,0,1,1,1,0,1,1,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Houser/Pletcher,5&4,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Houser/Pletcher,,,,,,Houser/Pletcher,5&4,18,50,2,4,4,4,,,,,,5,3,4,3,5,4,5,4,3
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Joe Houser,13.6,12.8,0,0,8,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Cody Pletcher,12.3,11.4,0,0,6,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Joe Houser,,,,,8,,,,58,3,4,4,5,,,,,,5,4,5,4,6,4,6,4,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Joe Houser,,,,,8,,,,,1,0,0,1,,,,,,0,0,1,1,1,0,0,0,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Cody Pletcher,,,,,6,,,,66,4,7,5,6,,,,,,5,3,5,4,6,5,5,6,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Cody Pletcher,,,,,6,,,,,1,0,0,1,,,,,,0,0,1,0,1,0,0,0,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Mcdermaid/Robinson,,,,,,Houser/Pletcher,5&4,18,58,4,5,4,5,,,,,,4,4,5,4,5,4,4,6,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Mike Mcdermaid,6.5,5,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Todd Robinson,12.5,11.6,0,0,7,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Mike Mcdermaid,,,,,0,,,,61,4,5,4,5,,,,,,5,4,5,4,6,4,4,6,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Mike Mcdermaid,,,,,0,,,,,0,0,0,0,,,,,,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Todd Robinson,,,,,7,,,,68,5,5,5,6,,,,,,4,4,7,4,6,6,5,6,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,5,We-Ko-Pa Golf Club,86ERS,Todd Robinson,,,,,7,,,,,1,0,0,1,,,,,,0,0,1,0,1,0,0,0,1
+
+MATCH_HEADER,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Dugan/Kushner,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,,,,,,,,,,,,4,4,4,5,3,4,4,5,3,4,3,4,4,5,3,4,4,4
+SI,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Benko/Horan,,,,,,Dugan/Kushner,1 UP,18,66,5,4,3,4,2,4,4,6,4,3,3,3,3,5,3,3,3,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,4.2,2.4,0,0,1,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Sean Horan,16,15.5,0,0,14,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,,,,,1,,,,73,5,4,4,5,2,4,4,6,4,3,3,3,6,5,3,3,5,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,,,,,1,,,,,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Sean Horan,,,,,14,,,,94,6,7,4,7,3,7,6,7,5,5,3,5,4,7,4,5,4,5
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Sean Horan,,,,,14,,,,,1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,1
+TEAM_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Dugan/Kushner,,,,,,Dugan/Kushner,1 UP,18,65,3,4,4,3,3,4,3,5,3,3,3,3,5,5,4,3,3,4
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jason Dugan,15.4,14.8,0,0,13,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jake Kushner,3.5,1.7,0,0,0,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jason Dugan,,,,,13,,,,83,4,5,5,4,3,5,4,6,3,4,4,4,6,6,5,4,4,7
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jason Dugan,,,,,13,,,,,1,1,1,1,0,1,1,1,0,0,0,1,1,1,0,1,1,1
+PLAYER_SCORE,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jake Kushner,,,,,0,,,,71,5,5,4,4,3,4,4,6,,3,3,4,5,6,4,4,3,4
+PLAYER_STROKES,R2 - 2-Man Best Ball,BestBall,6,We-Ko-Pa Golf Club,86ERS,Jake Kushner,,,,,0,,,,,0,0,0,0,0,0,0,0,,0,0,0,0,0,0,0,0,0
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Benko/Sloan,2&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,8,4
+SI,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Benko/Sloan,,,,,,Benko/Sloan,2&1,17,137,8,8,7,12,6,8,6,10,6,8,8,8,10,10,6,8,8,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,4.2,5.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,9.2,11.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,86ERS,Pierro/Euckert,,,,,,Benko/Sloan,2&1,17,140,8,10,8,10,6,8,8,10,4,6,6,10,10,10,8,8,10,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,86ERS,Anthony Pierro,7,8.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,1,We-Ko-Pa Golf Club,86ERS,Todd Euckert,13,15.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Davie/Kushner,2&1,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,8,8
+SI,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Mulcahey/Salazar,,,,,,Davie/Kushner,2&1,18,154,10,10,8,10,6,8,10,9,8,8,8,10,8,9,6,10,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,17,20.3,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,1.5,2.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,86ERS,Davie/Kushner,,,,,,Davie/Kushner,2&1,18,152,9,10,9,12,5,8,8,9,8,7,8,10,8,11,6,8,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,86ERS,Luke Davie,11.4,13.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,2,We-Ko-Pa Golf Club,86ERS,Jake Kushner,3.5,5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Herndon/Horan,1 UP,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,8,8
+SI,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Herndon/Horan,,,,,,Herndon/Horan,1 UP,18,150,10,8,6,10,4,8,6,10,6,8,8,10,10,14,6,10,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Herndon,13.3,16.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Sean Horan,16,19.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,86ERS,Reinwasser/Barnes,,,,,,Herndon/Horan,1 UP,18,152,10,8,8,12,6,10,8,10,8,6,6,8,10,12,6,8,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,15.1,18.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,3,We-Ko-Pa Golf Club,86ERS,Dan Barnes,7.9,9.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Lardeur/Mazzarese,4&2,18,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,8,8
+SI,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Lardeur/Mazzarese,,,,,,Lardeur/Mazzarese,4&2,18,144,10,8,8,10,6,8,10,10,4,8,6,8,10,10,6,6,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,10.2,12.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,SHANKAHOLICS,Lou Mazzarese,10.1,12.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,86ERS,Mcdermaid/Mower,,,,,,Lardeur/Mazzarese,4&2,18,152,10,6,8,10,6,10,10,8,6,8,8,10,10,12,6,8,8,8
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,86ERS,Mike Mcdermaid,6.5,8.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,4,We-Ko-Pa Golf Club,86ERS,Dave Mower,18.9,22.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Fabozzi/Bodmer,3&2,17,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,8,4
+SI,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Fabozzi/Bodmer,,,,,,Fabozzi/Bodmer,3&2,17,147,10,11,9,11,8,9,9,10,6,9,7,10,7,8,6,8,9,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,3.9,5.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Bodmer,14.9,17.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,86ERS,Warner/Dugan,,,,,,Fabozzi/Bodmer,3&2,17,155,11,11,12,10,6,9,10,10,5,9,7,9,10,10,8,9,9,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,86ERS,raymond Warner,5.2,6.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,5,We-Ko-Pa Golf Club,86ERS,Jason Dugan,15.4,18.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Robinson/Saar,3&2,16,,,,,,,,,,,,,,,,,,,
+PAR,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,,,,,,,,,,,,8,8,8,10,6,8,8,10,6,8,6,8,8,10,6,8,4,4
+SI,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,,,,,,,,,,,,5,11,9,1,15,7,13,3,17,14,18,6,8,2,16,12,10,4
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Houser/Pletcher,,,,,,Robinson/Saar,3&2,16,140,9,8,9,12,8,8,8,12,6,8,6,10,8,10,8,10,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Joe Houser,13.6,16.4,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,SHANKAHOLICS,Cody Pletcher,12.3,14.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,86ERS,Robinson/Saar,,,,,,Robinson/Saar,3&2,16,133,9,10,9,10,6,10,7,8,8,6,8,8,8,10,8,8,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,86ERS,Todd Robinson,12.5,15.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R3 - 2-Man Shamble,Shamble,6,We-Ko-Pa Golf Club,86ERS,JP Saar,4.5,6.1,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,HALVED,AS,18,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Fabozzi/Sloan,,,,,,HALVED,AS,18,61,4,5,2,3,2,3,3,5,3,4,2,4,4,3,3,4,4,3
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Jacob Fabozzi,3.9,6.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,SHANKAHOLICS,Steve Sloan,9.2,12.6,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Kushner/Dugan,,,,,,HALVED,AS,18,61,3,4,3,4,2,4,3,4,3,4,3,4,3,3,3,3,4,4
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Jake Kushner,3.5,5.7,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,1,We-Ko-Pa Golf Club,86ERS,Jason Dugan,15.4,20.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Saar/Reinwasser,1&1,17,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Salazar/Mulcahey,,,,,,Saar/Reinwasser,1&1,17,61,4,5,3,4,2,3,3,5,4,5,3,4,3,2,3,4,4,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Phil Salazar,1.5,3.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,SHANKAHOLICS,Dave Mulcahey,17,22.2,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,Saar/Reinwasser,,,,,,Saar/Reinwasser,1&1,17,60,4,5,3,3,3,4,4,4,3,4,3,3,3,3,3,3,5,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,JP Saar,4.5,6.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,2,We-Ko-Pa Golf Club,86ERS,Adam Reinwasser,15.1,19.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+
+MATCH_HEADER,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS vs 86ERS,,,,,,,Benko/Lardeur,2&1,18,,,,,,,,,,,,,,,,,,,
+PAR,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,4,5,3,4,3,4,4,5,4,5,3,4,4,3,4,4,5,4
+SI,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,,,,,,,,,,,,13,3,17,9,15,7,11,1,5,4,16,10,12,18,14,6,2,8
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Benko/Lardeur,,,,,,Benko/Lardeur,2&1,18,59,3,5,2,4,3,3,3,4,2,4,2,4,4,2,3,4,4,3
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Ryan Benko,4.2,6.5,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,SHANKAHOLICS,Jared Lardeur,10.2,13.9,0,0,,,,,,,,,,,,,,,,,,,,,,,
+TEAM_SCORE,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,Warner/Barnes,,,,,,Benko/Lardeur,2&1,18,61,3,5,3,4,2,3,3,4,3,5,3,4,4,3,2,3,4,3
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,raymond Warner,5.2,7.8,0,0,,,,,,,,,,,,,,,,,,,,,,,
+PLAYER_HDCP,R4 - 4-Man Scramble,Scramble,3,We-Ko-Pa Golf Club,86ERS,Dan Barnes,7.9,11,0,0,,,,,,,,,,,,,,,,,,,,,,,

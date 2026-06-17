@@ -6,6 +6,7 @@ import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
+import ChampionBanner from "../components/ChampionBanner";
 import OfflineImage from "../components/OfflineImage";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
@@ -62,6 +63,7 @@ function TournamentComponent() {
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
+        <ChampionBanner tournament={tournament} />
         <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
 

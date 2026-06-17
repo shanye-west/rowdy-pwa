@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
+import ChampionBanner from "./components/ChampionBanner";
 import OfflineImage from "./components/OfflineImage";
 import { ViewTransitionLink } from "./components/ViewTransitionLink";
 import { Badge } from "./components/ui/badge";
@@ -89,6 +90,7 @@ export default function App() {
         </div>
       ) : (
         <div className="space-y-6 px-4 py-6">
+          <ChampionBanner tournament={tournament} />
           <section>
             <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
