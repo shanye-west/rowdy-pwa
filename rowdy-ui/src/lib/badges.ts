@@ -63,15 +63,6 @@ export const BADGE_DEFS: BadgeDef[] = [
     describe: (c) => `Won ${plural(c, "match")} without ever trailing`,
   },
   {
-    id: "hamandegg",
-    label: "Ham & Egger",
-    emoji: "🥚",
-    tone: "gold",
-    threshold: 3,
-    value: (s) => num(s.hamAndEggs),
-    describe: (c) => `Bailed out a partner on ${plural(c, "hole")}`,
-  },
-  {
     id: "drives",
     label: "Drive Master",
     emoji: "🚀",

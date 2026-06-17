@@ -33,11 +33,6 @@ describe("getBadges", () => {
     expect(clutch?.tone).toBe("gold");
   });
 
-  it("respects thresholds (Ham & Egger needs 3)", () => {
-    expect(getBadges({ ...base, hamAndEggs: 2 }).some((b) => b.id === "hamandegg")).toBe(false);
-    expect(getBadges({ ...base, hamAndEggs: 3 }).some((b) => b.id === "hamandegg")).toBe(true);
-  });
-
   it("tags blown leads as a 'fun' badge", () => {
     const heartbreak = getBadges({ ...base, blownLeads: 1 }).find((b) => b.id === "heartbreak");
     expect(heartbreak?.tone).toBe("fun");
