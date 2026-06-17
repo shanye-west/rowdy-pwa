@@ -477,7 +477,8 @@ export default function Match() {
       const hole = holes.find(h => h.k === holeKey);
       if (!hole) return "";
       const { input } = hole;
-      if (format === "twoManScramble") {
+      if (format === "twoManScramble" || format === "fourManScramble") {
+        // Scramble (2- or 4-man): one team gross per hole, shown in every player row.
         const v = team === "A" ? input?.teamAGross : input?.teamBGross;
         return v ?? "";
       }
@@ -617,7 +618,7 @@ export default function Match() {
   const buildNewInput = useCallback((hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) => {
     const { input } = hole;
     
-    if (format === "twoManScramble") {
+    if (format === "twoManScramble" || format === "fourManScramble") {
       return {
         teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
         teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
