@@ -145,7 +145,7 @@ export default function DraftPool() {
                     </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0 hover:bg-slate-50 transition-colors duration-150">
+                <div className={`flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0 hover:bg-slate-50 transition-colors duration-150 ${cap ? "" : "opacity-50"}`}>
                   <div className="flex min-w-0 items-center gap-3">
                     <PlayerAvatar name={name} color={cap?.color} />
                     <div className="min-w-0">
