@@ -36,14 +36,9 @@ export default function DraftPool() {
     return null;
   };
 
-  const sortedIds = useMemo(() => {
+  // Handicap-sorted order is the canonical basis for tier assignment.
+  const handicapSortedIds = useMemo(() => {
     return [...poolIds].sort((a, b) => {
-      if (sortBy === "name") {
-        const na = players[a]?.displayName || a;
-        const nb = players[b]?.displayName || b;
-        return na.localeCompare(nb);
-      }
-      // Handicap ascending; players without a handicap fall to the bottom.
       const ha = draftPool?.[a];
       const hb = draftPool?.[b];
       if (ha == null && hb == null) return 0;
@@ -51,7 +46,30 @@ export default function DraftPool() {
       if (hb == null) return -1;
       return Number(ha) - Number(hb);
     });
-  }, [poolIds, sortBy, players, draftPool]);
+  }, [poolIds, draftPool]);
+
+  // Map each playerId to its tier label (A/B/C/D) based on handicap rank.
+  const tierMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    handicapSortedIds.forEach((pid, i) => {
+      if (i < 6) map[pid] = "A";
+      else if (i < 12) map[pid] = "B";
+      else if (i < 18) map[pid] = "C";
+      else map[pid] = "D";
+    });
+    return map;
+  }, [handicapSortedIds]);
+
+  const sortedIds = useMemo(() => {
+    if (sortBy === "name") {
+      return [...poolIds].sort((a, b) => {
+        const na = players[a]?.displayName || a;
+        const nb = players[b]?.displayName || b;
+        return na.localeCompare(nb);
+      });
+    }
+    return handicapSortedIds;
+  }, [poolIds, sortBy, players, handicapSortedIds]);
 
   const loading = tournamentLoading || (poolIds.length > 0 && !playersLoaded);
 
@@ -105,42 +123,63 @@ export default function DraftPool() {
 
         {/* Player list */}
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          {sortedIds.map((pid) => {
+          {sortedIds.map((pid, idx) => {
             const name = players[pid]?.displayName || "Unknown";
             const hcp = draftPool?.[pid];
             const cap = captainMeta(pid);
+            const tier = tierMap[pid];
+
+            // When sorted by handicap, insert a tier section header at the start of each group.
+            const showTierHeader =
+              sortBy === "handicap" && (idx === 0 || tierMap[sortedIds[idx - 1]] !== tier);
 
             return (
-              <div
-                key={pid}
-                className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0 hover:bg-slate-50 transition-colors duration-150"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <PlayerAvatar name={name} color={cap?.color} />
-                  <div className="min-w-0">
-                    <Link
-                      to={`/player/${pid}`}
-                      className="block truncate font-semibold text-slate-900 hover:text-slate-700"
-                    >
-                      {name}
-                    </Link>
-                    {cap && (
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          fontWeight: 700,
-                          color: cap.color,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                        }}
+              <div key={pid}>
+                {showTierHeader && (
+                  <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 border-b border-slate-200">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-[0.6rem] font-bold text-white">
+                      {tier}
+                    </span>
+                    <span className="text-[0.65rem] font-semibold uppercase tracking-widest text-slate-500">
+                      Tier {tier}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0 hover:bg-slate-50 transition-colors duration-150">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PlayerAvatar name={name} color={cap?.color} />
+                    <div className="min-w-0">
+                      <Link
+                        to={`/player/${pid}`}
+                        className="block truncate font-semibold text-slate-900 hover:text-slate-700"
                       >
-                        Captain · {cap.team}
+                        {name}
+                      </Link>
+                      {cap && (
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            color: cap.color,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          Captain · {cap.team}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {sortBy === "name" && (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-[0.6rem] font-bold text-white">
+                        {tier}
                       </span>
                     )}
+                    <div className="text-base font-semibold tabular-nums text-slate-900">
+                      {hcp != null ? Number(hcp).toFixed(1) : "—"}
+                    </div>
                   </div>
-                </div>
-                <div className="shrink-0 text-base font-semibold tabular-nums text-slate-900">
-                  {hcp != null ? Number(hcp).toFixed(1) : "—"}
                 </div>
               </div>
             );
