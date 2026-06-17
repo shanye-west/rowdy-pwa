@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs } from "firebase/firestore";
+import { doc, collection, onSnapshot, query, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
@@ -100,20 +100,27 @@ export function usePlayerStatsBySeries(playerId: string | undefined) {
 /**
  * All-time leaderboard for a series across EVERY player who has ever played in
  * it — not limited to the current tournament roster (retired players, guests,
- * and anyone no longer on a team still appear).
+ * and anyone no longer on a team still appear). Test accounts are excluded:
+ * their ids are `_`-prefixed (real players are `p`-prefixed). The `_testSeed`
+ * flag alone is insufficient — older seeded test players predate it.
  *
- * Uses a single collection-group query on `bySeries` filtered by the `series`
- * field (backed by the COLLECTION_GROUP index in firestore.indexes.json), so it
- * costs one query regardless of how many players exist. `enabled` lets callers
- * defer the read until the all-time tab is actually opened.
+ * Reads the `players` collection once, then fetches each real player's
+ * `bySeries/{series}` doc by path. This deliberately avoids a `bySeries`
+ * collection-group query so it needs no extra Firestore index — only a hosting
+ * deploy. `enabled` defers the reads until the all-time tab is opened.
+ *
+ * Returns a `names` map (playerId → displayName) sourced from the same players
+ * read, so callers don't need a second name lookup.
  */
 export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enabled: boolean) {
   const [leaderboard, setLeaderboard] = useState<PlayerStatsBySeries[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!series || !enabled) {
       setLeaderboard([]);
+      setNames({});
       setLoading(false);
       return;
     }
@@ -121,31 +128,49 @@ export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enab
     setLoading(true);
     let cancelled = false;
 
-    getDocs(query(collectionGroup(db, "bySeries"), where("series", "==", series)))
-      .then((snap) => {
+    (async () => {
+      try {
+        // All real players (skip test accounts: `_`-prefixed ids / _testSeed).
+        const playersSnap = await getDocs(collection(db, "players"));
         if (cancelled) return;
-        const stats: PlayerStatsBySeries[] = snap.docs.map((d) => {
-          const data = d.data();
-          // Prefer the stored playerId; fall back to the parent doc id
-          // (playerStats/{playerId}/bySeries/{series}).
-          const playerId = (data.playerId as string) || d.ref.parent.parent?.id || "";
-          return { ...data, playerId, series } as PlayerStatsBySeries;
+        const realPlayers = playersSnap.docs.filter(
+          (d) => !d.id.startsWith("_") && d.data()._testSeed !== true
+        );
+
+        const nameMap: Record<string, string> = {};
+        realPlayers.forEach((d) => {
+          nameMap[d.id] = (d.data().displayName as string) || "Unknown";
         });
+
+        // Each real player's all-time stats for this series (skip never-played).
+        const results = await Promise.all(
+          realPlayers.map(async (p) => {
+            const snap = await getDoc(doc(db, "playerStats", p.id, "bySeries", series));
+            return snap.exists()
+              ? ({ ...snap.data(), playerId: p.id, series } as PlayerStatsBySeries)
+              : null;
+          })
+        );
+        if (cancelled) return;
+
+        const stats = results.filter((s): s is PlayerStatsBySeries => s !== null);
         // Sort by points descending
         stats.sort((a, b) => b.points - a.points);
         setLeaderboard(stats);
+        setNames(nameMap);
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error fetching all-time leaderboard:", err);
         if (!cancelled) {
           setLeaderboard([]);
+          setNames({});
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => { cancelled = true; };
   }, [series, enabled]);
 
-  return { leaderboard, loading };
+  return { leaderboard, names, loading };
 }

@@ -92,7 +92,12 @@ export default function App() {
         </div>
       ) : (
         <div className="space-y-6 px-4 py-6">
-          <ChampionBanner tournament={tournament} />
+          <ChampionBanner
+            tournament={tournament}
+            teamAConfirmed={stats.teamAConfirmed}
+            teamBConfirmed={stats.teamBConfirmed}
+            totalPointsAvailable={totalPointsAvailable}
+          />
 
           {draftPoolCount > 0 && (
             <section>

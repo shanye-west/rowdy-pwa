@@ -63,7 +63,12 @@ function TournamentComponent() {
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
-        <ChampionBanner tournament={tournament} />
+        <ChampionBanner
+          tournament={tournament}
+          teamAConfirmed={stats.teamAConfirmed}
+          teamBConfirmed={stats.teamBConfirmed}
+          totalPointsAvailable={totalPointsAvailable}
+        />
         <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
 

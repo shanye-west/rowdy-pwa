@@ -3,10 +3,9 @@ import { Link } from "react-router-dom";
 import { Crown } from "lucide-react";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
-import { useTournamentContext, usePlayers } from "../contexts/TournamentContext";
+import { useTournamentContext } from "../contexts/TournamentContext";
 import { useTournamentLeaderboard, type LeaderboardRow } from "../hooks/useTournamentLeaderboard";
 import { useAllTimeLeaderboard } from "../hooks/usePlayerStats";
-import type { TournamentSeries } from "../types";
 
 type Tab = "tournament" | "allTime";
 
@@ -17,13 +16,11 @@ export default function Leaderboard() {
   const [tab, setTab] = useState<Tab>("tournament");
 
   const { rows: tournamentRows, nameById: tournamentNames, loading } = useTournamentLeaderboard(tournament);
-  const series = (tournament?.series as TournamentSeries) || "rowdyCup";
-  // All-time stats span EVERY player who has played the series, not just the
-  // current roster. Only fetched once that tab is active.
-  const { leaderboard: seriesStats, loading: seriesLoading } = useAllTimeLeaderboard(
-    series,
-    tab === "allTime"
-  );
+  // The all-time leaderboard is always the Rowdy Cup series, regardless of the
+  // active tournament's series. It spans EVERY player who has ever played it,
+  // not just the current roster. Only fetched once that tab is active.
+  const { leaderboard: seriesStats, names: allTimeNames, loading: seriesLoading } =
+    useAllTimeLeaderboard("rowdyCup", tab === "allTime");
 
   const allTimeRows: LeaderboardRow[] = useMemo(
     () =>
@@ -39,19 +36,9 @@ export default function Leaderboard() {
     [seriesStats]
   );
 
-  // All-time players can include people outside the current roster, so resolve
-  // their display names directly from the player cache.
-  const allTimeIds = useMemo(() => allTimeRows.map((r) => r.playerId), [allTimeRows]);
-  const { players: allTimePlayers, loaded: allTimeNamesLoaded } = usePlayers(allTimeIds);
-  const allTimeNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const id of allTimeIds) map[id] = allTimePlayers[id]?.displayName || "Unknown";
-    return map;
-  }, [allTimePlayers, allTimeIds]);
-
   const rows = tab === "tournament" ? tournamentRows : allTimeRows;
   const nameById = tab === "tournament" ? tournamentNames : allTimeNames;
-  const busy = tab === "tournament" ? loading : seriesLoading || !allTimeNamesLoaded;
+  const busy = tab === "tournament" ? loading : seriesLoading;
 
   return (
     <Layout
