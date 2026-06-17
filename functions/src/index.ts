@@ -1995,3 +1995,13 @@ export {
 // ============================================================================
 
 export { postComment, deleteComment, toggleReaction } from "./callables/commentOps.js";
+
+// ============================================================================
+// MCP SERVER (read-only)
+// Remote Model Context Protocol endpoint so players can point their own AI
+// (Claude.ai / ChatGPT / Claude Code) at Rowdy Cup stats. Reads via the
+// unauthenticated Web SDK (rules enforce read-only); guarded by a shared key.
+// See mcp/index.ts.
+// ============================================================================
+
+export { mcp } from "./mcp/index.js";
