@@ -15,7 +15,6 @@ import { formatRoundType } from "../utils";
 import type { BetTeamSide } from "../types";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
-import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
@@ -211,16 +210,9 @@ function RoundComponent() {
                       src={tournament?.teamA?.logo} 
                       alt={tournament?.teamA?.name || "Team A"}
                       fallbackIcon="🔵"
-                      style={{ width: 40, height: 40, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain" }}
                     />
                   </ViewTransitionLink>
-                  <TeamName
-                    name={tournament?.teamA?.name || "Team A"}
-                    variant="inline"
-                    minFontPx={14}
-                    maxFontPx={24}
-                    style={{ color: teamAColor }}
-                  />
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-semibold tracking-tight" style={{ color: teamAColor }}>
                       {fA}
@@ -239,16 +231,9 @@ function RoundComponent() {
                       src={tournament?.teamB?.logo} 
                       alt={tournament?.teamB?.name || "Team B"}
                       fallbackIcon="🔴"
-                      style={{ width: 40, height: 40, objectFit: "contain" }}
+                      style={{ width: 96, height: 96, objectFit: "contain" }}
                     />
                   </ViewTransitionLink>
-                  <TeamName
-                    name={tournament?.teamB?.name || "Team B"}
-                    variant="inline"
-                    minFontPx={14}
-                    maxFontPx={24}
-                    style={{ color: teamBColor }}
-                  />
                   <div className="flex items-baseline gap-1">
                     {pB > 0 && (
                       <span className="text-[0.6rem] font-semibold text-slate-400">(+{pB})</span>
