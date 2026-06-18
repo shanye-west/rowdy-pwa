@@ -6,7 +6,7 @@
  * projects, so types are duplicated rather than shared).
  */
 
-import type { RoundFormat, BetMarket, BetSide } from "../types.js";
+import type { RoundFormat, BetMarket, BetOverUnderMetric, BetSide } from "../types.js";
 import type { CourseInput } from "../helpers/adminValidation.js";
 
 export type TierMap = {
@@ -307,9 +307,15 @@ export interface FinalizePairingDraftResult extends AdminResult {
 export interface CreateBetOfferRequest {
   tournamentId: string;
   market: BetMarket;
-  /** Required when market === "match". */
+  /** Required for "match" and match-scoped "overUnder" markets. */
   matchId?: string;
-  /** The team the proposer is backing to win. */
+  /** Required when market === "round". */
+  roundId?: string;
+  /** Required when market === "overUnder". */
+  metric?: BetOverUnderMetric;
+  /** The over/under line (required when market === "overUnder"). */
+  line?: number;
+  /** Team to win (team markets) or "over"/"under" (overUnder). */
   side: BetSide;
   /** Even-money stake each side risks. */
   amount: number;
@@ -338,6 +344,23 @@ export interface SettleCupFuturesRequest {
 
 export interface SettleCupFuturesResult extends AdminResult {
   settledCount: number;
+}
+
+/** Debtor records a payment that clears part of a head-to-head tab. */
+export interface RecordSettlementRequest {
+  tournamentId: string;
+  /** The creditor being paid (caller is the payer). */
+  payeeId: string;
+  amount: number;
+}
+
+export interface RecordSettlementResult extends AdminResult {
+  settlementId: string;
+}
+
+/** Shared payload for confirm/cancel of a settlement. */
+export interface SettlementActionRequest {
+  settlementId: string;
 }
 
 // ============================================================================

@@ -49,3 +49,21 @@ export function settleMatchBet(bet: ResolvableBet, winner: "teamA" | "teamB" | "
 export function settleCupFutureBet(bet: ResolvableBet, winningTeam: BetSide | "push"): BetResult {
   return resolve(bet, winningTeam);
 }
+
+/**
+ * Settle a round/session-winner bet from the round's final team points. The team
+ * with more points wins; equal points (a halved session) is a push.
+ */
+export function settleRoundBet(bet: ResolvableBet, teamAPoints: number, teamBPoints: number): BetResult {
+  const outcome = teamAPoints > teamBPoints ? "teamA" : teamBPoints > teamAPoints ? "teamB" : "push";
+  return resolve(bet, outcome);
+}
+
+/**
+ * Settle an over/under bet by comparing the realized value to the line. Landing
+ * exactly on the line is a push — use half-lines (e.g. 16.5) to avoid it.
+ */
+export function settleOverUnderBet(bet: ResolvableBet, actualValue: number, line: number): BetResult {
+  const outcome = actualValue > line ? "over" : actualValue < line ? "under" : "push";
+  return resolve(bet, outcome);
+}

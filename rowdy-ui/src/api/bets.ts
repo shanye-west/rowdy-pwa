@@ -14,6 +14,9 @@ import type {
   CreateBetResult,
   SettleCupFuturesRequest,
   SettleCupFuturesResult,
+  RecordSettlementRequest,
+  RecordSettlementResult,
+  SettlementActionRequest,
 } from "./adminContracts";
 
 function call<Req, Res>(name: string) {
@@ -30,4 +33,7 @@ export const betsApi = {
   cancelBet: call<BetActionRequest, AdminResult>("cancelBet"),
   declineBet: call<BetActionRequest, AdminResult>("declineBet"),
   settleCupFutures: call<SettleCupFuturesRequest, SettleCupFuturesResult>("settleCupFutures"),
+  recordSettlement: call<RecordSettlementRequest, RecordSettlementResult>("recordSettlement"),
+  confirmSettlement: call<SettlementActionRequest, AdminResult>("confirmSettlement"),
+  cancelSettlement: call<SettlementActionRequest, AdminResult>("cancelSettlement"),
 };

@@ -5,41 +5,58 @@ import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import InlineBetCard from "../components/InlineBetCard";
+import OverUnderBetCard from "../components/OverUnderBetCard";
 import BetOfferRow from "../components/BetOfferRow";
+import BetSummaryCard from "../components/BetSummaryCard";
+import PlayerAvatar from "../components/PlayerAvatar";
 import { useAuth } from "../contexts/AuthContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { useToast } from "../contexts/ToastContext";
 import { useTournamentData } from "../hooks/useTournamentData";
 import {
   useBets,
+  useBetSettlements,
   useRosterPlayers,
   selectMyBets,
   needsMyConfirm,
   settledDelta,
   computeLedger,
   headToHead,
+  selectPendingSettlements,
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
-import { toDateOrNull, formatTeeTime } from "../utils";
+import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
 import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
+type MarketFilter = "all" | "cup" | "sessions" | "matches" | "overunder";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
-const oppositeSide = (s: BetSide): BetSide => (s === "teamA" ? "teamB" : "teamA");
+const oppositeSide = (s: BetSide): BetSide =>
+  s === "teamA" ? "teamB" : s === "teamB" ? "teamA" : s === "over" ? "under" : "over";
+
+// Over/under tile colors (mirrors OverUnderBetCard): over = emerald, under = slate.
+const OVER_COLOR = "#059669";
+const UNDER_COLOR = "#475569";
 
 export default function Sportsbook() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
   const { showToast } = useToast();
-  const { matchesByRound, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
+  const { matchesByRound, rounds, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
+  const settlements = useBetSettlements(tournament?.id);
   const betParticipantIds = useMemo(
-    () => [...new Set(bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]))],
-    [bets]
+    () => [
+      ...new Set([
+        ...bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]),
+        ...settlements.flatMap((s) => [s.payerId, s.payeeId]),
+      ]),
+    ],
+    [bets, settlements]
   );
   const { players, loading: playersLoading } = useRosterPlayers(tournament, betParticipantIds);
 
@@ -64,6 +81,8 @@ export default function Sportsbook() {
       },
       { replace: true }
     );
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>("all");
+
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
   // (read via state to keep Date.now() out of the render path).
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -99,8 +118,21 @@ export default function Sportsbook() {
     return tee !== null && tee.getTime() <= nowMs;
   };
   /** A locked-in bet can still be called off until its market starts. */
-  const canCancelLocked = (b: BetDoc): boolean =>
-    b.market === "cupFuture" ? !tournamentStarted : !matchHasStarted(b.matchId ? matchesById[b.matchId] : undefined);
+  const canCancelLocked = (b: BetDoc): boolean => {
+    if (b.market === "cupFuture") return !tournamentStarted;
+    if (b.market === "round") {
+      const ms = b.roundId ? (matchesByRound[b.roundId] ?? []) : [];
+      return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
+    }
+    // match + match-scoped over/under
+    return !matchHasStarted(b.matchId ? matchesById[b.matchId] : undefined);
+  };
+  /** True while the bet's underlying match is in progress (drives the live pulse). */
+  const isBetLive = (b: BetDoc): boolean => {
+    if (b.market !== "match" || !b.matchId) return false;
+    const m = matchesById[b.matchId];
+    return !!m && (m.status?.thru ?? 0) > 0 && m.status?.closed !== true;
+  };
 
   const teamNames = {
     teamA: tournament?.teamA?.name || "Team A",
@@ -111,9 +143,9 @@ export default function Sportsbook() {
     teamB: tournament?.teamB?.color || "var(--team-b-default, #b91c1c)",
   };
 
-  /** Labels for a bet's two sides — player names for matches, team names for futures. */
+  /** Labels for a team bet's two sides — player names for matches, team names otherwise. */
   const sideLabelsForBet = (b: BetDoc): { teamA: string; teamB: string } => {
-    if (b.market === "cupFuture") return teamNames;
+    if (b.market === "cupFuture" || b.market === "round") return teamNames;
     const m = b.matchId ? matchesById[b.matchId] : undefined;
     return { teamA: sideNames(m?.teamAPlayers), teamB: sideNames(m?.teamBPlayers) };
   };
@@ -199,35 +231,76 @@ export default function Sportsbook() {
     }
     return [...groups.entries()].map(([matchId, offers]) => ({ matchId, offers }));
   })();
+
+  // New markets: round/session winner and match holes-played over/unders.
+  const bettableRounds = rounds.filter((r) => {
+    const ms = matchesByRound[r.id] ?? [];
+    return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
+  });
+  const bettableMatches = allMatches.filter((m) => !matchHasStarted(m));
+  // In "All", keep O/U concise — only matches that already have an offer; the
+  // O/U filter shows the full builder for every bettable match.
+  const ouMatches =
+    marketFilter === "overunder"
+      ? bettableMatches
+      : bettableMatches.filter((m) => openOffers.some((b) => b.market === "overUnder" && b.matchId === m.id));
+
   const ledger = computeLedger(bets);
-  const h2h = headToHead(bets, player?.id);
+  const h2h = headToHead(bets, settlements, player?.id);
+  const pendingSettlements = selectPendingSettlements(settlements, player?.id);
+  const outgoingPendingTo = new Set(pendingSettlements.outgoing.map((s) => s.payeeId));
   const activeCount =
     myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.pending.length + myBets.active.length;
 
+  // My Bets summary hero: settled P&L + record, plus outstanding tab totals.
+  const summary = (() => {
+    const acc = { net: 0, wins: 0, losses: 0, pushes: 0 };
+    if (player) {
+      for (const b of myBets.settled) {
+        const d = settledDelta(b, player.id);
+        acc.net += d;
+        if (d > 0) acc.wins++;
+        else if (d < 0) acc.losses++;
+        else acc.pushes++;
+      }
+    }
+    const owedToYou = h2h.reduce((s, r) => (r.net > 0 ? s + r.net : s), 0);
+    const youOwe = h2h.reduce((s, r) => (r.net < 0 ? s + Math.abs(r.net) : s), 0);
+    return { ...acc, owedToYou, youOwe };
+  })();
+
   // ---- shared render helpers ----
-  /** Head-to-head tile data for a bet (Team A left / Team B right), filling `highlightSide`. */
+  /**
+   * Head-to-head tile data for a bet, filling `highlightSide`. Team markets put
+   * teamA on the left / teamB on the right; over/under markets put Over on the
+   * left / Under on the right. The bettor on each side fills in by name.
+   */
   const matchupSides = (b: BetDoc, highlightSide: BetSide | null): { teamA: MatchupSide; teamB: MatchupSide } => {
-    const labels = sideLabelsForBet(b);
-    const nameOn = (key: BetSide): string | null => {
-      if (b.proposerSide === key) return playerName(b.proposerId);
-      if (b.acceptorId) return playerName(b.acceptorId);
-      if (b.targetId) return playerName(b.targetId);
-      return null; // unfilled side of an open offer
+    // The proposer sits on proposerSide; the counterparty (acceptor/target) on the other.
+    const counterpartyId = b.acceptorId ?? b.targetId ?? null;
+    const contentOn = (key: BetSide): ReactNode => {
+      const name = b.proposerSide === key ? playerName(b.proposerId) : counterpartyId ? playerName(counterpartyId) : null;
+      return name ? <span className="block truncate">{name}</span> : <span className="text-slate-400">Open</span>;
     };
-    const side = (key: BetSide, color: string): MatchupSide => {
-      const name = nameOn(key);
+    const tile = (key: BetSide, label: string, color: string): MatchupSide => ({
+      label,
+      color,
+      filled: highlightSide === key,
+      content: contentOn(key),
+    });
+
+    if (b.market === "overUnder") {
+      const line = b.line ?? 0;
       return {
-        label: labels[key],
-        color,
-        filled: highlightSide === key,
-        content: name ? (
-          <span className="block truncate">{name}</span>
-        ) : (
-          <span className="text-slate-400">Open</span>
-        ),
+        teamA: tile("over", `Over ${line}`, OVER_COLOR),
+        teamB: tile("under", `Under ${line}`, UNDER_COLOR),
       };
+    }
+    const labels = sideLabelsForBet(b);
+    return {
+      teamA: tile("teamA", labels.teamA, teamColors.teamA),
+      teamB: tile("teamB", labels.teamB, teamColors.teamB),
     };
-    return { teamA: side("teamA", teamColors.teamA), teamB: side("teamB", teamColors.teamB) };
   };
 
   const opponentName = (b: BetDoc): string =>
@@ -282,12 +355,37 @@ export default function Sportsbook() {
           // Existing open offers are listed on each card to take. The shared
           // ledger (everyone's standings) lives at the bottom.
           <div className="space-y-4">
+            {/* Market filter — keeps the marketplace scannable as markets grow. */}
+            <div className="flex gap-1 rounded-full bg-slate-100 p-0.5">
+              {(
+                [
+                  { id: "all", label: "All" },
+                  { id: "cup", label: "Cup" },
+                  { id: "sessions", label: "Sessions" },
+                  { id: "matches", label: "Matches" },
+                  { id: "overunder", label: "O/U" },
+                ] as { id: MarketFilter; label: string }[]
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setMarketFilter(f.id)}
+                  className={`flex-1 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition-colors ${
+                    marketFilter === f.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
             {/* Cup futures — bettable until the tournament starts */}
-            {!tournamentStarted && (
+            {(marketFilter === "all" || marketFilter === "cup") && !tournamentStarted && (
               <InlineBetCard
                 tournamentId={tournament.id}
                 market="cupFuture"
                 title="🏆 Cup Winner"
+                accentColors={teamColors}
                 sideLabels={teamNames}
                 teamTags={teamNames}
                 teamColors={teamColors}
@@ -303,9 +401,38 @@ export default function Sportsbook() {
               />
             )}
 
+            {/* Sessions — who wins a round's points. Bettable until the round tees off. */}
+            {(marketFilter === "all" || marketFilter === "sessions") && bettableRounds.length > 0 && (
+              <div className="space-y-2">
+                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🗓️ Sessions</div>
+                {bettableRounds.map((r) => (
+                  <InlineBetCard
+                    key={r.id}
+                    tournamentId={tournament.id}
+                    market="round"
+                    roundId={r.id}
+                    title={`${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}`}
+                    sideLabels={teamNames}
+                    teamTags={teamNames}
+                    teamColors={teamColors}
+                    openOffers={openOffers.filter((b) => b.market === "round" && b.roundId === r.id)}
+                    loggedIn={!!player}
+                    meId={player?.id}
+                    rosterOptions={rosterOptions}
+                    bettorName={playerName}
+                    onTake={(b) =>
+                      runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
+                    }
+                    onPosted={() => undefined}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Open match bets — take an offer someone posted. Match bets are
                 created from the Rounds / scorecard pages ("Bet Me"). */}
-            {matchOfferGroups.length === 0 ? (
+            {(marketFilter === "all" || marketFilter === "matches") &&
+              (matchOfferGroups.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">🎲</div>
                 <div className="empty-state-text">
@@ -353,11 +480,36 @@ export default function Sportsbook() {
                   );
                 })}
               </div>
+            ))}
+
+            {/* Holes Over/Under — a per-match prop. Concise in "All", full list under O/U. */}
+            {(marketFilter === "all" || marketFilter === "overunder") && ouMatches.length > 0 && (
+              <div className="space-y-2">
+                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  📊 Holes Over/Under
+                </div>
+                {ouMatches.map((m) => (
+                  <OverUnderBetCard
+                    key={m.id}
+                    tournamentId={tournament.id}
+                    matchId={m.id}
+                    matchLabel={`${sideNames(m.teamAPlayers)} vs ${sideNames(m.teamBPlayers)}`}
+                    openOffers={openOffers.filter((b) => b.market === "overUnder" && b.matchId === m.id)}
+                    loggedIn={!!player}
+                    meId={player?.id}
+                    rosterOptions={rosterOptions}
+                    bettorName={playerName}
+                    onTake={(b) =>
+                      runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
+                    }
+                  />
+                ))}
+              </div>
             )}
 
-            {/* Shared ledger — everyone's settled-bet standings */}
+            {/* Shared ledger — everyone's settled-bet standings ("Money Leaders") */}
             <div className="space-y-2">
-              <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Standings</div>
+              <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">💰 Money Leaders</div>
               {ledger.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">💸</div>
@@ -366,22 +518,34 @@ export default function Sportsbook() {
               ) : (
                 <Card className="overflow-hidden p-0">
                   <ul className="divide-y divide-slate-100">
-                    {ledger.map((row, i) => (
-                      <li key={row.playerId} className="flex items-center gap-3 px-4 py-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-semibold text-slate-900">{playerName(row.playerId)}</div>
-                          <div className="text-xs text-slate-500">
-                            {row.wins}W · {row.losses}L{row.pushes > 0 ? ` · ${row.pushes}P` : ""}
+                    {ledger.map((row, i) => {
+                      const isMe = !!player && row.playerId === player.id;
+                      return (
+                        <li
+                          key={row.playerId}
+                          className={`flex items-center gap-3 px-4 py-3 ${isMe ? "bg-slate-900/[0.04]" : ""}`}
+                        >
+                          <RankBadge rank={i + 1} />
+                          <PlayerAvatar name={playerName(row.playerId)} size={32} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-semibold text-slate-900">{playerName(row.playerId)}</span>
+                              {isMe && (
+                                <span className="shrink-0 rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-slate-600">
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {row.wins}W · {row.losses}L{row.pushes > 0 ? ` · ${row.pushes}P` : ""}
+                            </div>
                           </div>
-                        </div>
-                        <div className={`text-lg font-bold ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-slate-400"}`}>
-                          {money(row.net)}
-                        </div>
-                      </li>
-                    ))}
+                          <div className={`text-lg font-bold tabular-nums ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-slate-400"}`}>
+                            {money(row.net)}
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </Card>
               )}
@@ -390,24 +554,130 @@ export default function Sportsbook() {
         ) : tab === "mybets" ? (
           // ============== MY BETS (your tab + active/completed) ===============
           <div className="space-y-4">
-            {/* Your tab: head-to-head balances with each opponent */}
-            {player && h2h.length > 0 && (
-              <Card className="p-4">
-                <div className="mb-2 text-sm font-bold text-slate-900">Your tab</div>
-                <ul className="space-y-1.5">
-                  {h2h.map((row) => (
-                    <li key={row.otherId} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-700">
-                        {row.net > 0 ? `${playerName(row.otherId)} owes you` : `You owe ${playerName(row.otherId)}`}
-                      </span>
-                      <span className={`font-bold ${row.net > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {money(Math.abs(row.net))}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
+            {/* Summary hero: settled net + record + outstanding tab totals */}
+            {player && (myBets.settled.length > 0 || h2h.length > 0) && (
+              <BetSummaryCard
+                net={summary.net}
+                wins={summary.wins}
+                losses={summary.losses}
+                pushes={summary.pushes}
+                owedToYou={summary.owedToYou}
+                youOwe={summary.youOwe}
+              />
             )}
+
+            {/* Your tab: head-to-head balances + settle-up */}
+            {player &&
+              (h2h.length > 0 ||
+                pendingSettlements.incoming.length > 0 ||
+                pendingSettlements.outgoing.length > 0) && (
+                <Card className="space-y-3 p-4">
+                  <div className="text-sm font-bold text-slate-900">Your tab</div>
+
+                  {h2h.length > 0 && (
+                    <ul className="space-y-2">
+                      {h2h.map((row) => {
+                        const owe = row.net < 0;
+                        return (
+                          <li key={row.otherId} className="flex items-center justify-between gap-2 text-sm">
+                            <span className="min-w-0 truncate text-slate-700">
+                              {row.net > 0 ? `${playerName(row.otherId)} owes you` : `You owe ${playerName(row.otherId)}`}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <span className={`font-bold tabular-nums ${row.net > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                                {money(Math.abs(row.net))}
+                              </span>
+                              {owe && !outgoingPendingTo.has(row.otherId) && (
+                                <SmallBtn
+                                  variant="primary"
+                                  onClick={() =>
+                                    confirmThen({
+                                      title: "Settle up?",
+                                      body: `Mark $${Math.abs(row.net)} as paid to ${playerName(row.otherId)}? They'll confirm they received it, then it clears from your tab.`,
+                                      confirmLabel: "Mark paid",
+                                      run: () =>
+                                        betsApi.recordSettlement({
+                                          tournamentId: tournament.id,
+                                          payeeId: row.otherId,
+                                          amount: Math.abs(row.net),
+                                        }),
+                                      success: "Marked paid — waiting on them to confirm.",
+                                    })
+                                  }
+                                >
+                                  Settle up
+                                </SmallBtn>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  {/* Incoming: someone says they paid you — confirm or dispute */}
+                  {pendingSettlements.incoming.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate text-amber-800">
+                        {playerName(s.payerId)} paid you <span className="font-bold">${s.amount}</span>
+                      </span>
+                      <span className="flex shrink-0 gap-2">
+                        <SmallBtn
+                          variant="primary"
+                          onClick={() =>
+                            runAction(() => betsApi.confirmSettlement({ settlementId: s.id }), "Confirmed — tab updated.")
+                          }
+                        >
+                          Confirm
+                        </SmallBtn>
+                        <SmallBtn
+                          variant="muted"
+                          onClick={() =>
+                            confirmThen({
+                              title: "Dispute this payment?",
+                              body: `Reject ${playerName(s.payerId)}'s record of paying you $${s.amount}? Use this if you didn't receive it.`,
+                              confirmLabel: "Dispute",
+                              run: () => betsApi.cancelSettlement({ settlementId: s.id }),
+                              success: "Payment record removed.",
+                            })
+                          }
+                        >
+                          Dispute
+                        </SmallBtn>
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Outgoing: you recorded a payment — awaiting their confirm */}
+                  {pendingSettlements.outgoing.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate text-slate-600">
+                        You paid {playerName(s.payeeId)} <span className="font-bold">${s.amount}</span> · awaiting confirm
+                      </span>
+                      <SmallBtn
+                        variant="muted"
+                        onClick={() =>
+                          confirmThen({
+                            title: "Cancel this record?",
+                            body: `Remove your record of paying ${playerName(s.payeeId)} $${s.amount}?`,
+                            confirmLabel: "Remove",
+                            run: () => betsApi.cancelSettlement({ settlementId: s.id }),
+                            success: "Payment record removed.",
+                          })
+                        }
+                      >
+                        Cancel
+                      </SmallBtn>
+                    </div>
+                  ))}
+                </Card>
+              )}
 
             {/* Personal bets (login required) */}
             {!player ? (
@@ -486,8 +756,10 @@ export default function Sportsbook() {
                       const sides = matchupSides(b, mySide(b, player.id));
                       return (
                         <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
-                          <div className="text-[0.7rem] font-semibold text-amber-600">
-                            {iConfirm ? "Waiting on you to confirm" : "Waiting on the other player"}
+                          <div>
+                            <StatusPill tone="amber">
+                              {iConfirm ? "Confirm to lock in" : "Waiting on them"}
+                            </StatusPill>
                           </div>
                           <div className="flex gap-2">
                             {iConfirm && (
@@ -540,9 +812,9 @@ export default function Sportsbook() {
                       const sides = matchupSides(b, mySide(b, player.id));
                       const cancellable = canCancelLocked(b);
                       return (
-                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
+                        <BetCard key={b.id} {...matchTrack(b)} live={isBetLive(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[0.7rem] font-semibold text-emerald-600">Locked in</span>
+                            <StatusPill tone="emerald">Locked in</StatusPill>
                             {cancellable && (
                               <SmallBtn
                                 variant="muted"
@@ -593,11 +865,11 @@ export default function Sportsbook() {
                       return (
                         <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between">
-                            <span className="text-[0.7rem] font-semibold text-slate-500">
-                              {delta > 0 ? "You won" : delta < 0 ? "You lost" : "Push — no money"}
-                            </span>
+                            <StatusPill tone={delta > 0 ? "emerald" : delta < 0 ? "red" : "slate"}>
+                              {delta > 0 ? "Won" : delta < 0 ? "Lost" : "Push"}
+                            </StatusPill>
                             <span
-                              className={`text-sm font-bold ${
+                              className={`text-sm font-bold tabular-nums ${
                                 delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-400"
                               }`}
                             >
@@ -708,6 +980,7 @@ function BetCard({
   amount,
   to,
   status,
+  live,
   children,
 }: {
   teamA: MatchupSide;
@@ -715,10 +988,12 @@ function BetCard({
   amount: number;
   to?: string;
   status?: ReactNode;
+  /** When the underlying match is in progress, give the card a soft pulse. */
+  live?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <Card className="space-y-2 p-3">
+    <Card className={`space-y-2 p-3 ${live ? "animate-soft-pulse" : ""}`}>
       {to ? (
         <ViewTransitionLink to={to} className="block rounded-lg active:opacity-80">
           <BetMatchup teamA={teamA} teamB={teamB} amount={amount} footer={status} />
@@ -793,6 +1068,39 @@ function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null
         <ChevronRight className="h-3.5 w-3.5" />
       </span>
     </div>
+  );
+}
+
+/** Leaderboard rank chip — medal colors for the top 3, neutral circle otherwise. */
+function RankBadge({ rank }: { rank: number }) {
+  const medal: Record<number, string> = {
+    1: "bg-amber-100 text-amber-700 ring-1 ring-amber-300",
+    2: "bg-slate-200 text-slate-600 ring-1 ring-slate-300",
+    3: "bg-orange-100 text-orange-700 ring-1 ring-orange-300",
+  };
+  return (
+    <span
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+        medal[rank] ?? "bg-slate-100 text-slate-600"
+      }`}
+    >
+      {rank}
+    </span>
+  );
+}
+
+/** A small status pill with a semantic tone, for a bet's lifecycle state. */
+function StatusPill({ tone, children }: { tone: "amber" | "emerald" | "red" | "slate"; children: ReactNode }) {
+  const cls = {
+    amber: "bg-amber-100 text-amber-700",
+    emerald: "bg-emerald-100 text-emerald-700",
+    red: "bg-red-100 text-red-700",
+    slate: "bg-slate-100 text-slate-600",
+  }[tone];
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${cls}`}>
+      {children}
+    </span>
   );
 }
 

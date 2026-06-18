@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { settleMatchBet, settleCupFutureBet } from "./betSettlement.js";
+import { settleMatchBet, settleCupFutureBet, settleRoundBet, settleOverUnderBet } from "./betSettlement.js";
 import type { BetDoc } from "../types.js";
 
 /** A matched/active bet: proposer backs teamA, acceptor backs teamB, $20 each. */
@@ -78,5 +78,52 @@ describe("settleCupFutureBet", () => {
 
   it("is a push when the Cup is tied/retained", () => {
     expect(settleCupFutureBet(futureBet(), "push")).toEqual({ outcome: "push", payout: 0 });
+  });
+});
+
+describe("settleRoundBet", () => {
+  function roundBet(overrides: Partial<BetDoc> = {}): BetDoc {
+    return activeBet({ market: "round", matchId: undefined, roundId: "r1", ...overrides });
+  }
+
+  it("pays the team with more round points", () => {
+    expect(settleRoundBet(roundBet(), 2.5, 1.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
+    expect(settleRoundBet(roundBet(), 1, 3)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
+  });
+
+  it("is a push when the session is split evenly", () => {
+    expect(settleRoundBet(roundBet(), 2, 2)).toEqual({ outcome: "push", payout: 0 });
+  });
+});
+
+describe("settleOverUnderBet", () => {
+  // Proposer backs the over, acceptor the under.
+  function ouBet(overrides: Partial<BetDoc> = {}): BetDoc {
+    return activeBet({
+      market: "overUnder",
+      metric: "matchHolesPlayed",
+      line: 16.5,
+      proposerSide: "over",
+      acceptorSide: "under",
+      ...overrides,
+    });
+  }
+
+  it("pays the over when the value clears the line", () => {
+    expect(settleOverUnderBet(ouBet(), 18, 16.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
+  });
+
+  it("pays the under when the value falls short", () => {
+    expect(settleOverUnderBet(ouBet(), 15, 16.5)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
+  });
+
+  it("is a push when the value lands exactly on the line", () => {
+    expect(settleOverUnderBet(ouBet({ line: 16 }), 16, 16)).toEqual({ outcome: "push", payout: 0 });
+  });
+
+  it("resolves from the acceptor's perspective when the proposer took the under", () => {
+    const bet = ouBet({ proposerSide: "under", acceptorSide: "over" });
+    expect(settleOverUnderBet(bet, 18, 16.5)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
+    expect(settleOverUnderBet(bet, 12, 16.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
   });
 });

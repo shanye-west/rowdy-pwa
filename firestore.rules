@@ -138,6 +138,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Settle-up records (betSettlements/{id}): public read like bets (the
+    // who-paid-whom tab is part of the shared ledger). All mutations go through
+    // the settlementOps callables via the Admin SDK — clients never write here.
+    match /betSettlements/{settlementId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Comments: public read (match threads + the sportsbook trash-talk feed are
     // visible to everyone). All mutations go through the commentOps callables via
     // the Admin SDK — clients never write here directly.

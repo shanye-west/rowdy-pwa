@@ -629,8 +629,18 @@ export interface RoundRecapDoc {
 // functions/src/types.ts.
 // ============================================================================
 
-/** Which betting market a wager belongs to. */
-export type BetMarket = "match" | "cupFuture";
+/**
+ * Which betting market a wager belongs to.
+ *  - match:      who wins a single match (sides teamA/teamB)
+ *  - round:      who wins a round/session's points (sides teamA/teamB)
+ *  - cupFuture:  who wins the overall Cup (sides teamA/teamB)
+ *  - overUnder:  a numeric prop vs a line (sides over/under); see BetOverUnderMetric
+ */
+export type BetMarket = "match" | "round" | "cupFuture" | "overUnder";
+
+/** What an over/under bet is measured against. matchHolesPlayed = holes the match
+ *  went before closing (status.thru); matchMargin = final margin of victory. */
+export type BetOverUnderMetric = "matchHolesPlayed" | "matchMargin";
 
 /** open marketplace offer (anyone may take) vs directed challenge (one target). */
 export type BetKind = "offer" | "challenge";
@@ -650,14 +660,18 @@ export type BetStatus =
   | "void";       // never locked before tee-off, or underlying match deleted
 
 /**
- * The side a player backs. For `match` markets it is the team that wins the
- * match; for `cupFuture` it is the team that wins the overall Cup.
+ * The side a player backs. For team markets (match / round / cupFuture) it is a
+ * team; for `overUnder` markets it is "over" / "under" the line. Proposer and
+ * acceptor always hold opposite sides.
  */
-export type BetSide = "teamA" | "teamB";
+export type BetSide = "teamA" | "teamB" | "over" | "under";
+
+/** The team-only subset of BetSide, for builders/markets that never use over/under. */
+export type BetTeamSide = "teamA" | "teamB";
 
 /** Settlement outcome written when a bet is resolved. */
 export type BetResult = {
-  outcome: "teamA" | "teamB" | "push"; // push = halved match (AS) — no money changes hands
+  outcome: BetSide | "push";           // push = tie at the line / halved — no money moves
   winnerId?: string;                   // playerId owed the money (omitted on push)
   loserId?: string;                    // playerId who pays (omitted on push)
   payout: number;                      // === amount on a win, 0 on push
@@ -667,7 +681,10 @@ export type BetDoc = {
   id: string;
   tournamentId: string;
   market: BetMarket;
-  matchId?: string;                    // present when market === "match"
+  matchId?: string;                    // present for match markets + match-scoped over/unders
+  roundId?: string;                    // present when market === "round"
+  metric?: BetOverUnderMetric;         // present when market === "overUnder"
+  line?: number;                       // the over/under line (use half-lines to avoid pushes)
   kind: BetKind;
   status: BetStatus;
   amount: number;                      // even-money stake each side risks
@@ -692,6 +709,29 @@ export type BetDoc = {
   acceptedAt?: FirestoreTimestampLike; // entered pending
   lockedAt?: FirestoreTimestampLike;   // both confirmed -> active
   settledAt?: FirestoreTimestampLike;
+};
+
+// ----------------------------------------------------------------------------
+// SETTLE-UP ("mark as paid")
+// A real-money transfer that clears part of a head-to-head tab. The debtor
+// records the payment (pending); the creditor confirms receipt (confirmed).
+// Confirmed settlements reduce the amounts-owed tab only — never the Money
+// Leaders standings. betSettlements/{id}: public-read / server-write, like bets.
+// Keep this block in sync with functions/src/types.ts.
+// ----------------------------------------------------------------------------
+
+export type SettlementStatus = "pending" | "confirmed" | "cancelled";
+
+export type BetSettlementDoc = {
+  id: string;
+  tournamentId: string;
+  payerId: string;     // player who paid (the debtor)
+  payeeId: string;     // player who received (the creditor)
+  amount: number;      // whole-dollar amount transferred
+  status: SettlementStatus;
+  initiatedBy: string; // playerId who created the record
+  createdAt?: FirestoreTimestampLike;
+  confirmedAt?: FirestoreTimestampLike;
 };
 
 // ============================================================================

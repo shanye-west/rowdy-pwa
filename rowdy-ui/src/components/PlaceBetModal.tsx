@@ -8,9 +8,10 @@
 import { useMemo, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Modal } from "./Modal";
+import BetSlipReview from "./BetSlipReview";
 import { useToast } from "../contexts/ToastContext";
 import { betsApi } from "../api/bets";
-import type { BetMarket, BetSide } from "../types";
+import type { BetMarket, BetTeamSide } from "../types";
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
 const STEP = 5;
@@ -31,7 +32,7 @@ export interface PlaceBetModalProps {
   /** Team brand colors (hex/CSS) for each side. */
   teamColors: { teamA: string; teamB: string };
   /** The side preselected by the tapped "Bet Me" button. */
-  initialSide: BetSide;
+  initialSide: BetTeamSide;
   /** Roster (excluding self) for the challenge target picker. */
   rosterOptions: { id: string; name: string }[];
   /** Called after a bet is successfully posted. */
@@ -53,11 +54,12 @@ export default function PlaceBetModal({
   onPosted,
 }: PlaceBetModalProps) {
   const { showToast } = useToast();
-  const [side, setSide] = useState<BetSide>(initialSide);
+  const [side, setSide] = useState<BetTeamSide>(initialSide);
   const [amount, setAmount] = useState<number>(10);
   const [directed, setDirected] = useState(false);
   const [targetId, setTargetId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewing, setReviewing] = useState(false); // bet-slip confirmation step
 
   const sortedRoster = useMemo(
     () => [...rosterOptions].sort((a, b) => a.name.localeCompare(b.name)),
@@ -66,10 +68,12 @@ export default function PlaceBetModal({
 
   const handleClose = () => {
     if (submitting) return;
+    setReviewing(false);
     onClose();
   };
 
   const canSubmit = amount > 0 && (!directed || !!targetId) && !submitting;
+  const targetName = rosterOptions.find((p) => p.id === targetId)?.name;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -93,6 +97,20 @@ export default function PlaceBetModal({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Place a bet" ariaLabel="Place a bet">
+      {reviewing ? (
+        <BetSlipReview
+          contextLabel={contextLabel}
+          sideLabel={sideLabels[side]}
+          sideTag={teamTags[side]}
+          sideColor={teamColors[side]}
+          amount={amount}
+          directed={directed}
+          targetName={targetName}
+          submitting={submitting}
+          onConfirm={handleSubmit}
+          onBack={() => setReviewing(false)}
+        />
+      ) : (
       <div className="space-y-4">
         <div className="text-center text-sm text-slate-500">{contextLabel}</div>
 
@@ -240,14 +258,15 @@ export default function PlaceBetModal({
           </button>
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => canSubmit && setReviewing(true)}
             disabled={!canSubmit}
             className="flex-1 rounded-lg bg-green-600 py-3 px-4 text-base font-semibold text-white transition-transform active:scale-95 hover:bg-green-700 disabled:opacity-60"
           >
-            {submitting ? "Posting…" : "Post bet"}
+            Review bet
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }

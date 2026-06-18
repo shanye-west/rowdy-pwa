@@ -14,7 +14,7 @@ import { db } from "../firebase";
 import { toDateOrNull } from "../utils";
 import { rosterPlayerIds } from "../utils/roster";
 import { usePlayers } from "../contexts/TournamentContext";
-import type { BetDoc, PlayerDoc, TournamentDoc } from "../types";
+import type { BetDoc, BetSettlementDoc, PlayerDoc, TournamentDoc } from "../types";
 
 /** Bet statuses a player can still act on — the only ones worth a realtime listener. */
 const LIVE_BET_STATUSES = ["open", "pending", "active"] as const;
@@ -109,6 +109,34 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
 
 function betMillis(b: BetDoc): number {
   return toDateOrNull(b.createdAt)?.getTime() ?? 0;
+}
+
+/**
+ * Realtime listener over a tournament's settle-up records (the in-play
+ * pending + confirmed ones; cancelled are dropped). Volume is tiny, so a single
+ * tournamentId-equality listener — no composite index — backs the whole feature.
+ */
+export function useBetSettlements(tournamentId: string | undefined): BetSettlementDoc[] {
+  const [settlements, setSettlements] = useState<BetSettlementDoc[]>([]);
+  useEffect(() => {
+    if (!tournamentId) {
+      setSettlements([]);
+      return;
+    }
+    const unsub = onSnapshot(
+      query(collection(db, "betSettlements"), where("tournamentId", "==", tournamentId)),
+      (snap) => {
+        setSettlements(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as BetSettlementDoc)
+            .filter((s) => s.status === "pending" || s.status === "confirmed")
+        );
+      },
+      (err) => console.error("Bet settlements subscription error:", err)
+    );
+    return () => unsub();
+  }, [tournamentId]);
+  return settlements;
 }
 
 // ============================================================================
@@ -230,8 +258,17 @@ export interface HeadToHead {
   net: number; // positive => other player owes `playerId`
 }
 
-/** Net balance between `playerId` and each opponent they've settled bets with. */
-export function headToHead(bets: BetDoc[], playerId: string | undefined): HeadToHead[] {
+/**
+ * Net balance between `playerId` and each opponent: their settled bets, less any
+ * confirmed settle-ups between them. Positive => the other player owes `playerId`.
+ * Fully-settled (zero) tabs are dropped. Settle-ups adjust this tab only — never
+ * the Money Leaders standings (which stay as lifetime betting P&L).
+ */
+export function headToHead(
+  bets: BetDoc[],
+  settlements: BetSettlementDoc[],
+  playerId: string | undefined
+): HeadToHead[] {
   if (!playerId) return [];
   const map = new Map<string, number>();
   for (const b of bets) {
@@ -240,7 +277,33 @@ export function headToHead(bets: BetDoc[], playerId: string | undefined): HeadTo
     if (winnerId === playerId && loserId) map.set(loserId, (map.get(loserId) ?? 0) + payout);
     else if (loserId === playerId && winnerId) map.set(winnerId, (map.get(winnerId) ?? 0) - payout);
   }
+  for (const s of settlements) {
+    if (s.status !== "confirmed") continue;
+    // They paid me -> they owe me less; I paid them -> I owe them less.
+    if (s.payeeId === playerId) map.set(s.payerId, (map.get(s.payerId) ?? 0) - s.amount);
+    else if (s.payerId === playerId) map.set(s.payeeId, (map.get(s.payeeId) ?? 0) + s.amount);
+  }
   return [...map.entries()]
     .map(([otherId, net]) => ({ otherId, net }))
+    .filter((r) => r.net !== 0)
     .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+}
+
+export interface PendingSettlements {
+  incoming: BetSettlementDoc[]; // someone says they paid me — I confirm receipt
+  outgoing: BetSettlementDoc[]; // I recorded a payment — awaiting their confirm
+}
+
+/** Split a player's pending settle-ups into ones they confirm vs ones they await. */
+export function selectPendingSettlements(
+  settlements: BetSettlementDoc[],
+  playerId: string | undefined
+): PendingSettlements {
+  const empty: PendingSettlements = { incoming: [], outgoing: [] };
+  if (!playerId) return empty;
+  const pending = settlements.filter((s) => s.status === "pending");
+  return {
+    incoming: pending.filter((s) => s.payeeId === playerId),
+    outgoing: pending.filter((s) => s.payerId === playerId),
+  };
 }

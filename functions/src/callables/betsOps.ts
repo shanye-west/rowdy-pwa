@@ -15,7 +15,7 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
 import { settleCupFutureBet } from "../scoring/betSettlement.js";
-import type { BetDoc, BetMarket, BetSide } from "../types.js";
+import type { BetDoc, BetMarket, BetOverUnderMetric, BetSide } from "../types.js";
 
 function db() {
   return getFirestore();
@@ -23,16 +23,36 @@ function db() {
 
 const MAX_BET_AMOUNT = 1_000_000;
 
-function isSide(v: unknown): v is BetSide {
+/** Over/under metrics that read from a single match (gated like a match bet). */
+const MATCH_SCOPED_METRICS: BetOverUnderMetric[] = ["matchHolesPlayed", "matchMargin"];
+
+function isTeamSide(v: unknown): v is "teamA" | "teamB" {
   return v === "teamA" || v === "teamB";
 }
 
+function isOverUnderSide(v: unknown): v is "over" | "under" {
+  return v === "over" || v === "under";
+}
+
 function isMarket(v: unknown): v is BetMarket {
-  return v === "match" || v === "cupFuture";
+  return v === "match" || v === "round" || v === "cupFuture" || v === "overUnder";
+}
+
+function isMetric(v: unknown): v is BetOverUnderMetric {
+  return v === "matchHolesPlayed" || v === "matchMargin";
 }
 
 function oppositeSide(side: BetSide): BetSide {
-  return side === "teamA" ? "teamB" : "teamA";
+  switch (side) {
+    case "teamA":
+      return "teamB";
+    case "teamB":
+      return "teamA";
+    case "over":
+      return "under";
+    case "under":
+      return "over";
+  }
 }
 
 function requireBetId(data: unknown): string {
@@ -77,20 +97,35 @@ async function isTournamentStarted(tournamentId: string): Promise<boolean> {
   return snap.docs.some((d) => matchStartedPlay(d.data()));
 }
 
+/** True once any match in a round has begun — used to lock round/session betting. */
+async function isRoundStarted(roundId: string): Promise<boolean> {
+  const snap = await db().collection("matches").where("roundId", "==", roundId).get();
+  return snap.docs.some((d) => matchStartedPlay(d.data()));
+}
+
+/** True if a single match is no longer bettable (started, locked, or gone). */
+async function isMatchClosed(matchId: string | undefined): Promise<boolean> {
+  if (!matchId) return true;
+  const snap = await db().collection("matches").doc(matchId).get();
+  if (!snap.exists) return true;
+  const m = snap.data()!;
+  return matchStartedPlay(m) || m.locked === true;
+}
+
 /**
- * Whether a bet's market is no longer open to wagering (match started/locked/gone,
- * or tournament started for futures). Read outside transactions; the settlement
- * trigger + confirm guard are the backstops against the small race window.
+ * Whether a bet's market is no longer open to wagering. Match markets (and
+ * match-scoped over/unders) close when the match starts; round markets when the
+ * round starts; cup futures when the tournament starts. Read outside transactions;
+ * the settlement trigger + confirm guard are the backstops against the race window.
  */
-async function marketClosed(bet: Pick<BetDoc, "market" | "matchId" | "tournamentId">): Promise<boolean> {
-  if (bet.market === "match") {
-    if (!bet.matchId) return true;
-    const snap = await db().collection("matches").doc(bet.matchId).get();
-    if (!snap.exists) return true;
-    const m = snap.data()!;
-    return matchStartedPlay(m) || m.locked === true;
+async function marketClosed(bet: Pick<BetDoc, "market" | "matchId" | "roundId" | "tournamentId">): Promise<boolean> {
+  if (bet.market === "match") return isMatchClosed(bet.matchId);
+  if (bet.market === "round") return bet.roundId ? isRoundStarted(bet.roundId) : true;
+  if (bet.market === "overUnder") {
+    // Only match-scoped over/unders exist today; they close with their match.
+    return isMatchClosed(bet.matchId);
   }
-  return isTournamentStarted(bet.tournamentId);
+  return isTournamentStarted(bet.tournamentId); // cupFuture
 }
 
 /** Loads a tournament and asserts the sportsbook is enabled for it. */
@@ -109,15 +144,18 @@ async function createBet(
   directed: boolean
 ): Promise<{ success: true; betId: string }> {
   const data = (request.data || {}) as Record<string, unknown>;
-  const { tournamentId, market, matchId, side, amount, targetId } = data;
+  const { tournamentId, market, matchId, roundId, metric, line, side, amount, targetId } = data;
 
   if (!tournamentId || typeof tournamentId !== "string") {
     throw new HttpsError("invalid-argument", "Missing tournamentId");
   }
   if (!isMarket(market)) {
-    throw new HttpsError("invalid-argument", "market must be 'match' or 'cupFuture'");
+    throw new HttpsError("invalid-argument", "Invalid betting market");
   }
-  if (!isSide(side)) {
+  // Sides are teams for match/round/cupFuture, over/under for overUnder.
+  if (market === "overUnder") {
+    if (!isOverUnderSide(side)) throw new HttpsError("invalid-argument", "side must be 'over' or 'under'");
+  } else if (!isTeamSide(side)) {
     throw new HttpsError("invalid-argument", "side must be 'teamA' or 'teamB'");
   }
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount > MAX_BET_AMOUNT) {
@@ -126,6 +164,7 @@ async function createBet(
 
   await requireSportsbookTournament(tournamentId);
 
+  // Per-market bettability + required references.
   if (market === "match") {
     if (!matchId || typeof matchId !== "string") {
       throw new HttpsError("invalid-argument", "matchId is required for match bets");
@@ -138,6 +177,39 @@ async function createBet(
     }
     if (matchStartedPlay(m) || m.locked === true) {
       throw new HttpsError("failed-precondition", "Betting on this match is closed — it has already started");
+    }
+  } else if (market === "round") {
+    if (!roundId || typeof roundId !== "string") {
+      throw new HttpsError("invalid-argument", "roundId is required for round bets");
+    }
+    const roundSnap = await db().collection("rounds").doc(roundId).get();
+    if (!roundSnap.exists) throw new HttpsError("not-found", "Round not found");
+    if (roundSnap.data()?.tournamentId !== tournamentId) {
+      throw new HttpsError("invalid-argument", "Round is not in this tournament");
+    }
+    if (await isRoundStarted(roundId)) {
+      throw new HttpsError("failed-precondition", "Betting on this round is closed — it has already started");
+    }
+  } else if (market === "overUnder") {
+    if (!isMetric(metric)) {
+      throw new HttpsError("invalid-argument", "A valid over/under metric is required");
+    }
+    if (typeof line !== "number" || !Number.isFinite(line) || line <= 0) {
+      throw new HttpsError("invalid-argument", "A positive line is required");
+    }
+    if (MATCH_SCOPED_METRICS.includes(metric)) {
+      if (!matchId || typeof matchId !== "string") {
+        throw new HttpsError("invalid-argument", "matchId is required for this over/under");
+      }
+      const matchSnap = await db().collection("matches").doc(matchId).get();
+      if (!matchSnap.exists) throw new HttpsError("not-found", "Match not found");
+      const m = matchSnap.data()!;
+      if (m.tournamentId && m.tournamentId !== tournamentId) {
+        throw new HttpsError("invalid-argument", "Match is not in this tournament");
+      }
+      if (matchStartedPlay(m) || m.locked === true) {
+        throw new HttpsError("failed-precondition", "Betting on this match is closed — it has already started");
+      }
     }
   } else if (await isTournamentStarted(tournamentId)) {
     throw new HttpsError("failed-precondition", "Cup futures betting is closed — the tournament has started");
@@ -171,7 +243,13 @@ async function createBet(
     participantIds: directed && target ? dedupe([proposerId, target]) : [proposerId],
     createdAt: FieldValue.serverTimestamp(),
   };
-  if (market === "match" && typeof matchId === "string") doc.matchId = matchId;
+  // Persist only the references each market needs.
+  if (typeof matchId === "string" && (market === "match" || market === "overUnder")) doc.matchId = matchId;
+  if (market === "round" && typeof roundId === "string") doc.roundId = roundId;
+  if (market === "overUnder") {
+    doc.metric = metric;
+    doc.line = line;
+  }
   if (target) doc.targetId = target;
 
   await ref.set(doc);

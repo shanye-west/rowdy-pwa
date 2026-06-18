@@ -12,7 +12,7 @@ import { useRoundData } from "../hooks/useRoundData";
 import { useRosterPlayers, isMatchBettable } from "../hooks/useBets";
 import PlaceBetModal from "../components/PlaceBetModal";
 import { formatRoundType } from "../utils";
-import type { BetSide } from "../types";
+import type { BetTeamSide } from "../types";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import TeamName from "../components/TeamName";
@@ -71,7 +71,7 @@ function RoundComponent() {
   );
   const [betCtx, setBetCtx] = useState<{
     matchId: string;
-    side: BetSide;
+    side: BetTeamSide;
     contextLabel: string;
     sideLabels: { teamA: string; teamB: string };
   } | null>(null);
@@ -302,7 +302,7 @@ function RoundComponent() {
                 const teamANames = (match.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
                 const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
                 const showBet = sportsbookEnabled && isMatchBettable(match);
-                const openBet = (side: BetSide) =>
+                const openBet = (side: BetTeamSide) =>
                   setBetCtx({
                     matchId: match.id,
                     side,

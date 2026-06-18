@@ -17,7 +17,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
 // Import shared modules
-import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, BetDoc, BetStatus } from "./types.js";
+import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, BetDoc, BetResult, BetStatus } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateSkinsStrokes } from "./ghin.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
@@ -35,7 +35,7 @@ import {
   clamp01,
   isValidGross
 } from "./scoring/matchScoring.js";
-import { settleMatchBet } from "./scoring/betSettlement.js";
+import { settleMatchBet, settleOverUnderBet, settleRoundBet } from "./scoring/betSettlement.js";
 
 initializeApp();
 const db = getFirestore();
@@ -1885,6 +1885,67 @@ async function voidBetsForMatch(matchId: string, statuses: BetStatus[]): Promise
   if (count > 0) await batch.commit();
 }
 
+/** Void round-market bets on `roundId` whose status is in `statuses` (round just started). */
+async function voidRoundBets(roundId: string | undefined, statuses: BetStatus[]): Promise<void> {
+  if (!roundId) return;
+  const snap = await db.collection("bets").where("roundId", "==", roundId).get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  let count = 0;
+  snap.docs.forEach((d) => {
+    if (statuses.includes(d.data().status as BetStatus)) {
+      batch.update(d.ref, { status: "void" });
+      count++;
+    }
+  });
+  if (count > 0) await batch.commit();
+}
+
+/** The realized value for a match-scoped over/under, read from the closed match. */
+function overUnderActual(bet: BetDoc, match: FirebaseFirestore.DocumentData): number | null {
+  if (bet.metric === "matchHolesPlayed") return match.status?.thru ?? 0;
+  if (bet.metric === "matchMargin") return Math.abs(match.status?.margin ?? 0);
+  return null;
+}
+
+/**
+ * When the last match in a round closes, settle its round/session-winner bets.
+ * Points are computed straight from the round's matches (same rule as
+ * computeRoundTotals) rather than the denormalized totals, since trigger ordering
+ * with that sibling trigger isn't guaranteed.
+ */
+async function settleRoundBetsIfComplete(roundId: string | undefined): Promise<void> {
+  if (!roundId) return;
+  const roundSnap = await db.collection("rounds").doc(roundId).get();
+  if (!roundSnap.exists) return;
+  const pv = roundSnap.data()?.pointsValue ?? 1;
+
+  const matchesSnap = await db.collection("matches").where("roundId", "==", roundId).get();
+  if (matchesSnap.empty) return;
+  let teamAPoints = 0;
+  let teamBPoints = 0;
+  for (const d of matchesSnap.docs) {
+    const m = d.data();
+    if (m.status?.closed !== true) return; // round not complete yet
+    const w = m.result?.winner;
+    teamAPoints += w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
+    teamBPoints += w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
+  }
+
+  const betsSnap = await db.collection("bets").where("roundId", "==", roundId).get();
+  if (betsSnap.empty) return;
+  const batch = db.batch();
+  let count = 0;
+  betsSnap.docs.forEach((d) => {
+    const bet = d.data() as BetDoc;
+    if (bet.status !== "active") return;
+    const result = settleRoundBet(bet, teamAPoints, teamBPoints);
+    batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+    count++;
+  });
+  if (count > 0) await batch.commit();
+}
+
 export const settleMatchBets = onDocumentWritten("matches/{matchId}", withTriggerLogging("settleMatchBets", async (event) => {
   const matchId = event.params.matchId;
   const before = event.data?.before?.data();
@@ -1909,25 +1970,41 @@ export const settleMatchBets = onDocumentWritten("matches/{matchId}", withTrigge
 
   if (justClosed) {
     const winner = after.result?.winner as "teamA" | "teamB" | "AS" | undefined;
+    // Both match-winner and match-scoped over/under bets carry this matchId.
     const snap = await db.collection("bets").where("matchId", "==", matchId).get();
-    if (snap.empty) return;
     const batch = db.batch();
+    let count = 0;
     snap.docs.forEach((d) => {
       const bet = d.data() as BetDoc;
-      if (bet.status === "active" && winner) {
-        const result = settleMatchBet(bet, winner);
-        batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+      if (bet.status === "active") {
+        let result: BetResult | null = null;
+        if (bet.market === "match" && winner) {
+          result = settleMatchBet(bet, winner);
+        } else if (bet.market === "overUnder" && typeof bet.line === "number") {
+          const actual = overUnderActual(bet, after);
+          if (actual !== null) result = settleOverUnderBet(bet, actual, bet.line);
+        }
+        if (result) {
+          batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+          count++;
+        }
       } else if (bet.status === "open" || bet.status === "pending") {
         // Never locked in before the match ended.
         batch.update(d.ref, { status: "void" });
+        count++;
       }
     });
-    await batch.commit();
+    if (count > 0) await batch.commit();
+
+    // Closing this match may complete its round — settle round/session bets.
+    await settleRoundBetsIfComplete(after.roundId as string | undefined);
     return;
   }
 
-  // Match just started but is not closed: void anything not locked in yet.
+  // Match just started but is not closed: void anything not locked in yet —
+  // both this match's bets and the round's session bets.
   await voidBetsForMatch(matchId, ["open", "pending"]);
+  await voidRoundBets(after.roundId as string | undefined, ["open", "pending"]);
 }));
 
 // ============================================================================
@@ -1991,6 +2068,10 @@ export {
   declineBet,
   settleCupFutures,
 } from "./callables/betsOps.js";
+
+// Settle-up ("mark as paid") for head-to-head betting tabs (betSettlements/{id}).
+// See callables/settlementOps.ts.
+export { recordSettlement, confirmSettlement, cancelSettlement } from "./callables/settlementOps.js";
 
 // ============================================================================
 // COMMENTS CALLABLES
