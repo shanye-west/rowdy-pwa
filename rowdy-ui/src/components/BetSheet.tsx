@@ -19,7 +19,7 @@ import type { CreateBetOfferRequest } from "../api/adminContracts";
 import type { BetDoc, BetTeamSide } from "../types";
 
 const LINE_OPTIONS = [14.5, 15.5, 16.5, 17.5];
-const QUICK_AMOUNTS = [5, 10, 20, 50];
+const QUICK_AMOUNTS = [10, 20, 50, 100];
 const STEP = 5;
 const OVER_COLOR = "#059669"; // emerald-600
 const UNDER_COLOR = "#475569"; // slate-600

@@ -22,7 +22,7 @@ import type { CreateBetOfferRequest } from "../api/adminContracts";
 import type { BetDoc } from "../types";
 
 const POINT_LINES = [1.5, 2.5, 3.5, 4.5];
-const QUICK_AMOUNTS = [5, 10, 20, 50];
+const QUICK_AMOUNTS = [10, 20, 50, 100];
 const STEP = 5;
 const OVER_COLOR = "#059669"; // emerald-600
 const UNDER_COLOR = "#475569"; // slate-600
