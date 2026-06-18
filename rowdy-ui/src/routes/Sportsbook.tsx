@@ -407,115 +407,8 @@ export default function Sportsbook() {
           // Existing open offers are listed on each card to take. The shared
           // ledger (everyone's standings) lives at the bottom.
           <div className="space-y-4">
-            {/* Bettable events — a calm, tappable list. Tap a row to open its bet sheet. */}
-            {!tournamentStarted && bettableRounds.length === 0 && bettableMatches.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">🎲</div>
-                <div className="empty-state-text">
-                  No open markets right now — check back before the next round tees off.
-                </div>
-              </div>
-            ) : (
-              <>
-                {!tournamentStarted && (
-                  <div className="space-y-2">
-                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🏆 Cup</div>
-                    <Card className="overflow-hidden p-0">
-                      <BetEventRow
-                        label={<span className="block truncate">Cup Winner</span>}
-                        subtitle={`${teamNames.teamA} v ${teamNames.teamB}`}
-                        accent={teamColors}
-                        hint={hintFor(cupOfferCount)}
-                        hintActive={cupOfferCount > 0}
-                        onClick={() => setSelectedEvent({ kind: "cup" })}
-                      />
-                    </Card>
-                  </div>
-                )}
-
-                {!tournamentStarted && (
-                  <div className="space-y-2">
-                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">👤 Player Props</div>
-                    <Card className="overflow-hidden p-0">
-                      <BetEventRow
-                        label={<span className="block truncate">Player Props</span>}
-                        subtitle="Matchups · tournament points O/U"
-                        accent={{ teamA: SUBJECT_A_COLOR, teamB: SUBJECT_B_COLOR }}
-                        hint={hintFor(playerPropOffers.length)}
-                        hintActive={playerPropOffers.length > 0}
-                        onClick={() => setPropSheetOpen(true)}
-                      />
-                    </Card>
-                  </div>
-                )}
-
-                {bettableRounds.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🗓️ Sessions</div>
-                    <Card className="overflow-hidden p-0">
-                      <ul className="divide-y divide-slate-100">
-                        {bettableRounds.map((r) => {
-                          const c = roundOfferCount(r.id);
-                          return (
-                            <li key={r.id}>
-                              <BetEventRow
-                                label={
-                                  <span className="block truncate">
-                                    {`${r.day ? `Round ${r.day}` : "Round"} winner`}
-                                  </span>
-                                }
-                                subtitle={formatRoundType(r.format)}
-                                accent={teamColors}
-                                hint={hintFor(c)}
-                                hintActive={c > 0}
-                                onClick={() => setSelectedEvent({ kind: "round", roundId: r.id })}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </Card>
-                  </div>
-                )}
-
-                {bettableMatches.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">⛳ Matches</div>
-                    <Card className="overflow-hidden p-0">
-                      <ul className="divide-y divide-slate-100">
-                        {bettableMatches.map((m) => {
-                          const c = matchOfferCount(m.id);
-                          const r = m.roundId ? roundsById[m.roundId] : undefined;
-                          return (
-                            <li key={m.id}>
-                              <BetEventRow
-                                label={
-                                  <>
-                                    <span className="block truncate">
-                                      {sideLastNames(m.teamAPlayers)} <span className="font-normal text-slate-400">vs</span>
-                                    </span>
-                                    <span className="block truncate">{sideLastNames(m.teamBPlayers)}</span>
-                                  </>
-                                }
-                                subtitle={r ? `${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}` : undefined}
-                                accent={teamColors}
-                                hint={hintFor(c)}
-                                hintActive={c > 0}
-                                onClick={() => setSelectedEvent({ kind: "match", matchId: m.id })}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </Card>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Shared ledger — everyone's settled-bet standings ("Money Leaders") */}
-            <div className="space-y-2">
-              <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">💰 Money Leaders</div>
+            {/* Shared ledger — everyone's settled-bet standings ("Money Leaders"). */}
+            <Collapsible title="💰 Money Leaders" count={ledger.length}>
               {ledger.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">💸</div>
@@ -555,7 +448,112 @@ export default function Sportsbook() {
                   </ul>
                 </Card>
               )}
-            </div>
+            </Collapsible>
+
+            {/* Bettable events — a calm, tappable list. Tap a row to open its bet sheet.
+                Cup + Player Props are open until the tournament starts (no rounds/draft
+                needed); sessions/matches appear once they exist. Only truly empty once
+                play has begun and nothing is left to bet. */}
+            {tournamentStarted && bettableRounds.length === 0 && bettableMatches.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🎲</div>
+                <div className="empty-state-text">
+                  No open markets right now — check back before the next round tees off.
+                </div>
+              </div>
+            ) : (
+              <>
+                {!tournamentStarted && (
+                  <Collapsible title="🏆 Cup" count={1} defaultOpen>
+                    <Card className="overflow-hidden p-0">
+                      <BetEventRow
+                        label={<span className="block truncate">Cup Winner</span>}
+                        subtitle={`${teamNames.teamA} v ${teamNames.teamB}`}
+                        accent={teamColors}
+                        hint={hintFor(cupOfferCount)}
+                        hintActive={cupOfferCount > 0}
+                        onClick={() => setSelectedEvent({ kind: "cup" })}
+                      />
+                    </Card>
+                  </Collapsible>
+                )}
+
+                {!tournamentStarted && (
+                  <Collapsible title="👤 Player Props" count={1} defaultOpen>
+                    <Card className="overflow-hidden p-0">
+                      <BetEventRow
+                        label={<span className="block truncate">Player Props</span>}
+                        subtitle="Matchups · tournament points O/U"
+                        accent={{ teamA: SUBJECT_A_COLOR, teamB: SUBJECT_B_COLOR }}
+                        hint={hintFor(playerPropOffers.length)}
+                        hintActive={playerPropOffers.length > 0}
+                        onClick={() => setPropSheetOpen(true)}
+                      />
+                    </Card>
+                  </Collapsible>
+                )}
+
+                {bettableRounds.length > 0 && (
+                  <Collapsible title="🗓️ Sessions" count={bettableRounds.length} defaultOpen>
+                    <Card className="overflow-hidden p-0">
+                      <ul className="divide-y divide-slate-100">
+                        {bettableRounds.map((r) => {
+                          const c = roundOfferCount(r.id);
+                          return (
+                            <li key={r.id}>
+                              <BetEventRow
+                                label={
+                                  <span className="block truncate">
+                                    {`${r.day ? `Round ${r.day}` : "Round"} winner`}
+                                  </span>
+                                }
+                                subtitle={formatRoundType(r.format)}
+                                accent={teamColors}
+                                hint={hintFor(c)}
+                                hintActive={c > 0}
+                                onClick={() => setSelectedEvent({ kind: "round", roundId: r.id })}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </Card>
+                  </Collapsible>
+                )}
+
+                {bettableMatches.length > 0 && (
+                  <Collapsible title="⛳ Matches" count={bettableMatches.length} defaultOpen>
+                    <Card className="overflow-hidden p-0">
+                      <ul className="divide-y divide-slate-100">
+                        {bettableMatches.map((m) => {
+                          const c = matchOfferCount(m.id);
+                          const r = m.roundId ? roundsById[m.roundId] : undefined;
+                          return (
+                            <li key={m.id}>
+                              <BetEventRow
+                                label={
+                                  <>
+                                    <span className="block truncate">
+                                      {sideLastNames(m.teamAPlayers)} <span className="font-normal text-slate-400">vs</span>
+                                    </span>
+                                    <span className="block truncate">{sideLastNames(m.teamBPlayers)}</span>
+                                  </>
+                                }
+                                subtitle={r ? `${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}` : undefined}
+                                accent={teamColors}
+                                hint={hintFor(c)}
+                                hintActive={c > 0}
+                                onClick={() => setSelectedEvent({ kind: "match", matchId: m.id })}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </Card>
+                  </Collapsible>
+                )}
+              </>
+            )}
           </div>
         ) : tab === "mybets" ? (
           // ============== MY BETS (your tab + active/completed) ===============
