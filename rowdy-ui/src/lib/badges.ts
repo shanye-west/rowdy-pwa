@@ -35,7 +35,9 @@ export interface EarnedBadge {
 const num = (v: number | undefined): number =>
   typeof v === "number" && Number.isFinite(v) ? v : 0;
 
-const plural = (c: number, word: string) => `${c} ${word}${c === 1 ? "" : "s"}`;
+const IRREGULAR_PLURALS: Record<string, string> = { match: "matches" };
+const plural = (c: number, word: string) =>
+  `${c} ${c === 1 ? word : (IRREGULAR_PLURALS[word] ?? word + "s")}`;
 
 export const BADGE_DEFS: BadgeDef[] = [
   {
