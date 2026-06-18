@@ -14,6 +14,7 @@ import {
 import PullToRefresh from "./PullToRefresh";
 import BottomNav from "./BottomNav";
 import OfflineImage from "./OfflineImage";
+import { ConnectionBanner } from "./ConnectionBanner";
 import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useAuth } from "../contexts/AuthContext";
@@ -260,8 +261,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
       {/* WRAP CONTENT IN PULL-TO-REFRESH */}
       <PullToRefresh>
-        {/* Offline Status Banner removed: Match route handles offline banner now */}
-        
+        {/* Offline Status Banner — app-wide so every route signals offline state */}
+        <ConnectionBanner isOnline={isOnline} />
+
         {/* Back Online Banner (auto-dismisses after 3s) */}
         {wasOffline && isOnline && (
           <div className="flex items-center justify-center gap-2 bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm">

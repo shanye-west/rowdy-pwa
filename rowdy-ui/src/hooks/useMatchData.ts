@@ -16,6 +16,12 @@ export interface UseMatchDataResult {
   matchFacts: PlayerMatchFact[];
   loading: boolean;
   error: string | null;
+  /**
+   * True when the match doc has local writes not yet acknowledged by the
+   * server (i.e. queued offline / mid-sync). Sourced from Firestore snapshot
+   * metadata; only meaningful for active matches (static reads are never dirty).
+   */
+  hasPendingWrites: boolean;
 }
 
 /**
@@ -37,6 +43,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasPendingWrites, setHasPendingWrites] = useState(false);
   
   const [matchLoaded, setMatchLoaded] = useState(false);
   const [roundLoaded, setRoundLoaded] = useState(false);
@@ -76,6 +83,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setRound(null);
     setCourse(null);
     setMatchFacts([]);
+    setHasPendingWrites(false);
 
     let unsub: (() => void) | undefined;
     
@@ -99,19 +107,24 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
           return;
         }
         
-        // Real-time subscription for active/in-progress matches
+        // Real-time subscription for active/in-progress matches.
+        // includeMetadataChanges lets us surface hasPendingWrites (queued writes
+        // not yet acked by the server) so the UI can confirm sync state.
         unsub = onSnapshot(
           doc(db, "matches", matchId),
+          { includeMetadataChanges: true },
           (mSnap) => {
-            if (!mSnap.exists()) { 
-              setMatch(null); 
+            if (!mSnap.exists()) {
+              setMatch(null);
               setMatchLoaded(true);
-              return; 
+              setHasPendingWrites(false);
+              return;
             }
-            
+
             const updated = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
             setMatch(updated);
             setMatchLoaded(true);
+            setHasPendingWrites(mSnap.metadata.hasPendingWrites);
           },
           (err) => {
             setError(`Failed to load match: ${err.message}`);
@@ -376,6 +389,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     matchFacts,
     loading,
     error,
+    hasPendingWrites,
   };
 }
 

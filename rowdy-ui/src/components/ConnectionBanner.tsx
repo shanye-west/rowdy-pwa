@@ -6,8 +6,9 @@ interface ConnectionBannerProps {
 }
 
 /**
- * Simple banner that shows only when offline.
- * Firestore handles sync automatically - we just need to tell users they're offline.
+ * Full-width banner shown app-wide (in Layout) only while offline.
+ * Firestore queues writes automatically — we just reassure the user that their
+ * scores are safe on-device and will sync once they reconnect.
  */
 export const ConnectionBanner = memo(function ConnectionBanner({
   isOnline,
@@ -19,12 +20,12 @@ export const ConnectionBanner = memo(function ConnectionBanner({
 
   return (
     <div
-      className="flex items-center justify-center gap-2 py-2 px-4 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-lg"
+      className="flex items-center justify-center gap-2 bg-amber-400/95 px-4 py-2 text-sm font-semibold text-amber-950 shadow-sm"
       role="status"
       aria-live="polite"
     >
       <span>📶</span>
-      <span>You're offline — scores will sync when you reconnect</span>
+      <span>You're offline — scores save on this device and sync when you reconnect</span>
     </div>
   );
 });

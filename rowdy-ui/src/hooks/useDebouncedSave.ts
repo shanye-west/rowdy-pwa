@@ -4,7 +4,15 @@ import { useCallback, useRef, useEffect, useState } from "react";
 type TimeoutId = ReturnType<typeof setTimeout>;
 
 /** Save status for UI feedback */
-export type SaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+export type SaveStatus = "idle" | "pending" | "saving" | "saved" | "queued" | "error";
+
+/**
+ * How long to wait for a server acknowledgment before treating an
+ * already-locally-committed write as "queued". Covers flaky coverage where
+ * `navigator.onLine` still reports true but requests hang — we never want the
+ * indicator stuck on "Saving…" while the score is in fact safe on-device.
+ */
+const QUEUED_AFTER_MS = 4000;
 
 /** Light haptic feedback, matching the score picker's idiom. */
 function vibrate(pattern: number | number[]) {
@@ -85,7 +93,10 @@ export function useDebouncedSave<T>(
       statusTimerRef.current = null;
     }
     setSaveStatus(status);
-    if (status === "saved" || status === "error") {
+    if (status === "saved" || status === "error" || status === "queued") {
+      // Transient feedback only — the persistent sync state (e.g. the
+      // SyncStatusBadge driven by metadata.hasPendingWrites) carries the
+      // authoritative "queued vs synced" truth after this fades.
       statusTimerRef.current = setTimeout(() => {
         if (mountedRef.current) setSaveStatus("idle");
       }, 2000);
@@ -98,17 +109,52 @@ export function useDebouncedSave<T>(
       if (!mountedRef.current) return;
       const data = pendingRef.current.get(key);
       if (data === undefined) return;
+
+      // Issue the write. With Firestore offline persistence the local write is
+      // committed synchronously and durably *here*; the returned promise only
+      // resolves once the server acknowledges — and never resolves while
+      // offline. So we must not gate the indicator on awaiting it indefinitely.
+      const savePromise = Promise.resolve(saveFn(key, data));
+      // The write is durable locally now — clear pending so flushes/unmount
+      // don't redundantly re-issue it. (Re-armed below only on a real failure.)
+      pendingRef.current.delete(key);
+      markErrored(key, false);
+
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (offline) {
+        // Known offline: report the write as safely queued instead of hanging on
+        // "Saving…". Firestore syncs it automatically when connectivity returns.
+        updateStatus("queued");
+        vibrate(10);
+        // A queued write can still reject later (e.g. rules); the SDK rolls the
+        // local write back. Swallow so it isn't an unhandled rejection.
+        savePromise.catch(() => {});
+        return;
+      }
+
       updateStatus("saving");
+      // Online, but coverage may be flaky: don't let "Saving…" hang. If the
+      // server ack doesn't arrive promptly, treat the (already-durable) write as
+      // queued; it flips to "saved" if the ack lands later.
+      let settled = false;
+      const queuedTimer = setTimeout(() => {
+        if (settled || !mountedRef.current) return;
+        updateStatus("queued");
+      }, QUEUED_AFTER_MS);
+
       try {
-        await saveFn(key, data);
+        await savePromise;
         if (!mountedRef.current) return;
-        pendingRef.current.delete(key);
-        markErrored(key, false);
+        settled = true;
+        clearTimeout(queuedTimer);
         updateStatus("saved");
         vibrate(10);
       } catch {
+        settled = true;
+        clearTimeout(queuedTimer);
         if (!mountedRef.current) return;
-        // Keep pending data so the user (or visibility flush) can retry.
+        // Genuine failure (e.g. permission): re-arm pending so the user can retry.
+        pendingRef.current.set(key, data);
         markErrored(key, true);
         updateStatus("error");
         vibrate([40, 30, 40]);

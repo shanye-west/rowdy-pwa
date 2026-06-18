@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
+import { WifiOff } from "lucide-react";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -14,7 +15,8 @@ import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlay
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
-import { ConnectionBanner } from "../components/ConnectionBanner";
+import { SyncStatusBadge } from "../components/SyncStatusBadge";
+import { OfflineReadyCheck } from "../components/OfflineReadyCheck";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   MatchFlowGraph, 
@@ -80,10 +82,13 @@ export default function Match() {
   const { canEditMatch, player } = useAuth();
   
   // Use custom hook for all data fetching
-  const { 
-    match, round, course, tournament, players, matchFacts, 
-    loading, error,
+  const {
+    match, round, course, tournament, players, matchFacts,
+    loading, error, hasPendingWrites,
   } = useMatchData(matchId);
+
+  // Pre-round "prepare for offline" checklist dialog
+  const [showOfflineReady, setShowOfflineReady] = useState(false);
   
   // Fetch skins data for the round (for $ icon display)
   // Pass prefetched round to avoid duplicate subscription
@@ -204,11 +209,16 @@ export default function Match() {
     match?.teamAPlayers?.map(p => p.playerId).filter(Boolean) || [], 
     [match?.teamAPlayers]
   );
-  const teamBPlayerIds = useMemo(() => 
-    match?.teamBPlayers?.map(p => p.playerId).filter(Boolean) || [], 
+  const teamBPlayerIds = useMemo(() =>
+    match?.teamBPlayers?.map(p => p.playerId).filter(Boolean) || [],
     [match?.teamBPlayers]
   );
-  
+  // Combined roster, used to pre-cache players for the offline-readiness check.
+  const rosterPlayerIds = useMemo(
+    () => Array.from(new Set([...teamAPlayerIds, ...teamBPlayerIds])),
+    [teamAPlayerIds, teamBPlayerIds]
+  );
+
   // Check if current user can edit this match. Also allow editing when
   // the tournament is explicitly opened for public edits (feature toggle).
   // Note: round.locked is the primary control for editability (not tournament.active).
@@ -872,8 +882,20 @@ export default function Match() {
           />
         )}
 
-        {/* Connection status banner - shows when offline */}
-        <ConnectionBanner isOnline={isOnline} />
+        {/* Offline sync status + pre-round readiness (offline banner is app-wide in Layout) */}
+        {canEdit && !isMatchClosed && (
+          <div className="flex items-center justify-between gap-2">
+            <SyncStatusBadge hasPendingWrites={hasPendingWrites} isOnline={isOnline} />
+            <button
+              type="button"
+              onClick={() => setShowOfflineReady(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            >
+              <WifiOff className="h-3.5 w-3.5" />
+              Prepare for offline
+            </button>
+          </div>
+        )}
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         
@@ -1175,6 +1197,18 @@ export default function Match() {
           round={round}
           getPlayerName={getPlayerName}
           getCourseHandicapFor={getCourseHandicapFor}
+        />
+
+        {/* PREPARE FOR OFFLINE CHECKLIST */}
+        <OfflineReadyCheck
+          open={showOfflineReady}
+          onClose={() => setShowOfflineReady(false)}
+          canEdit={canEdit}
+          playerName={player?.displayName}
+          matchId={match.id}
+          roundId={round?.id}
+          courseId={course?.id}
+          playerIds={rosterPlayerIds}
         />
       </div>
     </Layout>
