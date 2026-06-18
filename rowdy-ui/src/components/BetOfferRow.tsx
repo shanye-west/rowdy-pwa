@@ -2,7 +2,7 @@
  * One open offer inside a market card, drawn as a head-to-head tile (see
  * BetMatchup): the proposer sits on the side they bet (filled with their team
  * color); the open side shows a Take button you tap to bet the other team.
- * Used by both InlineBetCard (Cup futures) and the Markets tab (open match bets).
+ * Used inside the bet sheet to list takeable team-market offers (match/round/cup).
  */
 
 import { Link } from "react-router-dom";

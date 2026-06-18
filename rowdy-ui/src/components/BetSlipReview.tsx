@@ -1,8 +1,8 @@
 /**
  * The "review your bet" confirmation step shown before a wager is posted — the
  * single screen that makes the flow feel like a real sportsbook. Presentational
- * only: the parent owns the submit state and the API call. Rendered inside a
- * Modal by the inline builder, and as an in-place step inside PlaceBetModal.
+ * only: the parent owns the submit state and the API call. Rendered as an
+ * in-place step inside the bet sheet (BetSheet).
  */
 
 interface BetSlipReviewProps {

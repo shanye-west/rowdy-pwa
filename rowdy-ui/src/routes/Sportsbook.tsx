@@ -4,9 +4,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
-import InlineBetCard from "../components/InlineBetCard";
-import OverUnderBetCard from "../components/OverUnderBetCard";
-import BetOfferRow from "../components/BetOfferRow";
+import BetSheet, { type BetEvent } from "../components/BetSheet";
+import BetEventRow from "../components/BetEventRow";
 import BetSummaryCard from "../components/BetSummaryCard";
 import PlayerAvatar from "../components/PlayerAvatar";
 import { useAuth } from "../contexts/AuthContext";
@@ -29,10 +28,9 @@ import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
 import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
-import type { BetDoc, BetSide, MatchDoc, PlayerDoc } from "../types";
+import type { BetDoc, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
 
 type Tab = "markets" | "mybets" | "chat";
-type MarketFilter = "all" | "cup" | "sessions" | "matches" | "overunder";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide =>
@@ -81,7 +79,8 @@ export default function Sportsbook() {
       },
       { replace: true }
     );
-  const [marketFilter, setMarketFilter] = useState<MarketFilter>("all");
+  // The event whose focused bet sheet is open (null = closed).
+  const [selectedEvent, setSelectedEvent] = useState<BetEvent | null>(null);
 
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
   // (read via state to keep Date.now() out of the render path).
@@ -97,6 +96,14 @@ export default function Sportsbook() {
     (pid && players[pid]?.displayName) || "Unknown";
   const sideNames = (side?: { playerId: string }[]): string =>
     (side ?? []).map((p) => playerName(p.playerId)).join(" & ") || "TBD";
+  // Last name only — keeps the compact Open Bets rows from cutting off (no two
+  // players share a last name, so it stays unambiguous).
+  const lastName = (full: string): string => {
+    const parts = full.trim().split(/\s+/);
+    return parts[parts.length - 1] || full;
+  };
+  const sideLastNames = (side?: { playerId: string }[]): string =>
+    (side ?? []).map((p) => lastName(playerName(p.playerId))).join(" & ") || "TBD";
 
   const allMatches = useMemo(() => Object.values(matchesByRound).flat(), [matchesByRound]);
   const matchesById = useMemo(() => {
@@ -221,29 +228,21 @@ export default function Sportsbook() {
   const myBets = selectMyBets(bets, player?.id);
   const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
 
-  // Open match offers grouped by match, for the Markets marketplace.
-  const matchOfferGroups = (() => {
-    const groups = new Map<string, BetDoc[]>();
-    for (const b of openOffers) {
-      if (b.market !== "match" || !b.matchId) continue;
-      if (!groups.has(b.matchId)) groups.set(b.matchId, []);
-      groups.get(b.matchId)!.push(b);
-    }
-    return [...groups.entries()].map(([matchId, offers]) => ({ matchId, offers }));
-  })();
-
-  // New markets: round/session winner and match holes-played over/unders.
+  // Bettable events for the Open Bets list. A round/match is bettable until it
+  // tees off; the Cup until the tournament starts.
+  const roundsById: Record<string, RoundDoc> = Object.fromEntries(rounds.map((r) => [r.id, r]));
   const bettableRounds = rounds.filter((r) => {
     const ms = matchesByRound[r.id] ?? [];
     return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
   });
   const bettableMatches = allMatches.filter((m) => !matchHasStarted(m));
-  // In "All", keep O/U concise — only matches that already have an offer; the
-  // O/U filter shows the full builder for every bettable match.
-  const ouMatches =
-    marketFilter === "overunder"
-      ? bettableMatches
-      : bettableMatches.filter((m) => openOffers.some((b) => b.market === "overUnder" && b.matchId === m.id));
+
+  /** How many open offers sit on an event — drives the row's hint chip. */
+  const cupOfferCount = openOffers.filter((b) => b.market === "cupFuture").length;
+  const roundOfferCount = (roundId: string) =>
+    openOffers.filter((b) => b.market === "round" && b.roundId === roundId).length;
+  const matchOfferCount = (matchId: string) => openOffers.filter((b) => b.matchId === matchId).length;
+  const hintFor = (count: number) => (count > 0 ? `${count} open` : "Tap to bet");
 
   const ledger = computeLedger(bets);
   const h2h = headToHead(bets, settlements, player?.id);
@@ -319,6 +318,29 @@ export default function Sportsbook() {
     return { to: `/match/${b.matchId}`, status: <MatchTrackLine match={m} pick={pick} /> };
   };
 
+  /** Header label, team-side labels, and open offers for a tapped event's bet sheet. */
+  const eventSheetData = (ev: BetEvent): { label: string; sideLabels: { teamA: string; teamB: string }; offers: BetDoc[] } => {
+    if (ev.kind === "cup") {
+      return { label: "🏆 Cup Winner", sideLabels: teamNames, offers: openOffers.filter((b) => b.market === "cupFuture") };
+    }
+    if (ev.kind === "round") {
+      const r = roundsById[ev.roundId];
+      const label = r ? `${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}` : "Session";
+      return {
+        label,
+        sideLabels: teamNames,
+        offers: openOffers.filter((b) => b.market === "round" && b.roundId === ev.roundId),
+      };
+    }
+    const m = matchesById[ev.matchId];
+    const sideLabels = { teamA: sideNames(m?.teamAPlayers), teamB: sideNames(m?.teamBPlayers) };
+    return {
+      label: `${sideLabels.teamA} vs ${sideLabels.teamB}`,
+      sideLabels,
+      offers: openOffers.filter((b) => b.matchId === ev.matchId),
+    };
+  };
+
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-4 p-4">
@@ -355,156 +377,94 @@ export default function Sportsbook() {
           // Existing open offers are listed on each card to take. The shared
           // ledger (everyone's standings) lives at the bottom.
           <div className="space-y-4">
-            {/* Market filter — keeps the marketplace scannable as markets grow. */}
-            <div className="flex gap-1 rounded-full bg-slate-100 p-0.5">
-              {(
-                [
-                  { id: "all", label: "All" },
-                  { id: "cup", label: "Cup" },
-                  { id: "sessions", label: "Sessions" },
-                  { id: "matches", label: "Matches" },
-                  { id: "overunder", label: "O/U" },
-                ] as { id: MarketFilter; label: string }[]
-              ).map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setMarketFilter(f.id)}
-                  className={`flex-1 rounded-full px-1.5 py-1 text-[0.7rem] font-semibold transition-colors ${
-                    marketFilter === f.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Cup futures — bettable until the tournament starts */}
-            {(marketFilter === "all" || marketFilter === "cup") && !tournamentStarted && (
-              <InlineBetCard
-                tournamentId={tournament.id}
-                market="cupFuture"
-                title="🏆 Cup Winner"
-                accentColors={teamColors}
-                sideLabels={teamNames}
-                teamTags={teamNames}
-                teamColors={teamColors}
-                openOffers={openOffers.filter((b) => b.market === "cupFuture")}
-                loggedIn={!!player}
-                meId={player?.id}
-                rosterOptions={rosterOptions}
-                bettorName={playerName}
-                onTake={(b) =>
-                  runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                }
-                onPosted={() => undefined}
-              />
-            )}
-
-            {/* Sessions — who wins a round's points. Bettable until the round tees off. */}
-            {(marketFilter === "all" || marketFilter === "sessions") && bettableRounds.length > 0 && (
-              <div className="space-y-2">
-                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🗓️ Sessions</div>
-                {bettableRounds.map((r) => (
-                  <InlineBetCard
-                    key={r.id}
-                    tournamentId={tournament.id}
-                    market="round"
-                    roundId={r.id}
-                    title={`${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}`}
-                    sideLabels={teamNames}
-                    teamTags={teamNames}
-                    teamColors={teamColors}
-                    openOffers={openOffers.filter((b) => b.market === "round" && b.roundId === r.id)}
-                    loggedIn={!!player}
-                    meId={player?.id}
-                    rosterOptions={rosterOptions}
-                    bettorName={playerName}
-                    onTake={(b) =>
-                      runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                    }
-                    onPosted={() => undefined}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Open match bets — take an offer someone posted. Match bets are
-                created from the Rounds / scorecard pages ("Bet Me"). */}
-            {(marketFilter === "all" || marketFilter === "matches") &&
-              (matchOfferGroups.length === 0 ? (
+            {/* Bettable events — a calm, tappable list. Tap a row to open its bet sheet. */}
+            {!tournamentStarted && bettableRounds.length === 0 && bettableMatches.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">🎲</div>
                 <div className="empty-state-text">
-                  No open match bets right now. Open a round and tap{" "}
-                  <span className="font-semibold">Bet Me</span> under a match to start one.
+                  No open markets right now — check back before the next round tees off.
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Open match bets
-                </div>
-                {matchOfferGroups.map((group) => {
-                  const labels = sideLabelsForBet(group.offers[0]);
-                  return (
-                    <Card key={group.matchId} className="p-4">
-                      <div className="mb-2 text-sm font-bold">
-                        <span className="block" style={{ color: teamColors.teamA }}>
-                          {labels.teamA} <span className="text-slate-400">vs</span>
-                        </span>
-                        <span className="block" style={{ color: teamColors.teamB }}>
-                          {labels.teamB}
-                        </span>
-                      </div>
-                      <ul className="space-y-1.5">
-                        {group.offers.map((b) => (
-                          <BetOfferRow
-                            key={b.id}
-                            teamALabel={labels.teamA}
-                            teamBLabel={labels.teamB}
-                            teamAColor={teamColors.teamA}
-                            teamBColor={teamColors.teamB}
-                            proposerSide={b.proposerSide}
-                            proposerName={playerName(b.proposerId)}
-                            amount={b.amount}
-                            mine={player?.id === b.proposerId}
-                            loggedIn={!!player}
-                            onTake={() =>
-                              runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                            }
-                          />
-                        ))}
+              <>
+                {!tournamentStarted && (
+                  <div className="space-y-2">
+                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🏆 Cup</div>
+                    <Card className="overflow-hidden p-0">
+                      <BetEventRow
+                        label={<span className="block truncate">Cup Winner</span>}
+                        subtitle={`${teamNames.teamA} v ${teamNames.teamB}`}
+                        accent={teamColors}
+                        hint={hintFor(cupOfferCount)}
+                        hintActive={cupOfferCount > 0}
+                        onClick={() => setSelectedEvent({ kind: "cup" })}
+                      />
+                    </Card>
+                  </div>
+                )}
+
+                {bettableRounds.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🗓️ Sessions</div>
+                    <Card className="overflow-hidden p-0">
+                      <ul className="divide-y divide-slate-100">
+                        {bettableRounds.map((r) => {
+                          const c = roundOfferCount(r.id);
+                          return (
+                            <li key={r.id}>
+                              <BetEventRow
+                                label={
+                                  <span className="block truncate">
+                                    {`${r.day ? `Round ${r.day}` : "Round"} winner`}
+                                  </span>
+                                }
+                                subtitle={formatRoundType(r.format)}
+                                accent={teamColors}
+                                hint={hintFor(c)}
+                                hintActive={c > 0}
+                                onClick={() => setSelectedEvent({ kind: "round", roundId: r.id })}
+                              />
+                            </li>
+                          );
+                        })}
                       </ul>
                     </Card>
-                  );
-                })}
-              </div>
-            ))}
+                  </div>
+                )}
 
-            {/* Holes Over/Under — a per-match prop. Concise in "All", full list under O/U. */}
-            {(marketFilter === "all" || marketFilter === "overunder") && ouMatches.length > 0 && (
-              <div className="space-y-2">
-                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  📊 Holes Over/Under
-                </div>
-                {ouMatches.map((m) => (
-                  <OverUnderBetCard
-                    key={m.id}
-                    tournamentId={tournament.id}
-                    matchId={m.id}
-                    matchLabel={`${sideNames(m.teamAPlayers)} vs ${sideNames(m.teamBPlayers)}`}
-                    openOffers={openOffers.filter((b) => b.market === "overUnder" && b.matchId === m.id)}
-                    loggedIn={!!player}
-                    meId={player?.id}
-                    rosterOptions={rosterOptions}
-                    bettorName={playerName}
-                    onTake={(b) =>
-                      runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")
-                    }
-                  />
-                ))}
-              </div>
+                {bettableMatches.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">⛳ Matches</div>
+                    <Card className="overflow-hidden p-0">
+                      <ul className="divide-y divide-slate-100">
+                        {bettableMatches.map((m) => {
+                          const c = matchOfferCount(m.id);
+                          const r = m.roundId ? roundsById[m.roundId] : undefined;
+                          return (
+                            <li key={m.id}>
+                              <BetEventRow
+                                label={
+                                  <>
+                                    <span className="block truncate">
+                                      {sideLastNames(m.teamAPlayers)} <span className="font-normal text-slate-400">vs</span>
+                                    </span>
+                                    <span className="block truncate">{sideLastNames(m.teamBPlayers)}</span>
+                                  </>
+                                }
+                                subtitle={r ? `${r.day ? `Round ${r.day}` : "Round"} · ${formatRoundType(r.format)}` : undefined}
+                                accent={teamColors}
+                                hint={hintFor(c)}
+                                hintActive={c > 0}
+                                onClick={() => setSelectedEvent({ kind: "match", matchId: m.id })}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </Card>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Shared ledger — everyone's settled-bet standings ("Money Leaders") */}
@@ -914,6 +874,37 @@ export default function Sportsbook() {
           {confirmState.body}
         </ConfirmDialog>
       )}
+
+      {/* Focused bet sheet for the tapped event (match winner / holes O/U, session, or cup). */}
+      {selectedEvent &&
+        (() => {
+          const d = eventSheetData(selectedEvent);
+          const key =
+            selectedEvent.kind === "match"
+              ? `m-${selectedEvent.matchId}`
+              : selectedEvent.kind === "round"
+                ? `r-${selectedEvent.roundId}`
+                : "cup";
+          return (
+            <BetSheet
+              key={key}
+              isOpen
+              onClose={() => setSelectedEvent(null)}
+              tournamentId={tournament.id}
+              event={selectedEvent}
+              label={d.label}
+              sideLabels={d.sideLabels}
+              teamTags={teamNames}
+              teamColors={teamColors}
+              openOffers={d.offers}
+              loggedIn={!!player}
+              meId={player?.id}
+              rosterOptions={rosterOptions}
+              bettorName={playerName}
+              onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")}
+            />
+          );
+        })()}
     </Layout>
   );
 }
