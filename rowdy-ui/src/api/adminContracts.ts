@@ -360,7 +360,13 @@ export interface CreateBetOfferRequest {
   metric?: BetOverUnderMetric;
   /** The over/under line (required when market === "overUnder"). */
   line?: number;
-  /** Team to win (team markets) or "over"/"under" (overUnder). */
+  /** Player O/U (metric === "playerTournamentPoints"): the player bet on. */
+  subjectId?: string;
+  /** playerMatchup: player backed by the teamA side. */
+  subjectAId?: string;
+  /** playerMatchup: player backed by the teamB side. */
+  subjectBId?: string;
+  /** Team to win (team / playerMatchup markets) or "over"/"under" (overUnder). */
   side: BetSide;
   /** Even-money stake each side risks. */
   amount: number;
@@ -388,6 +394,15 @@ export interface SettleCupFuturesRequest {
 }
 
 export interface SettleCupFuturesResult extends AdminResult {
+  settledCount: number;
+}
+
+/** Admin: settle the player-futures markets (matchups + player point O/Us). */
+export interface SettlePlayerFuturesRequest {
+  tournamentId: string;
+}
+
+export interface SettlePlayerFuturesResult extends AdminResult {
   settledCount: number;
 }
 

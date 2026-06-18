@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { PlayerDoc, TierMap, TournamentDoc } from "../../types";
 import type { TournamentUpdates } from "../../api/adminContracts";
+import { betsApi } from "../../api/bets";
 
 const TIERS = ["A", "B", "C", "D"] as const;
 
@@ -73,6 +74,28 @@ export default function TournamentSettingsForm({
   const [teamA, setTeamA] = useState<TeamFormState>(teamToForm(tournament.teamA));
   const [teamB, setTeamB] = useState<TeamFormState>(teamToForm(tournament.teamB));
   const [error, setError] = useState<string | null>(null);
+
+  // Operational: settle the tournament-long player-futures markets.
+  const [settling, setSettling] = useState(false);
+  const [settleMsg, setSettleMsg] = useState<string | null>(null);
+  const handleSettlePlayerFutures = async () => {
+    if (
+      !window.confirm(
+        "Settle all active player-prop bets (matchups + player point O/Us) from final tournament points? Make sure every match is closed first."
+      )
+    )
+      return;
+    setSettling(true);
+    setSettleMsg(null);
+    try {
+      const res = await betsApi.settlePlayerFutures({ tournamentId: tournament.id });
+      setSettleMsg(`Settled ${res.settledCount} player-prop bet${res.settledCount === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setSettleMsg(e instanceof Error ? e.message : "Couldn't settle player futures");
+    } finally {
+      setSettling(false);
+    }
+  };
 
   const playerNameById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -283,6 +306,26 @@ export default function TournamentSettingsForm({
           <span className="font-semibold">Test tournament</span>
         </label>
       </div>
+
+      {tournament.sportsbookEnabled && (
+        <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+          <div className="text-sm font-semibold">Settle player futures</div>
+          <p className="text-xs text-gray-500">
+            Resolves active player matchups and tournament-points over/unders from each player's total
+            points. Run once the tournament is complete (all matches closed). Other markets settle
+            automatically as matches finish.
+          </p>
+          <button
+            type="button"
+            onClick={handleSettlePlayerFutures}
+            disabled={settling}
+            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {settling ? "Settling…" : "Settle player futures"}
+          </button>
+          {settleMsg && <p className="text-xs text-gray-700">{settleMsg}</p>}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-semibold mb-1">Tiebreaker winner</label>

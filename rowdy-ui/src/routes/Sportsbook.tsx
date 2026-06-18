@@ -5,6 +5,7 @@ import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import BetSheet, { type BetEvent } from "../components/BetSheet";
+import PlayerPropSheet from "../components/PlayerPropSheet";
 import BetEventRow from "../components/BetEventRow";
 import BetSummaryCard from "../components/BetSummaryCard";
 import PlayerAvatar from "../components/PlayerAvatar";
@@ -39,6 +40,9 @@ const oppositeSide = (s: BetSide): BetSide =>
 // Over/under tile colors (mirrors OverUnderBetCard): over = emerald, under = slate.
 const OVER_COLOR = "#059669";
 const UNDER_COLOR = "#475569";
+// Player-matchup tile colors (mirror PlayerPropSheet): subject A = blue, B = amber.
+const SUBJECT_A_COLOR = "#2563eb";
+const SUBJECT_B_COLOR = "#d97706";
 
 export default function Sportsbook() {
   const { player } = useAuth();
@@ -81,6 +85,8 @@ export default function Sportsbook() {
     );
   // The event whose focused bet sheet is open (null = closed).
   const [selectedEvent, setSelectedEvent] = useState<BetEvent | null>(null);
+  // The tournament-long player-props sheet (matchups + player point O/Us).
+  const [propSheetOpen, setPropSheetOpen] = useState(false);
 
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
   // (read via state to keep Date.now() out of the render path).
@@ -126,7 +132,10 @@ export default function Sportsbook() {
   };
   /** A locked-in bet can still be called off until its market starts. */
   const canCancelLocked = (b: BetDoc): boolean => {
-    if (b.market === "cupFuture") return !tournamentStarted;
+    // Tournament-long futures (Cup, player matchups, player point O/Us) stay
+    // callable until any match starts.
+    if (b.market === "cupFuture" || b.market === "playerMatchup") return !tournamentStarted;
+    if (b.market === "overUnder" && b.metric === "playerTournamentPoints") return !tournamentStarted;
     if (b.market === "round") {
       const ms = b.roundId ? (matchesByRound[b.roundId] ?? []) : [];
       return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
@@ -153,6 +162,9 @@ export default function Sportsbook() {
   /** Labels for a team bet's two sides — player names for matches, team names otherwise. */
   const sideLabelsForBet = (b: BetDoc): { teamA: string; teamB: string } => {
     if (b.market === "cupFuture" || b.market === "round") return teamNames;
+    if (b.market === "playerMatchup") {
+      return { teamA: playerName(b.subjectAId), teamB: playerName(b.subjectBId) };
+    }
     const m = b.matchId ? matchesById[b.matchId] : undefined;
     return { teamA: sideNames(m?.teamAPlayers), teamB: sideNames(m?.teamBPlayers) };
   };
@@ -170,6 +182,11 @@ export default function Sportsbook() {
         .filter((p: PlayerDoc) => p.id !== player?.id)
         .map((p) => ({ id: p.id, name: p.displayName || p.id })),
     [players, player?.id]
+  );
+  // Player-prop subjects can be anyone in the field, including yourself.
+  const propSubjectOptions = useMemo(
+    () => Object.values(players).map((p: PlayerDoc) => ({ id: p.id, name: p.displayName || p.id })),
+    [players]
   );
 
   async function runAction(fn: () => Promise<unknown>, successMsg: string) {
@@ -239,6 +256,9 @@ export default function Sportsbook() {
 
   /** How many open offers sit on an event — drives the row's hint chip. */
   const cupOfferCount = openOffers.filter((b) => b.market === "cupFuture").length;
+  const playerPropOffers = openOffers.filter(
+    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && b.metric === "playerTournamentPoints")
+  );
   const roundOfferCount = (roundId: string) =>
     openOffers.filter((b) => b.market === "round" && b.roundId === roundId).length;
   const matchOfferCount = (matchId: string) => openOffers.filter((b) => b.matchId === matchId).length;
@@ -290,15 +310,25 @@ export default function Sportsbook() {
 
     if (b.market === "overUnder") {
       const line = b.line ?? 0;
+      // Player point props carry the player's name + a "pts" unit; match-scoped
+      // over/unders (holes, margin) read as a bare number.
+      const isPlayerPts = b.metric === "playerTournamentPoints";
+      const prefix = isPlayerPts && b.subjectId ? `${lastName(playerName(b.subjectId))} ` : "";
+      const unit = isPlayerPts ? " pts" : "";
       return {
-        teamA: tile("over", `Over ${line}`, OVER_COLOR),
-        teamB: tile("under", `Under ${line}`, UNDER_COLOR),
+        teamA: tile("over", `${prefix}Over ${line}${unit}`, OVER_COLOR),
+        teamB: tile("under", `${prefix}Under ${line}${unit}`, UNDER_COLOR),
       };
     }
     const labels = sideLabelsForBet(b);
+    // Player matchups aren't team-affiliated — use neutral subject colors.
+    const colors =
+      b.market === "playerMatchup"
+        ? { teamA: SUBJECT_A_COLOR, teamB: SUBJECT_B_COLOR }
+        : { teamA: teamColors.teamA, teamB: teamColors.teamB };
     return {
-      teamA: tile("teamA", labels.teamA, teamColors.teamA),
-      teamB: tile("teamB", labels.teamB, teamColors.teamB),
+      teamA: tile("teamA", labels.teamA, colors.teamA),
+      teamB: tile("teamB", labels.teamB, colors.teamB),
     };
   };
 
@@ -398,6 +428,22 @@ export default function Sportsbook() {
                         hint={hintFor(cupOfferCount)}
                         hintActive={cupOfferCount > 0}
                         onClick={() => setSelectedEvent({ kind: "cup" })}
+                      />
+                    </Card>
+                  </div>
+                )}
+
+                {!tournamentStarted && (
+                  <div className="space-y-2">
+                    <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">👤 Player Props</div>
+                    <Card className="overflow-hidden p-0">
+                      <BetEventRow
+                        label={<span className="block truncate">Player Props</span>}
+                        subtitle="Matchups · tournament points O/U"
+                        accent={{ teamA: SUBJECT_A_COLOR, teamB: SUBJECT_B_COLOR }}
+                        hint={hintFor(playerPropOffers.length)}
+                        hintActive={playerPropOffers.length > 0}
+                        onClick={() => setPropSheetOpen(true)}
                       />
                     </Card>
                   </div>
@@ -905,6 +951,21 @@ export default function Sportsbook() {
             />
           );
         })()}
+
+      {/* Tournament-long player props sheet (matchups + player point O/Us). */}
+      {propSheetOpen && (
+        <PlayerPropSheet
+          isOpen
+          onClose={() => setPropSheetOpen(false)}
+          tournamentId={tournament.id}
+          openOffers={playerPropOffers}
+          loggedIn={!!player}
+          meId={player?.id}
+          rosterOptions={propSubjectOptions}
+          bettorName={playerName}
+          onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")}
+        />
+      )}
     </Layout>
   );
 }

@@ -337,16 +337,22 @@ export interface RoundRecapDoc {
 
 /**
  * Which betting market a wager belongs to.
- *  - match:      who wins a single match (sides teamA/teamB)
- *  - round:      who wins a round/session's points (sides teamA/teamB)
- *  - cupFuture:  who wins the overall Cup (sides teamA/teamB)
- *  - overUnder:  a numeric prop vs a line (sides over/under); see BetOverUnderMetric
+ *  - match:        who wins a single match (sides teamA/teamB)
+ *  - round:        who wins a round/session's points (sides teamA/teamB)
+ *  - cupFuture:    who wins the overall Cup (sides teamA/teamB)
+ *  - overUnder:    a numeric prop vs a line (sides over/under); see BetOverUnderMetric
+ *  - playerMatchup: which of two players scores more tournament points
+ *                  (positional sides: teamA backs subjectAId, teamB backs subjectBId)
  */
-export type BetMarket = "match" | "round" | "cupFuture" | "overUnder";
+export type BetMarket = "match" | "round" | "cupFuture" | "overUnder" | "playerMatchup";
 
-/** What an over/under bet is measured against. matchHolesPlayed = holes the match
- *  went before closing (status.thru); matchMargin = final margin of victory. */
-export type BetOverUnderMetric = "matchHolesPlayed" | "matchMargin";
+/** What an over/under bet is measured against.
+ *  - matchHolesPlayed:        holes the match went before closing (status.thru)
+ *  - matchMargin:             final margin of victory
+ *  - playerTournamentPoints:  a single player's total tournament points (subjectId).
+ *    Match-scoped metrics close with their match; playerTournamentPoints is
+ *    tournament-scoped (closes when the tournament starts). */
+export type BetOverUnderMetric = "matchHolesPlayed" | "matchMargin" | "playerTournamentPoints";
 
 /** open marketplace offer (anyone may take) vs directed challenge (one target). */
 export type BetKind = "offer" | "challenge";
@@ -389,6 +395,9 @@ export interface BetDoc {
   roundId?: string;                    // present when market === "round"
   metric?: BetOverUnderMetric;         // present when market === "overUnder"
   line?: number;                       // the over/under line (use half-lines to avoid pushes)
+  subjectId?: string;                  // player O/U: the player whose tournament points are bet on
+  subjectAId?: string;                 // playerMatchup: player backed by the teamA side
+  subjectBId?: string;                 // playerMatchup: player backed by the teamB side
   kind: BetKind;
   status: BetStatus;
   amount: number;                      // even-money stake each side risks

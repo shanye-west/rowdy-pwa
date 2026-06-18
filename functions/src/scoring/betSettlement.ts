@@ -67,3 +67,13 @@ export function settleOverUnderBet(bet: ResolvableBet, actualValue: number, line
   const outcome = actualValue > line ? "over" : actualValue < line ? "under" : "push";
   return resolve(bet, outcome);
 }
+
+/**
+ * Settle a player-matchup bet from the two subjects' total tournament points.
+ * `pointsA`/`pointsB` are subjectAId's / subjectBId's points; teamA backs subject
+ * A, teamB backs subject B. Equal points is a push.
+ */
+export function settlePlayerMatchupBet(bet: ResolvableBet, pointsA: number, pointsB: number): BetResult {
+  const outcome = pointsA > pointsB ? "teamA" : pointsB > pointsA ? "teamB" : "push";
+  return resolve(bet, outcome);
+}

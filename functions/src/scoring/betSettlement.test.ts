@@ -3,7 +3,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { settleMatchBet, settleCupFutureBet, settleRoundBet, settleOverUnderBet } from "./betSettlement.js";
+import {
+  settleMatchBet,
+  settleCupFutureBet,
+  settleRoundBet,
+  settleOverUnderBet,
+  settlePlayerMatchupBet,
+} from "./betSettlement.js";
 import type { BetDoc } from "../types.js";
 
 /** A matched/active bet: proposer backs teamA, acceptor backs teamB, $20 each. */
@@ -125,5 +131,38 @@ describe("settleOverUnderBet", () => {
     const bet = ouBet({ proposerSide: "under", acceptorSide: "over" });
     expect(settleOverUnderBet(bet, 18, 16.5)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
     expect(settleOverUnderBet(bet, 12, 16.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
+  });
+
+  it("settles a player's tournament-points over/under from their total", () => {
+    const bet = ouBet({ metric: "playerTournamentPoints", matchId: undefined, subjectId: "pCarol", line: 3.5 });
+    expect(settleOverUnderBet(bet, 4, 3.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
+    expect(settleOverUnderBet(bet, 2.5, 3.5)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
+  });
+});
+
+describe("settlePlayerMatchupBet", () => {
+  // Proposer (pAlice) backs subject A via teamA; acceptor (pBob) backs subject B.
+  function matchupBet(overrides: Partial<BetDoc> = {}): BetDoc {
+    return activeBet({
+      market: "playerMatchup",
+      matchId: undefined,
+      subjectAId: "pCarol",
+      subjectBId: "pDave",
+      ...overrides,
+    });
+  }
+
+  it("pays the side backing the higher-scoring player", () => {
+    expect(settlePlayerMatchupBet(matchupBet(), 4, 2.5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
+    expect(settlePlayerMatchupBet(matchupBet(), 1, 3)).toMatchObject({ winnerId: "pBob", loserId: "pAlice", payout: 20 });
+  });
+
+  it("is a push when the two players tie on points", () => {
+    expect(settlePlayerMatchupBet(matchupBet(), 3, 3)).toEqual({ outcome: "push", payout: 0 });
+  });
+
+  it("resolves correctly when the proposer backed subject B (teamB)", () => {
+    const bet = matchupBet({ proposerSide: "teamB", acceptorSide: "teamA" });
+    expect(settlePlayerMatchupBet(bet, 2, 5)).toMatchObject({ winnerId: "pAlice", loserId: "pBob", payout: 20 });
   });
 });

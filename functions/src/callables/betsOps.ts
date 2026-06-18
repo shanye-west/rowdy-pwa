@@ -14,7 +14,7 @@
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
-import { settleCupFutureBet } from "../scoring/betSettlement.js";
+import { settleCupFutureBet, settleOverUnderBet, settlePlayerMatchupBet } from "../scoring/betSettlement.js";
 import type { BetDoc, BetMarket, BetOverUnderMetric, BetSide } from "../types.js";
 
 function db() {
@@ -35,11 +35,21 @@ function isOverUnderSide(v: unknown): v is "over" | "under" {
 }
 
 function isMarket(v: unknown): v is BetMarket {
-  return v === "match" || v === "round" || v === "cupFuture" || v === "overUnder";
+  return v === "match" || v === "round" || v === "cupFuture" || v === "overUnder" || v === "playerMatchup";
 }
 
 function isMetric(v: unknown): v is BetOverUnderMetric {
-  return v === "matchHolesPlayed" || v === "matchMargin";
+  return v === "matchHolesPlayed" || v === "matchMargin" || v === "playerTournamentPoints";
+}
+
+/** Confirm a player doc exists; returns its id for persistence. */
+async function requirePlayerExists(playerId: unknown, label: string): Promise<string> {
+  if (!playerId || typeof playerId !== "string") {
+    throw new HttpsError("invalid-argument", `${label} is required`);
+  }
+  const snap = await db().collection("players").doc(playerId).get();
+  if (!snap.exists) throw new HttpsError("not-found", `${label}: player not found`);
+  return playerId;
 }
 
 function oppositeSide(side: BetSide): BetSide {
@@ -118,14 +128,19 @@ async function isMatchClosed(matchId: string | undefined): Promise<boolean> {
  * round starts; cup futures when the tournament starts. Read outside transactions;
  * the settlement trigger + confirm guard are the backstops against the race window.
  */
-async function marketClosed(bet: Pick<BetDoc, "market" | "matchId" | "roundId" | "tournamentId">): Promise<boolean> {
+async function marketClosed(
+  bet: Pick<BetDoc, "market" | "matchId" | "roundId" | "tournamentId" | "metric">
+): Promise<boolean> {
   if (bet.market === "match") return isMatchClosed(bet.matchId);
   if (bet.market === "round") return bet.roundId ? isRoundStarted(bet.roundId) : true;
   if (bet.market === "overUnder") {
-    // Only match-scoped over/unders exist today; they close with their match.
-    return isMatchClosed(bet.matchId);
+    // Match-scoped over/unders close with their match; player-points props are
+    // tournament-scoped and close when the tournament starts.
+    if (bet.metric && MATCH_SCOPED_METRICS.includes(bet.metric)) return isMatchClosed(bet.matchId);
+    return isTournamentStarted(bet.tournamentId);
   }
-  return isTournamentStarted(bet.tournamentId); // cupFuture
+  // cupFuture + playerMatchup are tournament-scoped.
+  return isTournamentStarted(bet.tournamentId);
 }
 
 /** Loads a tournament and asserts the sportsbook is enabled for it. */
@@ -145,6 +160,11 @@ async function createBet(
 ): Promise<{ success: true; betId: string }> {
   const data = (request.data || {}) as Record<string, unknown>;
   const { tournamentId, market, matchId, roundId, metric, line, side, amount, targetId } = data;
+
+  // Validated player references, persisted below for player-centric markets.
+  let subjectId: string | undefined;   // player O/U
+  let subjectAId: string | undefined;  // playerMatchup teamA side
+  let subjectBId: string | undefined;  // playerMatchup teamB side
 
   if (!tournamentId || typeof tournamentId !== "string") {
     throw new HttpsError("invalid-argument", "Missing tournamentId");
@@ -210,6 +230,21 @@ async function createBet(
       if (matchStartedPlay(m) || m.locked === true) {
         throw new HttpsError("failed-precondition", "Betting on this match is closed — it has already started");
       }
+    } else {
+      // playerTournamentPoints: tournament-scoped prop on a single player.
+      subjectId = await requirePlayerExists(data.subjectId, "subjectId");
+      if (await isTournamentStarted(tournamentId)) {
+        throw new HttpsError("failed-precondition", "Player props betting is closed — the tournament has started");
+      }
+    }
+  } else if (market === "playerMatchup") {
+    subjectAId = await requirePlayerExists(data.subjectAId, "subjectAId");
+    subjectBId = await requirePlayerExists(data.subjectBId, "subjectBId");
+    if (subjectAId === subjectBId) {
+      throw new HttpsError("invalid-argument", "A matchup needs two different players");
+    }
+    if (await isTournamentStarted(tournamentId)) {
+      throw new HttpsError("failed-precondition", "Player props betting is closed — the tournament has started");
     }
   } else if (await isTournamentStarted(tournamentId)) {
     throw new HttpsError("failed-precondition", "Cup futures betting is closed — the tournament has started");
@@ -249,6 +284,11 @@ async function createBet(
   if (market === "overUnder") {
     doc.metric = metric;
     doc.line = line;
+    if (subjectId) doc.subjectId = subjectId;
+  }
+  if (market === "playerMatchup") {
+    doc.subjectAId = subjectAId;
+    doc.subjectBId = subjectBId;
   }
   if (target) doc.targetId = target;
 
@@ -482,4 +522,55 @@ export const settleCupFutures = onCall(async (request) => {
   await batch.commit();
 
   return { success: true, settledCount: snap.size };
+});
+
+/**
+ * Admin: resolve the tournament-long player-futures markets (playerMatchup +
+ * player tournament-points over/unders). Like settleCupFutures, this is an
+ * explicit admin action — there is no single authoritative "tournament over"
+ * signal. Each player's total points are summed from their playerMatchFacts
+ * (the same source aggregatePlayerStats rolls up), so matches must be closed for
+ * the totals to be final before settling.
+ */
+export const settlePlayerFutures = onCall(async (request) => {
+  await requireAdmin(request, "settlePlayerFutures", { maxCalls: 10, windowSeconds: 60 });
+  const data = (request.data || {}) as Record<string, unknown>;
+  const { tournamentId } = data;
+  if (!tournamentId || typeof tournamentId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing tournamentId");
+  }
+
+  // Total tournament points per player from playerMatchFacts.
+  const factsSnap = await db().collection("playerMatchFacts").where("tournamentId", "==", tournamentId).get();
+  const points = new Map<string, number>();
+  factsSnap.docs.forEach((d) => {
+    const f = d.data();
+    if (typeof f.playerId !== "string") return;
+    points.set(f.playerId, (points.get(f.playerId) ?? 0) + (f.pointsEarned ?? 0));
+  });
+
+  const betsSnap = await db()
+    .collection("bets")
+    .where("tournamentId", "==", tournamentId)
+    .where("status", "==", "active")
+    .get();
+
+  const batch = db().batch();
+  let settledCount = 0;
+  betsSnap.docs.forEach((d) => {
+    const bet = d.data() as BetDoc;
+    let result;
+    if (bet.market === "playerMatchup") {
+      result = settlePlayerMatchupBet(bet, points.get(bet.subjectAId ?? "") ?? 0, points.get(bet.subjectBId ?? "") ?? 0);
+    } else if (bet.market === "overUnder" && bet.metric === "playerTournamentPoints" && typeof bet.line === "number") {
+      result = settleOverUnderBet(bet, points.get(bet.subjectId ?? "") ?? 0, bet.line);
+    } else {
+      return; // other markets settle via their own triggers / settleCupFutures
+    }
+    batch.update(d.ref, { status: "settled", result, settledAt: FieldValue.serverTimestamp() });
+    settledCount++;
+  });
+  if (settledCount > 0) await batch.commit();
+
+  return { success: true, settledCount };
 });
