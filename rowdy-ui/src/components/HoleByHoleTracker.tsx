@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, useMemo, type CSSProperties } from "react";
 import type { MatchDoc } from "../types";
 
 interface HoleByHoleTrackerProps {
@@ -8,48 +8,69 @@ interface HoleByHoleTrackerProps {
   teamBColor: string;
 }
 
+type HoleResult = { holeNum: number; winner: "teamA" | "teamB" | "AS" | null; played: boolean; afterClose: boolean };
+
 /**
  * Visual tracker showing hole-by-hole results for a match.
  * Renders 18 holes with circles indicating winner (team color) or halved (grey).
  * After a match closes early, holes beyond the closing hole are shown shaded with a
  * diagonal pattern and are not considered for wins/losses.
+ *
+ * Rendered once per match in the Round list, so it's wrapped in React.memo and the
+ * per-hole result computation is memoized — only recomputes when the match (or
+ * format/colors) actually changes, not on every Round re-render.
  */
-export function HoleByHoleTracker({
+export const HoleByHoleTracker = memo(function HoleByHoleTracker({
   match,
   format,
   teamAColor,
   teamBColor,
 }: HoleByHoleTrackerProps) {
-  // If a match closed early, `status.thru` tells how many holes were completed.
-  // Ignore any inputs beyond that hole so tiles don't change after close.
-  const closingThru: number | null = match?.status?.closed ? (match.status.thru || null) : null;
+  // Compute which holes to display + each hole's winner. Heavy part (18x
+  // getHoleWinner) only runs when the match data / format changes.
+  const displayHoles = useMemo<HoleResult[]>(() => {
+    // If a match closed early, `status.thru` tells how many holes were completed.
+    // Ignore any inputs beyond that hole so tiles don't change after close.
+    const closingThru: number | null = match?.status?.closed ? (match.status.thru || null) : null;
 
-  // Build metadata for all 18 holes.
-  const holesArray = Array.from({ length: 18 }, (_, idx) => {
-    const holeNum = idx + 1;
-    const holeData = match.holes?.[String(holeNum)];
+    const holesArray: HoleResult[] = Array.from({ length: 18 }, (_, idx) => {
+      const holeNum = idx + 1;
+      const holeData = match.holes?.[String(holeNum)];
 
-    const afterClose = closingThru != null && holeNum > closingThru;
+      const afterClose = closingThru != null && holeNum > closingThru;
 
-    // Consider a hole played only if it's not after close and input exists.
-    let hasScore = false;
-    if (!afterClose && holeData?.input) {
-      const input = holeData.input;
-      if (format === "singles") {
-        hasScore = input.teamAPlayerGross != null || input.teamBPlayerGross != null;
-      } else if (format === "twoManScramble" || format === "fourManScramble") {
-        hasScore = input.teamAGross != null || input.teamBGross != null;
-      } else if (format === "twoManBestBall" || format === "twoManShamble") {
-        const aArr = input.teamAPlayersGross;
-        const bArr = input.teamBPlayersGross;
-        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
-                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+      // Consider a hole played only if it's not after close and input exists.
+      let hasScore = false;
+      if (!afterClose && holeData?.input) {
+        const input = holeData.input;
+        if (format === "singles") {
+          hasScore = input.teamAPlayerGross != null || input.teamBPlayerGross != null;
+        } else if (format === "twoManScramble" || format === "fourManScramble") {
+          hasScore = input.teamAGross != null || input.teamBGross != null;
+        } else if (format === "twoManBestBall" || format === "twoManShamble") {
+          const aArr = input.teamAPlayersGross;
+          const bArr = input.teamBPlayersGross;
+          hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                     (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+        }
       }
-    }
 
-    const winner = hasScore ? getHoleWinner(match, format, holeNum) : null;
-    return { holeNum, winner, played: hasScore, afterClose };
-  });
+      const winner = hasScore ? getHoleWinner(match, format, holeNum) : null;
+      return { holeNum, winner, played: hasScore, afterClose };
+    });
+
+    // Determine which holes to display:
+    // - If match is closed: show holes 1..closingThru as played, then render the
+    //   remaining holes as the dotted/diagonal placeholder.
+    // - If not closed: only show holes that have been played.
+    if (match?.status?.closed) {
+      const closing = closingThru ?? Math.max(0, ...holesArray.filter((h) => h.played).map((h) => h.holeNum));
+      const played = holesArray.slice(0, closing);
+      const remaining = holesArray.slice(closing).map((h) => ({ ...h, afterClose: true, played: false }));
+      return [...played, ...remaining];
+    }
+    return holesArray.filter((h) => h.played);
+  }, [match, format]);
 
   // Always render all 18 holes on the round page tiles.
   const showAll = true;
@@ -130,21 +151,6 @@ export function HoleByHoleTracker({
     padding: "2px 0",
     width: "100%",
   };
-  // Determine which holes to display:
-  // - If match is closed: show holes 1..closingThru as played (or as existing), then render remaining holes (closingThru+1..18)
-  //   as the dotted/diagonal placeholder.
-  // - If match is not closed: only show holes that have been played.
-  const isClosed = !!match?.status?.closed;
-  let displayHoles = [] as Array<{ holeNum: number; winner: "teamA" | "teamB" | "AS" | null; played: boolean; afterClose: boolean }>;
-
-  if (isClosed) {
-    const closing = closingThru ?? Math.max(0, ...holesArray.filter((h) => h.played).map((h) => h.holeNum));
-    const played = holesArray.slice(0, closing);
-    const remaining = holesArray.slice(closing).map((h) => ({ ...h, afterClose: true, played: false }));
-    displayHoles = [...played, ...remaining];
-  } else {
-    displayHoles = holesArray.filter((h) => h.played);
-  }
 
   return (
     <div style={containerStyle} aria-label="Hole-by-hole results">
@@ -165,7 +171,7 @@ export function HoleByHoleTracker({
       ))}
     </div>
   );
-}
+});
 
 /**
  * Simplified hole winner calculation (matches backend logic).

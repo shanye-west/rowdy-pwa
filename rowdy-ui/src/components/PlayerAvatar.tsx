@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { cn } from "../lib/utils";
 
 export interface PlayerAvatarProps {
@@ -24,7 +24,7 @@ function initialsOf(name: string | undefined): string {
  * team-tinted background are how we give each name a visual anchor. Deterministic
  * — same name + color always renders the same.
  */
-export default function PlayerAvatar({ name, color, size = 28, className }: PlayerAvatarProps) {
+function PlayerAvatar({ name, color, size = 28, className }: PlayerAvatarProps) {
   const initials = useMemo(() => initialsOf(name), [name]);
   const tint = color || "var(--team-a-default)";
   return (
@@ -46,3 +46,5 @@ export default function PlayerAvatar({ name, color, size = 28, className }: Play
     </span>
   );
 }
+
+export default memo(PlayerAvatar);

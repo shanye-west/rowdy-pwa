@@ -5,6 +5,7 @@
  * figures are computed by the caller from the useBets selectors.
  */
 
+import { memo } from "react";
 import { Card } from "./ui/card";
 
 interface BetSummaryCardProps {
@@ -21,7 +22,7 @@ interface BetSummaryCardProps {
 
 const signed = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 
-export default function BetSummaryCard({ net, wins, losses, pushes, owedToYou, youOwe }: BetSummaryCardProps) {
+function BetSummaryCard({ net, wins, losses, pushes, owedToYou, youOwe }: BetSummaryCardProps) {
   const netColor = net > 0 ? "text-emerald-400" : net < 0 ? "text-red-400" : "text-white";
   return (
     <Card className="border-0 bg-slate-900 p-5 text-white shadow-md">
@@ -44,3 +45,5 @@ export default function BetSummaryCard({ net, wins, losses, pushes, owedToYou, y
     </Card>
   );
 }
+
+export default memo(BetSummaryCard);

@@ -4,7 +4,7 @@
  * compact — the dense builders live in the sheet, not here.
  */
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
 export interface BetEventRowProps {
@@ -20,7 +20,7 @@ export interface BetEventRowProps {
   onClick: () => void;
 }
 
-export default function BetEventRow({ label, subtitle, accent, hint, hintActive, onClick }: BetEventRowProps) {
+function BetEventRow({ label, subtitle, accent, hint, hintActive, onClick }: BetEventRowProps) {
   return (
     <button
       type="button"
@@ -50,3 +50,5 @@ export default function BetEventRow({ label, subtitle, accent, hint, hintActive,
     </button>
   );
 }
+
+export default memo(BetEventRow);

@@ -21,8 +21,15 @@ export default function OfflineImage({
   style,
   className,
   fallbackSrc,
+  loading,
+  decoding,
   ...rest
 }: OfflineImageProps) {
+  // Opt-in lazy loading: when the caller asks for loading="lazy", skip the eager
+  // Image() preloader (and CriOS prefetch) below and let the native <img> defer
+  // the network request until it scrolls near the viewport. Default callers are
+  // unaffected and keep the reliable preload behavior.
+  const isLazy = loading === "lazy";
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [displayedSrc, setDisplayedSrc] = useState<string | undefined>(src);
@@ -48,6 +55,7 @@ export default function OfflineImage({
   // Preload displayedSrc via Image() to ensure load events fire reliably
   useEffect(() => {
     if (!displayedSrc) return;
+    if (isLazy) return; // lazy images load natively when scrolled into view
     let cancelled = false;
     const loader = new Image();
     try {
@@ -88,6 +96,7 @@ export default function OfflineImage({
   useEffect(() => {
     const isCriOS = typeof navigator !== 'undefined' && /CriOS/.test(navigator.userAgent || '');
     if (!isCriOS) return;
+    if (isLazy) return; // don't eagerly prefetch lazy images
     if (!displayedSrc) return;
     if (!/^https?:\/\//.test(displayedSrc)) return; // only remote http(s) URLs
 
@@ -111,7 +120,7 @@ export default function OfflineImage({
     })();
 
     return () => { cancelled = true; controller.abort(); if (objUrl) URL.revokeObjectURL(objUrl); };
-  }, [displayedSrc]);
+  }, [displayedSrc, isLazy]);
 
   // Log render state for debugging
   useEffect(() => {
@@ -157,6 +166,8 @@ export default function OfflineImage({
       ref={imgRef}
       src={effectiveSrc}
       alt={alt}
+      loading={loading}
+      decoding={decoding ?? "async"}
       style={{
         ...style,
         // Hide until loaded to prevent flash of broken image

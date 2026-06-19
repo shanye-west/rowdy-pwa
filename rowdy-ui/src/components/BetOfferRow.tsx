@@ -5,6 +5,7 @@
  * Used inside the bet sheet to list takeable team-market offers (match/round/cup).
  */
 
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import BetMatchup, { type MatchupSide } from "./BetMatchup";
 import type { BetSide } from "../types";
@@ -24,7 +25,7 @@ export interface BetOfferRowProps {
   onTake: () => void;
 }
 
-export default function BetOfferRow({
+function BetOfferRow({
   teamALabel,
   teamBLabel,
   teamAColor,
@@ -71,3 +72,5 @@ export default function BetOfferRow({
     </li>
   );
 }
+
+export default memo(BetOfferRow);

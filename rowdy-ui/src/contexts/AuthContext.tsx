@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { 
   auth, 
   db,
@@ -139,15 +139,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return allPlayerIds.includes(player.id);
   }, [player]);
 
-  const value: AuthContextType = {
-    user,
-    player,
-    loading,
-    login,
-    resetPassword,
-    logout,
-    canEditMatch
-  };
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      player,
+      loading,
+      login,
+      resetPassword,
+      logout,
+      canEditMatch,
+    }),
+    [user, player, loading, login, resetPassword, logout, canEditMatch]
+  );
 
   return (
     <AuthContext.Provider value={value}>

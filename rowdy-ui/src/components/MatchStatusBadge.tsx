@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import type { FirestoreTimestampLike } from "../types";
 import { formatTeeTime } from "../utils";
 
@@ -43,7 +43,7 @@ export interface MatchStatusBadgeProps {
  * - Completed (halved): "TIED" with "FINAL"
  * - Completed (winner): Team name, margin, "FINAL"
  */
-export function MatchStatusBadge({
+export const MatchStatusBadge = memo(function MatchStatusBadge({
   status,
   result,
   teamAColor = "var(--team-a-default)",
@@ -214,7 +214,7 @@ export function MatchStatusBadge({
       )}
     </div>
   );
-}
+});
 
 /**
  * Returns background and border styles for match card based on state.

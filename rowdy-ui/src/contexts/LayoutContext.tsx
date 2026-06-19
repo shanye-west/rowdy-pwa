@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type LayoutConfig = {
   title: string;
@@ -36,8 +36,13 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const value = useMemo<LayoutContextValue>(
+    () => ({ config, setConfig }),
+    [config, setConfig]
+  );
+
   return (
-    <LayoutContext.Provider value={{ config, setConfig }}>
+    <LayoutContext.Provider value={value}>
       {children}
     </LayoutContext.Provider>
   );

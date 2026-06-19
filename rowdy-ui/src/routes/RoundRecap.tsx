@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { Trophy } from "lucide-react";
@@ -122,6 +122,48 @@ export default function RoundRecap() {
     setLoading(!allLoaded);
   }, [recapLoaded, tournamentLoaded]);
 
+  // Build + sort the vs-all leaderboard once per recap (not on every tab/view
+  // switch). Hoisted above the early returns so the hook order stays stable.
+  const sortedVsAll = useMemo<Array<VsAllRecord & { displayName?: string }>>(() => {
+    if (!recap) return [];
+    const isTeamFormat = recap.format !== "singles";
+    let displayVsAll: Array<VsAllRecord & { displayName?: string }> = [];
+
+    if (isTeamFormat) {
+      const teamMap = new Map<string, VsAllRecord[]>();
+      for (const record of recap.vsAllRecords) {
+        const key = record.teamKey || record.playerId;
+        if (!teamMap.has(key)) teamMap.set(key, []);
+        teamMap.get(key)!.push(record);
+      }
+
+      for (const [teamKey, members] of teamMap.entries()) {
+        const firstMember = members[0];
+        const playerNames = members.map((member) => member.playerName).join(" / ");
+        displayVsAll.push({
+          ...firstMember,
+          displayName: playerNames,
+          playerId: teamKey,
+        });
+      }
+    } else {
+      displayVsAll = recap.vsAllRecords.map((record) => ({
+        ...record,
+        displayName: record.playerName,
+      }));
+    }
+
+    return [...displayVsAll].sort((a, b) => {
+      const totalA = a.wins + a.losses + a.ties;
+      const totalB = b.wins + b.losses + b.ties;
+      const winPctA = totalA > 0 ? a.wins / totalA : 0;
+      const winPctB = totalB > 0 ? b.wins / totalB : 0;
+
+      if (winPctB !== winPctA) return winPctB - winPctA;
+      return b.wins - a.wins;
+    });
+  }, [recap]);
+
   if (loading) {
     return (
       <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
@@ -159,43 +201,6 @@ export default function RoundRecap() {
       </Layout>
     );
   }
-
-  const isTeamFormat = recap.format !== "singles";
-  let displayVsAll: Array<VsAllRecord & { displayName?: string }> = [];
-
-  if (isTeamFormat) {
-    const teamMap = new Map<string, VsAllRecord[]>();
-    for (const record of recap.vsAllRecords) {
-      const key = record.teamKey || record.playerId;
-      if (!teamMap.has(key)) teamMap.set(key, []);
-      teamMap.get(key)!.push(record);
-    }
-
-    for (const [teamKey, members] of teamMap.entries()) {
-      const firstMember = members[0];
-      const playerNames = members.map((member) => member.playerName).join(" / ");
-      displayVsAll.push({
-        ...firstMember,
-        displayName: playerNames,
-        playerId: teamKey,
-      });
-    }
-  } else {
-    displayVsAll = recap.vsAllRecords.map((record) => ({
-      ...record,
-      displayName: record.playerName,
-    }));
-  }
-  
-  const sortedVsAll = [...displayVsAll].sort((a, b) => {
-    const totalA = a.wins + a.losses + a.ties;
-    const totalB = b.wins + b.losses + b.ties;
-    const winPctA = totalA > 0 ? a.wins / totalA : 0;
-    const winPctB = totalB > 0 ? b.wins / totalB : 0;
-    
-    if (winPctB !== winPctA) return winPctB - winPctA;
-    return b.wins - a.wins;
-  });
 
   const formatWinPct = (record: VsAllRecord) => {
     const total = record.wins + record.losses + record.ties;

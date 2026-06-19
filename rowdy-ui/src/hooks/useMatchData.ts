@@ -59,6 +59,11 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const fetchedTournamentIdRef = useRef<string | undefined>(undefined);
   const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
+  // Holds the last match document data we pushed to state (serialized). Lets us
+  // skip metadata-only snapshots (hasPendingWrites flips) where the document
+  // payload is unchanged, so the scorecard doesn't re-render every sync tick.
+  const lastMatchJsonRef = useRef<string | null>(null);
+
   // 1. Listen to MATCH (optimized for completed matches)
   // Completed+closed matches use one-time read; active matches use real-time subscription
   useEffect(() => {
@@ -84,6 +89,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setCourse(null);
     setMatchFacts([]);
     setHasPendingWrites(false);
+    lastMatchJsonRef.current = null;
 
     let unsub: (() => void) | undefined;
     
@@ -103,6 +109,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         if (isStatic) {
           // One-time read for static/historical matches (reduces reads by ~80%)
           setMatch(mData);
+          lastMatchJsonRef.current = JSON.stringify(snap.data());
           setMatchLoaded(true);
           return;
         }
@@ -116,15 +123,24 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
           (mSnap) => {
             if (!mSnap.exists()) {
               setMatch(null);
+              lastMatchJsonRef.current = null;
               setMatchLoaded(true);
               setHasPendingWrites(false);
               return;
             }
 
-            const updated = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
-            setMatch(updated);
-            setMatchLoaded(true);
+            // Sync-state always tracks the latest snapshot...
             setHasPendingWrites(mSnap.metadata.hasPendingWrites);
+            setMatchLoaded(true);
+
+            // ...but only push new match state when the document payload actually
+            // changed. includeMetadataChanges fires this listener on every
+            // pending-write flip; skipping no-op data updates stops the scorecard
+            // from re-rendering ~1-2x/sec during active scoring.
+            const dataJson = JSON.stringify(mSnap.data());
+            if (dataJson === lastMatchJsonRef.current) return;
+            lastMatchJsonRef.current = dataJson;
+            setMatch({ id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc);
           },
           (err) => {
             setError(`Failed to load match: ${err.message}`);

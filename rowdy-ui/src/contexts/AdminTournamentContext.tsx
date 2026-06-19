@@ -5,7 +5,7 @@
  * ones — once per layout mount, so child admin pages never re-select it.
  */
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useRosterPlayers } from "../hooks/admin/useRosterPlayers";
@@ -63,18 +63,21 @@ export function AdminTournamentProvider({
   const { players } = useRosterPlayers(tournament);
   const { rounds, refresh: refreshRounds, error: roundsError } = useRounds(tournamentId);
 
+  const value = useMemo<AdminTournamentContextValue>(
+    () => ({
+      tournamentId,
+      tournament,
+      players,
+      rounds,
+      loading,
+      error: error ?? roundsError,
+      refreshRounds,
+    }),
+    [tournamentId, tournament, players, rounds, loading, error, roundsError, refreshRounds]
+  );
+
   return (
-    <AdminTournamentContext.Provider
-      value={{
-        tournamentId,
-        tournament,
-        players,
-        rounds,
-        loading,
-        error: error ?? roundsError,
-        refreshRounds,
-      }}
-    >
+    <AdminTournamentContext.Provider value={value}>
       {children}
     </AdminTournamentContext.Provider>
   );

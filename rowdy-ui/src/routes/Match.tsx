@@ -730,6 +730,59 @@ export default function Match() {
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
+  // Four player rows: Best Ball and Shamble (individual player scores)
+  const isFourPlayerRows = format === "twoManBestBall" || format === "twoManShamble";
+
+  // Build player rows config. Memoized so the (memoized) PlayerScoreRow children
+  // keep stable props and don't re-render on unrelated parent updates (e.g.
+  // sync-state flips, modal toggles). The cell getters/handlers are all
+  // individually memoized, so rows only rebuild when match/tournament change.
+  // Declared before the early returns below to keep hook order stable.
+  type PlayerRowConfig = {
+    team: "A" | "B";
+    pIdx: number;
+    label: React.ReactNode;
+    color: string;
+    onCellChange: (holeKey: string, value: number | null) => void;
+    getCellValue: (holeKey: string) => number | "";
+    hasStroke: (holeIdx: number) => boolean;
+    getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
+    getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+    hasSkinWin: (holeKey: string) => boolean;
+  };
+  const playerRows: PlayerRowConfig[] = useMemo(() => {
+    if (!match) return [];
+    if (isFourPlayerRows) {
+      // 4 players: A1, A2, B1, B2 (Best Ball & Shamble)
+      return [
+        { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+        { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
+        { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
+        { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
+      ];
+    }
+    if (isTeamFormat) {
+      // 2 rows with TEAM NAMES for scramble only
+      return [
+        { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: teamAColor, onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+        { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: teamBColor, onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
+      ];
+    }
+    // 2 rows: Player A, Player B (singles)
+    return [
+      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
+    ];
+  }, [
+    isFourPlayerRows, isTeamFormat, match, tournament, getPlayerName, teamAColor, teamBColor,
+    cellChangeHandlerA0, cellChangeHandlerA1, cellChangeHandlerB0, cellChangeHandlerB1,
+    getCellValueA0, getCellValueA1, getCellValueB0, getCellValueB1,
+    hasStrokeA0, hasStrokeA1, hasStrokeB0, hasStrokeB1,
+    getDriveValueA, getDriveValueB,
+    getLowScoreStatusA0, getLowScoreStatusA1, getLowScoreStatusB0, getLowScoreStatusB1,
+    hasSkinWinA0, hasSkinWinA1, hasSkinWinB0, hasSkinWinB1,
+  ]);
+
   if (loading) return (
     <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -760,23 +813,6 @@ export default function Match() {
 
   const tName = tournament?.name || "Match Scoring";
   const tSeries = tournament?.series || "rowdyCup";
-  // Four player rows: Best Ball and Shamble (individual player scores)
-  const isFourPlayerRows = format === "twoManBestBall" || format === "twoManShamble";
-
-  // Build player rows config with memoized handlers and getters
-  type PlayerRowConfig = { 
-    team: "A" | "B"; 
-    pIdx: number; 
-    label: React.ReactNode; 
-    color: string;
-    onCellChange: (holeKey: string, value: number | null) => void;
-    getCellValue: (holeKey: string) => number | "";
-    hasStroke: (holeIdx: number) => boolean;
-    getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
-    getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
-    hasSkinWin: (holeKey: string) => boolean;
-  };
-  const playerRows: PlayerRowConfig[] = [];
 
   // Helper to read full courseHandicap for a player from match.courseHandicaps
   const getCourseHandicapFor = (team: "A" | "B", pIdx: number) => {
@@ -785,52 +821,6 @@ export default function Match() {
     if (team === "A") return match.courseHandicaps[pIdx];
     return match.courseHandicaps[aLen + pIdx];
   };
-  
-  if (isFourPlayerRows) {
-    // 4 players: A1, A2, B1, B2 (Best Ball & Shamble)
-    playerRows.push(
-      { team: "A", pIdx: 0, label: (
-          <>
-            <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
-      { team: "A", pIdx: 1, label: (
-          <>
-            <span>{getPlayerName(match.teamAPlayers?.[1]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
-      { team: "B", pIdx: 0, label: (
-          <>
-            <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
-      { team: "B", pIdx: 1, label: (
-          <>
-            <span>{getPlayerName(match.teamBPlayers?.[1]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
-    );
-  } else if (isTeamFormat) {
-    // 2 rows with TEAM NAMES for scramble only
-    playerRows.push(
-      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
-      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
-    );
-  } else {
-    // 2 rows: Player A, Player B (singles)
-    playerRows.push(
-      { team: "A", pIdx: 0, label: (
-          <>
-            <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
-      { team: "B", pIdx: 0, label: (
-          <>
-            <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
-          </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
-    );
-  }
 
   const cellWidth = SCORECARD_CELL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;

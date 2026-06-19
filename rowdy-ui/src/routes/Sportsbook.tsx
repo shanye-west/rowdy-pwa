@@ -89,11 +89,31 @@ export default function Sportsbook() {
   const [propSheetOpen, setPropSheetOpen] = useState(false);
 
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
-  // (read via state to keep Date.now() out of the render path).
+  // (read via state to keep Date.now() out of the render path). The interval is
+  // paused while the app is backgrounded so a hidden tab doesn't re-render this
+  // heavy page every 30s; it resyncs immediately on becoming visible again.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 30_000);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (id !== undefined) {
+        clearInterval(id);
+        id = undefined;
+      }
+    };
+    const start = () => {
+      if (id === undefined) {
+        setNowMs(Date.now());
+        id = setInterval(() => setNowMs(Date.now()), 30_000);
+      }
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   // Never fall back to the raw player ID — show a neutral placeholder if a name

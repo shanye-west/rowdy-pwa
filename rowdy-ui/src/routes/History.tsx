@@ -265,6 +265,9 @@ export default function History() {
                     src={t.teamA?.logo}
                     alt={t.teamA?.name || "Team A"}
                     fallbackIcon="🔵"
+                    loading="lazy"
+                    width={56}
+                    height={56}
                     style={{ width: 56, height: 56, objectFit: "contain", ...(winner?.winnerKey === "teamA" ? championGlow : {}) }}
                   />
                   {winner?.winnerKey === "teamA" && (
@@ -292,6 +295,9 @@ export default function History() {
                     src={t.teamB?.logo}
                     alt={t.teamB?.name || "Team B"}
                     fallbackIcon="🔴"
+                    loading="lazy"
+                    width={56}
+                    height={56}
                     style={{ width: 56, height: 56, objectFit: "contain", ...(winner?.winnerKey === "teamB" ? championGlow : {}) }}
                   />
                   {winner?.winnerKey === "teamB" && (
