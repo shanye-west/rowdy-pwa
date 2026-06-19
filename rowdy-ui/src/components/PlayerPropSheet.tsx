@@ -153,7 +153,7 @@ export default function PlayerPropSheet({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+      className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground focus:border-slate-400 focus:outline-none"
     >
       <option value="">Select a player…</option>
       {sortedRoster
@@ -183,7 +183,7 @@ export default function PlayerPropSheet({
       ) : (
         <div className="space-y-4">
           {/* Prop-type toggle */}
-          <div className="flex gap-1 rounded-full bg-slate-100 p-0.5">
+          <div className="flex gap-1 rounded-full bg-muted p-0.5">
             {(
               [
                 { id: "matchup", label: "Player matchup" },
@@ -195,7 +195,7 @@ export default function PlayerPropSheet({
                 type="button"
                 onClick={() => setPropType(t.id)}
                 className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  propType === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  propType === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.label}
@@ -220,7 +220,7 @@ export default function PlayerPropSheet({
                 </div>
               </div>
               <div>
-                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Who scores more?
                 </div>
                 <div className="flex items-stretch gap-2">
@@ -240,10 +240,10 @@ export default function PlayerPropSheet({
                             : { borderLeftColor: color, borderLeftWidth: 4 }
                         }
                         className={`flex-1 rounded-lg border px-3 py-2 text-left transition-colors ${
-                          selected ? "text-white" : "border-slate-200 bg-white hover:bg-slate-50"
+                          selected ? "text-white" : "border-border bg-card hover:bg-muted"
                         }`}
                       >
-                        <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-slate-800"}`}>
+                        <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-foreground"}`}>
                           {id ? nameOf(id) : s === "teamA" ? "Player A" : "Player B"}
                         </span>
                       </button>
@@ -255,11 +255,11 @@ export default function PlayerPropSheet({
           ) : (
             <div className="space-y-3">
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Player</div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Player</div>
                 {playerSelect(subjectId, setSubjectId)}
               </div>
               <div>
-                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Points line</div>
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Points line</div>
                 <div className="mb-2 flex gap-2">
                   {POINT_LINES.map((l) => (
                     <button
@@ -267,7 +267,7 @@ export default function PlayerPropSheet({
                       type="button"
                       onClick={() => setLine(l)}
                       className={`flex-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-                        line === l ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        line === l ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       {l}
@@ -290,7 +290,7 @@ export default function PlayerPropSheet({
                             : { borderLeftColor: color, borderLeftWidth: 4 }
                         }
                         className={`flex-1 rounded-lg border px-3 py-2 text-left transition-colors ${
-                          selected ? "text-white" : "border-slate-200 bg-white hover:bg-slate-50"
+                          selected ? "text-white" : "border-border bg-card hover:bg-muted"
                         }`}
                       >
                         <span
@@ -299,7 +299,7 @@ export default function PlayerPropSheet({
                         >
                           {s}
                         </span>
-                        <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-slate-800"}`}>
+                        <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-foreground"}`}>
                           {s === "over" ? `Over ${line}` : `Under ${line}`}
                         </span>
                       </button>
@@ -312,33 +312,33 @@ export default function PlayerPropSheet({
 
           {/* Stake stepper + presets */}
           <div>
-            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Stake (each side risks this)
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setAmount((a) => Math.max(STEP, a - STEP))}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-700 active:scale-95"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground active:scale-95"
                 aria-label="Decrease stake"
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <div className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2">
-                <span className="text-lg font-bold text-slate-400">$</span>
+              <div className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-card py-2">
+                <span className="text-lg font-bold text-muted-foreground">$</span>
                 <input
                   type="number"
                   min={1}
                   inputMode="numeric"
                   value={amount}
                   onChange={(e) => setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                  className="w-20 bg-transparent text-center text-lg font-bold text-slate-900 focus:outline-none"
+                  className="w-20 bg-transparent text-center text-lg font-bold text-foreground focus:outline-none"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setAmount((a) => a + STEP)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-700 active:scale-95"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground active:scale-95"
                 aria-label="Increase stake"
               >
                 <Plus className="h-4 w-4" />
@@ -351,7 +351,7 @@ export default function PlayerPropSheet({
                   type="button"
                   onClick={() => setAmount(a)}
                   className={`flex-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-                    amount === a ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    amount === a ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
                   }`}
                 >
                   ${a}
@@ -367,7 +367,7 @@ export default function PlayerPropSheet({
                 type="button"
                 onClick={() => setDirected(false)}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
-                  !directed ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700"
+                  !directed ? "border-slate-900 bg-slate-900 text-white" : "border-border bg-card text-foreground"
                 }`}
               >
                 Open offer
@@ -376,7 +376,7 @@ export default function PlayerPropSheet({
                 type="button"
                 onClick={() => setDirected(true)}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
-                  directed ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700"
+                  directed ? "border-slate-900 bg-slate-900 text-white" : "border-border bg-card text-foreground"
                 }`}
               >
                 Challenge a player
@@ -386,7 +386,7 @@ export default function PlayerPropSheet({
               <select
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground focus:border-slate-400 focus:outline-none"
               >
                 <option value="">Select a player…</option>
                 {sortedRoster
@@ -405,7 +405,7 @@ export default function PlayerPropSheet({
               type="button"
               onClick={handleClose}
               disabled={submitting}
-              className="flex-1 rounded-lg bg-slate-200 px-4 py-3 text-base font-semibold text-slate-700 transition-transform active:scale-95 hover:bg-slate-300 disabled:opacity-60"
+              className="flex-1 rounded-lg bg-muted px-4 py-3 text-base font-semibold text-foreground transition-transform active:scale-95 hover:bg-muted disabled:opacity-60"
             >
               Cancel
             </button>
@@ -421,8 +421,8 @@ export default function PlayerPropSheet({
 
           {/* Existing open player-prop offers — take the other side */}
           {relevantOffers.length > 0 && (
-            <div className="space-y-1.5 border-t border-slate-100 pt-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Open offers</div>
+            <div className="space-y-1.5 border-t border-border pt-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open offers</div>
               <ul className="space-y-1.5">
                 {relevantOffers.map((b) => {
                   const desc = isMatchup
@@ -438,26 +438,26 @@ export default function PlayerPropSheet({
                       <span className="min-w-0 truncate">
                         {isMatchup ? (
                           <>
-                            <span className="font-semibold text-slate-800">
+                            <span className="font-semibold text-foreground">
                               {nameOf(b.subjectAId ?? "")} vs {nameOf(b.subjectBId ?? "")}
                             </span>{" "}
-                            <span className="text-slate-400">·</span> {desc}
+                            <span className="text-muted-foreground">·</span> {desc}
                           </>
                         ) : (
                           <>
-                            <span className="font-semibold text-slate-800">{desc}</span>{" "}
-                            <span className="text-slate-400">·</span> {bettorName(b.proposerId)}
+                            <span className="font-semibold text-foreground">{desc}</span>{" "}
+                            <span className="text-muted-foreground">·</span> {bettorName(b.proposerId)}
                           </>
                         )}
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="font-bold tabular-nums text-slate-900">${b.amount}</span>
+                        <span className="font-bold tabular-nums text-foreground">${b.amount}</span>
                         {loggedIn ? (
                           <button
                             type="button"
                             disabled={meId === b.proposerId}
                             onClick={() => onTake(b)}
-                            className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
+                            className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground"
                           >
                             {meId === b.proposerId ? "Yours" : "Take"}
                           </button>

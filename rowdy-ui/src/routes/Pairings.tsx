@@ -34,9 +34,9 @@ const TEAM_FALLBACK: Record<DraftTeamKey, string> = { teamA: "Team A", teamB: "T
 function BoardSkeleton() {
   return (
     <div className="p-4 space-y-2 max-w-2xl mx-auto">
-      <div className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+      <div className="h-20 rounded-2xl bg-muted animate-pulse" />
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+        <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
       ))}
     </div>
   );
@@ -408,7 +408,7 @@ export default function Pairings() {
         onClose={() => setConfirmAction(null)}
         title={isFinalize ? "Create matches?" : "Reset draft?"}
       >
-        <p className="mb-5 text-center text-sm text-slate-600">
+        <p className="mb-5 text-center text-sm text-muted-foreground">
           {isFinalize
             ? `This locks the pairings and creates ${draft?.totalMatches ?? ""} matches for the round.`
             : "This discards the current pairings and returns to setup."}

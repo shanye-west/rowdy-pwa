@@ -879,7 +879,7 @@ export default function Match() {
             <button
               type="button"
               onClick={() => setShowOfflineReady(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
             >
               <WifiOff className="h-3.5 w-3.5" />
               Prepare for offline
@@ -968,8 +968,8 @@ export default function Match() {
                 )}
 
                 {/* MATCH STATUS ROW - Between Team A and Team B */}
-                <tr className="bg-white border-y-2 border-slate-300">
-                  <td className="sticky left-0 z-10 bg-white text-left px-3 py-1.5 text-slate-600 text-xs font-bold uppercase tracking-wide">
+                <tr className="bg-card border-y-2 border-border">
+                  <td className="sticky left-0 z-10 bg-card text-left px-3 py-1.5 text-muted-foreground text-xs font-bold uppercase tracking-wide">
                     Status
                   </td>
                   {/* Front 9 match status */}
@@ -990,7 +990,7 @@ export default function Match() {
                     const displayTextColor = isClosingHole ? "#fff" : textColor;
                     
                     return (
-                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${isPostMatch ? "bg-slate-50/60" : ""}`}>
+                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${isPostMatch ? "bg-muted/60" : ""}`}>
                         <div 
                           className="text-xs font-bold rounded px-1 py-0.5 text-center"
                           style={{ color: displayTextColor, backgroundColor: displayBgColor }}
@@ -1001,7 +1001,7 @@ export default function Match() {
                     );
                   })}
                   {/* OUT status - always blank */}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
+                  <td className="py-1 bg-muted border-l-2 border-border"></td>
                   {/* Back 9 match status - post-match cells have border and tint */}
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i; // 0-indexed hole position
@@ -1024,7 +1024,7 @@ export default function Match() {
                     return (
                       <td 
                         key={`status-${h.k}`} 
-                        className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-50/60" : ""}`}
+                        className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-border" : ""} ${isPostMatch ? "bg-muted/60" : ""}`}
                       >
                         <div 
                           className="text-xs font-bold rounded px-1 py-0.5 text-center whitespace-nowrap"
@@ -1036,9 +1036,9 @@ export default function Match() {
                     );
                   })}
                   {/* IN status - always blank */}
-                  <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
+                  <td className="py-1 bg-muted border-l-2 border-border"></td>
                   {/* TOTAL status - always blank */}
-                  <td className="py-1 bg-slate-200"></td>
+                  <td className="py-1 bg-muted"></td>
                 </tr>
 
                 {/* Team B Score Row (Best Ball: low net, Shamble: low gross) */}
@@ -1110,7 +1110,7 @@ export default function Match() {
 
         {/* MATCH FLOW GRAPH */}
         {match.status?.marginHistory && match.status.marginHistory.length > 0 && (
-          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Match flow graph unavailable</div>}>
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-muted-foreground text-sm">Match flow graph unavailable</div>}>
             <MatchFlowGraph
               marginHistory={match.status.marginHistory}
               teamAColor={teamAColor}
@@ -1124,7 +1124,7 @@ export default function Match() {
         {/* POST-MATCH STATS */}
         {/* Show when: match closed AND (all 18 holes scored OR round locked) */}
         {showPostMatchStats && (
-          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Match stats unavailable</div>}>
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-muted-foreground text-sm">Match stats unavailable</div>}>
             <PostMatchStats
               matchFacts={matchFacts}
               format={format}
@@ -1142,7 +1142,7 @@ export default function Match() {
 
         {/* MATCH COMMENTS */}
         {tournament?.commentsEnabled && matchId && (
-          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Comments unavailable</div>}>
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-muted-foreground text-sm">Comments unavailable</div>}>
             <CommentThread threadType="match" threadId={matchId} tournamentId={tournament.id} />
           </ComponentErrorBoundary>
         )}

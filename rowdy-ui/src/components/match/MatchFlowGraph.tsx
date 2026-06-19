@@ -203,7 +203,7 @@ export function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamALog
 
   return (
     <div className="card p-4">
-      <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center mb-3">
+      <h3 className="text-sm font-bold uppercase text-muted-foreground tracking-wide text-center mb-3">
         Match Flow
       </h3>
 

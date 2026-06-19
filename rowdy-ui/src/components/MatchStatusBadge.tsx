@@ -69,7 +69,7 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
   } else if (leader === "teamB") {
     statusColor = teamBColor;
   } else {
-    statusColor = "#94a3b8"; // slate-400
+    statusColor = "var(--text-secondary)"; // slate-400
   }
 
   // Compact variant uses slightly smaller text
@@ -104,8 +104,8 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
       // Halved/Tied match
       return (
         <div style={containerStyle}>
-          <div style={{ ...mainTextStyle, color: "#334155" }}>TIED</div>
-          <div style={{ ...labelStyle, color: "#64748b" }}>FINAL</div>
+          <div style={{ ...mainTextStyle, color: "var(--text-primary)" }}>TIED</div>
+          <div style={{ ...labelStyle, color: "var(--text-secondary)" }}>FINAL</div>
         </div>
       );
     }
@@ -143,7 +143,7 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
         <div style={{ ...mainTextStyle, color: statusColor }}>
           {margin} UP
         </div>
-        <div style={{ ...labelStyle, color: "#94a3b8" }}>
+        <div style={{ ...labelStyle, color: "var(--text-secondary)" }}>
           THRU {thru}
         </div>
       </div>
@@ -154,8 +154,8 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
   if (isStarted) {
     return (
       <div style={containerStyle}>
-        <div style={{ ...mainTextStyle, color: "#64748b" }}>ALL SQUARE</div>
-        <div style={{ ...labelStyle, color: "#64748b" }}>THRU {thru}</div>
+        <div style={{ ...mainTextStyle, color: "var(--text-secondary)" }}>ALL SQUARE</div>
+        <div style={{ ...labelStyle, color: "var(--text-secondary)" }}>THRU {thru}</div>
       </div>
     );
   }
@@ -169,12 +169,12 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
       return (
         <div style={containerStyle}>
           {matchNumber && (
-            <div style={{ ...mainTextStyle, color: "#64748b" }}>
+            <div style={{ ...mainTextStyle, color: "var(--text-secondary)" }}>
               Match {matchNumber}
             </div>
           )}
-          <div style={{ ...labelStyle, color: "#94a3b8" }}>Tee Time</div>
-          <div style={{ ...mainTextStyle, color: "#64748b" }}>{teeTimeStr}</div>
+          <div style={{ ...labelStyle, color: "var(--text-secondary)" }}>Tee Time</div>
+          <div style={{ ...mainTextStyle, color: "var(--text-secondary)" }}>{teeTimeStr}</div>
         </div>
       );
     }
@@ -183,11 +183,11 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
     return (
       <div style={containerStyle}>
         {matchNumber && (
-          <div style={{ ...mainTextStyle, color: "#64748b" }}>
+          <div style={{ ...mainTextStyle, color: "var(--text-secondary)" }}>
             Match {matchNumber}
           </div>
         )}
-        <div style={{ ...labelStyle, color: "#94a3b8" }}>{teeTimeStr}</div>
+        <div style={{ ...labelStyle, color: "var(--text-secondary)" }}>{teeTimeStr}</div>
       </div>
     );
   }
@@ -201,14 +201,14 @@ export const MatchStatusBadge = memo(function MatchStatusBadge({
             whiteSpace: "nowrap",
             fontSize: "0.75rem",
             fontWeight: 600,
-            color: "#94a3b8",
+            color: "var(--text-secondary)",
           }}
         >
           Not Started
         </div>
       )}
       {matchNumber && (
-        <div style={{ ...mainTextStyle, color: "#64748b" }}>
+        <div style={{ ...mainTextStyle, color: "var(--text-secondary)" }}>
           Match {matchNumber}
         </div>
       )}
@@ -232,7 +232,7 @@ export function getMatchCardStyles(
 
   let bgStyle: React.CSSProperties = {};
   let borderStyle: React.CSSProperties = {};
-  let textColor = "text-slate-900";
+  let textColor = "text-foreground";
 
   if (isClosed && winner && winner !== "AS") {
     // Completed match with a winner - full team color background
@@ -241,12 +241,12 @@ export function getMatchCardStyles(
     textColor = "text-white";
   } else if (isClosed && winner === "AS") {
     // Halved match - grey background with team color borders
-    bgStyle = { backgroundColor: "#cbd5e1" };
+    bgStyle = { backgroundColor: "var(--divider)" };
     borderStyle = {
       borderLeft: `4px solid ${teamAColor}`,
       borderRight: `4px solid ${teamBColor}`,
     };
-    textColor = "text-slate-700";
+    textColor = "text-foreground";
   } else if (leader === "teamA") {
     bgStyle = { background: `linear-gradient(90deg, ${teamAColor}11 0%, transparent 30%)` };
     borderStyle = { borderLeft: `4px solid ${teamAColor}`, borderRight: "4px solid transparent" };

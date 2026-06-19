@@ -11,6 +11,14 @@ const badgeVariants = cva(
         default: "border-transparent bg-primary text-primary-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "text-foreground",
+        // Semantic status variants — theme-aware via the emerald/amber/red/blue
+        // token ramps (dark: shades keep contrast in dark mode). Canonical
+        // replacement for the legacy .badge-* CSS classes.
+        success: "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+        warning: "border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+        error: "border-transparent bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+        info: "border-transparent bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+        muted: "border-transparent bg-muted text-muted-foreground",
       },
     },
     defaultVariants: {

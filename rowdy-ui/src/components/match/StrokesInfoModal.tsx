@@ -112,58 +112,58 @@ export function StrokesInfoModal({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200">
-              <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
-              <th className="text-left py-2 px-2 font-semibold text-slate-700">
+            <tr className="border-b border-border">
+              <th className="text-left py-2 px-2 font-semibold text-foreground">Player</th>
+              <th className="text-left py-2 px-2 font-semibold text-foreground">
                 <button
                   onClick={(e) => openDefTooltip(e, "HI")}
                   aria-label="Define H.I."
                   className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
                 >
                   <span>H.I.</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <circle cx="12" cy="16" r="1" />
                   </svg>
                 </button>
               </th>
-              <th className="text-left py-2 px-2 font-semibold text-slate-700">
+              <th className="text-left py-2 px-2 font-semibold text-foreground">
                 <button
                   onClick={(e) => openDefTooltip(e, "CH")}
                   aria-label="Define C.H."
                   className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
                 >
                   <span>C.H.</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <circle cx="12" cy="16" r="1" />
                   </svg>
                 </button>
               </th>
-              <th className="text-left py-2 px-2 font-semibold text-slate-700">
+              <th className="text-left py-2 px-2 font-semibold text-foreground">
                 <button
                   onClick={(e) => openDefTooltip(e, "SO")}
                   aria-label="Define S.O."
                   className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
                 >
                   <span>S.O.</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <circle cx="12" cy="16" r="1" />
                   </svg>
                 </button>
               </th>
-              <th className="text-left py-2 px-2 font-semibold text-slate-700">
+              <th className="text-left py-2 px-2 font-semibold text-foreground">
                 <button
                   onClick={(e) => openDefTooltip(e, "SH")}
                   aria-label="Define S.H."
                   className="flex items-center gap-1 focus:outline-none hover:opacity-70 active:opacity-50 -my-2 py-2"
                 >
                   <span>S.H.</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <circle cx="12" cy="16" r="1" />
@@ -174,12 +174,12 @@ export function StrokesInfoModal({
           </thead>
           <tbody>
             {playerRows.map((row, i) => (
-              <tr key={i} className="border-b border-slate-100">
-                <td className="py-2 px-2 text-slate-800">{row.name}</td>
-                <td className="py-2 px-2 text-left text-slate-600">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
-                <td className="py-2 px-2 text-left text-slate-600">{row.ch != null ? row.ch : "—"}</td>
-                <td className="py-2 px-2 text-left text-slate-600">{row.so}</td>
-                <td className="py-2 px-2 text-left text-slate-600">{row.sh}</td>
+              <tr key={i} className="border-b border-border">
+                <td className="py-2 px-2 text-foreground">{row.name}</td>
+                <td className="py-2 px-2 text-left text-muted-foreground">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
+                <td className="py-2 px-2 text-left text-muted-foreground">{row.ch != null ? row.ch : "—"}</td>
+                <td className="py-2 px-2 text-left text-muted-foreground">{row.so}</td>
+                <td className="py-2 px-2 text-left text-muted-foreground">{row.sh}</td>
               </tr>
             ))}
           </tbody>

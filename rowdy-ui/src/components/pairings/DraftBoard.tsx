@@ -21,8 +21,8 @@ export default function DraftBoard({ draft, meta }: DraftBoardProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Matchups</span>
-        <span className="text-xs font-medium text-slate-400">
+        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Matchups</span>
+        <span className="text-xs font-medium text-muted-foreground">
           {setCount} of {draft.totalMatches} set
         </span>
       </div>

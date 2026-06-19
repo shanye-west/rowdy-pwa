@@ -32,7 +32,7 @@ export const SyncStatusBadge = memo(function SyncStatusBadge({
     dotCls = "bg-amber-500";
     label = "Saved on device · will sync";
   } else if (hasPendingWrites) {
-    cls = "bg-slate-100 text-slate-600";
+    cls = "bg-muted text-muted-foreground";
     dotCls = "bg-slate-400 animate-pulse";
     label = "Syncing…";
   } else {

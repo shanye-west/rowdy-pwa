@@ -18,12 +18,12 @@ export default function PairingsMessage({ icon, title, children, action }: Pairi
   return (
     <div className="mx-auto flex max-w-md flex-col items-center px-6 py-12 text-center">
       {icon && (
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
           {icon}
         </div>
       )}
-      <h2 className="text-lg font-bold text-slate-800">{title}</h2>
-      {children && <p className="mt-2 text-sm leading-relaxed text-slate-500">{children}</p>}
+      <h2 className="text-lg font-bold text-foreground">{title}</h2>
+      {children && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{children}</p>}
       {action && <div className="mt-5 w-full">{action}</div>}
     </div>
   );

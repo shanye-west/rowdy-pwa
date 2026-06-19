@@ -97,8 +97,8 @@ export const HoleByHoleTracker = memo(function HoleByHoleTracker({
       return {
         ...baseStyle,
         backgroundColor: "transparent",
-        color: "#64748b",
-        border: "1px dashed #cbd5e1",
+        color: "var(--text-secondary)",
+        border: "1px dashed var(--divider)",
         backgroundImage:
           "linear-gradient(135deg, transparent calc(50% - 1px), rgba(0,0,0,0.18) 50%, transparent calc(50% + 1px))",
       };
@@ -125,9 +125,9 @@ export const HoleByHoleTracker = memo(function HoleByHoleTracker({
     if (winner === "AS") {
       return {
         ...baseStyle,
-        backgroundColor: "#94a3b8",
+        backgroundColor: "var(--text-secondary)",
         color: "white",
-        border: "2px solid #94a3b8",
+        border: "2px solid var(--text-secondary)",
       };
     }
 
@@ -135,8 +135,8 @@ export const HoleByHoleTracker = memo(function HoleByHoleTracker({
     return {
       ...baseStyle,
       backgroundColor: "transparent",
-      color: "#94a3b8",
-      border: "1px dashed #cbd5e1",
+      color: "var(--text-secondary)",
+      border: "1px dashed var(--divider)",
     };
   };
 

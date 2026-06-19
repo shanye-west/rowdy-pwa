@@ -38,7 +38,7 @@ function PlayerAvatar({ name, color, size = 28, className }: PlayerAvatarProps) 
         width: size,
         height: size,
         fontSize: Math.round(size * 0.4),
-        background: `color-mix(in srgb, ${tint} 18%, white)`,
+        background: `color-mix(in srgb, ${tint} 18%, var(--card-bg))`,
         color: tint,
       }}
     >

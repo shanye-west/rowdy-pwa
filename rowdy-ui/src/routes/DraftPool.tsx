@@ -86,9 +86,9 @@ export default function DraftPool() {
   if (poolIds.length === 0) {
     return (
       <Layout title="Draft Pool" series={tournament?.series} showBack tournamentLogo={tournament?.tournamentLogo}>
-        <div className="px-4 pt-16 text-center text-slate-500">
+        <div className="px-4 pt-16 text-center text-muted-foreground">
           <ClipboardList className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-          <div className="text-base font-semibold text-slate-700">Draft pool not posted yet</div>
+          <div className="text-base font-semibold text-foreground">Draft pool not posted yet</div>
           <div className="mt-1 text-sm">Check back once the field is set.</div>
         </div>
       </Layout>
@@ -103,7 +103,7 @@ export default function DraftPool() {
           <div className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             {poolIds.length} players available
           </div>
-          <div className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-xs font-semibold">
+          <div className="inline-flex overflow-hidden rounded-lg border border-border text-xs font-semibold">
             {(["handicap", "name"] as const).map((key) => (
               <button
                 key={key}
@@ -112,7 +112,7 @@ export default function DraftPool() {
                 aria-pressed={sortBy === key}
                 className={
                   "px-3 py-1.5 capitalize transition-colors " +
-                  (sortBy === key ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50")
+                  (sortBy === key ? "bg-slate-900 text-white" : "bg-card text-muted-foreground hover:bg-muted")
                 }
               >
                 {key}
@@ -136,22 +136,22 @@ export default function DraftPool() {
             return (
               <div key={pid}>
                 {showTierHeader && (
-                  <div className="flex items-center gap-2 bg-slate-50 px-4 py-1.5 border-b border-slate-200">
+                  <div className="flex items-center gap-2 bg-muted px-4 py-1.5 border-b border-border">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-[0.6rem] font-bold text-white">
                       {tier}
                     </span>
-                    <span className="text-[0.65rem] font-semibold uppercase tracking-widest text-slate-500">
+                    <span className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
                       Tier {tier}
                     </span>
                   </div>
                 )}
-                <div className={`flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 last:border-b-0 hover:bg-slate-50 transition-colors duration-150 ${cap ? "" : "opacity-50"}`}>
+                <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-muted transition-colors duration-150 ${cap ? "" : "opacity-50"}`}>
                   <div className="flex min-w-0 items-center gap-3">
                     <PlayerAvatar name={name} color={cap?.color} />
                     <div className="min-w-0">
                       <Link
                         to={`/player/${pid}`}
-                        className="block truncate font-semibold text-slate-900 hover:text-slate-700"
+                        className="block truncate font-semibold text-foreground hover:text-foreground"
                       >
                         {name}
                       </Link>
@@ -176,7 +176,7 @@ export default function DraftPool() {
                         {tier}
                       </span>
                     )}
-                    <div className="text-base font-semibold tabular-nums text-slate-900">
+                    <div className="text-base font-semibold tabular-nums text-foreground">
                       {hcp != null ? Number(hcp).toFixed(1) : "—"}
                     </div>
                   </div>

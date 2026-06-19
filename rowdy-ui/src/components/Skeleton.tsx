@@ -24,7 +24,7 @@ export const Skeleton = memo(function Skeleton({
   
   return (
     <div 
-      className={`bg-slate-200 animate-pulse ${roundedClass} ${className}`}
+      className={`bg-muted animate-pulse ${roundedClass} ${className}`}
       style={{ width, height }}
       aria-hidden="true"
     />
@@ -56,8 +56,8 @@ export const ScorecardSkeleton = memo(function ScorecardSkeleton() {
           </thead>
           <tbody>
             {/* Par row skeleton */}
-            <tr className="bg-slate-100">
-              <td className="sticky left-0 z-10 bg-slate-100 px-3 py-1.5">
+            <tr className="bg-muted">
+              <td className="sticky left-0 z-10 bg-muted px-3 py-1.5">
                 <Skeleton width={24} height={14} />
               </td>
               {holes.map(i => (
@@ -65,7 +65,7 @@ export const ScorecardSkeleton = memo(function ScorecardSkeleton() {
                   <Skeleton width={16} height={14} className="mx-auto" />
                 </td>
               ))}
-              <td className="py-1.5 bg-slate-200">
+              <td className="py-1.5 bg-muted">
                 <Skeleton width={20} height={14} className="mx-auto" />
               </td>
             </tr>
@@ -80,7 +80,7 @@ export const ScorecardSkeleton = memo(function ScorecardSkeleton() {
                     <Skeleton width={40} height={40} rounded="md" className="mx-auto" />
                   </td>
                 ))}
-                <td className="py-2 bg-slate-100">
+                <td className="py-2 bg-muted">
                   <Skeleton width={24} height={16} className="mx-auto" />
                 </td>
               </tr>

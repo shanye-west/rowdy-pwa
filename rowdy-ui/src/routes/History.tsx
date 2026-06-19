@@ -162,9 +162,9 @@ export default function History() {
                     border: "none",
                     borderLeft: idx > 0 ? "1px solid var(--divider)" : "none",
                     cursor: "pointer",
-                    background: isSelected 
-                      ? `color-mix(in srgb, ${config.color} 15%, white)` 
-                      : "white",
+                    background: isSelected
+                      ? `color-mix(in srgb, ${config.color} 15%, var(--card-bg))`
+                      : "var(--card-bg)",
                     borderBottom: isSelected ? `3px solid ${config.color}` : "3px solid transparent",
                     transition: "all 0.2s ease",
                   }}
@@ -201,7 +201,7 @@ export default function History() {
               gap: 8,
               padding: "14px 12px",
               borderRadius: 12,
-              background: `color-mix(in srgb, ${SERIES_CONFIG[availableSeries[0]].color} 15%, white)`,
+              background: `color-mix(in srgb, ${SERIES_CONFIG[availableSeries[0]].color} 15%, var(--card-bg))`,
               border: "1px solid var(--divider)",
             }}
           >

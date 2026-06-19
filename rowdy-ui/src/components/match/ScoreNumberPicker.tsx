@@ -77,9 +77,9 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
   // Common button styles
   const buttonBase = "flex items-center justify-center text-lg font-semibold rounded-lg transition-all duration-100 active:scale-95 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1";
   const buttonSize = "w-12 h-12"; // 48px - good touch target
-  const buttonNormal = "bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 active:bg-slate-100";
+  const buttonNormal = "bg-card border border-border text-foreground hover:bg-muted active:bg-muted";
   const buttonSelected = "bg-blue-500 border border-blue-500 text-white";
-  const buttonSpecial = "bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 active:bg-slate-300";
+  const buttonSpecial = "bg-muted border border-border text-muted-foreground hover:bg-muted active:bg-muted";
 
   const isSelected = (num: number) => value === num;
 
@@ -89,7 +89,7 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
       id={id}
       popover="auto"
       onKeyDown={handleKeyDown}
-      className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 m-0"
+      className="bg-card rounded-xl shadow-xl border border-border p-3 m-0"
       style={{ minWidth: "180px" }}
     >
       {/* Main 3x3 grid (1-9) */}
@@ -121,7 +121,7 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
         <div /> {/* Empty spacer */}
         <button
           type="button"
-          className={`${buttonBase} ${buttonSize} ${buttonSpecial} text-sm ${showExtended ? 'bg-slate-200' : ''}`}
+          className={`${buttonBase} ${buttonSize} ${buttonSpecial} text-sm ${showExtended ? 'bg-muted' : ''}`}
           onClick={toggleExtended}
           aria-label={showExtended ? "Show fewer numbers" : "Show more numbers"}
         >
@@ -131,7 +131,7 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
 
       {/* Extended numbers (10-15) - shown when expanded */}
       {showExtended && (
-        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200">
+        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border">
           {[10, 11, 12, 13, 14, 15].map((num) => (
             <button
               key={num}

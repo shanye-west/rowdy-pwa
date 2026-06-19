@@ -25,7 +25,7 @@ function BetEventRow({ label, subtitle, accent, hint, hintActive, onClick }: Bet
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted active:bg-muted"
     >
       {accent && (
         <span className="flex h-9 w-1.5 shrink-0 flex-col overflow-hidden rounded-full">
@@ -34,13 +34,13 @@ function BetEventRow({ label, subtitle, accent, hint, hintActive, onClick }: Bet
         </span>
       )}
       <div className="min-w-0 flex-1 leading-snug">
-        <div className="text-sm font-semibold text-slate-900">{label}</div>
-        {subtitle && <div className="truncate text-[0.7rem] text-slate-500">{subtitle}</div>}
+        <div className="text-sm font-semibold text-foreground">{label}</div>
+        {subtitle && <div className="truncate text-[0.7rem] text-muted-foreground">{subtitle}</div>}
       </div>
       {hint && (
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${
-            hintActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+            hintActive ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
           }`}
         >
           {hint}

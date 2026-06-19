@@ -30,7 +30,7 @@ export const SaveStatusIndicator = memo(function SaveStatusIndicator({
         ${showSaved ? "bg-green-100 text-green-700" : ""}
         ${showQueued ? "bg-amber-100 text-amber-800" : ""}
         ${showError ? "bg-red-100 text-red-700" : ""}
-        ${showSaving ? "bg-slate-100 text-slate-500" : ""}
+        ${showSaving ? "bg-muted text-muted-foreground" : ""}
       `}
       role="status"
       aria-live="polite"

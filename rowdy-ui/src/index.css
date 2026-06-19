@@ -5,6 +5,11 @@
 /* Tailwind CSS */
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` utilities activate when <html> has .dark
+   (toggled by the theme switcher / no-flash script in index.html), rather than
+   purely following the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom Theme - extend Tailwind with CSS variables */
 @theme {
   /* Shadcn UI Tokens */
@@ -45,6 +50,8 @@
 /* Base layer for global styles */
 @layer base {
   :root {
+    /* Native form controls / scrollbars follow the active theme. */
+    color-scheme: light;
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -67,6 +74,8 @@
 
     /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
     --brand-primary: #132448;
+    /* Lighter stop for the primary-button / brand gradient. */
+    --brand-primary-2: #1f3a69;
     --brand-secondary: #bf203c;
     --brand-accent: #ffffff;
     
@@ -100,6 +109,54 @@
     --primary: 1 87% 52%;
     --secondary: 147 100% 26%;
     --ring: 1 87% 52%;
+  }
+
+  /* --- DARK MODE ---
+     Surface + text tokens flip; brand/team colors are kept (and the gradient
+     stops lightened so primary buttons stay legible on a dark field). Applied
+     via the .dark class on <html>. Token-based surfaces (.card, <Card>, nav,
+     inputs, buttons, badges) pick this up automatically. */
+  .dark {
+    color-scheme: dark;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 39% 13%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 39% 13%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217 48% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 349 70% 52%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 28% 18%;
+    --muted-foreground: 215 22% 65%;
+    --accent: 222 28% 20%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 217 60% 58%;
+
+    /* Lighten the brand gradient so navy buttons pop on a dark field. */
+    --brand-primary: #2a4a82;
+    --brand-primary-2: #3a5d9e;
+
+    /* UI Colors */
+    --app-bg: #0b1220;
+    --card-bg: #131c2e;
+    --text-primary: #e8edf5;
+    --text-secondary: #9aa7bd;
+    --divider: #1f2a3d;
+  }
+
+  /* Christmas + dark: keep the festive brand reds/greens but lift them slightly
+     so they read on the dark field. */
+  body.theme-christmas.dark,
+  .dark body.theme-christmas {
+    --brand-primary: #ff4a45;
+    --team-a-default: #1aa657;
+    --team-b-default: #ff4a45;
   }
 
   /* =========================================
@@ -212,7 +269,7 @@
   /* Bottom tab bar — thumb-reachable primary nav, centered to the content column. */
   .bottom-nav {
     @apply fixed bottom-0 z-50 flex items-stretch justify-around
-           border-t border-slate-200/70 bg-white/90 backdrop-blur;
+           border-t border-border/70 bg-card/90 backdrop-blur;
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
@@ -224,7 +281,7 @@
   }
   .bottom-nav-item {
     @apply flex flex-1 flex-col items-center justify-center gap-0.5
-           text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400
+           text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground
            transition-colors duration-150;
   }
   .bottom-nav-item[aria-current="page"] {
@@ -254,7 +311,7 @@
 
   /* Cards */
   .card {
-    @apply rounded-2xl p-4 mb-3 relative overflow-hidden border border-slate-200/70 bg-white/80 backdrop-blur;
+    @apply rounded-2xl p-4 mb-3 relative overflow-hidden border border-border/70 bg-card/80 text-card-foreground backdrop-blur;
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -288,37 +345,40 @@
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center font-semibold rounded-lg 
+    @apply inline-flex items-center justify-center font-semibold rounded-lg
            transition-all duration-200 cursor-pointer px-4 py-3 text-white shadow-sm;
-    background: linear-gradient(135deg, var(--brand-primary), #1f3a69);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-2));
   }
   .btn-primary:hover:not(:disabled) {
     @apply brightness-110 shadow-lg;
   }
   .btn-primary:active:not(:disabled) {
-    @apply brightness-95;
+    @apply brightness-95 scale-[0.98];
   }
   .btn-primary:disabled {
     @apply opacity-50 cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center font-semibold rounded-lg 
-           transition-all duration-200 cursor-pointer px-4 py-3 bg-white/80 border border-slate-200 text-slate-700 shadow-sm;
+    @apply inline-flex items-center justify-center font-semibold rounded-lg
+           transition-all duration-200 cursor-pointer px-4 py-3 bg-card/80 border border-border text-foreground shadow-sm;
   }
   .btn-secondary:hover:not(:disabled) {
-    @apply bg-slate-50 border-slate-300;
+    @apply bg-muted border-border;
+  }
+  .btn-secondary:active:not(:disabled) {
+    @apply scale-[0.98];
   }
   .btn-secondary:disabled {
     @apply opacity-50 cursor-not-allowed;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center font-semibold rounded-lg 
-           transition-all duration-200 cursor-pointer px-3 py-2 bg-transparent text-slate-600;
+    @apply inline-flex items-center justify-center font-semibold rounded-lg
+           transition-all duration-200 cursor-pointer px-3 py-2 bg-transparent text-muted-foreground;
   }
   .btn-ghost:hover:not(:disabled) {
-    @apply bg-slate-100;
+    @apply bg-muted;
   }
   .btn-ghost:disabled {
     @apply opacity-50 cursor-not-allowed;
@@ -354,28 +414,28 @@
 
   /* Score Inputs */
   .score-input {
-    @apply w-full h-12 text-2xl text-center font-bold rounded-lg 
-           bg-white/70 border border-slate-200 text-slate-900
+    @apply w-full h-12 text-2xl text-center font-bold rounded-lg
+           bg-card/70 border border-border text-foreground
            transition-all duration-150;
     appearance: none;
   }
   .score-input:focus {
-    @apply outline-none ring-2 ring-offset-0 bg-white border-transparent;
+    @apply outline-none ring-2 ring-offset-0 bg-card border-transparent;
     --tw-ring-color: var(--brand-primary);
   }
   .score-input:disabled {
-    @apply bg-slate-200 text-slate-400 cursor-not-allowed;
+    @apply bg-muted text-muted-foreground cursor-not-allowed;
   }
 
   /* Section Headers */
   .section-header {
-    @apply bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-slate-500 
-           uppercase tracking-wider border-b border-slate-200;
+    @apply bg-muted/60 px-4 py-1.5 text-xs font-bold text-muted-foreground
+           uppercase tracking-wider border-b border-border;
   }
 
   /* Empty State */
   .empty-state {
-    @apply text-center py-12 text-slate-400;
+    @apply text-center py-12 text-muted-foreground;
   }
   .empty-state-icon {
     @apply text-4xl mb-2;
@@ -387,18 +447,18 @@
   /* Loading Spinner */
   .spinner {
     @apply inline-block w-5 h-5 rounded-full animate-spin;
-    border: 2px solid #e2e8f0;
+    border: 2px solid hsl(var(--border));
     border-top-color: hsl(var(--primary));
   }
   .spinner-lg {
     @apply inline-block w-8 h-8 rounded-full animate-spin;
-    border: 3px solid #e2e8f0;
+    border: 3px solid hsl(var(--border));
     border-top-color: hsl(var(--primary));
   }
 
   /* Divider */
   .divider {
-    @apply border-t border-slate-200 my-4;
+    @apply border-t border-border my-4;
   }
 
   /* Toasts — fixed stack above the bottom nav + home indicator */

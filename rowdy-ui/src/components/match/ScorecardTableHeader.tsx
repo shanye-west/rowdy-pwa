@@ -100,12 +100,12 @@ export function ScorecardTableHeader({
       </tr>
 
       {/* Handicap Row */}
-      <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
-        <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1">Hcp</td>
+      <tr className="bg-muted text-muted-foreground text-xs border-b border-border">
+        <td className="sticky left-0 z-10 bg-muted text-left px-3 py-1">Hcp</td>
         {holes.slice(0, 9).map(h => (
           <td key={h.k} className="py-1">{h.hcpIndex || ""}</td>
         ))}
-        <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
+        <td className="py-1 bg-muted border-l-2 border-border"></td>
         {holes.slice(9, 18).map((h, i) => {
           const holeIdx = 9 + i;
           const isPostMatch = closingHole !== null && holeIdx > closingHole;
@@ -113,23 +113,23 @@ export function ScorecardTableHeader({
           return (
             <td 
               key={h.k} 
-              className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
+              className={`py-1 ${i === 0 ? "border-l-2 border-border" : ""} ${isPostMatch ? "bg-muted/60" : ""}`}
             >
               {h.hcpIndex || ""}
             </td>
           );
         })}
-        <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
-        <td className="py-1 bg-slate-200"></td>
+        <td className="py-1 bg-muted border-l-2 border-border"></td>
+        <td className="py-1 bg-muted"></td>
       </tr>
 
       {/* Yardage Row */}
-      <tr className="bg-slate-50 text-slate-900 text-xs border-b border-slate-200">
-        <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1 capitalize">{courseTees || 'Yards'}</td>
+      <tr className="bg-muted text-foreground text-xs border-b border-border">
+        <td className="sticky left-0 z-10 bg-muted text-left px-3 py-1 capitalize">{courseTees || 'Yards'}</td>
         {holes.slice(0, 9).map(h => (
           <td key={h.k} className="py-1">{h.yards || ""}</td>
         ))}
-        <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
+        <td className="py-1 bg-muted border-l-2 border-border">
           {holes.slice(0, 9).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
         {holes.slice(9, 18).map((h, i) => {
@@ -139,27 +139,27 @@ export function ScorecardTableHeader({
           return (
             <td 
               key={h.k} 
-              className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
+              className={`py-1 ${i === 0 ? "border-l-2 border-border" : ""} ${isPostMatch ? "bg-muted/60" : ""}`}
             >
               {h.yards || ""}
             </td>
           );
         })}
-        <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
+        <td className="py-1 bg-muted border-l-2 border-border">
           {holes.slice(9, 18).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
-        <td className="py-1 bg-slate-200">
+        <td className="py-1 bg-muted">
           {holes.reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
       </tr>
 
       {/* Par Row */}
-      <tr className="bg-slate-100 text-slate-600 text-xs font-semibold">
-        <td className="sticky left-0 z-10 bg-slate-100 text-left px-3 py-1.5">Par</td>
+      <tr className="bg-muted text-muted-foreground text-xs font-semibold">
+        <td className="sticky left-0 z-10 bg-muted text-left px-3 py-1.5">Par</td>
         {holes.slice(0, 9).map(h => (
           <td key={h.k} className="py-1.5">{h.par}</td>
         ))}
-        <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
+        <td className="py-1.5 bg-muted font-bold border-l-2 border-border">{totals.parOut}</td>
         {holes.slice(9, 18).map((h, i) => {
           const holeIdx = 9 + i;
           const isPostMatch = closingHole !== null && holeIdx > closingHole;
@@ -167,14 +167,14 @@ export function ScorecardTableHeader({
           return (
             <td 
               key={h.k} 
-              className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-200/60" : ""}`}
+              className={`py-1.5 ${i === 0 ? "border-l-2 border-border" : ""} ${isPostMatch ? "bg-muted/60" : ""}`}
             >
               {h.par}
             </td>
           );
         })}
-        <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
-        <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
+        <td className="py-1.5 bg-muted font-bold border-l-2 border-border">{totals.parIn}</td>
+        <td className="py-1.5 bg-muted font-bold">{totals.parTotal}</td>
       </tr>
     </thead>
   );

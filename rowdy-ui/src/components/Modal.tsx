@@ -76,11 +76,11 @@ export function Modal({
       className="backdrop:bg-black/50 bg-transparent p-0 border-0"
     >
       <div 
-        className={`bg-white rounded-xl shadow-xl p-6 ${maxWidth}`}
+        className={`bg-card rounded-xl shadow-xl p-6 ${maxWidth}`}
         style={{ width: 'calc(100vw - 32px)' }}
       >
         {title && (
-          <h3 className="text-lg font-bold text-center text-slate-800 mb-4">
+          <h3 className="text-lg font-bold text-center text-foreground mb-4">
             {title}
           </h3>
         )}
@@ -120,7 +120,7 @@ export function ModalActions({
         <button
           type="button"
           onClick={onSecondary}
-          className="flex-1 py-3 px-4 rounded-lg bg-slate-200 text-slate-700 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
+          className="flex-1 py-3 px-4 rounded-lg bg-muted text-foreground font-semibold text-base transition-transform active:scale-95 hover:bg-muted"
         >
           {secondaryLabel}
         </button>

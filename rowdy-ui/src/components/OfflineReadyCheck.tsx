@@ -40,7 +40,7 @@ const makeInitial = (): StepInfo[] =>
 function StepIcon({ state }: { state: StepState }) {
   if (state === "ok") return <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />;
   if (state === "fail") return <XCircle className="h-5 w-5 shrink-0 text-red-600" />;
-  if (state === "running") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-slate-400" />;
+  if (state === "running") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />;
   return <Circle className="h-5 w-5 shrink-0 text-slate-300" />;
 }
 
@@ -138,7 +138,7 @@ export function OfflineReadyCheck({
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Prepare for offline" ariaLabel="Prepare for offline">
-      <p className="mb-4 text-center text-sm text-slate-600">
+      <p className="mb-4 text-center text-sm text-muted-foreground">
         Run this on wi-fi or cell before your round so you can keep scoring even
         if you lose signal on the course.
       </p>
@@ -153,13 +153,13 @@ export function OfflineReadyCheck({
                   s.state === "fail"
                     ? "text-red-700"
                     : s.state === "ok"
-                      ? "text-slate-800"
-                      : "text-slate-600"
+                      ? "text-foreground"
+                      : "text-muted-foreground"
                 }`}
               >
                 {s.label}
               </div>
-              {s.detail && <div className="text-xs text-slate-500">{s.detail}</div>}
+              {s.detail && <div className="text-xs text-muted-foreground">{s.detail}</div>}
             </div>
           </li>
         ))}
@@ -190,7 +190,7 @@ export function OfflineReadyCheck({
           type="button"
           onClick={onClose}
           disabled={running}
-          className="flex-1 rounded-lg bg-slate-200 px-4 py-3 text-base font-semibold text-slate-700 transition-transform active:scale-95 hover:bg-slate-300 disabled:opacity-60"
+          className="flex-1 rounded-lg bg-muted px-4 py-3 text-base font-semibold text-foreground transition-transform active:scale-95 hover:bg-muted disabled:opacity-60"
         >
           {running ? "Checking…" : allOk ? "Done" : "Close"}
         </button>

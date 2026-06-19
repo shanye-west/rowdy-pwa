@@ -85,12 +85,12 @@ function SkinsComponent() {
       return (
         <Layout title="Skins" showBack series={tSeries} tournamentLogo={tLogo}>
           <div className="px-4 py-10">
-            <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+            <Card className="mx-auto max-w-md border-border/80 bg-card/90 text-center">
               <CardContent className="py-8">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Target className="h-6 w-6" />
                 </div>
-                <div className="text-lg font-semibold text-slate-900">Round not found</div>
+                <div className="text-lg font-semibold text-foreground">Round not found</div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   This round is not available right now.
                 </div>
@@ -107,12 +107,12 @@ function SkinsComponent() {
     return (
       <Layout title="Skins" showBack series={tSeries} tournamentLogo={tLogo}>
         <div className="px-4 py-10">
-          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+          <Card className="mx-auto max-w-md border-border/80 bg-card/90 text-center">
             <CardContent className="py-8">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <Target className="h-6 w-6" />
               </div>
-              <div className="text-lg font-semibold text-slate-900">Skins not configured</div>
+              <div className="text-lg font-semibold text-foreground">Skins not configured</div>
               <div className="mt-1 text-sm text-muted-foreground">
                 No skins game has been set for this round.
               </div>
@@ -145,11 +145,11 @@ function SkinsComponent() {
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
         <section>
-          <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
+          <Card className="relative overflow-hidden border-white/50 bg-card/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
               <div className="text-center">
-                <div className="text-2xl font-semibold text-slate-900">Skins Game</div>
+                <div className="text-2xl font-semibold text-foreground">Skins Game</div>
                 <div className="mt-1 text-sm text-muted-foreground">{roundLabel} • {skinModeLabel}</div>
               </div>
 
@@ -175,12 +175,12 @@ function SkinsComponent() {
               )}
 
               <div className="grid gap-3">
-                <Card className="border-slate-200/70 bg-slate-50/80">
+                <Card className="border-border/70 bg-muted/80">
                   <CardContent className="text-center py-6">
                     <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                       Total Pot
                     </div>
-                    <div className="text-2xl font-semibold text-slate-900 mt-2">
+                    <div className="text-2xl font-semibold text-foreground mt-2">
                       ${totalPot.toFixed(0)}
                     </div>
                     <div className="mt-2 text-sm text-muted-foreground">
@@ -194,7 +194,7 @@ function SkinsComponent() {
         </section>
 
         <section>
-          <Card className="border-slate-200/80 bg-white/85">
+          <Card className="border-border/80 bg-card/85">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -211,7 +211,7 @@ function SkinsComponent() {
             </CardHeader>
             <CardContent className="space-y-3">
               {leaderboard.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                   No skins won yet
                 </div>
               ) : (
@@ -231,7 +231,7 @@ function SkinsComponent() {
                         "flex flex-wrap items-center justify-between gap-4 rounded-xl border px-4 py-3",
                         isLeader
                           ? "border-primary/30 bg-primary/5"
-                          : "border-slate-200/80 bg-white/80"
+                          : "border-border/80 bg-card/80"
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -240,13 +240,13 @@ function SkinsComponent() {
                             "flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold",
                             isLeader
                               ? "bg-primary text-primary-foreground"
-                              : "bg-slate-100 text-slate-600"
+                              : "bg-muted text-muted-foreground"
                           )}
                         >
                           {isLeader ? <Crown className="h-5 w-5" /> : idx + 1}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-slate-900">
+                          <div className="text-sm font-semibold text-foreground">
                             {player.playerName}
                           </div>
                           <div className="text-xs text-muted-foreground">
@@ -272,7 +272,7 @@ function SkinsComponent() {
         </section>
 
         <section>
-          <Card className="border-slate-200/80 bg-white/85">
+          <Card className="border-border/80 bg-card/85">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -309,8 +309,8 @@ function SkinsComponent() {
                   <Card
                     key={hole.holeNumber}
                     className={cn(
-                      "overflow-hidden border-slate-200/80 card-hover",
-                      allPlayersCompleted ? "bg-emerald-50/40" : "bg-white"
+                      "overflow-hidden border-border/80 card-hover",
+                      allPlayersCompleted ? "bg-emerald-50/40" : "bg-card"
                     )}
                   >
                     <button
@@ -319,7 +319,7 @@ function SkinsComponent() {
                         "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition",
                         allPlayersCompleted
                           ? "bg-emerald-50/70 hover:bg-emerald-50"
-                          : "bg-slate-50/70 hover:bg-slate-50"
+                          : "bg-muted/70 hover:bg-muted"
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -327,8 +327,8 @@ function SkinsComponent() {
                           className={cn(
                             "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold",
                             allPlayersCompleted
-                              ? "border-emerald-200 bg-white text-emerald-700"
-                              : "border-slate-200 bg-white text-slate-600"
+                              ? "border-emerald-200 bg-card text-emerald-700"
+                              : "border-border bg-card text-muted-foreground"
                           )}
                         >
                           {hole.holeNumber}
@@ -337,7 +337,7 @@ function SkinsComponent() {
                           <div
                             className={cn(
                               "text-sm font-semibold",
-                              isHoleWinner ? "text-slate-900" : "text-slate-700"
+                              isHoleWinner ? "text-foreground" : "text-foreground"
                             )}
                           >
                             {winnerText}
@@ -353,16 +353,16 @@ function SkinsComponent() {
                               "text-xs",
                               allPlayersCompleted
                                 ? "border-emerald-200 text-emerald-700"
-                                : "border-slate-200 text-slate-600"
+                                : "border-border text-muted-foreground"
                             )}
                           >
                             {scoreLabel(lowScore, par)}
                           </Badge>
                         )}
                         {isExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-slate-500" />
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <ChevronDown className="h-4 w-4 text-slate-500" />
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         )}
                       </div>
                     </button>
@@ -423,10 +423,10 @@ function SkinsComponent() {
                                       "flex items-center justify-between rounded-lg border px-3 py-2 text-sm",
                                       isWinner
                                         ? "border-emerald-200 bg-emerald-50"
-                                        : "border-slate-200 bg-slate-50/70"
+                                        : "border-border bg-muted/70"
                                     )}
                                   >
-                                    <div className="flex items-center gap-2 text-slate-900">
+                                    <div className="flex items-center gap-2 text-foreground">
                                       <span className="font-medium">{score.playerName}</span>
                                       {selectedTab === "net" && score.hasStroke && (
                                         <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -435,7 +435,7 @@ function SkinsComponent() {
                                     <div
                                       className={cn(
                                         "text-sm font-semibold",
-                                        hasScore ? "text-slate-900" : "text-slate-400"
+                                        hasScore ? "text-foreground" : "text-muted-foreground"
                                       )}
                                     >
                                       {scoreDisplay}

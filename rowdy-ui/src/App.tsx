@@ -76,13 +76,13 @@ export default function App() {
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
       {!tournament ? (
         <div className="px-4 pt-10">
-          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/85 text-center shadow-xl backdrop-blur">
+          <Card className="mx-auto max-w-sm border-border/80 bg-card/85 text-center shadow-xl backdrop-blur">
             <CardContent className="space-y-4 py-8">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Flag className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-lg font-semibold text-slate-900">No active tournament</div>
+                <div className="text-lg font-semibold text-foreground">No active tournament</div>
               </div>
               <Button asChild variant="outline" className="mx-auto">
                 <ViewTransitionLink to="/history">View tournament history</ViewTransitionLink>
@@ -102,13 +102,13 @@ export default function App() {
           {draftPoolCount > 0 && (
             <section>
               <ViewTransitionLink to="/draft" className="card-link-hover block">
-                <Card className="border-slate-200/80 bg-white/80">
+                <Card className="border-border/80 bg-card/80">
                   <CardContent className="flex items-center gap-3 py-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <ClipboardList className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-semibold text-slate-900">Draft Pool</div>
+                      <div className="text-sm font-semibold text-foreground">Draft Pool</div>
                       <div className="text-xs text-muted-foreground">
                         {draftPoolCount} players available for the draft
                       </div>
@@ -121,7 +121,7 @@ export default function App() {
           )}
 
           <section>
-            <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
+            <Card className="relative overflow-hidden border-white/40 bg-card/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
               <CardContent className="relative space-y-6 pt-6">
                 <div className="space-y-2">
@@ -136,7 +136,7 @@ export default function App() {
                       <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                         {pointsToWinDisplay} points needed to win
                       </div>
-                      <div className="rounded-xl bg-white/80 p-2 shadow-inner">
+                      <div className="rounded-xl bg-card/80 p-2 shadow-inner">
                         <ScoreTrackerBar
                           totalPoints={totalPointsAvailable}
                           teamAConfirmed={stats.teamAConfirmed}
@@ -170,7 +170,7 @@ export default function App() {
                   </div>
 
                   <div className="flex h-12 items-center justify-center">
-                    <div className="h-10 w-px bg-slate-200/80" />
+                    <div className="h-10 w-px bg-muted/80" />
                   </div>
 
                   <div className="flex flex-col items-center gap-2">
@@ -210,7 +210,7 @@ export default function App() {
                 return (
                   <div key={r.id}>
                     <ViewTransitionLink to={`/round/${r.id}`} className="card-link-hover block">
-                      <Card className="border-slate-200/80 bg-white/80">
+                      <Card className="border-border/80 bg-card/80">
                         <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                           <div className="flex items-center gap-3">
                             <OfflineImage 
@@ -219,7 +219,7 @@ export default function App() {
                               fallbackIcon="🔵"
                               style={{ width: 22, height: 22, objectFit: "contain" }}
                             />
-                            <div className="text-lg font-semibold text-slate-900">
+                            <div className="text-lg font-semibold text-foreground">
                               <ScoreBlock
                                 final={rs?.teamAConfirmed ?? 0}
                                 proj={rs?.teamAPending ?? 0}
@@ -229,8 +229,8 @@ export default function App() {
                           </div>
 
                           <div className="text-center">
-                            <div className="text-sm font-semibold text-slate-900">Round {idx + 1}</div>
-                            <Badge variant="outline" className="mt-1 border-slate-200 text-[0.55rem]">
+                            <div className="text-sm font-semibold text-foreground">Round {idx + 1}</div>
+                            <Badge variant="outline" className="mt-1 border-border text-[0.55rem]">
                               {formatRoundType(r.format)}
                             </Badge>
                             {courseName && (
@@ -241,7 +241,7 @@ export default function App() {
                           </div>
 
                           <div className="flex items-center justify-end gap-3">
-                            <div className="text-lg font-semibold text-slate-900">
+                            <div className="text-lg font-semibold text-foreground">
                               <ScoreBlock
                                 final={rs?.teamBConfirmed ?? 0}
                                 proj={rs?.teamBPending ?? 0}
@@ -291,7 +291,7 @@ export default function App() {
                 <Button
                   onClick={handleUpdateClick}
                   variant="secondary"
-                  className="bg-white text-slate-900 hover:bg-white/90"
+                  className="bg-card text-foreground hover:bg-card/90"
                 >
                   Reload
                   <ArrowRight className="h-4 w-4" />

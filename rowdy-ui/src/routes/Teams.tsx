@@ -122,7 +122,7 @@ function TeamsComponent() {
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (
       <div className="card p-4 opacity-60">
-        <div className="text-center text-slate-400">No roster defined.</div>
+        <div className="text-center text-muted-foreground">No roster defined.</div>
       </div>
     );
 
@@ -165,17 +165,17 @@ function TeamsComponent() {
                   return (
                     <div 
                       key={pid} 
-                      className="flex justify-between items-center px-4 py-2 border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150"
+                      className="flex justify-between items-center px-4 py-2 border-b border-border hover:bg-muted transition-colors duration-150"
                     >
                       <div className="flex items-baseline gap-2">
                         <Link
                           to={`/player/${pid}`}
-                          className="font-semibold text-slate-900 hover:text-slate-700"
+                          className="font-semibold text-foreground hover:text-foreground"
                         >
                           {name}
                         </Link>
                         {hcp != null && (
-                          <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
+                          <span className="text-xs text-muted-foreground">({Number(hcp).toFixed(1)})</span>
                         )}
                         {isCaptain && (
                           <span 
@@ -187,7 +187,7 @@ function TeamsComponent() {
                               letterSpacing: '0.05em',
                               padding: '1px 5px',
                               borderRadius: 4,
-                              background: `color-mix(in srgb, ${teamColor} 15%, white)`,
+                              background: `color-mix(in srgb, ${teamColor} 15%, var(--card-bg))`,
                               marginLeft: 6,
                             }}
                           >
@@ -195,7 +195,7 @@ function TeamsComponent() {
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-slate-500 font-mono">
+                      <div className="text-sm text-muted-foreground font-mono">
                         {s ? `${s.wins}-${s.losses}-${s.halves}` : "0-0-0"}
                       </div>
                     </div>
@@ -233,7 +233,7 @@ function TeamsComponent() {
       <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 800, margin: "0 auto" }}>
         
         {/* Team Selector Tabs */}
-        <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+        <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border shadow-sm">
           {/* Team A Tab */}
           <button
             type="button"
@@ -243,8 +243,8 @@ function TeamsComponent() {
             style={{
               background:
                 selectedTeam === "A"
-                  ? `color-mix(in srgb, ${teamAColor} 15%, white)`
-                  : "white",
+                  ? `color-mix(in srgb, ${teamAColor} 15%, var(--card-bg))`
+                  : "var(--card-bg)",
               borderBottom: `3px solid ${selectedTeam === "A" ? teamAColor : "transparent"}`,
             }}
           >
@@ -261,12 +261,12 @@ function TeamsComponent() {
             type="button"
             onClick={() => setSelectedTeam("B")}
             aria-pressed={selectedTeam === "B"}
-            className="flex items-center justify-center gap-2.5 border-l border-slate-200 px-3 py-3.5 transition-all"
+            className="flex items-center justify-center gap-2.5 border-l border-border px-3 py-3.5 transition-all"
             style={{
               background:
                 selectedTeam === "B"
-                  ? `color-mix(in srgb, ${teamBColor} 15%, white)`
-                  : "white",
+                  ? `color-mix(in srgb, ${teamBColor} 15%, var(--card-bg))`
+                  : "var(--card-bg)",
               borderBottom: `3px solid ${selectedTeam === "B" ? teamBColor : "transparent"}`,
             }}
           >

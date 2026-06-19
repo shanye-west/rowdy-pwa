@@ -45,18 +45,18 @@ export default function PlayerPickRow({
         selected
           ? "border-transparent ring-2"
           : disabled
-            ? "border-slate-200 opacity-45"
-            : "border-slate-200 hover:bg-slate-50"
+            ? "border-border opacity-45"
+            : "border-border hover:bg-muted"
       )}
       style={
         selected
-          ? { background: `color-mix(in srgb, ${teamColor} 12%, white)`, boxShadow: `0 0 0 2px ${teamColor}` }
+          ? { background: `color-mix(in srgb, ${teamColor} 12%, var(--card-bg))`, boxShadow: `0 0 0 2px ${teamColor}` }
           : undefined
       }
     >
       <PlayerAvatar name={meta.nameOf(pid)} color={teamColor} size={32} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-slate-800">{meta.nameOf(pid)}</div>
+        <div className="truncate text-sm font-semibold text-foreground">{meta.nameOf(pid)}</div>
         {disabled && disabledReason && (
           <div className="truncate text-[11px] font-medium text-rose-500">{disabledReason}</div>
         )}
@@ -66,11 +66,11 @@ export default function PlayerPickRow({
           {tier}
         </span>
       )}
-      {ch != null && <span className="text-xs font-medium text-slate-400">CH {ch}</span>}
+      {ch != null && <span className="text-xs font-medium text-muted-foreground">CH {ch}</span>}
       <span
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-          selected ? "border-transparent text-white" : "border-slate-300 text-transparent"
+          selected ? "border-transparent text-white" : "border-border text-transparent"
         )}
         style={selected ? { background: teamColor } : undefined}
       >

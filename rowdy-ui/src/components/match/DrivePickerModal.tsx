@@ -41,7 +41,7 @@ export function DrivePickerModal({
       title={`Whose drive for Hole ${hole.num}?`}
       ariaLabel="Select drive player"
     >
-      <div className="text-xs text-center text-slate-500 mb-3 font-medium" style={{ color }}>
+      <div className="text-xs text-center text-muted-foreground mb-3 font-medium" style={{ color }}>
         {team === "A" ? (
           <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: teamAColor }} />
         ) : (
@@ -70,7 +70,7 @@ export function DrivePickerModal({
           type="button"
           onClick={() => onSelect(null)}
           aria-label="Clear drive selection"
-          className="w-full py-3 px-4 rounded-lg bg-slate-200 text-slate-600 font-semibold text-base transition-transform active:scale-95 hover:bg-slate-300"
+          className="w-full py-3 px-4 rounded-lg bg-muted text-muted-foreground font-semibold text-base transition-transform active:scale-95 hover:bg-muted"
         >
           Clear
         </button>
@@ -79,7 +79,7 @@ export function DrivePickerModal({
       <button
         type="button"
         onClick={onClose}
-        className="w-full mt-4 py-2 text-sm text-slate-500 hover:text-slate-700"
+        className="w-full mt-4 py-2 text-sm text-muted-foreground hover:text-foreground"
       >
         Cancel
       </button>

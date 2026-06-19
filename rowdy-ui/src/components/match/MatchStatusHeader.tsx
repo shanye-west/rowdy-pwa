@@ -35,8 +35,8 @@ export function MatchStatusHeader({
           aria-label="Open strokes info"
           className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 rounded"
         >
-          <span className="text-sm text-slate-700">Strokes</span>
-          <span className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
+          <span className="text-sm text-foreground">Strokes</span>
+          <span className="ml-1 w-4 h-4 rounded-full bg-muted text-foreground flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -61,7 +61,7 @@ export function MatchStatusHeader({
               <span> View only</span>
             )}
             {editBlockReason === "login" && (
-              <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
+              <Link to="/login" className="underline hover:text-muted-foreground">Login to edit</Link>
             )}
             {editBlockReason === "not-rostered" && (
               <span>👀 Spectating</span>

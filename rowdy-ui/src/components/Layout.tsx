@@ -25,6 +25,8 @@ import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/us
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import ThemeToggle from "./ThemeToggle";
+import { applyTheme, getThemePref } from "../lib/theme";
 
 type LayoutProps = {
   title: string;
@@ -95,6 +97,20 @@ export function LayoutShell({ children }: LayoutShellProps) {
     const meta = document.querySelector('meta[name="theme-color"]');
     meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
   }, [series]);
+
+  // --- DARK MODE ENGINE ---
+  // Re-assert the saved preference on mount, and (when on "system") follow live
+  // OS changes. The initial class is set pre-paint by the script in index.html.
+  useEffect(() => {
+    applyTheme(getThemePref());
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    const onChange = () => {
+      if (getThemePref() === "system") applyTheme("system");
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -182,46 +198,46 @@ export function LayoutShell({ children }: LayoutShellProps) {
               className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right animate-menu-open"
               onClick={(e) => e.stopPropagation()}
             >
-              <Card className="border border-white/30 bg-white/95 shadow-2xl backdrop-blur">
+              <Card className="border border-border/60 bg-card/95 shadow-2xl backdrop-blur">
                   {!authLoading && player && (
                     <div className="px-4 py-3">
-                      <div className="text-sm font-semibold text-slate-900">
+                      <div className="text-sm font-semibold text-foreground">
                         {player.displayName}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-muted-foreground">
                         {player.email || "Logged in"}
                       </div>
                       {player.isAdmin && (
-                        <div className="mt-2 inline-flex rounded-full bg-slate-900 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white">
+                        <div className="mt-2 inline-flex rounded-full bg-primary px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-primary-foreground">
                           Admin
                         </div>
                       )}
                     </div>
                   )}
 
-                  {!authLoading && player && <div className="h-px bg-slate-200/80" />}
+                  {!authLoading && player && <div className="h-px bg-border/80" />}
 
                   <div className="space-y-1 p-2">
                     {draftPoolCount > 0 && (
-                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                         <ViewTransitionLink to="/draft" onClick={closeMenu}>
-                          <ClipboardList className="h-4 w-4 text-slate-500" />
+                          <ClipboardList className="h-4 w-4 text-muted-foreground" />
                           Draft Pool
                         </ViewTransitionLink>
                       </Button>
                     )}
 
-                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                       <ViewTransitionLink to="/leaderboard" onClick={closeMenu}>
-                        <Trophy className="h-4 w-4 text-slate-500" />
+                        <Trophy className="h-4 w-4 text-muted-foreground" />
                         Player Leaderboard
                       </ViewTransitionLink>
                     </Button>
 
                     {player?.isAdmin && (
-                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                         <ViewTransitionLink to="/admin" onClick={closeMenu}>
-                          <Shield className="h-4 w-4 text-slate-500" />
+                          <Shield className="h-4 w-4 text-muted-foreground" />
                           Admin
                         </ViewTransitionLink>
                       </Button>
@@ -233,7 +249,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                           <Button
                             type="button"
                             variant="ghost"
-                            className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10"
                             onClick={() => {
                               closeMenu();
                               setConfirmLogout(true);
@@ -243,7 +259,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                             Logout
                           </Button>
                         ) : (
-                          <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                          <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-500/10">
                             <ViewTransitionLink to="/login" onClick={closeMenu}>
                               <LogIn className="h-4 w-4" />
                               Login
@@ -252,6 +268,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         )}
                       </>
                     )}
+                  </div>
+
+                  {/* Appearance toggle pinned to the bottom of the menu. */}
+                  <div className="border-t border-border/80 pt-2 pb-1">
+                    <div className="px-3 pb-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Appearance
+                    </div>
+                    <ThemeToggle />
                   </div>
                 </Card>
               </div>
@@ -293,7 +317,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
         title="Log out?"
         ariaLabel="Confirm logout"
       >
-        <p className="mb-4 text-center text-sm text-slate-600">
+        <p className="mb-4 text-center text-sm text-muted-foreground">
           You'll need to log back in to enter scores.
         </p>
         <ModalActions

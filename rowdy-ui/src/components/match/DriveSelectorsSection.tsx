@@ -65,8 +65,8 @@ const DriveRow = memo(function DriveRow({
     
     // Build class and style
     let cellClass = "p-0.5";
-    if (isFirstBack9) cellClass += " border-l-2 border-slate-200";
-    if (isPostMatch) cellClass += " bg-slate-100/50";
+    if (isFirstBack9) cellClass += " border-l-2 border-border";
+    if (isPostMatch) cellClass += " bg-muted/50";
     
     return (
       <td 
@@ -84,10 +84,10 @@ const DriveRow = memo(function DriveRow({
           className={`
             w-10 h-7 text-xs font-bold rounded border transition-colors
             ${locked || isMatchClosed
-              ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
+              ? "bg-muted text-muted-foreground border-border cursor-default"
               : initials
                 ? "text-white border-transparent"
-                : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
+                : "bg-card border-border text-muted-foreground hover:border-slate-400 hover:bg-muted"
             }
           `}
           style={initials && !locked ? { backgroundColor: teamColor } : {}}
@@ -109,7 +109,7 @@ const DriveRow = memo(function DriveRow({
       {/* Front 9 */}
       {holes.slice(0, 9).map(h => renderDriveButton(h))}
       {/* OUT spacer */}
-      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
+      <td className="bg-muted border-l-2 border-border" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
       {/* Back 9 - post-match cells have border and tint */}
       {holes.slice(9, 18).map((h, i) => {
         const holeIdx = 9 + i;
@@ -120,9 +120,9 @@ const DriveRow = memo(function DriveRow({
         });
       })}
       {/* IN spacer */}
-      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
+      <td className="bg-muted border-l-2 border-border" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
       {/* TOT spacer */}
-      <td className="bg-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
+      <td className="bg-muted" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
     </tr>
   );
 });

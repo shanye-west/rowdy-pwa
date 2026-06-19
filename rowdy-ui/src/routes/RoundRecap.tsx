@@ -192,7 +192,7 @@ export default function RoundRecap() {
     return (
       <Layout title={tournament?.name || "Round Recap"} showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="px-4 py-10">
-          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+          <Card className="mx-auto max-w-md border-border/80 bg-card/90 text-center">
             <CardContent className="py-6 text-sm text-muted-foreground">
               Recap not available.
             </CardContent>
@@ -250,7 +250,7 @@ export default function RoundRecap() {
     <Layout title={tournament?.name || "Round Recap"} showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <div className="space-y-6 px-4 py-6">
         <section>
-          <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
+          <Card className="relative overflow-hidden border-white/50 bg-card/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -263,7 +263,7 @@ export default function RoundRecap() {
                 </Badge>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-semibold text-slate-900">{recap.courseName}</div>
+                <div className="text-2xl font-semibold text-foreground">{recap.courseName}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{courseLine}</div>
               </div>
             </CardContent>
@@ -310,16 +310,16 @@ export default function RoundRecap() {
         <section>
           {viewMode === "vsAll" && (
             <div>
-              <Card className="border-slate-200/80 bg-white/85">
+              <Card className="border-border/80 bg-card/85">
                   <CardHeader>
                     <CardDescription>
                       Simulated record if each player or team played all others.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto rounded-xl border border-slate-200/70">
+                    <div className="overflow-x-auto rounded-xl border border-border/70">
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <thead className="bg-muted text-xs uppercase tracking-[0.2em] text-muted-foreground">
                           <tr>
                             <th className="px-3 py-2 text-left">Rank</th>
                             <th className="px-3 py-2 text-left">Player</th>
@@ -331,12 +331,12 @@ export default function RoundRecap() {
                         </thead>
                         <tbody>
                           {sortedVsAll.map((record, idx) => (
-                            <tr key={record.playerId} className="border-t border-slate-100">
-                              <td className="px-3 py-3 text-left font-semibold text-slate-500">
+                            <tr key={record.playerId} className="border-t border-border">
+                              <td className="px-3 py-3 text-left font-semibold text-muted-foreground">
                                 {idx + 1}
                               </td>
                               <td className="px-3 py-3">
-                                <div className="max-w-[18rem] text-sm font-semibold text-slate-900">
+                                <div className="max-w-[18rem] text-sm font-semibold text-foreground">
                                   {renderNameLines(record.displayName || record.playerName)}
                                 </div>
                               </td>
@@ -346,10 +346,10 @@ export default function RoundRecap() {
                               <td className="px-3 py-3 text-center font-semibold text-rose-600">
                                 {record.losses}
                               </td>
-                              <td className="px-3 py-3 text-center text-slate-500">
+                              <td className="px-3 py-3 text-center text-muted-foreground">
                                 {record.ties}
                               </td>
-                              <td className="px-3 py-3 text-center font-semibold text-slate-900">
+                              <td className="px-3 py-3 text-center font-semibold text-foreground">
                                 {formatWinPct(record)}
                               </td>
                             </tr>
@@ -364,7 +364,7 @@ export default function RoundRecap() {
 
             {viewMode === "grossScoring" && (
               <div>
-                <Card className="border-slate-200/80 bg-white/85">
+                <Card className="border-border/80 bg-card/85">
                   <CardHeader className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
@@ -404,14 +404,14 @@ export default function RoundRecap() {
                             {recap.leaders.scoringGross.map((leader, idx) => (
                               <div
                                 key={leader.playerId}
-                                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                     {idx + 1}
                                   </div>
                                   <div>
-                                    <div className="text-sm font-semibold text-slate-900">
+                                    <div className="text-sm font-semibold text-foreground">
                                       {leader.playerName}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
@@ -441,13 +441,13 @@ export default function RoundRecap() {
                             {recap.leaders.scoringTeamGross.map((leader, idx) => (
                               <div
                                 key={leader.playerId}
-                                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                                className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                     {idx + 1}
                                   </div>
-                                  <div className="text-sm font-semibold text-slate-900">
+                                  <div className="text-sm font-semibold text-foreground">
                                     {renderNameLines(leader.playerName)}
                                   </div>
                                 </div>
@@ -466,7 +466,7 @@ export default function RoundRecap() {
 
                         {(!recap.leaders.scoringGross || recap.leaders.scoringGross.length === 0) &&
                           (!recap.leaders.scoringTeamGross || recap.leaders.scoringTeamGross.length === 0) && (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                            <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                               No gross scoring data available.
                             </div>
                           )}
@@ -482,14 +482,14 @@ export default function RoundRecap() {
                           recap.leaders.birdiesGross.map((leader, idx) => (
                             <div
                               key={leader.playerId}
-                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                   {idx + 1}
                                 </div>
                                 <div>
-                                  <div className="text-sm font-semibold text-slate-900">
+                                  <div className="text-sm font-semibold text-foreground">
                                     {renderNameLines(leader.playerName)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
@@ -503,7 +503,7 @@ export default function RoundRecap() {
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                          <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                             No gross birdies recorded.
                           </div>
                         )}
@@ -519,14 +519,14 @@ export default function RoundRecap() {
                           recap.leaders.eaglesGross.map((leader, idx) => (
                             <div
                               key={leader.playerId}
-                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                   {idx + 1}
                                 </div>
                                 <div>
-                                  <div className="text-sm font-semibold text-slate-900">
+                                  <div className="text-sm font-semibold text-foreground">
                                     {renderNameLines(leader.playerName)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
@@ -540,7 +540,7 @@ export default function RoundRecap() {
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                          <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                             No gross eagles recorded.
                           </div>
                         )}
@@ -553,7 +553,7 @@ export default function RoundRecap() {
 
             {viewMode === "netScoring" && (
               <div>
-                <Card className="border-slate-200/80 bg-white/85">
+                <Card className="border-border/80 bg-card/85">
                   <CardHeader className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
@@ -615,14 +615,14 @@ export default function RoundRecap() {
                               {recap.leaders.scoringNet.map((leader, idx) => (
                                 <div
                                   key={leader.playerId}
-                                  className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                                  className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                       {idx + 1}
                                     </div>
                                     <div>
-                                      <div className="text-sm font-semibold text-slate-900">
+                                      <div className="text-sm font-semibold text-foreground">
                                         {leader.playerName}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
@@ -654,13 +654,13 @@ export default function RoundRecap() {
                               {recap.leaders.scoringTeamNet.map((leader, idx) => (
                                 <div
                                   key={leader.playerId}
-                                  className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                                  className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                       {idx + 1}
                                     </div>
-                                    <div className="text-sm font-semibold text-slate-900">
+                                    <div className="text-sm font-semibold text-foreground">
                                       {renderNameLines(leader.playerName)}
                                     </div>
                                   </div>
@@ -679,7 +679,7 @@ export default function RoundRecap() {
 
                         {(!recap.leaders.scoringNet || recap.leaders.scoringNet.length === 0) &&
                           (!recap.leaders.scoringTeamNet || recap.leaders.scoringTeamNet.length === 0) && (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                            <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                               No net scoring data available.
                             </div>
                           )}
@@ -695,14 +695,14 @@ export default function RoundRecap() {
                           recap.leaders.birdiesNet.map((leader, idx) => (
                             <div
                               key={leader.playerId}
-                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                   {idx + 1}
                                 </div>
                                 <div>
-                                  <div className="text-sm font-semibold text-slate-900">
+                                  <div className="text-sm font-semibold text-foreground">
                                     {renderNameLines(leader.playerName)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
@@ -716,7 +716,7 @@ export default function RoundRecap() {
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                          <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                             No net birdies recorded.
                           </div>
                         )}
@@ -732,14 +732,14 @@ export default function RoundRecap() {
                           recap.leaders.eaglesNet.map((leader, idx) => (
                             <div
                               key={leader.playerId}
-                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3"
+                              className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-card/80 px-4 py-3"
                             >
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
                                   {idx + 1}
                                 </div>
                                 <div>
-                                  <div className="text-sm font-semibold text-slate-900">
+                                  <div className="text-sm font-semibold text-foreground">
                                     {renderNameLines(leader.playerName)}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
@@ -753,7 +753,7 @@ export default function RoundRecap() {
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center text-sm text-muted-foreground">
+                          <div className="rounded-xl border border-dashed border-border bg-muted/80 p-6 text-center text-sm text-muted-foreground">
                             No net eagles recorded.
                           </div>
                         )}
@@ -766,7 +766,7 @@ export default function RoundRecap() {
 
             {viewMode === "holes" && (
               <div>
-                <Card className="border-slate-200/80 bg-white/85">
+                <Card className="border-border/80 bg-card/85">
                   <CardHeader className="space-y-4" />
                   <CardContent className="space-y-5">
                     <div className="grid gap-3 md:grid-cols-2">
@@ -802,9 +802,9 @@ export default function RoundRecap() {
                       )}
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200/70">
+                    <div className="overflow-x-auto rounded-xl border border-border/70">
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        <thead className="bg-muted text-xs uppercase tracking-[0.2em] text-muted-foreground">
                           <tr>
                             <th className="px-3 py-2 text-left">Hole</th>
                             <th className="px-3 py-2 text-center">Par</th>
@@ -816,13 +816,13 @@ export default function RoundRecap() {
                         </thead>
                         <tbody>
                           {recap.holeAverages.map((hole) => (
-                            <tr key={hole.holeNumber} className="border-t border-slate-100">
-                              <td className="px-3 py-3 font-semibold text-slate-900">{hole.holeNumber}</td>
-                              <td className="px-3 py-3 text-center text-slate-600">{hole.par}</td>
-                              <td className="px-3 py-3 text-center font-semibold text-slate-900">
+                            <tr key={hole.holeNumber} className="border-t border-border">
+                              <td className="px-3 py-3 font-semibold text-foreground">{hole.holeNumber}</td>
+                              <td className="px-3 py-3 text-center text-muted-foreground">{hole.par}</td>
+                              <td className="px-3 py-3 text-center font-semibold text-foreground">
                                 {hole.avgGross != null ? hole.avgGross.toFixed(2) : "--"}
                               </td>
-                              <td className="px-3 py-3 text-center text-slate-500">
+                              <td className="px-3 py-3 text-center text-muted-foreground">
                                 {hole.avgNet != null ? hole.avgNet.toFixed(2) : "--"}
                               </td>
                               <td className="px-3 py-3 text-center text-emerald-600">

@@ -57,9 +57,9 @@ function findTeamInfo(t: TournamentDoc | null, playerId: string): TeamInfo | nul
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center">
-      <div className="text-lg font-bold text-slate-900">{value}</div>
-      <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="rounded-xl border border-border bg-card px-3 py-2 text-center">
+      <div className="text-lg font-bold text-foreground">{value}</div>
+      <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
   );
 }
@@ -132,10 +132,10 @@ export default function Player() {
     if (allSeriesStats.length === 0) {
       return (
         <div className="px-4 py-10">
-          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 p-8 text-center">
+          <Card className="mx-auto max-w-md border-border/80 bg-card/90 p-8 text-center">
             <div className="text-3xl">🏌️</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">{name}</div>
-            <p className="mt-1 text-sm text-slate-500">No match history yet — stats appear once matches are played.</p>
+            <div className="mt-2 text-lg font-semibold text-foreground">{name}</div>
+            <p className="mt-1 text-sm text-muted-foreground">No match history yet — stats appear once matches are played.</p>
           </Card>
         </div>
       );
@@ -147,14 +147,14 @@ export default function Player() {
         <Card className="overflow-hidden p-0" style={{ borderTop: `4px solid ${accent}` }}>
           <div className="p-4">
             <div className="flex items-baseline gap-2">
-              <h1 className="text-2xl font-bold text-slate-900">{name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{name}</h1>
               {(teamInfo?.isCaptain || teamInfo?.isCoCaptain) && (
                 <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white">
                   {teamInfo.isCaptain ? "Captain" : "Co-Captain"}
                 </span>
               )}
             </div>
-            <div className="mt-0.5 text-sm text-slate-500">
+            <div className="mt-0.5 text-sm text-muted-foreground">
               {teamInfo?.name ? <span style={{ color: accent }} className="font-semibold">{teamInfo.name}</span> : null}
               {teamInfo?.handicap != null && <span>{teamInfo?.name ? " · " : ""}HCP {Number(teamInfo.handicap).toFixed(1)}</span>}
             </div>
@@ -170,7 +170,7 @@ export default function Player() {
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                       s === selectedSeries
                         ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        : "bg-muted text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {SERIES_LABELS[s] ?? s}
@@ -182,18 +182,18 @@ export default function Player() {
             {/* Record */}
             <div className="mt-4 flex items-end gap-4">
               <div>
-                <div className="text-3xl font-bold tracking-tight text-slate-900">
+                <div className="text-3xl font-bold tracking-tight text-foreground">
                   {wins}-{losses}-{halves}
                 </div>
-                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">W–L–H</div>
+                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">W–L–H</div>
               </div>
               <div className="ml-auto text-right">
-                <div className="text-xl font-bold text-slate-900">{num(stats?.points)}</div>
-                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">Points</div>
+                <div className="text-xl font-bold text-foreground">{num(stats?.points)}</div>
+                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Points</div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-slate-900">{winPct}%</div>
-                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">Win</div>
+                <div className="text-xl font-bold text-foreground">{winPct}%</div>
+                <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Win</div>
               </div>
             </div>
           </div>
@@ -201,22 +201,22 @@ export default function Player() {
 
         {/* Achievements */}
         <Card className="p-4">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Achievements</h2>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Achievements</h2>
           <BadgeGrid badges={badges} />
         </Card>
 
         {/* By format */}
         {hasFormatData && (
           <Card className="p-4">
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">By Format</h2>
-            <div className="divide-y divide-slate-100">
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">By Format</h2>
+            <div className="divide-y divide-border">
               {FORMAT_ORDER.map((fmt) => {
                 const fb = stats?.formatBreakdown?.[fmt];
                 if (!fb || num(fb.matches) === 0) return null;
                 return (
                   <div key={fmt} className="flex items-center justify-between py-2">
-                    <span className="text-sm font-medium text-slate-700">{FORMAT_LABELS[fmt]}</span>
-                    <span className="text-sm font-semibold text-slate-900">
+                    <span className="text-sm font-medium text-foreground">{FORMAT_LABELS[fmt]}</span>
+                    <span className="text-sm font-semibold text-foreground">
                       {num(fb.wins)}-{num(fb.losses)}-{num(fb.halves)}
                     </span>
                   </div>
@@ -228,7 +228,7 @@ export default function Player() {
 
         {/* Career counting stats */}
         <Card className="p-4">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Career</h2>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Career</h2>
           <div className="grid grid-cols-3 gap-2">
             <StatTile label="Matches" value={played} />
             <StatTile label="Holes Won" value={num(stats?.holesWon)} />

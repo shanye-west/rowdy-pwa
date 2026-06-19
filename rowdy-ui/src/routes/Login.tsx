@@ -125,7 +125,7 @@ export default function Login() {
                   width: "100%",
                   padding: "0.75rem",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color, #e5e7eb)",
+                  border: "1px solid var(--divider)",
                   fontSize: "1rem",
                   boxSizing: "border-box"
                 }}
@@ -138,7 +138,7 @@ export default function Login() {
                 padding: "0.75rem",
                 marginBottom: "1rem",
                 borderRadius: 8,
-                background: "#fef2f2",
+                background: "color-mix(in srgb, #dc2626 14%, var(--card-bg))",
                 color: "#dc2626",
                 fontSize: "0.875rem",
                 textAlign: "center"
@@ -153,7 +153,7 @@ export default function Login() {
                 padding: "0.75rem",
                 marginBottom: "1rem",
                 borderRadius: 8,
-                background: "#f0fdf4",
+                background: "color-mix(in srgb, #16a34a 14%, var(--card-bg))",
                 color: "#16a34a",
                 fontSize: "0.875rem",
                 textAlign: "center"
@@ -191,7 +191,7 @@ export default function Login() {
                 width: "100%",
                 padding: "0.75rem",
                 borderRadius: 8,
-                border: "1px solid var(--border-color, #e5e7eb)",
+                border: "1px solid var(--divider)",
                 background: "transparent",
                 color: "var(--text-primary)",
                 fontWeight: 500,
@@ -230,7 +230,7 @@ export default function Login() {
                   width: "100%",
                   padding: "0.75rem",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color, #e5e7eb)",
+                  border: "1px solid var(--divider)",
                   fontSize: "1rem",
                   boxSizing: "border-box"
                 }}
@@ -261,7 +261,7 @@ export default function Login() {
                   width: "100%",
                   padding: "0.75rem",
                   borderRadius: 8,
-                  border: "1px solid var(--border-color, #e5e7eb)",
+                  border: "1px solid var(--divider)",
                   fontSize: "1rem",
                   boxSizing: "border-box"
                 }}
@@ -287,7 +287,7 @@ export default function Login() {
                 padding: "0.75rem",
                 marginBottom: "1rem",
                 borderRadius: 8,
-                background: "#fef2f2",
+                background: "color-mix(in srgb, #dc2626 14%, var(--card-bg))",
                 color: "#dc2626",
                 fontSize: "0.875rem",
                 textAlign: "center"
@@ -302,7 +302,7 @@ export default function Login() {
                 padding: "0.75rem",
                 marginBottom: "1rem",
                 borderRadius: 8,
-                background: "#f0fdf4",
+                background: "color-mix(in srgb, #16a34a 14%, var(--card-bg))",
                 color: "#16a34a",
                 fontSize: "0.875rem",
                 textAlign: "center"

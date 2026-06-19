@@ -108,8 +108,8 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900">{title ?? "Comments"}</h3>
-        {comments.length > 0 && <span className="text-xs text-slate-400">{comments.length}</span>}
+        <h3 className="text-sm font-bold text-foreground">{title ?? "Comments"}</h3>
+        {comments.length > 0 && <span className="text-xs text-muted-foreground">{comments.length}</span>}
       </div>
 
       {/* Thread */}
@@ -118,7 +118,7 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
           <div className="spinner-lg" />
         </div>
       ) : comments.length === 0 ? (
-        <div className="py-3 text-center text-xs text-slate-400">No comments yet — be the first.</div>
+        <div className="py-3 text-center text-xs text-muted-foreground">No comments yet — be the first.</div>
       ) : (
         <ul className="space-y-3">
           {comments.map((c) => (
@@ -142,7 +142,7 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
       {canInteract ? (
         <Composer text={text} onChange={setText} onSubmit={submit} />
       ) : (
-        <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
           <Link to="/login" className="font-semibold text-blue-600 underline">
             Log in
           </Link>{" "}
@@ -163,7 +163,7 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
       >
         This can't be undone.
         {pendingDelete && (
-          <p className="mt-2 line-clamp-3 rounded-lg bg-slate-50 px-3 py-2 text-slate-500 italic">
+          <p className="mt-2 line-clamp-3 rounded-lg bg-muted px-3 py-2 text-muted-foreground italic">
             "{pendingDelete.text}"
           </p>
         )}
@@ -215,19 +215,19 @@ function Composer({
           maxLength={MAX_COMMENT_LENGTH}
           rows={1}
           placeholder="Add a comment…"
-          className="max-h-[140px] min-h-[2.5rem] flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+          className="max-h-[140px] min-h-[2.5rem] flex-1 resize-none rounded-lg border border-border px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
         />
         <button
           type="button"
           onClick={onSubmit}
           disabled={!text.trim()}
-          className="h-9 shrink-0 rounded-full bg-slate-900 px-4 text-xs font-semibold text-white transition-transform active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
+          className="h-9 shrink-0 rounded-full bg-slate-900 px-4 text-xs font-semibold text-white transition-transform active:scale-95 disabled:bg-muted disabled:text-muted-foreground"
         >
           Post
         </button>
       </div>
       {remaining <= COUNTER_THRESHOLD && (
-        <div className={cn("text-right text-[0.7rem]", remaining <= 0 ? "text-red-500" : "text-slate-400")}>
+        <div className={cn("text-right text-[0.7rem]", remaining <= 0 ? "text-red-500" : "text-muted-foreground")}>
           {remaining} left
         </div>
       )}
@@ -266,12 +266,12 @@ function CommentRow({
       <PlayerAvatar name={comment.authorName} size={32} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="truncate text-sm font-semibold text-slate-900">{comment.authorName}</span>
-          <span className="shrink-0 text-[0.7rem] text-slate-400">
+          <span className="truncate text-sm font-semibold text-foreground">{comment.authorName}</span>
+          <span className="shrink-0 text-[0.7rem] text-muted-foreground">
             {comment.pending ? "Sending…" : timeAgo(comment.createdAt)}
           </span>
         </div>
-        <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{comment.text}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{comment.text}</p>
 
         {/* Reactions */}
         {(activeReactions.length > 0 || canReact || canDelete) && (
@@ -287,7 +287,7 @@ function CommentRow({
                   onClick={() => onReact(emoji)}
                   className={cn(
                     "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors disabled:opacity-100",
-                    mine ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    mine ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground hover:bg-muted"
                   )}
                 >
                   <span>{emoji}</span>
@@ -304,14 +304,14 @@ function CommentRow({
                   aria-label="Add reaction"
                   aria-expanded={pickerOpen}
                   className={cn(
-                    "flex items-center rounded-full px-1.5 py-0.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600",
-                    pickerOpen && "bg-slate-100 text-slate-600"
+                    "flex items-center rounded-full px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-muted-foreground",
+                    pickerOpen && "bg-muted text-muted-foreground"
                   )}
                 >
                   <SmilePlus size={16} />
                 </button>
                 {pickerOpen && (
-                  <div className="absolute left-0 top-7 z-10 flex gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-md">
+                  <div className="absolute left-0 top-7 z-10 flex gap-1 rounded-full border border-border bg-card px-2 py-1 shadow-md">
                     {REACTION_EMOJI.map((emoji) => (
                       <button
                         key={emoji}
@@ -334,7 +334,7 @@ function CommentRow({
               <button
                 type="button"
                 onClick={onDelete}
-                className="ml-auto text-[0.7rem] font-semibold text-slate-400 hover:text-red-600"
+                className="ml-auto text-[0.7rem] font-semibold text-muted-foreground hover:text-red-600"
               >
                 Delete
               </button>

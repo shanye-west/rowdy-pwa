@@ -64,15 +64,15 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
 }: PlayerScoreRowProps) {
   // Team B last row has thicker border
   const rowClassName = isTeamB && isLastOfTeam 
-    ? "border-b-2 border-slate-300" 
+    ? "border-b-2 border-border" 
     : isLastOfTeam 
       ? "" 
-      : "border-b border-slate-100";
+      : "border-b border-border";
 
   return (
     <tr className={rowClassName}>
       <td 
-        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
+        className="sticky left-0 z-10 bg-card text-left px-3 py-1 font-semibold whitespace-nowrap"
         style={{ color }}
       >
         {label}
@@ -83,7 +83,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
         const isPostMatch = closingHole != null && holeIdx > closingHole;
         
         let cellClass = "p-0.5";
-        if (isPostMatch) cellClass += " bg-slate-50/60";
+        if (isPostMatch) cellClass += " bg-muted/60";
         
         return (
           <td 
@@ -110,7 +110,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
         );
       })}
       {/* OUT total */}
-      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+      <td className="py-1 bg-muted font-bold text-foreground border-l-2 border-border">
         {outTotal ?? "–"}
       </td>
       {/* Back 9 holes - post-match cells have border and tint */}
@@ -120,8 +120,8 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
         
         // Build class: first hole of back 9 gets border, first post-match gets thick colored border
         let cellClass = "p-0.5";
-        if (i === 0) cellClass += " border-l-2 border-slate-200";
-        if (isPostMatch) cellClass += " bg-slate-50/60";
+        if (i === 0) cellClass += " border-l-2 border-border";
+        if (isPostMatch) cellClass += " bg-muted/60";
         
         return (
           <td 
@@ -148,11 +148,11 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
         );
       })}
       {/* IN total */}
-      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+      <td className="py-1 bg-muted font-bold text-foreground border-l-2 border-border">
         {inTotal ?? "–"}
       </td>
       {/* TOTAL */}
-      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
+      <td className="py-1 bg-muted font-bold text-foreground text-base">
         {totalScore ?? "–"}
       </td>
     </tr>

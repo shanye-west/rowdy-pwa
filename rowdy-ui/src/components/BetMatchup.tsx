@@ -32,14 +32,14 @@ export default function BetMatchup({ teamA, teamB, amount, footer }: BetMatchupP
     <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
       <div className="flex items-stretch">
         <SideCell side={teamA} align="left" />
-        <div className="flex shrink-0 flex-col items-center justify-center bg-slate-50 px-2.5 py-2">
-          <span className="text-[0.55rem] font-bold uppercase tracking-wide text-slate-400">Bet</span>
-          <span className="text-sm font-bold tabular-nums text-slate-900">${amount}</span>
+        <div className="flex shrink-0 flex-col items-center justify-center bg-muted px-2.5 py-2">
+          <span className="text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">Bet</span>
+          <span className="text-sm font-bold tabular-nums text-foreground">${amount}</span>
         </div>
         <SideCell side={teamB} align="right" />
       </div>
       {footer && (
-        <div className="border-t border-slate-200 bg-slate-50/60 px-3 py-1.5 text-[0.7rem] font-semibold">
+        <div className="border-t border-border bg-muted/60 px-3 py-1.5 text-[0.7rem] font-semibold">
           {footer}
         </div>
       )}
@@ -64,7 +64,7 @@ function SideCell({ side, align }: { side: MatchupSide; align: "left" | "right" 
         }`}
         style={labelStyle}
       />
-      <div className={`max-w-full text-sm font-semibold ${filled ? "text-white" : "text-slate-800"}`}>{content}</div>
+      <div className={`max-w-full text-sm font-semibold ${filled ? "text-white" : "text-foreground"}`}>{content}</div>
     </div>
   );
 }

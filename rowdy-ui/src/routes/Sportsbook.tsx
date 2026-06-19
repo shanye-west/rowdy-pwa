@@ -319,7 +319,7 @@ export default function Sportsbook() {
     const counterpartyId = b.acceptorId ?? b.targetId ?? null;
     const contentOn = (key: BetSide): ReactNode => {
       const name = b.proposerSide === key ? playerName(b.proposerId) : counterpartyId ? playerName(counterpartyId) : null;
-      return name ? <span className="block truncate">{name}</span> : <span className="text-slate-400">Open</span>;
+      return name ? <span className="block truncate">{name}</span> : <span className="text-muted-foreground">Open</span>;
     };
     const tile = (key: BetSide, label: string, color: string): MatchupSide => ({
       label,
@@ -408,7 +408,7 @@ export default function Sportsbook() {
               type="button"
               onClick={() => setTab(t.id)}
               className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                tab === t.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                tab === t.id ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
               }`}
             >
               {t.label}
@@ -436,7 +436,7 @@ export default function Sportsbook() {
                 </div>
               ) : (
                 <Card className="overflow-hidden p-0">
-                  <ul className="divide-y divide-slate-100">
+                  <ul className="divide-y divide-border">
                     {ledger.map((row, i) => {
                       const isMe = !!player && row.playerId === player.id;
                       return (
@@ -448,18 +448,18 @@ export default function Sportsbook() {
                           <PlayerAvatar name={playerName(row.playerId)} size={32} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="truncate font-semibold text-slate-900">{playerName(row.playerId)}</span>
+                              <span className="truncate font-semibold text-foreground">{playerName(row.playerId)}</span>
                               {isMe && (
-                                <span className="shrink-0 rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-slate-600">
+                                <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">
                                   You
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                               {row.wins}W · {row.losses}L{row.pushes > 0 ? ` · ${row.pushes}P` : ""}
                             </div>
                           </div>
-                          <div className={`text-lg font-bold tabular-nums ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-slate-400"}`}>
+                          <div className={`text-lg font-bold tabular-nums ${row.net > 0 ? "text-emerald-600" : row.net < 0 ? "text-red-600" : "text-muted-foreground"}`}>
                             {money(row.net)}
                           </div>
                         </li>
@@ -516,7 +516,7 @@ export default function Sportsbook() {
                 {bettableRounds.length > 0 && (
                   <Collapsible title="🗓️ Sessions" count={bettableRounds.length} defaultOpen>
                     <Card className="overflow-hidden p-0">
-                      <ul className="divide-y divide-slate-100">
+                      <ul className="divide-y divide-border">
                         {bettableRounds.map((r) => {
                           const c = roundOfferCount(r.id);
                           return (
@@ -544,7 +544,7 @@ export default function Sportsbook() {
                 {bettableMatches.length > 0 && (
                   <Collapsible title="⛳ Matches" count={bettableMatches.length} defaultOpen>
                     <Card className="overflow-hidden p-0">
-                      <ul className="divide-y divide-slate-100">
+                      <ul className="divide-y divide-border">
                         {bettableMatches.map((m) => {
                           const c = matchOfferCount(m.id);
                           const r = m.roundId ? roundsById[m.roundId] : undefined;
@@ -554,7 +554,7 @@ export default function Sportsbook() {
                                 label={
                                   <>
                                     <span className="block truncate">
-                                      {sideLastNames(m.teamAPlayers)} <span className="font-normal text-slate-400">vs</span>
+                                      {sideLastNames(m.teamAPlayers)} <span className="font-normal text-muted-foreground">vs</span>
                                     </span>
                                     <span className="block truncate">{sideLastNames(m.teamBPlayers)}</span>
                                   </>
@@ -596,7 +596,7 @@ export default function Sportsbook() {
                 pendingSettlements.incoming.length > 0 ||
                 pendingSettlements.outgoing.length > 0) && (
                 <Card className="space-y-3 p-4">
-                  <div className="text-sm font-bold text-slate-900">Your tab</div>
+                  <div className="text-sm font-bold text-foreground">Your tab</div>
 
                   {h2h.length > 0 && (
                     <ul className="space-y-2">
@@ -604,7 +604,7 @@ export default function Sportsbook() {
                         const owe = row.net < 0;
                         return (
                           <li key={row.otherId} className="flex items-center justify-between gap-2 text-sm">
-                            <span className="min-w-0 truncate text-slate-700">
+                            <span className="min-w-0 truncate text-foreground">
                               {row.net > 0 ? `${playerName(row.otherId)} owes you` : `You owe ${playerName(row.otherId)}`}
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
@@ -679,9 +679,9 @@ export default function Sportsbook() {
                   {pendingSettlements.outgoing.map((s) => (
                     <div
                       key={s.id}
-                      className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                      className="flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2 text-sm"
                     >
-                      <span className="min-w-0 truncate text-slate-600">
+                      <span className="min-w-0 truncate text-muted-foreground">
                         You paid {playerName(s.payeeId)} <span className="font-bold">${s.amount}</span> · awaiting confirm
                       </span>
                       <SmallBtn
@@ -722,7 +722,7 @@ export default function Sportsbook() {
                       const sides = matchupSides(b, b.proposerSide);
                       return (
                         <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
-                          <div className="text-[0.7rem] font-semibold text-slate-500">
+                          <div className="text-[0.7rem] font-semibold text-muted-foreground">
                             {playerName(b.proposerId)} challenges you
                           </div>
                           <div className="flex gap-2">
@@ -750,7 +750,7 @@ export default function Sportsbook() {
                       return (
                         <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[0.7rem] font-semibold text-slate-500">
+                            <span className="text-[0.7rem] font-semibold text-muted-foreground">
                               {b.kind === "challenge" ? `Challenge to ${playerName(b.targetId)}` : "Open to anyone"}
                             </span>
                             <SmallBtn
@@ -857,7 +857,7 @@ export default function Sportsbook() {
                             )}
                           </div>
                           {cancellable && (
-                            <div className="text-[0.65rem] text-slate-400">
+                            <div className="text-[0.65rem] text-muted-foreground">
                               Either player can cancel until the match starts.
                             </div>
                           )}
@@ -867,7 +867,7 @@ export default function Sportsbook() {
                   </Section>
 
                   {activeCount === 0 && (
-                    <div className="px-1 text-xs text-slate-400">No active bets — find some action in Markets.</div>
+                    <div className="px-1 text-xs text-muted-foreground">No active bets — find some action in Markets.</div>
                   )}
                 </Collapsible>
 
@@ -881,7 +881,7 @@ export default function Sportsbook() {
                   }
                 >
                   {myBets.settled.length === 0 ? (
-                    <div className="px-1 text-xs text-slate-400">No completed bets yet.</div>
+                    <div className="px-1 text-xs text-muted-foreground">No completed bets yet.</div>
                   ) : (
                     myBets.settled.map((b) => {
                       const delta = settledDelta(b, player.id);
@@ -894,7 +894,7 @@ export default function Sportsbook() {
                             </StatusPill>
                             <span
                               className={`text-sm font-bold tabular-nums ${
-                                delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-400"
+                                delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-muted-foreground"
                               }`}
                             >
                               {delta === 0 ? "Push" : money(delta)}
@@ -1015,8 +1015,8 @@ function Collapsible({
         className="flex w-full items-center justify-between rounded-lg px-1 py-1.5"
         aria-expanded={open}
       >
-        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? "" : "-rotate-90"}`} />
+        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`} />
           {title} ({count})
         </span>
         {trailing}
@@ -1030,7 +1030,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
   if (count === 0) return null;
   return (
     <div className="space-y-2">
-      <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <div className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title} ({count})
       </div>
       <div className="space-y-2">{children}</div>
@@ -1125,7 +1125,7 @@ function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null
   }
 
   const toneClass =
-    tone === "win" ? "text-emerald-600" : tone === "lose" ? "text-red-600" : "text-slate-500";
+    tone === "win" ? "text-emerald-600" : tone === "lose" ? "text-red-600" : "text-muted-foreground";
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -1133,7 +1133,7 @@ function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null
         {dot}
         <span className="truncate">{text}</span>
       </span>
-      <span className="flex shrink-0 items-center gap-0.5 text-slate-400">
+      <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
         <span className="text-[0.6rem] uppercase tracking-wide">Scorecard</span>
         <ChevronRight className="h-3.5 w-3.5" />
       </span>
@@ -1145,13 +1145,13 @@ function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null
 function RankBadge({ rank }: { rank: number }) {
   const medal: Record<number, string> = {
     1: "bg-amber-100 text-amber-700 ring-1 ring-amber-300",
-    2: "bg-slate-200 text-slate-600 ring-1 ring-slate-300",
+    2: "bg-muted text-muted-foreground ring-1 ring-slate-300",
     3: "bg-orange-100 text-orange-700 ring-1 ring-orange-300",
   };
   return (
     <span
       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-        medal[rank] ?? "bg-slate-100 text-slate-600"
+        medal[rank] ?? "bg-muted text-muted-foreground"
       }`}
     >
       {rank}
@@ -1165,7 +1165,7 @@ function StatusPill({ tone, children }: { tone: "amber" | "emerald" | "red" | "s
     amber: "bg-amber-100 text-amber-700",
     emerald: "bg-emerald-100 text-emerald-700",
     red: "bg-red-100 text-red-700",
-    slate: "bg-slate-100 text-slate-600",
+    slate: "bg-muted text-muted-foreground",
   }[tone];
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${cls}`}>
@@ -1178,7 +1178,7 @@ function NetBadge({ net }: { net: number }) {
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-        net > 0 ? "bg-emerald-100 text-emerald-700" : net < 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500"
+        net > 0 ? "bg-emerald-100 text-emerald-700" : net < 0 ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"
       }`}
     >
       {net < 0 ? `-$${Math.abs(net)}` : `$${net}`}
@@ -1196,7 +1196,7 @@ function SmallBtn({
   children: ReactNode;
 }) {
   const cls =
-    variant === "primary" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200";
+    variant === "primary" ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted";
   return (
     <button
       type="button"

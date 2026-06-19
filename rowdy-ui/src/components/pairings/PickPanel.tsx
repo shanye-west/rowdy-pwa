@@ -71,22 +71,22 @@ export default function PickPanel({
       </div>
 
       {isResponse && nominatedIds && nominatedIds.length > 0 && (
-        <div className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
+        <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
           Facing{" "}
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-foreground">
             {nominatedIds.map((pid) => meta.nameOf(pid)).join(" & ")}
           </span>
         </div>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Pick {perSide} player{perSide > 1 ? "s" : ""}.
         {perSide === 2 && " No two A-tier and no two D-tier together."}
         {meta.grossOnly && " Course handicaps are shown for reference only (gross play)."}
       </p>
 
       {remaining.length === 0 ? (
-        <p className="text-sm text-slate-500">No players left to pick.</p>
+        <p className="text-sm text-muted-foreground">No players left to pick.</p>
       ) : (
         <div className="space-y-3">
           {groups.map(({ tier, ids }) => (
@@ -95,7 +95,7 @@ export default function PickPanel({
                 <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold", tierStyle(tier).chip)}>
                   {tier === "—" ? "No tier" : `Tier ${tier}`}
                 </span>
-                <span className="h-px flex-1 bg-slate-100" />
+                <span className="h-px flex-1 bg-muted" />
               </div>
               {ids.map((pid) => {
                 const isSel = selected.includes(pid);

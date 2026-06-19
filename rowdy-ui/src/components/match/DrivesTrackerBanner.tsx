@@ -24,7 +24,7 @@ interface PlayerDriveStatusProps {
 function PlayerDriveStatus({ playerName, drivesUsed, drivesNeeded }: PlayerDriveStatusProps) {
   return (
     <div>
-      <span className="text-slate-500">{playerName}:</span>{" "}
+      <span className="text-muted-foreground">{playerName}:</span>{" "}
       <span className={`font-bold ${drivesNeeded > 0 ? "text-red-500" : "text-green-600"}`}>
         {drivesUsed}/{MIN_DRIVES_PER_ROUND}
       </span>
@@ -52,7 +52,7 @@ export const DrivesTrackerBanner = memo(function DrivesTrackerBanner({
 }: DrivesTrackerBannerProps) {
   return (
     <div className="card p-3 space-y-2">
-      <div className="text-xs font-bold uppercase text-slate-500">Drives Tracker</div>
+      <div className="text-xs font-bold uppercase text-muted-foreground">Drives Tracker</div>
       <div className="grid grid-cols-2 gap-4 text-sm">
         {/* Team A */}
         <div>

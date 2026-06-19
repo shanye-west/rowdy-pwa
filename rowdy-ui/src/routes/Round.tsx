@@ -83,12 +83,12 @@ function RoundComponent() {
     return (
       <Layout title="Round" showBack>
         <div className="px-4 py-10">
-          <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
+          <Card className="mx-auto max-w-md border-border/80 bg-card/90 text-center">
             <CardContent className="py-8">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <div className="text-lg font-semibold text-slate-900">Round not found</div>
+              <div className="text-lg font-semibold text-foreground">Round not found</div>
               <div className="mt-1 text-sm text-muted-foreground">
                 This round is not available right now.
               </div>
@@ -130,7 +130,7 @@ function RoundComponent() {
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
         <section>
-          <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
+          <Card className="relative overflow-hidden border-white/50 bg-card/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
               <div className="space-y-1">
@@ -141,7 +141,7 @@ function RoundComponent() {
                         asChild
                         size="sm"
                         variant="outline"
-                        className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                        className="h-9 rounded-full px-4 bg-card/90 shadow-sm hover:bg-muted"
                       >
                         <ViewTransitionLink to={`/round/${round.id}/recap`}>
                           Recap
@@ -150,7 +150,7 @@ function RoundComponent() {
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
+                    <div className="text-2xl font-semibold text-foreground">{roundLabel}</div>
                   </div>
                   <div className="flex items-center justify-end">
                     {skinsEnabled && (
@@ -158,7 +158,7 @@ function RoundComponent() {
                         asChild
                         size="sm"
                         variant="outline"
-                        className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                        className="h-9 rounded-full px-4 bg-card/90 shadow-sm hover:bg-muted"
                       >
                         <ViewTransitionLink to={`/round/${round.id}/skins`}>
                           Skins
@@ -178,7 +178,7 @@ function RoundComponent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-border/70 bg-card/80 p-4">
                 <div className="flex flex-col items-center gap-1">
                   <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
                     <OfflineImage 
@@ -193,12 +193,12 @@ function RoundComponent() {
                       {fA}
                     </span>
                     {pA > 0 && (
-                      <span className="text-[0.6rem] font-semibold text-slate-400">(+{pA})</span>
+                      <span className="text-[0.6rem] font-semibold text-muted-foreground">(+{pA})</span>
                     )}
                   </div>
                 </div>
 
-                <div className="h-14 w-px bg-slate-200" />
+                <div className="h-14 w-px bg-muted" />
 
                 <div className="flex flex-col items-center gap-1">
                   <ViewTransitionLink to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
@@ -211,7 +211,7 @@ function RoundComponent() {
                   </ViewTransitionLink>
                   <div className="flex items-baseline gap-1">
                     {pB > 0 && (
-                      <span className="text-[0.6rem] font-semibold text-slate-400">(+{pB})</span>
+                      <span className="text-[0.6rem] font-semibold text-muted-foreground">(+{pB})</span>
                     )}
                     <span className="text-3xl font-semibold tracking-tight" style={{ color: teamBColor }}>
                       {fB}
@@ -228,7 +228,7 @@ function RoundComponent() {
             <Button
               asChild
               variant="outline"
-              className="h-11 w-full rounded-xl bg-white/90 shadow-sm hover:bg-slate-50"
+              className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
             >
               <ViewTransitionLink to={`/round/${round.id}/pairings`}>
                 ⛳ Set pairings (captains' draft)
@@ -245,7 +245,7 @@ function RoundComponent() {
             </div>
 
           {matches.length === 0 ? (
-            <Card className="border-slate-200/80 bg-white/85">
+            <Card className="border-border/80 bg-card/85">
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 No matches scheduled.
               </CardContent>
@@ -270,7 +270,7 @@ function RoundComponent() {
                       className="card-link-hover block"
                     >
                       <Card
-                        className="overflow-hidden border-slate-200/70"
+                        className="overflow-hidden border-border/70"
                         style={{ ...bgStyle, ...borderStyle }}
                       >
                         <CardContent className="space-y-4 py-4">

@@ -50,7 +50,7 @@ function BetOfferRow({
           disabled={mine}
           onClick={onTake}
           style={mine ? undefined : { backgroundColor: color }}
-          className="rounded-full px-3.5 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-slate-200 disabled:text-slate-400"
+          className="rounded-full px-3.5 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground"
         >
           {mine ? "Yours" : "Take"}
         </button>

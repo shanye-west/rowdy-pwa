@@ -54,7 +54,7 @@ function renderScoreWithVsPar(total: number | undefined | null, vsPar: number | 
   return (
     <>
       <span className="font-semibold text-lg">{total}</span>
-      <span className="text-sm text-slate-500 ml-1">({formatStrokesVsPar(vsPar)})</span>
+      <span className="text-sm text-muted-foreground ml-1">({formatStrokesVsPar(vsPar)})</span>
     </>
   );
 }
@@ -73,11 +73,11 @@ function TeamStatRow({ label, valueA, valueB, teamAColor, teamBColor, highlight 
   highlight?: boolean;
 } & TeamColors) {
   return (
-    <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-slate-50 px-3 rounded-md" : ""}`}>
+    <div className={`flex items-center gap-4 py-2 ${highlight ? "bg-muted px-3 rounded-md" : ""}`}>
       <div className="flex-1 text-right pr-3 font-semibold text-sm" style={{ color: teamAColor }}>
         {valueA ?? "–"}
       </div>
-      <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">
+      <div className="text-xs text-muted-foreground font-medium text-center w-28 shrink-0 uppercase">
         {label}
       </div>
       <div className="flex-1 text-left pl-3 font-semibold text-sm" style={{ color: teamBColor }}>
@@ -92,8 +92,8 @@ function MatchStat({ label, value }: { label: string; value: React.ReactNode }) 
   if (value == null) return null;
   return (
     <div className="flex items-center justify-center gap-2 py-2">
-      <span className="text-slate-600 font-semibold">{value}</span>
-      <span className="text-xs text-slate-500 font-medium">{label}</span>
+      <span className="text-muted-foreground font-semibold">{value}</span>
+      <span className="text-xs text-muted-foreground font-medium">{label}</span>
     </div>
   );
 }
@@ -132,7 +132,7 @@ function TeamNamesHeader({ teamAName, teamBName, teamAColor, teamBColor }: {
       <div className="flex-1 text-right pr-3 font-semibold text-sm" style={{ color: teamAColor }}>
         {teamAName ?? "Team A"}
       </div>
-      <div className="text-xs text-slate-500 font-medium text-center w-28 shrink-0 uppercase">Team</div>
+      <div className="text-xs text-muted-foreground font-medium text-center w-28 shrink-0 uppercase">Team</div>
       <div className="flex-1 text-left pl-3 font-semibold text-sm" style={{ color: teamBColor }}>
         {teamBName ?? "Team B"}
       </div>
@@ -148,14 +148,14 @@ function PlayerStatRow({ label, teamA, teamB, teamAColor, teamBColor, highlight 
   highlight?: boolean;
 } & TeamColors) {
   return (
-    <div className={`flex items-center py-2 ${highlight ? "bg-slate-50 px-3 rounded-md" : ""}`}>
+    <div className={`flex items-center py-2 ${highlight ? "bg-muted px-3 rounded-md" : ""}`}>
       <div className="flex-1 text-right pr-1 font-semibold text-sm" style={{ color: teamAColor }}>
         {teamA[0] ?? "–"}
       </div>
       <div className="flex-1 text-right pr-2 font-semibold text-sm" style={{ color: teamAColor }}>
         {teamA[1] ?? "–"}
       </div>
-      <div className="text-xs text-slate-500 font-medium text-center w-16 shrink-0 uppercase">
+      <div className="text-xs text-muted-foreground font-medium text-center w-16 shrink-0 uppercase">
         {label}
       </div>
       <div className="flex-1 text-left pl-2 font-semibold text-sm" style={{ color: teamBColor }}>
@@ -181,7 +181,7 @@ function StoryBadge({ icon, title, description, teamColor, alignRight = false }:
       <span className="text-lg">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm" style={{ color: teamColor }}>{title}</div>
-        <div className="text-xs text-slate-500">{description}</div>
+        <div className="text-xs text-muted-foreground">{description}</div>
       </div>
     </div>
   );
@@ -480,7 +480,7 @@ export function PostMatchStats({
       {/* ===== SECTION 3: TEAM COMPARISON STATS ===== */}
       {/* Visual separator + grouped team-wide stats */}
       {(showHamAndEgg || hasLeadChanges) && (
-        <div className="mt-3 pt-3 border-t border-slate-200">
+        <div className="mt-3 pt-3 border-t border-border">
           <TeamNamesHeader teamAName={teamAName} teamBName={teamBName} {...colors} />
           {showHamAndEgg && (
             <TeamStatRow label="🍳 Ham & Eggs" {...colors}

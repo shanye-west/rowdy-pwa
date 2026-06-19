@@ -42,7 +42,7 @@ export default function TurnHeader({ draft, actingTeam, meta, isResponse, myMove
       )}
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/25">
         <div
-          className={cn("h-full rounded-full bg-white/90 transition-all duration-500")}
+          className={cn("h-full rounded-full bg-card/90 transition-all duration-500")}
           style={{ width: `${pct}%` }}
         />
       </div>

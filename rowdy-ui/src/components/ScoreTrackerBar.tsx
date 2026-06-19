@@ -151,7 +151,7 @@ export default function ScoreTrackerBar({
             bottom: 0,
             left: `${((i + 1) / totalPoints) * 100}%`,
             width: 1,
-            background: "white",
+            background: "var(--card-bg)",
             transform: "translateX(-0.5px)",
             zIndex: 2,
           }}

@@ -36,10 +36,10 @@ function TeamAvailabilityPicker({
         <h3 className="font-bold" style={{ color }}>
           {meta.teamName(team)}
         </h3>
-        <span className="text-xs font-semibold text-slate-500">{sel.size} playing</span>
+        <span className="text-xs font-semibold text-muted-foreground">{sel.size} playing</span>
       </div>
       {ids.length === 0 ? (
-        <p className="text-sm text-slate-500">No roster set for this team.</p>
+        <p className="text-sm text-muted-foreground">No roster set for this team.</p>
       ) : (
         <div className="space-y-1.5">
           {ids.map((pid) => {
@@ -54,27 +54,27 @@ function TeamAvailabilityPicker({
                 aria-pressed={on}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all duration-150 active:scale-[0.98]",
-                  on ? "border-transparent ring-2" : "border-slate-200 opacity-55 hover:opacity-80"
+                  on ? "border-transparent ring-2" : "border-border opacity-55 hover:opacity-80"
                 )}
                 style={
                   on
-                    ? { background: `color-mix(in srgb, ${color} 10%, white)`, boxShadow: `0 0 0 2px ${color}` }
+                    ? { background: `color-mix(in srgb, ${color} 10%, var(--card-bg))`, boxShadow: `0 0 0 2px ${color}` }
                     : undefined
                 }
               >
                 <PlayerAvatar name={meta.nameOf(pid)} color={color} size={30} />
                 <div className="min-w-0 flex-1">
-                  <div className={cn("truncate text-sm font-semibold", on ? "text-slate-800" : "text-slate-500 line-through")}>
+                  <div className={cn("truncate text-sm font-semibold", on ? "text-foreground" : "text-muted-foreground line-through")}>
                     {meta.nameOf(pid)}
                   </div>
-                  {!on && <div className="text-[11px] font-medium text-slate-400">Benched</div>}
+                  {!on && <div className="text-[11px] font-medium text-muted-foreground">Benched</div>}
                 </div>
                 {tier && (
                   <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-bold", tierStyle(tier).chip)}>
                     {tier}
                   </span>
                 )}
-                {ch != null && <span className="text-xs font-medium text-slate-400">CH {ch}</span>}
+                {ch != null && <span className="text-xs font-medium text-muted-foreground">CH {ch}</span>}
                 {on && (
                   <span
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
@@ -143,7 +143,7 @@ export default function DraftSetup({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted-foreground">
         Bench anyone sitting out, record the coin-flip winner (they nominate match 1), then start the
         draft.{perSide === 2 && " Pairs can't be two A-tier or two D-tier players."}
       </p>
@@ -153,7 +153,7 @@ export default function DraftSetup({
 
       {/* Coin flip */}
       <div className="card p-4 space-y-3">
-        <div className="font-semibold text-slate-700">Who nominates first?</div>
+        <div className="font-semibold text-foreground">Who nominates first?</div>
         <div className="grid grid-cols-2 gap-2">
           {(["teamA", "teamB"] as DraftTeamKey[]).map((team) => {
             const on = firstPick === team;
@@ -167,7 +167,7 @@ export default function DraftSetup({
                 className={cn(
                   "rounded-xl border px-3 py-3 text-sm font-bold transition-all duration-200",
                   flashed === team && "animate-soft-pulse",
-                  on ? "border-transparent text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  on ? "border-transparent text-white" : "border-border text-muted-foreground hover:bg-muted"
                 )}
                 style={on ? { background: color } : undefined}
               >
@@ -179,7 +179,7 @@ export default function DraftSetup({
         <button
           type="button"
           onClick={flipCoin}
-          className="btn-ghost mx-auto inline-flex items-center gap-1.5 text-sm text-slate-500"
+          className="btn-ghost mx-auto inline-flex items-center gap-1.5 text-sm text-muted-foreground"
         >
           <Dices size={16} /> Flip a coin
         </button>

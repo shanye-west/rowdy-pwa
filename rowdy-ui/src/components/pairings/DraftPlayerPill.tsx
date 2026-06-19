@@ -32,7 +32,7 @@ export default function DraftPlayerPill({ pid, team, meta, alignRight }: DraftPl
         {tier && (
           <span className={cn("rounded px-1 text-[10px] font-bold", tierStyle(tier).chip)}>{tier}</span>
         )}
-        {ch != null && <span className="text-[10px] font-medium text-slate-400">CH {ch}</span>}
+        {ch != null && <span className="text-[10px] font-medium text-muted-foreground">CH {ch}</span>}
       </div>
     </div>
   );

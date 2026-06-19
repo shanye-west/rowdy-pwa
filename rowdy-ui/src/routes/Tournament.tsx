@@ -77,7 +77,7 @@ function TournamentComponent() {
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div className="space-y-6 px-4 py-6">
         <section>
-          <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
+          <Card className="relative overflow-hidden border-white/40 bg-card/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
 
             <CardContent className="relative space-y-6 pt-6">
               <div className="space-y-2">
@@ -131,7 +131,7 @@ function TournamentComponent() {
                 </div>
 
                 <div className="flex h-12 items-center justify-center">
-                  <div className="h-10 w-px bg-slate-200/80" />
+                  <div className="h-10 w-px bg-muted/80" />
                 </div>
 
                 <div className="flex flex-col items-center gap-2">
@@ -178,7 +178,7 @@ function TournamentComponent() {
               return (
                 <div key={r.id}>
                   <ViewTransitionLink to={`/round/${r.id}`} className="card-link-hover block">
-                    <Card className="border-slate-200/80 bg-white/80">
+                    <Card className="border-border/80 bg-card/80">
                       <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                         <div className="flex items-center gap-3">
                           <OfflineImage 
@@ -187,7 +187,7 @@ function TournamentComponent() {
                             fallbackIcon="🔵"
                             style={{ width: 22, height: 22, objectFit: "contain" }}
                           />
-                          <div className="text-lg font-semibold text-slate-900">
+                          <div className="text-lg font-semibold text-foreground">
                             <ScoreBlock
                               final={rs?.teamAConfirmed ?? 0}
                               proj={rs?.teamAPending ?? 0}
@@ -197,8 +197,8 @@ function TournamentComponent() {
                         </div>
 
                         <div className="text-center">
-                          <div className="text-sm font-semibold text-slate-900">Round {idx + 1}</div>
-                          <Badge variant="outline" className="mt-1 border-slate-200 text-[0.55rem]">
+                          <div className="text-sm font-semibold text-foreground">Round {idx + 1}</div>
+                          <Badge variant="outline" className="mt-1 border-border text-[0.55rem]">
                             {formatRoundType(r.format)}
                           </Badge>
                           {courseName && (
@@ -209,7 +209,7 @@ function TournamentComponent() {
                         </div>
 
                         <div className="flex items-center justify-end gap-3">
-                          <div className="text-lg font-semibold text-slate-900">
+                          <div className="text-lg font-semibold text-foreground">
                             <ScoreBlock
                               final={rs?.teamBConfirmed ?? 0}
                               proj={rs?.teamBPending ?? 0}

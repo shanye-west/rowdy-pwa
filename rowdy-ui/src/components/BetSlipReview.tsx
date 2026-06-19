@@ -37,31 +37,31 @@ export default function BetSlipReview({
 }: BetSlipReviewProps) {
   return (
     <div className="space-y-4">
-      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
+      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         Review your bet
       </div>
-      {contextLabel && <div className="text-center text-sm text-slate-500">{contextLabel}</div>}
+      {contextLabel && <div className="text-center text-sm text-muted-foreground">{contextLabel}</div>}
 
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Backing</span>
-          <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-900">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Backing</span>
+          <span className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: sideColor }} />
             <span className="truncate">{sideLabel}</span>
-            {sideTag && sideTag !== sideLabel && <span className="shrink-0 text-slate-400">({sideTag})</span>}
+            {sideTag && sideTag !== sideLabel && <span className="shrink-0 text-muted-foreground">({sideTag})</span>}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Stake</span>
-          <span className="font-bold tabular-nums text-slate-900">${amount}</span>
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Stake</span>
+          <span className="font-bold tabular-nums text-foreground">${amount}</span>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">To win</span>
+        <div className="flex items-center justify-between border-t border-border pt-3">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">To win</span>
           <span className="text-lg font-bold tabular-nums text-emerald-600">${amount}</span>
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-muted-foreground">
         {directed
           ? `Challenge to ${targetName || "your pick"} — both of you confirm to lock it in.`
           : "Open to anyone — both of you confirm to lock it in."}
@@ -72,7 +72,7 @@ export default function BetSlipReview({
           type="button"
           onClick={onBack}
           disabled={submitting}
-          className="flex-1 rounded-lg bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-transform active:scale-95 hover:bg-slate-300 disabled:opacity-60"
+          className="flex-1 rounded-lg bg-muted px-4 py-2.5 text-sm font-semibold text-foreground transition-transform active:scale-95 hover:bg-muted disabled:opacity-60"
         >
           Back
         </button>

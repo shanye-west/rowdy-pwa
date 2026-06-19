@@ -70,8 +70,8 @@ export default function Leaderboard() {
       <div className="space-y-3 p-4">
         {/* Sort toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Lifetime Rowdy Cup records</span>
-          <div className="flex gap-1 rounded-full bg-slate-100 p-0.5">
+          <span className="text-xs font-medium text-muted-foreground">Lifetime Rowdy Cup records</span>
+          <div className="flex gap-1 rounded-full bg-muted p-0.5">
             {(
               [
                 { id: "total", label: "Total Pts" },
@@ -83,7 +83,7 @@ export default function Leaderboard() {
                 type="button"
                 onClick={() => setSortBy(s.id)}
                 className={`rounded-full px-2.5 py-1 text-[0.65rem] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
-                  sortBy === s.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  sortBy === s.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {s.label}
@@ -103,33 +103,33 @@ export default function Leaderboard() {
           </div>
         ) : (
           <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-border">
               {rows.map((r, i) => {
                 return (
                   <li key={r.playerId}>
                     <Link
                       to={`/player/${r.playerId}`}
-                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
                         {i + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate font-semibold text-slate-900">
+                          <span className="truncate font-semibold text-foreground">
                             {names[r.playerId] || "Unknown"}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           {r.wins}-{r.losses}-{r.halves} · {r.matchesPlayed} {r.matchesPlayed === 1 ? "match" : "matches"}
                           {r.birdies > 0 && <span> · {r.birdies} birdies</span>}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-lg font-bold text-slate-900">
+                        <div className="text-lg font-bold text-foreground">
                           {sortBy === "perMatch" ? r.perMatch.toFixed(2) : r.points}
                         </div>
-                        <div className="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500">
+                        <div className="text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">
                           {sortBy === "perMatch" ? "pts/match" : "pts"}
                         </div>
                       </div>

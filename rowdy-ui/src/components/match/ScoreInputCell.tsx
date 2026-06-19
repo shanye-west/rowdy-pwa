@@ -48,7 +48,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   const tintPercent = lowScoreStatus === 'solo' ? '15%' : lowScoreStatus === 'tied' ? '5%' : null;
   const lowScoreStyle: CSSProperties | undefined = tintPercent && teamColor
     ? (() => {
-        const tint = `color-mix(in srgb, ${teamColor} ${tintPercent}, white)`;
+        const tint = `color-mix(in srgb, ${teamColor} ${tintPercent}, var(--card-bg))`;
         return {
           background: tint,
           borderColor: tint,
@@ -98,10 +98,10 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           transition-colors duration-100 select-none
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1
           ${isPostMatch
-            ? "bg-slate-50 text-slate-400 border-slate-200"
+            ? "bg-muted text-muted-foreground border-border"
             : locked
-              ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
-              : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
+              ? "bg-muted text-muted-foreground border-border cursor-default"
+              : "bg-card border-border hover:border-border active:bg-muted"
           }
           ${hasError ? " ring-2 ring-red-500 ring-offset-1" : ""}
         `}

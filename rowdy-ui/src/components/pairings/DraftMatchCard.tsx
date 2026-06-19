@@ -55,16 +55,16 @@ export default function DraftMatchCard({ match, meta, isCurrent }: DraftMatchCar
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white/80 p-3 transition-all duration-200",
+        "rounded-xl border bg-card/80 p-3 transition-all duration-200",
         isCurrent
           ? "animate-soft-pulse border-[hsl(var(--primary))]"
           : bothSet
-            ? "border-slate-200"
-            : "border-slate-200/60 opacity-90"
+            ? "border-border"
+            : "border-border/60 opacity-90"
       )}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           Match {match.matchNumber}
         </span>
         {bothSet ? (
@@ -76,7 +76,7 @@ export default function DraftMatchCard({ match, meta, isCurrent }: DraftMatchCar
             <Clock size={11} strokeWidth={3} /> On the clock
           </span>
         ) : (
-          <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             Nom. {meta.teamName(match.nominatedBy)}
           </span>
         )}

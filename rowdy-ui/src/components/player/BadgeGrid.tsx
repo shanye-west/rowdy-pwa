@@ -5,7 +5,7 @@ import type { EarnedBadge } from "../../lib/badges";
 export const BadgeGrid = memo(function BadgeGrid({ badges }: { badges: EarnedBadge[] }) {
   if (badges.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted-foreground">
         No badges yet — they unlock as you rack up comebacks, clutch wins, and birdies.
       </p>
     );
@@ -17,7 +17,7 @@ export const BadgeGrid = memo(function BadgeGrid({ badges }: { badges: EarnedBad
         <li
           key={b.id}
           className={`flex items-start gap-2 rounded-xl border p-3 ${
-            b.tone === "gold" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"
+            b.tone === "gold" ? "border-amber-200 bg-amber-50" : "border-border bg-muted"
           }`}
         >
           <span className="text-2xl leading-none" aria-hidden="true">
@@ -25,14 +25,14 @@ export const BadgeGrid = memo(function BadgeGrid({ badges }: { badges: EarnedBad
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="truncate text-sm font-semibold text-slate-900">{b.label}</span>
+              <span className="truncate text-sm font-semibold text-foreground">{b.label}</span>
               {b.count > 1 && (
-                <span className="shrink-0 rounded-full bg-white/70 px-1.5 text-xs font-bold text-slate-600">
+                <span className="shrink-0 rounded-full bg-card/70 px-1.5 text-xs font-bold text-muted-foreground">
                   ×{b.count}
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-xs leading-snug text-slate-500">{b.description}</p>
+            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{b.description}</p>
           </div>
         </li>
       ))}
