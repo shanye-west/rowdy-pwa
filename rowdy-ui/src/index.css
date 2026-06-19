@@ -5,11 +5,6 @@
 /* Tailwind CSS */
 @import "tailwindcss";
 
-/* Class-based dark mode: `dark:` utilities activate when <html> has .dark
-   (toggled by the theme switcher / no-flash script in index.html), rather than
-   purely following the OS setting. */
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Custom Theme - extend Tailwind with CSS variables */
 @theme {
   /* Shadcn UI Tokens */
@@ -109,54 +104,6 @@
     --primary: 1 87% 52%;
     --secondary: 147 100% 26%;
     --ring: 1 87% 52%;
-  }
-
-  /* --- DARK MODE ---
-     Surface + text tokens flip; brand/team colors are kept (and the gradient
-     stops lightened so primary buttons stay legible on a dark field). Applied
-     via the .dark class on <html>. Token-based surfaces (.card, <Card>, nav,
-     inputs, buttons, badges) pick this up automatically. */
-  .dark {
-    color-scheme: dark;
-    --background: 222 47% 8%;
-    --foreground: 210 40% 96%;
-    --card: 222 39% 13%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 39% 13%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 217 48% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 349 70% 52%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 222 28% 18%;
-    --muted-foreground: 215 22% 65%;
-    --accent: 222 28% 20%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 25% 22%;
-    --input: 215 25% 22%;
-    --ring: 217 60% 58%;
-
-    /* Lighten the brand gradient so navy buttons pop on a dark field. */
-    --brand-primary: #2a4a82;
-    --brand-primary-2: #3a5d9e;
-
-    /* UI Colors */
-    --app-bg: #0b1220;
-    --card-bg: #131c2e;
-    --text-primary: #e8edf5;
-    --text-secondary: #9aa7bd;
-    --divider: #1f2a3d;
-  }
-
-  /* Christmas + dark: keep the festive brand reds/greens but lift them slightly
-     so they read on the dark field. */
-  body.theme-christmas.dark,
-  .dark body.theme-christmas {
-    --brand-primary: #ff4a45;
-    --team-a-default: #1aa657;
-    --team-b-default: #ff4a45;
   }
 
   /* =========================================

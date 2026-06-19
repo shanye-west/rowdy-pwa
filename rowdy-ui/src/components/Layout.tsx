@@ -25,8 +25,6 @@ import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/us
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import ThemeToggle from "./ThemeToggle";
-import { applyTheme, getThemePref } from "../lib/theme";
 
 type LayoutProps = {
   title: string;
@@ -97,20 +95,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
     const meta = document.querySelector('meta[name="theme-color"]');
     meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
   }, [series]);
-
-  // --- DARK MODE ENGINE ---
-  // Re-assert the saved preference on mount, and (when on "system") follow live
-  // OS changes. The initial class is set pre-paint by the script in index.html.
-  useEffect(() => {
-    applyTheme(getThemePref());
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    if (!mq) return;
-    const onChange = () => {
-      if (getThemePref() === "system") applyTheme("system");
-    };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -249,7 +233,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                           <Button
                             type="button"
                             variant="ghost"
-                            className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10"
+                            className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => {
                               closeMenu();
                               setConfirmLogout(true);
@@ -259,7 +243,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                             Logout
                           </Button>
                         ) : (
-                          <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-500/10">
+                          <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
                             <ViewTransitionLink to="/login" onClick={closeMenu}>
                               <LogIn className="h-4 w-4" />
                               Login
@@ -268,14 +252,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         )}
                       </>
                     )}
-                  </div>
-
-                  {/* Appearance toggle pinned to the bottom of the menu. */}
-                  <div className="border-t border-border/80 pt-2 pb-1">
-                    <div className="px-3 pb-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Appearance
-                    </div>
-                    <ThemeToggle />
                   </div>
                 </Card>
               </div>
