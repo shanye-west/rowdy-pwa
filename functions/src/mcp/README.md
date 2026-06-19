@@ -32,7 +32,8 @@ The key can also be sent as a header: `Authorization: Bearer YOUR_KEY`.
 | `get_head_to_head` | Record between any two players, overall and by format. |
 | `get_leaderboard` | All-time (by series) or current-tournament standings. |
 | `get_tournament` | Active tournament: teams, rosters, handicaps, captains, live cup score. |
-| `get_draft_pool` | Pre-draft pool handicaps joined with all-time stats (captain analysis). |
+| `get_draft_pool` | Pre-draft pool handicaps joined with all-time stats + a recent-form summary (captain analysis). |
+| `get_player_recent_rounds` | A golfer's last ~20 GHIN rounds (score differentials, form summary) for draft analysis. |
 | `get_round_recap` | Scoring leaders, per-hole averages, vs-all records for a round. |
 
 ## Adding it to an AI client

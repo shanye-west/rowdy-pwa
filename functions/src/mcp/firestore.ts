@@ -25,6 +25,7 @@ import type {
   RoundDoc,
   PlayerStatsDoc,
   PlayerMatchFact,
+  PlayerRecentRoundsDoc,
 } from "./types.js";
 
 let _db: Firestore | null = null;
@@ -128,4 +129,18 @@ export async function getTournamentStatRows(tournamentId: string): Promise<Playe
 export async function getRoundRecap(roundId: string): Promise<Record<string, unknown> | null> {
   const snap = await getDoc(doc(db(), "roundRecaps", roundId));
   return snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+}
+
+/** playerRecentRounds/{playerId} — one golfer's last ~20 GHIN rounds + summary. */
+export async function getRecentRounds(playerId: string): Promise<PlayerRecentRoundsDoc | null> {
+  const snap = await getDoc(doc(db(), "playerRecentRounds", playerId));
+  return snap.exists() ? (snap.data() as PlayerRecentRoundsDoc) : null;
+}
+
+/** All players' recent-rounds docs, keyed by playerId (for the draft-pool join). */
+export async function getAllRecentRounds(): Promise<Map<string, PlayerRecentRoundsDoc>> {
+  const snap = await getDocs(collection(db(), "playerRecentRounds"));
+  const out = new Map<string, PlayerRecentRoundsDoc>();
+  snap.docs.forEach((d) => out.set(d.id, d.data() as PlayerRecentRoundsDoc));
+  return out;
 }

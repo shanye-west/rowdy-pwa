@@ -96,6 +96,50 @@ export interface PlayerStatsDoc {
   captainHalves?: number;
 }
 
+/** One round in a player's recent-rounds history (GHIN last-~20 import). */
+export interface RecentRound {
+  roundNumber?: number;
+  score?: number | null;
+  scoreRaw?: string;
+  scoreDifferential?: number | null;
+  datePlayed?: string;
+  courseRating?: number | null;
+  slope?: number | null;
+  /** GHIN posting code: H=home, A=away, N=nine-hole, C=combined/competition. */
+  scoreType?: string | null;
+  /** Holes actually played when fewer than the full round; null = full round. */
+  holesPlayed?: number | null;
+  nineHole?: boolean;
+  /** True = one of the rounds currently counting toward the handicap index. */
+  usedInHandicap?: boolean;
+}
+
+/**
+ * playerRecentRounds/{playerId} — a golfer's last ~20 posted GHIN rounds plus a
+ * small form summary. Data-only (not in the app UI); read by the MCP server for
+ * draft analysis. `lowHandicapIndex` is numeric with plus handicaps negative.
+ */
+export interface PlayerRecentRoundsDoc {
+  playerId?: string;
+  golferName?: string;
+  lowHandicapIndex?: number | null;
+  lowHandicapIndexDisplay?: string;
+  source?: string;
+  updatedAt?: string;
+  roundCount?: number;
+  summary?: {
+    rounds?: number;
+    nineHoleRounds?: number;
+    countingRounds?: number;
+    avgDifferential?: number | null;
+    bestDifferential?: number | null;
+    worstDifferential?: number | null;
+    last5AvgDifferential?: number | null;
+    countingAvgDifferential?: number | null;
+  };
+  rounds?: RecentRound[];
+}
+
 /** playerMatchFacts/{factId} — one per rostered player per closed match. */
 export interface PlayerMatchFact {
   playerId: string;

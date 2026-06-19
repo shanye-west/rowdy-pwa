@@ -8,11 +8,12 @@ import {
   getAllRealPlayers,
   getPlayerStats,
   getRoundsForTournament,
+  getAllRecentRounds,
   resolveTournament,
   resolveSeries,
 } from "../firestore.js";
 import { jsonResult, errorResult } from "./util.js";
-import type { RoundDoc, TeamSide } from "../types.js";
+import type { RoundDoc, TeamSide, PlayerRecentRoundsDoc } from "../types.js";
 
 function teamSummary(side: TeamSide | undefined, nameById: Map<string, string>) {
   if (!side) return null;
@@ -94,9 +95,11 @@ export function registerTournamentTools(server: McpServer): void {
       title: "Get draft pool (captain analysis)",
       description:
         "The pre-draft pool of available players with their handicap index, joined " +
-        "with each player's all-time stats (record, points, format breakdown, " +
-        "badges). Built for captains doing draft analysis. Combine with " +
-        "get_head_to_head and get_player_stats for pairing decisions.",
+        "with each player's all-time Rowdy Cup stats (record, points, format " +
+        "breakdown, badges) AND a compact recent-form summary from their last ~20 " +
+        "GHIN rounds (average / recent / best score differential). Built for captains " +
+        "doing draft analysis. Use get_player_recent_rounds for the full round-by-round " +
+        "detail, and get_head_to_head / get_player_stats for pairing decisions.",
       inputSchema: {
         tournamentId: z.string().optional().describe("Defaults to the active tournament."),
         series: z
@@ -119,11 +122,17 @@ export function registerTournamentTools(server: McpServer): void {
       }
       const seriesKey = await resolveSeries(series);
       const players = await getAllRealPlayers();
+      // recentForm is enrichment — never let it break the core draft tool (e.g.
+      // if the playerRecentRounds collection/rule isn't present yet).
+      const recentByPlayer = await getAllRecentRounds().catch(
+        (): Map<string, PlayerRecentRoundsDoc> => new Map()
+      );
       const nameById = new Map(players.map((p) => [p.id, p.displayName || p.id]));
 
       const rows = await Promise.all(
         poolIds.map(async (pid) => {
           const s = await getPlayerStats(pid, "allTime", seriesKey);
+          const rr = recentByPlayer.get(pid);
           return {
             playerId: pid,
             displayName: nameById.get(pid) || pid,
@@ -141,6 +150,17 @@ export function registerTournamentTools(server: McpServer): void {
                   comebackWins: s.comebackWins,
                   blownLeads: s.blownLeads,
                   clutchWins: s.clutchWins,
+                }
+              : null,
+            // Current off-course form from the last ~20 GHIN rounds. Lower
+            // differential = better. Full detail via get_player_recent_rounds.
+            recentForm: rr
+              ? {
+                  lowHandicapIndex: rr.lowHandicapIndex ?? null,
+                  rounds: rr.summary?.rounds ?? rr.roundCount ?? null,
+                  avgDifferential: rr.summary?.avgDifferential ?? null,
+                  last5AvgDifferential: rr.summary?.last5AvgDifferential ?? null,
+                  bestDifferential: rr.summary?.bestDifferential ?? null,
                 }
               : null,
           };
