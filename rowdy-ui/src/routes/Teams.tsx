@@ -5,7 +5,6 @@ import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
-import TeamName from "../components/TeamName";
 import type { TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
 import { usePlayers } from "../contexts/TournamentContext";
@@ -253,13 +252,7 @@ function TeamsComponent() {
               src={teamALogo}
               alt={teamAName}
               fallbackIcon="🔵"
-              style={{ width: 28, height: 28, objectFit: "contain" }}
-            />
-            <TeamName
-              name={teamAName}
-              variant="inline"
-              className="text-[0.95rem] font-bold uppercase tracking-[0.03em]"
-              style={{ color: selectedTeam === "A" ? teamAColor : "var(--text-secondary)" }}
+              style={{ width: 56, height: 56, objectFit: "contain" }}
             />
           </button>
 
@@ -281,13 +274,7 @@ function TeamsComponent() {
               src={teamBLogo}
               alt={teamBName}
               fallbackIcon="🔴"
-              style={{ width: 28, height: 28, objectFit: "contain" }}
-            />
-            <TeamName
-              name={teamBName}
-              variant="inline"
-              className="text-[0.95rem] font-bold uppercase tracking-[0.03em]"
-              style={{ color: selectedTeam === "B" ? teamBColor : "var(--text-secondary)" }}
+              style={{ width: 56, height: 56, objectFit: "contain" }}
             />
           </button>
         </div>
