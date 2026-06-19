@@ -14,6 +14,7 @@ import {
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import { MatchPageSkeleton } from "../components/Skeleton";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { SyncStatusBadge } from "../components/SyncStatusBadge";
 import { OfflineReadyCheck } from "../components/OfflineReadyCheck";
@@ -785,9 +786,7 @@ export default function Match() {
 
   if (loading) return (
     <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="spinner-lg"></div>
-      </div>
+      <MatchPageSkeleton />
     </Layout>
   );
   

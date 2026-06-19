@@ -13,6 +13,7 @@ import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
+import { RoundPageSkeleton } from "../components/Skeleton";
 // Badge removed from this file (was used for matches pill)
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -57,9 +58,7 @@ function RoundComponent() {
 
   if (loading) return (
     <Layout title="Loading..." showBack>
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="spinner-lg"></div>
-      </div>
+      <RoundPageSkeleton />
     </Layout>
   );
 

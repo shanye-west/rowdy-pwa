@@ -68,6 +68,8 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   
   // Handle number selection from picker
   const handleSelect = useCallback((num: number) => {
+    // Light haptic tick on score entry (Android; iOS Safari ignores it).
+    navigator.vibrate?.(10);
     onChange(holeKey, num);
     // Popover will auto-dismiss after selection with togglepopover
     const popover = document.getElementById(popoverId) as HTMLElement & { hidePopover?: () => void };
@@ -125,25 +127,25 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           {circleCount >= 2 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 3 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid' }}
             />
           )}
           {circleCount >= 4 && (
             <div
               className="absolute rounded-full"
-              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
           <div
             className="absolute rounded-full"
-            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid' }}
+            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid' }}
           />
         </div>
       )}
@@ -155,25 +157,25 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           {squareCount >= 2 && (
             <div
               className="absolute"
-              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+              style={{ width: '32px', height: '32px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid', borderRadius: '3px' }}
             />
           )}
           {squareCount >= 3 && (
             <div
               className="absolute"
-              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+              style={{ width: '24px', height: '24px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid', borderRadius: '3px' }}
             />
           )}
           {squareCount >= 4 && (
             <div
               className="absolute"
-              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+              style={{ width: '20px', height: '20px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid', borderRadius: '3px' }}
             />
           )}
           {/* Inner square for bogey (always shown when over par) */}
           <div
             className="absolute"
-            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? '#cbd5e1' : '#000000', borderStyle: 'solid', borderRadius: '3px' }}
+            style={{ width: '28px', height: '28px', borderWidth: '1px', borderColor: isPostMatch ? 'var(--divider)' : 'var(--text-primary)', borderStyle: 'solid', borderRadius: '3px' }}
           />
         </div>
       )}
@@ -186,6 +188,16 @@ export const ScoreInputCell = memo(function ScoreInputCell({
       )}
       {hasSkinWin && !hasDrive && (
         <div className="absolute top-0.5 left-1 text-[8px] font-bold text-amber-500">$</div>
+      )}
+      {/* Failed-save indicator: visible cue (paired with the red ring + aria-label)
+          so sighted users know to tap and retry. */}
+      {hasError && (
+        <div
+          className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold leading-none text-white shadow"
+          aria-hidden="true"
+        >
+          !
+        </div>
       )}
     </div>
   );
