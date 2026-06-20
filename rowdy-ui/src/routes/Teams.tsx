@@ -47,7 +47,6 @@ function TeamsComponent() {
     [rounds]
   );
 
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
@@ -114,11 +113,9 @@ function TeamsComponent() {
       });
   }, [tournament?.id, players, playersLoaded, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
 
-  // Coordinated loading state
-  useEffect(() => {
-    const allLoaded = !tournamentLoading && (!tournament || (playersLoaded && factsLoaded));
-    setLoading(!allLoaded);
-  }, [tournamentLoading, tournament, playersLoaded, factsLoaded]);
+  // Coordinated loading state (derived during render — no effect needed)
+  const allLoaded = !tournamentLoading && (!tournament || (playersLoaded && factsLoaded));
+  const loading = !allLoaded;
 
   const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (
