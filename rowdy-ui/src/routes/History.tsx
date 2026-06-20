@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
+import LoadingScreen from "../components/LoadingScreen";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
@@ -121,9 +122,7 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="spinner-lg"></div>
-      </div>
+      <LoadingScreen />
     );
   }
 

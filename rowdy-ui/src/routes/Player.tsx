@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
 import BadgeGrid from "../components/player/BadgeGrid";
 import { getBadges } from "../lib/badges";
@@ -123,9 +124,7 @@ export default function Player() {
   const content = (() => {
     if (loading) {
       return (
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="spinner-lg" />
-        </div>
+        <LoadingScreen className="min-h-[50vh]" />
       );
     }
 

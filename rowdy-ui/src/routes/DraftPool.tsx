@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
 import PlayerAvatar from "../components/PlayerAvatar";
 import { useTournamentContext, usePlayers } from "../contexts/TournamentContext";
@@ -76,9 +77,7 @@ export default function DraftPool() {
   if (loading) {
     return (
       <Layout title="Draft Pool" series={tournament?.series} showBack tournamentLogo={tournament?.tournamentLogo}>
-        <div className="flex items-center justify-center py-20">
-          <div className="spinner-lg" />
-        </div>
+        <LoadingScreen />
       </Layout>
     );
   }

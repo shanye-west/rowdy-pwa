@@ -5,6 +5,7 @@ import { Trophy } from "lucide-react";
 import { db } from "../firebase";
 import type { RoundRecapDoc, TournamentDoc, VsAllRecord } from "../types";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -167,9 +168,7 @@ export default function RoundRecap() {
   if (loading) {
     return (
       <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="spinner-lg"></div>
-        </div>
+        <LoadingScreen className="min-h-[60vh]" />
       </Layout>
     );
   }

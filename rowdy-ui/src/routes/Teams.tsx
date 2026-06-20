@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { query, where, getDocs, collectionGroup } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import type { TierMap } from "../types";
@@ -209,11 +210,7 @@ function TeamsComponent() {
     );
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
-  );
+  if (loading) return <LoadingScreen />;
   if (error) return (
     <div className="p-5 text-center text-red-600">
       <div className="text-2xl mb-2">⚠️</div>

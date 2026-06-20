@@ -14,6 +14,7 @@ import type { SkinType } from "../hooks/useSkinsData";
 import { formatTeeTime, toDateOrNull } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -55,9 +56,7 @@ function SkinsComponent() {
   if (loading) {
     return (
       <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="spinner-lg"></div>
-        </div>
+        <LoadingScreen className="min-h-[60vh]" />
       </Layout>
     );
   }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
+import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { useAllTimeLeaderboard } from "../hooks/usePlayerStats";
@@ -93,9 +94,7 @@ export default function Leaderboard() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="spinner-lg" />
-          </div>
+          <LoadingScreen className="min-h-[40vh]" />
         ) : rows.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">⛳</div>

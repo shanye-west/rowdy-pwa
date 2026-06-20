@@ -2,9 +2,26 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+// Build-time provenance, injected as compile-time constants (see vite-env.d.ts).
+// Lets the app print which build it's running so "am I on the latest version?"
+// is answerable at a glance. gitSha changes every commit; buildTime every build.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+const gitSha = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim(); }
+  catch { return 'unknown'; }
+})();
+const buildTime = new Date().toISOString();
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __GIT_SHA__: JSON.stringify(gitSha),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -15,7 +32,14 @@ export default defineConfig({
         "images/rowdycup-logo.svg",
         "images/stocking-stuffers.svg",
       ],
-      registerType: 'prompt',
+      // autoUpdate: the generated SW uses skipWaiting + clientsClaim, so a new
+      // version installs, activates, and reloads the page automatically. This
+      // closes the window where a stale old SW kept serving old chunks after a
+      // deploy — a lazy-route chunk would 404 and a plain reload couldn't
+      // promote the waiting SW, leaving the page stuck on a spinner until the
+      // app was force-closed. Score input is persisted to Firestore as it's
+      // entered, so an automatic reload is safe.
+      registerType: 'autoUpdate',
       devOptions: {
         enabled: true // Enables PWA in local dev (npm run dev)
       },

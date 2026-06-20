@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Layout from "./Layout";
+import LoadingScreen from "./LoadingScreen";
 
 /**
  * Route guard for admin-only pages.
@@ -20,9 +21,7 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <Layout title="Loading..." showBack>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="spinner-lg" />
-        </div>
+        <LoadingScreen className="min-h-[60vh]" />
       </Layout>
     );
   }

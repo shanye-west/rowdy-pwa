@@ -2,6 +2,7 @@ import { memo } from "react";
 import { useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
+import LoadingScreen from "../components/LoadingScreen";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
@@ -31,9 +32,7 @@ function TournamentComponent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="spinner-lg"></div>
-      </div>
+      <LoadingScreen />
     );
   }
 

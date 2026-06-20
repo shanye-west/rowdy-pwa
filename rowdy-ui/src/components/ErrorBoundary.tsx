@@ -1,6 +1,40 @@
 import { useEffect } from "react";
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
+import { hardResetApp } from "../utils/swRecovery";
+
+/**
+ * Recover from a stale chunk-load failure (a lazy route's chunk 404s after a
+ * deploy because the active SW is still serving an old shell). Reloading once
+ * normally picks up the fresh bundle, but a plain reload can loop against the
+ * same stale SW — so we count attempts and, after a few, unregister the SW and
+ * drop all caches to force a clean network fetch. That breaks the loop without
+ * the user having to force-close the app. No-op while offline (a reload or
+ * cache wipe would only strand them on a blank screen).
+ */
+function recoverFromStaleChunk() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+
+  const KEY = "sw-chunk-recovery";
+  let count = 0;
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(KEY) || "null") as { count: number; at: number } | null;
+    // Anything older than 30s is treated as a fresh incident, not a loop.
+    if (parsed && Date.now() - parsed.at < 30_000) count = parsed.count;
+  } catch { /* ignore malformed state */ }
+
+  count += 1;
+  try { sessionStorage.setItem(KEY, JSON.stringify({ count, at: Date.now() })); } catch { /* ignore */ }
+
+  if (count < 3) {
+    window.location.reload();
+    return;
+  }
+
+  // Repeated failures → nuke the SW + caches, then reload from the network.
+  try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
+  void hardResetApp();
+}
 
 /**
  * Error boundary for route errors.
@@ -10,29 +44,34 @@ export default function ErrorBoundary() {
   const error = useRouteError();
   const navigate = useNavigate();
 
-  // Check if this is a stale cache / MIME type error (triggers auto-reload)
-  const isStaleCache = 
-    error instanceof Error && 
-    (error.message.includes("MIME type") || 
-     error.message.includes("text/html") ||
-     error.message.includes("Failed to fetch dynamically imported module") ||
-     error.message.includes("Importing a module script failed") ||
-     error.message.includes("error loading dynamically imported module"));
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  // Stale cache / failed-chunk-load error (triggers auto-recovery). Covers the
+  // varied messages browsers emit — Chrome ("failed to fetch dynamically
+  // imported module"), Firefox ("error loading dynamically imported module"),
+  // and Safari/iOS ("importing a module script failed"), plus MIME-type errors
+  // from a stale index.html being served for a .js request.
+  const isStaleCache =
+    message.includes("mime type") ||
+    message.includes("text/html") ||
+    message.includes("dynamically imported module") ||
+    message.includes("importing a module script failed") ||
+    message.includes("module script failed") ||
+    message.includes("loading chunk") ||
+    message.includes("chunkloaderror");
 
   // Check if this is a network/offline error
-  const isNetworkError = 
-    error instanceof Error &&
-    (error.message.toLowerCase().includes("network") ||
-     error.message.toLowerCase().includes("offline") ||
-     error.message.toLowerCase().includes("failed to fetch") ||
-     error.message.toLowerCase().includes("internet"));
+  const isNetworkError =
+    message.includes("network") ||
+    message.includes("offline") ||
+    message.includes("failed to fetch") ||
+    message.includes("internet");
 
   // Check if this is a permission/auth error
   const isPermissionError =
-    error instanceof Error &&
-    (error.message.toLowerCase().includes("permission") ||
-     error.message.toLowerCase().includes("unauthorized") ||
-     error.message.toLowerCase().includes("unauthenticated"));
+    message.includes("permission") ||
+    message.includes("unauthorized") ||
+    message.includes("unauthenticated");
 
   // Trigger service worker update check on error
   useEffect(() => {
@@ -45,12 +84,10 @@ export default function ErrorBoundary() {
     }
   }, []);
 
-  // Auto-reload for stale cache errors after a short delay
+  // Auto-recover from stale cache / failed chunk loads after a short delay.
   useEffect(() => {
     if (isStaleCache) {
-      const timer = setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      const timer = setTimeout(recoverFromStaleChunk, 2000);
       return () => clearTimeout(timer);
     }
   }, [isStaleCache]);

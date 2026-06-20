@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useRegisterSW } from "virtual:pwa-register/react";
-import { ArrowRight, ClipboardList, Flag, RefreshCw, X } from "lucide-react";
+import { ArrowRight, ClipboardList, Flag } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
@@ -9,6 +7,7 @@ import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import ChampionBanner from "./components/ChampionBanner";
 import OfflineImage from "./components/OfflineImage";
+import LoadingScreen from "./components/LoadingScreen";
 import { ViewTransitionLink } from "./components/ViewTransitionLink";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
@@ -16,28 +15,9 @@ import { Card, CardContent } from "./components/ui/card";
 import { formatRoundType } from "./utils";
 
 export default function App() {
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
-  
-  // PWA update handler
-  const { updateServiceWorker } = useRegisterSW({
-    onNeedRefresh() {
-      setShowUpdatePrompt(true);
-    },
-    onRegisteredSW(swUrl: string, r: ServiceWorkerRegistration | undefined) {
-      console.log("Service Worker registered:", swUrl);
-      // Check for updates every 60 seconds
-      if (r) {
-        setInterval(() => {
-          r.update();
-        }, 60000);
-      }
-    },
-  });
-
-  const handleUpdateClick = () => {
-    setShowUpdatePrompt(false);
-    updateServiceWorker(true);
-  };
+  // Service worker registration + update polling now live app-wide in main.tsx,
+  // and autoUpdate reloads the page automatically when a new version activates,
+  // so the Home route no longer owns the update flow.
 
   // Get tournament from shared context (already subscribed in TournamentProvider)
   const { tournament, loading: tournamentLoading } = useTournamentContext();
@@ -55,11 +35,7 @@ export default function App() {
   
   const loading = tournamentLoading || dataLoading;
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
-  );
+  if (loading) return <LoadingScreen />;
 
   const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
@@ -270,46 +246,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {/* PWA Update Prompt */}
-      {showUpdatePrompt && (
-        <div
-          className="fixed left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2 animate-slide-up"
-          style={{ bottom: 'calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem)' }}
-        >
-            <Card className="border-white/20 bg-slate-900 text-white shadow-2xl">
-              <CardContent className="flex items-center gap-3 py-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
-                  <RefreshCw className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-semibold">Update Available</div>
-                  <div className="text-xs text-white/75">
-                    A new version is ready. Reload to update.
-                  </div>
-                </div>
-                <Button
-                  onClick={handleUpdateClick}
-                  variant="secondary"
-                  className="bg-card text-foreground hover:bg-card/90"
-                >
-                  Reload
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowUpdatePrompt(false)}
-                  className="text-white/70 hover:bg-white/10 hover:text-white"
-                  aria-label="Dismiss"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
     </Layout>
   );
 }

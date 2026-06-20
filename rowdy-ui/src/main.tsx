@@ -1,6 +1,7 @@
 import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -99,6 +100,34 @@ const router = createBrowserRouter(
     },
   }
 );
+
+// Register the service worker once, app-wide (previously this only ran on the
+// Home route, so a user sitting on a sub-page never checked for new versions).
+// In autoUpdate mode the SW reloads the page itself once a new version
+// activates; the 60s poll forces a timely update check regardless of route.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_swUrl, registration) {
+    if (registration) {
+      setInterval(() => {
+        registration.update().catch(() => {});
+      }, 60_000);
+    }
+  },
+});
+
+// Recover from a stale-chunk load failure. After a deploy, a client still
+// running the old bundle can request a lazy-route chunk that no longer exists
+// (404) before the new SW has taken over — Vite fires `vite:preloadError`.
+// Reload once to pick up the fresh bundle; the timestamp guard prevents an
+// infinite reload loop if the reload also fails (the ErrorBoundary then escalates).
+window.addEventListener("vite:preloadError", () => {
+  const KEY = "preload-error-reloaded-at";
+  const last = Number(sessionStorage.getItem(KEY) || 0);
+  if (Date.now() - last < 10_000) return; // already tried very recently — don't loop
+  sessionStorage.setItem(KEY, String(Date.now()));
+  window.location.reload();
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

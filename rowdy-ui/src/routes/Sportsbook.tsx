@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
+import LoadingScreen from "../components/LoadingScreen";
 import Layout from "../components/Layout";
 import { Card } from "../components/ui/card";
 import BetSheet, { type BetEvent } from "../components/BetSheet";
@@ -417,9 +418,7 @@ export default function Sportsbook() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="spinner-lg" />
-          </div>
+          <LoadingScreen className="min-h-[40vh]" />
         ) : tab === "markets" ? (
           // ========================== OPEN BETS ===========================
           // Each bettable event is a card you bet on in place: tap a team to
