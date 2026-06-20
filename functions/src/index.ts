@@ -2083,6 +2083,14 @@ export { recordSettlement, confirmSettlement, cancelSettlement } from "./callabl
 export { postComment, deleteComment, toggleReaction } from "./callables/commentOps.js";
 
 // ============================================================================
+// PUSH NOTIFICATION CALLABLES
+// Register/unregister a player's web-push device tokens (pushTokens/{token}).
+// See callables/pushOps.ts.
+// ============================================================================
+
+export { registerPushToken, unregisterPushToken } from "./callables/pushOps.js";
+
+// ============================================================================
 // MCP SERVER (read-only)
 // Remote Model Context Protocol endpoint so players can point their own AI
 // (Claude.ai / ChatGPT / Claude Code) at Rowdy Cup stats. Reads via the

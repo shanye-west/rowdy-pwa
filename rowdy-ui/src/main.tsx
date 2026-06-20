@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
 import { LayoutProvider } from "./contexts/LayoutContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { NotificationsProvider } from "./contexts/NotificationsContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 import { LayoutShell } from "./components/Layout";
@@ -135,7 +136,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <TournamentProvider>
         <LayoutProvider>
           <ToastProvider>
-            <RouterProvider router={router} />
+            <NotificationsProvider>
+              <RouterProvider router={router} />
+            </NotificationsProvider>
           </ToastProvider>
         </LayoutProvider>
       </TournamentProvider>

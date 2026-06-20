@@ -15,10 +15,17 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
 import { settleCupFutureBet, settleOverUnderBet, settlePlayerMatchupBet } from "../scoring/betSettlement.js";
+import { notify } from "../messaging/notify.js";
 import type { BetDoc, BetMarket, BetOverUnderMetric, BetSide } from "../types.js";
 
 function db() {
   return getFirestore();
+}
+
+/** A player's denormalized display name (falls back to the id). */
+async function displayName(playerId: string): Promise<string> {
+  const snap = await db().collection("players").doc(playerId).get();
+  return (snap.data()?.displayName as string | undefined) || playerId;
 }
 
 const MAX_BET_AMOUNT = 1_000_000;
@@ -305,7 +312,27 @@ export const createBetOffer = onCall(async (request) => {
 /** Post a directed challenge to one specific player. */
 export const createBetChallenge = onCall(async (request) => {
   const { playerId } = await requirePlayer(request, "createBetChallenge", { maxCalls: 30, windowSeconds: 60 });
-  return createBet(request, playerId, true);
+  const result = await createBet(request, playerId, true);
+
+  // Best-effort push to the challenged player — never fail the bet on this.
+  try {
+    const data = (request.data || {}) as Record<string, unknown>;
+    const targetId = typeof data.targetId === "string" ? data.targetId : null;
+    const amount = typeof data.amount === "number" ? data.amount : null;
+    if (targetId) {
+      const name = await displayName(playerId);
+      await notify([targetId], {
+        category: "sportsbook",
+        title: "New bet challenge",
+        body: amount ? `${name} challenged you to a $${amount} bet` : `${name} challenged you to a bet`,
+        link: "/sportsbook",
+      });
+    }
+  } catch (err) {
+    console.error("createBetChallenge notify failed:", err);
+  }
+
+  return result;
 });
 
 /**
@@ -345,6 +372,19 @@ export const acceptBet = onCall(async (request) => {
       participantIds: dedupe([bet.proposerId, playerId]),
     });
   });
+
+  // Best-effort push to the proposer that someone took their bet.
+  try {
+    const name = await displayName(playerId);
+    await notify([preBet.proposerId], {
+      category: "sportsbook",
+      title: "Bet accepted",
+      body: `${name} took your $${preBet.amount} bet — confirm to lock it in`,
+      link: "/sportsbook",
+    });
+  } catch (err) {
+    console.error("acceptBet notify failed:", err);
+  }
 
   return { success: true };
 });

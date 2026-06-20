@@ -468,3 +468,36 @@ export interface CommentDoc {
   reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
   createdAt?: Timestamp | FieldValue;
 }
+
+// ============================================================================
+// PUSH NOTIFICATIONS (web push via FCM)
+// pushTokens/{token}: server-only (no security rule — denied to clients by
+// default, written by the pushOps callables via the Admin SDK).
+// players/{playerId}/notifications/{id}: per-player in-app history that drives the
+// notification bell + unread badges; owner-readable (see firestore.rules).
+// Keep this block in sync with rowdy-ui/src/types.ts.
+// ============================================================================
+
+/** Which feature a notification belongs to (gates badges + future prefs). */
+export type NotificationCategory = "chat" | "sportsbook";
+
+/** A registered web-push device token for a player (doc id === the token). */
+export interface PushTokenDoc {
+  token: string;       // FCM registration token (also the doc id)
+  playerId: string;    // player doc id this device belongs to
+  userAgent?: string | null;
+  createdAt?: Timestamp | FieldValue;
+  lastSeenAt?: Timestamp | FieldValue;
+}
+
+/** A delivered notification, mirrored in-app under the recipient's player doc. */
+export interface NotificationDoc {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  link: string;        // app-relative deep link, e.g. "/sportsbook" or "/match/abc"
+  read: boolean;
+  createdAt?: Timestamp | FieldValue;
+  readAt?: Timestamp | FieldValue;
+}

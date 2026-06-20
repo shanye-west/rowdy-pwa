@@ -762,3 +762,23 @@ export type CommentDoc = {
   reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
   createdAt?: FirestoreTimestampLike;
 };
+
+// ============================================================================
+// NOTIFICATIONS (in-app history for the bell + unread badges)
+// players/{playerId}/notifications/{id}: owner-readable; written server-side by
+// notify() whenever a push is sent. Keep in sync with functions/src/types.ts.
+// ============================================================================
+
+/** Which feature a notification belongs to. */
+export type NotificationCategory = "chat" | "sportsbook";
+
+export type NotificationDoc = {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  link: string;        // app-relative deep link, e.g. "/sportsbook" or "/match/abc"
+  read: boolean;
+  createdAt?: FirestoreTimestampLike;
+  readAt?: FirestoreTimestampLike;
+};

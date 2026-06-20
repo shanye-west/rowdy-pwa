@@ -10,6 +10,8 @@ import {
   LogOut,
   LogIn,
   Wifi,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import BottomNav from "./BottomNav";
@@ -17,7 +19,10 @@ import OfflineImage from "./OfflineImage";
 import { ConnectionBanner } from "./ConnectionBanner";
 import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
+import { NotificationBell } from "./NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
+import { enablePush, disablePush, isPushEnabledLocally, pushSupport } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
@@ -44,6 +49,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
+  const [pushOn, setPushOn] = useState(() => isPushEnabledLocally());
+  // Hide the toggle only where push can never work (e.g. desktop browsers without
+  // push support); on iOS-not-installed we still show it to guide the user.
+  const pushUnsupported = pushSupport() === "unsupported";
   const tournamentCtx = useTournamentContextOptional();
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
@@ -66,6 +76,39 @@ export function LayoutShell({ children }: LayoutShellProps) {
       });
     } else {
       navigate(-1);
+    }
+  };
+
+  // Turn web push on/off for this device. Guides iOS users to install first.
+  const handleTogglePush = async () => {
+    setMenuOpen(false);
+    if (pushOn) {
+      await disablePush();
+      setPushOn(false);
+      showToast({ message: "Notifications turned off", variant: "info" });
+      return;
+    }
+    const result = await enablePush();
+    if (result.ok) {
+      setPushOn(true);
+      showToast({ message: "Notifications enabled 🎉", variant: "success" });
+      return;
+    }
+    if (result.reason === "ios-needs-install") {
+      showToast({
+        message: "Add Rowdy Cup to your Home Screen first (Share → Add to Home Screen), then enable notifications.",
+        variant: "info",
+        duration: 8000,
+      });
+    } else if (result.reason === "denied") {
+      showToast({
+        message: "Notifications are blocked — turn them on for this site in your browser settings.",
+        variant: "error",
+      });
+    } else if (result.reason === "missing-vapid") {
+      showToast({ message: "Push isn't configured yet. Try again later.", variant: "error" });
+    } else {
+      showToast({ message: "Couldn't enable notifications on this device.", variant: "error" });
     }
   };
 
@@ -161,8 +204,10 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         </div>
 
-        {/* Right: Hamburger Menu */}
-        <div className="relative flex min-w-[48px] items-center justify-end">
+        {/* Right: Notification bell + Hamburger Menu */}
+        <div className="flex items-center justify-end gap-0.5">
+          <NotificationBell />
+          <div className="relative">
           <Button
             type="button"
             variant="ghost"
@@ -218,6 +263,22 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       </ViewTransitionLink>
                     </Button>
 
+                    {player && !pushUnsupported && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full justify-start gap-2 text-foreground hover:bg-muted"
+                        onClick={handleTogglePush}
+                      >
+                        {pushOn ? (
+                          <BellOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Bell className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        {pushOn ? "Turn off notifications" : "Enable notifications"}
+                      </Button>
+                    )}
+
                     {player?.isAdmin && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                         <ViewTransitionLink to="/admin" onClick={closeMenu}>
@@ -256,6 +317,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                 </Card>
               </div>
             )}
+          </div>
         </div>
       </header>
 
