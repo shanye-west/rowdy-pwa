@@ -27,6 +27,7 @@ export default function PlayersAdmin() {
   // Selected player edit form
   const [selectedId, setSelectedId] = useState("");
   const [editName, setEditName] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [linkEmail, setLinkEmail] = useState("");
   const [confirmAdminChange, setConfirmAdminChange] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -82,13 +83,18 @@ export default function PlayersAdmin() {
     setError(null);
     const p = players.find((x) => x.id === id);
     setEditName(p?.displayName ?? "");
+    setEditNotes(p?.scoutingNotes ?? "");
     setLinkEmail(p?.email ?? "");
   };
 
-  const handleRename = (e: React.FormEvent) => {
+  const handleSaveInfo = (e: React.FormEvent) => {
     e.preventDefault();
     runAction(async () => {
-      await adminApi.updatePlayerInfo({ playerId: selectedId, displayName: editName.trim() });
+      await adminApi.updatePlayerInfo({
+        playerId: selectedId,
+        displayName: editName.trim(),
+        scoutingNotes: editNotes.trim(),
+      });
       return "Player updated.";
     });
   };
@@ -200,16 +206,31 @@ export default function PlayersAdmin() {
 
           {selected && (
             <div className="border-t border-gray-200 pt-4 space-y-4">
-              <form onSubmit={handleRename} className="flex gap-3">
+              <form onSubmit={handleSaveInfo} className="space-y-2">
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="flex-1 p-2 border border-gray-300 rounded-lg"
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  placeholder="Display name"
                   required
                 />
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Scouting notes</label>
+                  <textarea
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    rows={3}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g. Longest hitter but inconsistent off the tee; deadly with a wedge; streaky putter."
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Subjective take used by AI for draft &amp; pairing suggestions. Not shown in
+                    stats. Leave blank to clear.
+                  </div>
+                </div>
                 <button type="submit" disabled={busy} className="btn btn-secondary">
-                  Rename
+                  {busy ? "Saving..." : "Save"}
                 </button>
               </form>
 

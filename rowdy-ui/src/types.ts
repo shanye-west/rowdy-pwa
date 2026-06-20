@@ -112,12 +112,13 @@ export function isDriveTrackingFormat(format: RoundFormat | null | undefined): b
 // DOCUMENT TYPES
 // ============================================================================
 
-export type PlayerDoc = { 
-  id: string; 
-  displayName?: string; 
+export type PlayerDoc = {
+  id: string;
+  displayName?: string;
   authUid?: string;       // Firebase Auth UID (set after account setup)
   email?: string;         // Email for login (set after account setup)
   isAdmin?: boolean;      // Admin access flag
+  scoutingNotes?: string; // Subjective free-text take used by AI for draft/pairing help (not shown in stats)
 };
 
 // NEW: Helper for the Tier Arrays

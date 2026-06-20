@@ -97,9 +97,11 @@ export function registerTournamentTools(server: McpServer): void {
         "The pre-draft pool of available players with their handicap index, joined " +
         "with each player's all-time Rowdy Cup stats (record, points, format " +
         "breakdown, badges) AND a compact recent-form summary from their last ~20 " +
-        "GHIN rounds (average / recent / best score differential). Built for captains " +
-        "doing draft analysis. Use get_player_recent_rounds for the full round-by-round " +
-        "detail, and get_head_to_head / get_player_stats for pairing decisions.",
+        "GHIN rounds (average / recent / best score differential). Each player may also " +
+        "carry a subjective free-text 'scoutingNotes' take (e.g. driving distance, " +
+        "consistency, putting, temperament) — factor it into draft and pairing reasoning. " +
+        "Built for captains doing draft analysis. Use get_player_recent_rounds for the full " +
+        "round-by-round detail, and get_head_to_head / get_player_stats for pairing decisions.",
       inputSchema: {
         tournamentId: z.string().optional().describe("Defaults to the active tournament."),
         series: z
@@ -128,6 +130,7 @@ export function registerTournamentTools(server: McpServer): void {
         (): Map<string, PlayerRecentRoundsDoc> => new Map()
       );
       const nameById = new Map(players.map((p) => [p.id, p.displayName || p.id]));
+      const notesById = new Map(players.map((p) => [p.id, p.scoutingNotes]));
 
       const rows = await Promise.all(
         poolIds.map(async (pid) => {
@@ -137,6 +140,7 @@ export function registerTournamentTools(server: McpServer): void {
             playerId: pid,
             displayName: nameById.get(pid) || pid,
             handicapIndex: pool[pid],
+            scoutingNotes: notesById.get(pid) || undefined,
             allTime: s
               ? {
                   wins: s.wins ?? 0,

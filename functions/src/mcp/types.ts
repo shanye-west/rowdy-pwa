@@ -18,6 +18,7 @@ export interface PlayerDoc {
   id: string;
   displayName?: string;
   isAdmin?: boolean;
+  scoutingNotes?: string; // Subjective free-text scouting take (for AI draft/pairing analysis)
   _testSeed?: boolean;
 }
 

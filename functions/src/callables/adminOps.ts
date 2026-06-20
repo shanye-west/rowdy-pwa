@@ -636,11 +636,13 @@ export const createPlayer = onCall(async (request) => {
 });
 
 /**
- * Update a player's display name.
+ * Update a player's display name and/or subjective scouting note.
  *
  * Data payload:
  * - playerId: string
  * - displayName: string
+ * - scoutingNotes?: string - subjective free-text take used by AI for draft/pairing
+ *   help (not shown in stats). Omit to leave unchanged; pass "" to clear it.
  */
 export const updatePlayerInfo = onCall(async (request) => {
   await requireAdmin(request, "updatePlayerInfo", { maxCalls: 30, windowSeconds: 60 });
@@ -654,7 +656,19 @@ export const updatePlayerInfo = onCall(async (request) => {
     throw new HttpsError("not-found", "Player not found");
   }
 
-  await ref.set({ displayName, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  const update: Record<string, unknown> = {
+    displayName,
+    _adminUpdatedAt: FieldValue.serverTimestamp(),
+  };
+  // Only touch scoutingNotes when the key is present. A non-empty string is
+  // stored (trimmed); an empty string clears the field entirely.
+  const rawNotes = request.data?.scoutingNotes;
+  if (typeof rawNotes === "string") {
+    const notes = rawNotes.trim();
+    update.scoutingNotes = notes ? notes : FieldValue.delete();
+  }
+
+  await ref.set(update, { merge: true });
   return { success: true, playerId };
 });
 

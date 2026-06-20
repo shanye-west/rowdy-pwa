@@ -7,6 +7,7 @@ import {
   getAllRealPlayers,
   getActiveTournament,
   getPlayerStats,
+  getPlayerDoc,
   getFactsForPlayer,
   resolveTournament,
   resolveSeries,
@@ -49,6 +50,7 @@ export function registerPlayerTools(server: McpServer): void {
                 isCaptain: roster[p.id].isCaptain || undefined,
               }
             : {}),
+          scoutingNotes: p.scoutingNotes || undefined,
         }))
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       return jsonResult({ count: rows.length, players: rows });
@@ -62,7 +64,9 @@ export function registerPlayerTools(server: McpServer): void {
       description:
         "Aggregated stats for one player: win/loss/halve record, points, format " +
         "breakdown, birdies/eagles, and badges (comebacks, blown leads, clutch " +
-        "wins, etc.). Scope is all-time (by series) or a single tournament.",
+        "wins, etc.). Scope is all-time (by series) or a single tournament. May also " +
+        "include a subjective free-text 'scoutingNotes' take (e.g. driving distance, " +
+        "consistency, putting, temperament) for draft/pairing reasoning.",
       inputSchema: {
         player: z.string().describe("Player name or id (e.g. 'Austin' or 'pAustinBrady')."),
         scope: z
@@ -93,11 +97,16 @@ export function registerPlayerTools(server: McpServer): void {
         key = await resolveSeries(series);
       }
 
-      const stats = await getPlayerStats(resolved.playerId, useScope, key);
+      const [stats, doc] = await Promise.all([
+        getPlayerStats(resolved.playerId, useScope, key),
+        getPlayerDoc(resolved.playerId),
+      ]);
+      const scoutingNotes = doc?.scoutingNotes || undefined;
       if (!stats) {
         return jsonResult({
           playerId: resolved.playerId,
           displayName: resolved.displayName,
+          scoutingNotes,
           scope: useScope,
           key,
           stats: null,
@@ -107,6 +116,7 @@ export function registerPlayerTools(server: McpServer): void {
       return jsonResult({
         playerId: resolved.playerId,
         displayName: resolved.displayName,
+        scoutingNotes,
         scope: useScope,
         key,
         stats,

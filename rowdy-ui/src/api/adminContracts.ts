@@ -191,6 +191,11 @@ export interface CreatePlayerRequest {
 export interface UpdatePlayerInfoRequest {
   playerId: string;
   displayName: string;
+  /**
+   * Subjective free-text scouting note used by AI for draft/pairing help.
+   * Omit to leave unchanged; pass "" to clear it.
+   */
+  scoutingNotes?: string;
 }
 
 export interface LinkAuthToPlayerRequest {
