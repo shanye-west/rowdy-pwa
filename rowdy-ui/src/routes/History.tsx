@@ -76,6 +76,10 @@ export default function History() {
         const acc: Record<string, { aConf: number; bConf: number; totalPts: number }> = {};
         for (const t of tournaments) acc[t.id] = { aConf: 0, bConf: 0, totalPts: 0 };
 
+        // Rounds without pointTotals (scored before denormalization existed) need
+        // a match-level fallback query.
+        const fallbackRounds: { roundId: string; tournamentId: string; pointsValue: number }[] = [];
+
         await Promise.all(batches.map(async (batch) => {
           const snap = await getDocs(
             query(collection(db, "rounds"), where("tournamentId", "in", batch))
@@ -83,13 +87,44 @@ export default function History() {
           snap.docs.forEach(d => {
             const r = { id: d.id, ...d.data() } as RoundDoc;
             const bucket = r.tournamentId ? acc[r.tournamentId] : undefined;
+            if (!bucket) return;
             const pt = r.pointTotals;
-            if (!bucket || !pt) return;
-            bucket.aConf += pt.teamAConfirmed;
-            bucket.bConf += pt.teamBConfirmed;
-            bucket.totalPts += (r.pointsValue ?? 1) * (pt.matchCount ?? 0);
+            if (pt) {
+              bucket.aConf += pt.teamAConfirmed;
+              bucket.bConf += pt.teamBConfirmed;
+              bucket.totalPts += (r.pointsValue ?? 1) * (pt.matchCount ?? 0);
+            } else if (r.matchIds?.length) {
+              fallbackRounds.push({ roundId: r.id, tournamentId: r.tournamentId, pointsValue: r.pointsValue ?? 1 });
+            }
           });
         }));
+
+        // Fallback: tally points directly from match results for rounds missing pointTotals.
+        if (fallbackRounds.length > 0) {
+          const fallbackIds = fallbackRounds.map(r => r.roundId);
+          const matchBatches: string[][] = [];
+          for (let i = 0; i < fallbackIds.length; i += 30) matchBatches.push(fallbackIds.slice(i, i + 30));
+
+          await Promise.all(matchBatches.map(async (batch) => {
+            const snap = await getDocs(
+              query(collection(db, "matches"), where("roundId", "in", batch))
+            );
+            snap.docs.forEach(d => {
+              const m = d.data();
+              const round = fallbackRounds.find(r => r.roundId === m.roundId);
+              if (!round) return;
+              const bucket = acc[round.tournamentId];
+              if (!bucket) return;
+              bucket.totalPts += round.pointsValue;
+              if (m.result?.winner === "teamA") bucket.aConf += round.pointsValue;
+              else if (m.result?.winner === "teamB") bucket.bConf += round.pointsValue;
+              else if (m.result?.winner === "AS") {
+                bucket.aConf += round.pointsValue / 2;
+                bucket.bConf += round.pointsValue / 2;
+              }
+            });
+          }));
+        }
 
         if (cancelled) return;
 
