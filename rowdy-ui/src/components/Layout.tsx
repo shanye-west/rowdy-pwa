@@ -12,6 +12,7 @@ import {
   Wifi,
   Bell,
   BellOff,
+  Download,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import BottomNav from "./BottomNav";
@@ -22,6 +23,9 @@ import { ViewTransitionLink } from "./ViewTransitionLink";
 import { NotificationBell } from "./NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import { InstallGuideModal } from "./InstallGuideModal";
+import { isIOS, isStandalone } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
@@ -49,6 +53,10 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
   const { pushOn, pushUnsupported, toggle: togglePush } = usePushNotifications();
+  const { canInstall, guideOpen, openGuide, closeGuide } = useInstallPrompt();
+  // Offer "Install app" whenever the app isn't already installed and we can either
+  // fire the native prompt (Android/Chromium) or walk an iPhone user through it.
+  const showInstall = !isStandalone() && (canInstall || isIOS());
   const tournamentCtx = useTournamentContextOptional();
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
@@ -79,6 +87,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const handleTogglePush = () => {
     setMenuOpen(false);
     void togglePush();
+  };
+
+  // Open the add-to-Home-Screen guide / native install prompt.
+  const handleInstall = () => {
+    setMenuOpen(false);
+    openGuide();
   };
 
   // Logout, gated behind a confirm dialog to prevent accidental taps.
@@ -232,6 +246,18 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       </ViewTransitionLink>
                     </Button>
 
+                    {showInstall && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full justify-start gap-2 text-foreground hover:bg-muted"
+                        onClick={handleInstall}
+                      >
+                        <Download className="h-4 w-4 text-muted-foreground" />
+                        Install app
+                      </Button>
+                    )}
+
                     {player && !pushUnsupported && (
                       <Button
                         type="button"
@@ -317,6 +343,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
       </PullToRefresh>
 
       {!hideBottomNav && <BottomNav />}
+
+      <InstallGuideModal isOpen={guideOpen} onClose={closeGuide} />
 
       <Modal
         isOpen={confirmLogout}

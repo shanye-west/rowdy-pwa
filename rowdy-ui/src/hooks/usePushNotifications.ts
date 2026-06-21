@@ -11,6 +11,7 @@
 import { useSyncExternalStore } from "react";
 import { useToast } from "../contexts/ToastContext";
 import { enablePush, disablePush, isPushEnabledLocally, pushSupport } from "../messaging";
+import { openInstallGuide } from "./useInstallPrompt";
 
 const listeners = new Set<() => void>();
 let pushOnState = isPushEnabledLocally();
@@ -41,11 +42,8 @@ export function usePushNotifications() {
       return;
     }
     if (result.reason === "ios-needs-install") {
-      showToast({
-        message: "Add Rowdy Cup to your Home Screen first (Share → Add to Home Screen), then enable notifications.",
-        variant: "info",
-        duration: 8000,
-      });
+      // iOS only delivers push to installed PWAs — show the visual how-to.
+      openInstallGuide();
     } else if (result.reason === "denied") {
       showToast({
         message: "Notifications are blocked — turn them on for this site in your browser settings.",

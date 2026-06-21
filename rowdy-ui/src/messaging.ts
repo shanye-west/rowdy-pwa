@@ -48,7 +48,7 @@ function messagingIfSupported(): Promise<Messaging | null> {
 
 export type PushSupport = "ok" | "unsupported" | "ios-needs-install";
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   if (typeof navigator === "undefined") return false;
   return (
     /iphone|ipad|ipod/i.test(navigator.userAgent) ||
@@ -57,7 +57,7 @@ function isIOS(): boolean {
   );
 }
 
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
