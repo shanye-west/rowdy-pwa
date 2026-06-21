@@ -11,6 +11,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   limit,
   onSnapshot,
@@ -35,6 +36,10 @@ interface NotificationsValue {
   unreadForPrefix: (prefix: string) => number;
   markRead: (id: string) => void;
   markAllRead: () => void;
+  /** Permanently remove a single notification from the player's history. */
+  deleteNotification: (id: string) => void;
+  /** Permanently remove every notification currently in the player's history. */
+  clearAll: () => void;
 }
 
 const NotificationsContext = createContext<NotificationsValue | null>(null);
@@ -106,6 +111,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             read: true,
             readAt: serverTimestamp(),
           })
+        );
+        void batch.commit().catch(() => {});
+      },
+      deleteNotification: (id) => {
+        if (!player) return;
+        void deleteDoc(doc(db, "players", player.id, "notifications", id)).catch(() => {});
+      },
+      clearAll: () => {
+        if (!player || notifications.length === 0) return;
+        const batch = writeBatch(db);
+        notifications.forEach((n) =>
+          batch.delete(doc(db, "players", player.id, "notifications", n.id))
         );
         void batch.commit().catch(() => {});
       },

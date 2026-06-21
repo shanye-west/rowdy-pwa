@@ -500,4 +500,5 @@ export interface NotificationDoc {
   read: boolean;
   createdAt?: Timestamp | FieldValue;
   readAt?: Timestamp | FieldValue;
+  expireAt?: Timestamp;  // TTL reap time; a Firestore TTL policy deletes past this
 }

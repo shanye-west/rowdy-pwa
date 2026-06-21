@@ -15,13 +15,22 @@
  * the emulator (see messaging/notify.test.ts).
  */
 
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import type { NotificationCategory } from "../types.js";
 
 function db() {
   return getFirestore();
 }
+
+/**
+ * How long an in-app notification lives before Firestore auto-deletes it. Each
+ * doc is stamped with `expireAt`; a TTL policy on the `notifications` collection
+ * group (Firestore console → TTL) reaps expired docs server-side so history
+ * self-cleans without any client/cron work. Players can still delete sooner from
+ * the bell. Coarse cleanup only — TTL deletion can lag up to ~24h past expiry.
+ */
+const NOTIFICATION_TTL_DAYS = 30;
 
 export interface NotifyPayload {
   category: NotificationCategory;
@@ -95,6 +104,7 @@ export async function notify(recipientPlayerIds: string[], payload: NotifyPayloa
   if (recipients.length === 0) return;
 
   // 1. In-app notification history (bell + unread badges).
+  const expireAt = Timestamp.fromMillis(Date.now() + NOTIFICATION_TTL_DAYS * 24 * 60 * 60 * 1000);
   const historyBatch = db().batch();
   for (const playerId of recipients) {
     const ref = db().collection("players").doc(playerId).collection("notifications").doc();
@@ -106,6 +116,7 @@ export async function notify(recipientPlayerIds: string[], payload: NotifyPayloa
       link: payload.link,
       read: false,
       createdAt: FieldValue.serverTimestamp(),
+      expireAt,
     });
   }
   await historyBatch.commit();

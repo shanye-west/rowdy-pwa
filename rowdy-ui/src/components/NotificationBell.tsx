@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -32,7 +32,8 @@ function relativeTime(ts: FirestoreTimestampLike | undefined): string {
 
 export function NotificationBell() {
   const { player } = useAuth();
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markRead, markAllRead, deleteNotification, clearAll } =
+    useNotifications();
   const { pushOn, pushUnsupported, enable: enablePushNotifications } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -90,17 +91,28 @@ export function NotificationBell() {
           onClick={(e) => e.stopPropagation()}
         >
           <Card className="overflow-hidden border border-border/60 bg-card/95 shadow-2xl backdrop-blur">
-            <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
               <span className="text-sm font-semibold text-foreground">Notifications</span>
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  className="text-xs font-medium text-primary hover:underline"
-                  onClick={() => markAllRead()}
-                >
-                  Mark all read
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary hover:underline"
+                    onClick={() => markAllRead()}
+                  >
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-muted-foreground hover:text-red-500 hover:underline"
+                    onClick={() => clearAll()}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
             <div className="h-px bg-border/80" />
             {showEnablePrompt && (
@@ -125,22 +137,34 @@ export function NotificationBell() {
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">No notifications yet</div>
               ) : (
                 notifications.map((n) => (
-                  <button
+                  <div
                     key={n.id}
-                    type="button"
-                    onClick={() => handleItem(n.id, n.link)}
-                    className={`flex w-full flex-col items-start gap-0.5 border-b border-border/40 px-4 py-2.5 text-left last:border-b-0 hover:bg-muted ${
+                    className={`flex items-stretch border-b border-border/40 last:border-b-0 ${
                       n.read ? "" : "bg-primary/5"
                     }`}
                   >
-                    <div className="flex w-full items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">{n.title}</span>
-                      <span className="shrink-0 text-[0.65rem] text-muted-foreground/70">
-                        {relativeTime(n.createdAt)}
-                      </span>
-                    </div>
-                    <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleItem(n.id, n.link)}
+                      className="flex min-w-0 flex-1 flex-col items-start gap-0.5 py-2.5 pl-4 pr-2 text-left hover:bg-muted"
+                    >
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">{n.title}</span>
+                        <span className="shrink-0 text-[0.65rem] text-muted-foreground/70">
+                          {relativeTime(n.createdAt)}
+                        </span>
+                      </div>
+                      <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Delete notification"
+                      onClick={() => deleteNotification(n.id)}
+                      className="flex w-9 shrink-0 items-center justify-center text-muted-foreground/40 hover:bg-muted hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))
               )}
             </div>

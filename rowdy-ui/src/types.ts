@@ -781,4 +781,5 @@ export type NotificationDoc = {
   read: boolean;
   createdAt?: FirestoreTimestampLike;
   readAt?: FirestoreTimestampLike;
+  expireAt?: FirestoreTimestampLike;  // TTL reap time (server-set); see functions notify()
 };

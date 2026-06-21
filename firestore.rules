@@ -51,8 +51,9 @@ service cloud.firestore {
     // the in-app notification bell + unread badges. Unlike the admin case, the
     // owning playerId is in the PATH, so rules CAN resolve ownership by reading
     // that player doc's authUid. Owner-only read; owner may flip a notification
-    // to read (and only the read/readAt fields). All creates come from the
-    // server (notify() via the Admin SDK), which bypasses these rules.
+    // to read (and only the read/readAt fields) or dismiss it from their bell by
+    // deleting it. All creates come from the server (notify() via the Admin SDK),
+    // which bypasses these rules.
     match /players/{playerId}/notifications/{notifId} {
       function isOwner() {
         return request.auth != null
@@ -61,7 +62,8 @@ service cloud.firestore {
       allow read: if isOwner();
       allow update: if isOwner()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
-      allow create, delete: if false;
+      allow delete: if isOwner();
+      allow create: if false;
     }
 
     // Matches: public read; rostered players (or an open tournament) may edit
