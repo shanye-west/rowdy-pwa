@@ -13,6 +13,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationsContext";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import { toDateOrNull } from "../utils";
 import type { FirestoreTimestampLike } from "../types";
 
@@ -32,6 +33,7 @@ function relativeTime(ts: FirestoreTimestampLike | undefined): string {
 export function NotificationBell() {
   const { player } = useAuth();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { pushOn, pushUnsupported, enable: enablePushNotifications } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
@@ -52,6 +54,13 @@ export function NotificationBell() {
     markRead(id);
     setOpen(false);
     navigate(link);
+  };
+
+  // Offer to turn on push when it isn't enabled for this device (and it could be).
+  const showEnablePrompt = !pushOn && !pushUnsupported;
+  const handleEnable = () => {
+    setOpen(false);
+    void enablePushNotifications();
   };
 
   return (
@@ -94,6 +103,23 @@ export function NotificationBell() {
               )}
             </div>
             <div className="h-px bg-border/80" />
+            {showEnablePrompt && (
+              <button
+                type="button"
+                onClick={handleEnable}
+                className="flex w-full items-center gap-3 border-b border-border/40 bg-primary/5 px-4 py-3 text-left hover:bg-primary/10"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                  <Bell className="h-4 w-4 text-primary" />
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-semibold text-primary">Enable notifications</span>
+                  <span className="text-xs text-muted-foreground">
+                    Get alerts for chat &amp; bets on this device
+                  </span>
+                </span>
+              </button>
+            )}
             <div className="max-h-[60vh] overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">No notifications yet</div>

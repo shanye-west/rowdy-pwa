@@ -21,8 +21,7 @@ import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { NotificationBell } from "./NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../contexts/ToastContext";
-import { enablePush, disablePush, isPushEnabledLocally, pushSupport } from "../messaging";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
@@ -49,11 +48,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
-  const { showToast } = useToast();
-  const [pushOn, setPushOn] = useState(() => isPushEnabledLocally());
-  // Hide the toggle only where push can never work (e.g. desktop browsers without
-  // push support); on iOS-not-installed we still show it to guide the user.
-  const pushUnsupported = pushSupport() === "unsupported";
+  const { pushOn, pushUnsupported, toggle: togglePush } = usePushNotifications();
   const tournamentCtx = useTournamentContextOptional();
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
@@ -79,37 +74,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
     }
   };
 
-  // Turn web push on/off for this device. Guides iOS users to install first.
-  const handleTogglePush = async () => {
+  // Turn web push on/off for this device (toast feedback + iOS guidance handled
+  // by the shared hook).
+  const handleTogglePush = () => {
     setMenuOpen(false);
-    if (pushOn) {
-      await disablePush();
-      setPushOn(false);
-      showToast({ message: "Notifications turned off", variant: "info" });
-      return;
-    }
-    const result = await enablePush();
-    if (result.ok) {
-      setPushOn(true);
-      showToast({ message: "Notifications enabled 🎉", variant: "success" });
-      return;
-    }
-    if (result.reason === "ios-needs-install") {
-      showToast({
-        message: "Add Rowdy Cup to your Home Screen first (Share → Add to Home Screen), then enable notifications.",
-        variant: "info",
-        duration: 8000,
-      });
-    } else if (result.reason === "denied") {
-      showToast({
-        message: "Notifications are blocked — turn them on for this site in your browser settings.",
-        variant: "error",
-      });
-    } else if (result.reason === "missing-vapid") {
-      showToast({ message: "Push isn't configured yet. Try again later.", variant: "error" });
-    } else {
-      showToast({ message: "Couldn't enable notifications on this device.", variant: "error" });
-    }
+    void togglePush();
   };
 
   // Logout, gated behind a confirm dialog to prevent accidental taps.
