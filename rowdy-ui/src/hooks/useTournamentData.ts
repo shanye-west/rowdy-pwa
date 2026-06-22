@@ -14,6 +14,7 @@ import { collection, doc, query, where, onSnapshot, limit, documentId, getDocs }
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
+import { useResolvedLoading } from "./useResolvedLoading";
 
 // ============================================================================
 // TYPES
@@ -100,8 +101,12 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   const [roundsLoaded, setRoundsLoaded] = useState(false);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
 
-  // Derived loading state
-  const loading = !tournamentLoaded || (tournament !== null && (!roundsLoaded || !matchesLoaded));
+  // Derived loading state. The tournament/rounds/matches all use cache-first
+  // onSnapshot, so returning users resolve from IndexedDB instantly; the
+  // watchdog backstops a wedged connection so we render cached/partial data
+  // rather than spinning forever once a tournament is in hand.
+  const rawLoading = !tournamentLoaded || (tournament !== null && (!roundsLoaded || !matchesLoaded));
+  const loading = useResolvedLoading(rawLoading, tournament !== null);
 
   // -------------------------------------------------------------------------
   // 1) Subscribe to tournament

@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useMemo } from "react";
-import { doc, onSnapshot, getDoc, getDocs, collection, where, query } from "firebase/firestore";
+import { doc, onSnapshot, collection, where, query } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, CourseDoc, PlayerMatchFact } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { useTournamentContextOptional, usePlayers } from "../contexts/TournamentContext";
+import { getDocCacheFirst, getDocsCacheFirst } from "../utils/firestoreReads";
+import { useResolvedLoading } from "./useResolvedLoading";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
@@ -41,7 +43,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rawLoading, setRawLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasPendingWrites, setHasPendingWrites] = useState(false);
   
@@ -91,69 +93,57 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setHasPendingWrites(false);
     lastMatchJsonRef.current = null;
 
-    let unsub: (() => void) | undefined;
-    
-    // Check if match is static (completed + closed) to use one-time read
-    const initializeMatch = async () => {
-      try {
-        const snap = await getDoc(doc(db, "matches", matchId));
-        if (!snap.exists()) {
+    // Attach the listener directly — onSnapshot is cache-first, so the first
+    // emission arrives instantly from IndexedDB (no blocking server round-trip).
+    // includeMetadataChanges lets us surface hasPendingWrites (queued writes not
+    // yet acked by the server) so the UI can confirm sync state, and lets us see
+    // the cache→server transition. For static (completed + closed) matches we
+    // drop the listener once the server confirms it, so historical matches don't
+    // hold an open subscription (the ~80% read win) — read cost matches the old
+    // one-time fetch while still painting instantly from cache.
+    let unsub: (() => void) | undefined = onSnapshot(
+      doc(db, "matches", matchId),
+      { includeMetadataChanges: true },
+      (mSnap) => {
+        if (!mSnap.exists()) {
           setMatch(null);
+          lastMatchJsonRef.current = null;
           setMatchLoaded(true);
+          setHasPendingWrites(false);
           return;
         }
-        
-        const mData = { id: snap.id, ...(snap.data() as any) } as MatchDoc;
-        const isStatic = mData.completed && mData.status?.closed;
-        
-        if (isStatic) {
-          // One-time read for static/historical matches (reduces reads by ~80%)
+
+        const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
+
+        // Sync-state always tracks the latest snapshot...
+        setHasPendingWrites(mSnap.metadata.hasPendingWrites);
+        setMatchLoaded(true);
+
+        // ...but only push new match state when the document payload actually
+        // changed. includeMetadataChanges fires this listener on every
+        // pending-write flip; skipping no-op data updates stops the scorecard
+        // from re-rendering ~1-2x/sec during active scoring.
+        const dataJson = JSON.stringify(mSnap.data());
+        if (dataJson !== lastMatchJsonRef.current) {
+          lastMatchJsonRef.current = dataJson;
           setMatch(mData);
-          lastMatchJsonRef.current = JSON.stringify(snap.data());
-          setMatchLoaded(true);
-          return;
         }
-        
-        // Real-time subscription for active/in-progress matches.
-        // includeMetadataChanges lets us surface hasPendingWrites (queued writes
-        // not yet acked by the server) so the UI can confirm sync state.
-        unsub = onSnapshot(
-          doc(db, "matches", matchId),
-          { includeMetadataChanges: true },
-          (mSnap) => {
-            if (!mSnap.exists()) {
-              setMatch(null);
-              lastMatchJsonRef.current = null;
-              setMatchLoaded(true);
-              setHasPendingWrites(false);
-              return;
-            }
 
-            // Sync-state always tracks the latest snapshot...
-            setHasPendingWrites(mSnap.metadata.hasPendingWrites);
-            setMatchLoaded(true);
-
-            // ...but only push new match state when the document payload actually
-            // changed. includeMetadataChanges fires this listener on every
-            // pending-write flip; skipping no-op data updates stops the scorecard
-            // from re-rendering ~1-2x/sec during active scoring.
-            const dataJson = JSON.stringify(mSnap.data());
-            if (dataJson === lastMatchJsonRef.current) return;
-            lastMatchJsonRef.current = dataJson;
-            setMatch({ id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc);
-          },
-          (err) => {
-            setError(`Failed to load match: ${err.message}`);
-            setMatchLoaded(true);
-          }
-        );
-      } catch (err: any) {
+        // Static/historical match → drop the realtime listener, but only once the
+        // server has confirmed it (not on a cache-only snapshot, which could pin
+        // us to a stale copy if the match was reopened server-side). onSnapshot
+        // resolves the synchronously-returned `unsub` before any callback fires,
+        // so it's safe to call here; the effect cleanup then no-ops.
+        if (mData.completed && mData.status?.closed && !mSnap.metadata.fromCache) {
+          unsub?.();
+          unsub = undefined;
+        }
+      },
+      (err) => {
         setError(`Failed to load match: ${err.message}`);
         setMatchLoaded(true);
       }
-    };
-    
-    initializeMatch();
+    );
 
     return () => unsub?.();
   }, [matchId]);
@@ -250,7 +240,10 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     const tournamentIdToFetch = tournamentId; // Capture for closure
     async function fetchTournament() {
       try {
-        const tSnap = await getDoc(doc(db, "tournaments", tournamentIdToFetch));
+        // Cache-first: a non-active/historical tournament is effectively static
+        // for the session, so the cached copy is fine and won't block on a slow
+        // connection. The active tournament stays fresh via the context.
+        const tSnap = await getDocCacheFirst(doc(db, "tournaments", tournamentIdToFetch));
         if (cancelled) return;
         if (tSnap.exists()) {
           const tournament = ensureTournamentTeamColors({ id: tSnap.id, ...tSnap.data() } as TournamentDoc);
@@ -305,7 +298,9 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     const courseIdToFetch = courseId; // Capture for closure
     async function fetchCourse() {
       try {
-        const cSnap = await getDoc(doc(db, "courses", courseIdToFetch));
+        // Courses are static during a tournament — cache-first avoids blocking
+        // the scorecard on a slow connection for data we already have.
+        const cSnap = await getDocCacheFirst(doc(db, "courses", courseIdToFetch));
         if (cancelled) return;
         if (cSnap.exists()) {
           const courseData = { id: cSnap.id, ...cSnap.data() } as CourseDoc;
@@ -344,7 +339,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     let cancelled = false;
     async function fetchFacts() {
       try {
-        const snap = await getDocs(query(collection(db, "playerMatchFacts"), where("matchId", "==", factMatchId)));
+        const snap = await getDocsCacheFirst(query(collection(db, "playerMatchFacts"), where("matchId", "==", factMatchId)));
         if (cancelled) return;
         const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
         setMatchFacts(facts);
@@ -362,8 +357,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   // Coordinate all loading states
   useEffect(() => {
     const allLoaded = matchLoaded && roundLoaded && courseLoaded && tournamentLoaded && playersLoaded && factsLoaded;
-    setLoading(!allLoaded);
+    setRawLoading(!allLoaded);
   }, [matchLoaded, roundLoaded, courseLoaded, tournamentLoaded, playersLoaded, factsLoaded]);
+
+  // Never spin forever: once we have the match loaded, a wedged secondary read
+  // (course/facts on a stalled connection) stops blocking after the timeout so
+  // the scorecard renders with cached/partial data instead of an endless spinner.
+  const loading = useResolvedLoading(rawLoading, match !== null);
 
   // Use tournament from context if available, otherwise check cache, then local fetch
   // During initial load, use context's tournament as fallback to prevent header flash

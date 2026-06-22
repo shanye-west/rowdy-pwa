@@ -53,3 +53,16 @@ export const COMEBACK_THRESHOLD = 3;
 
 /** Maximum IDs allowed in a Firestore 'in' query */
 export const FIRESTORE_IN_QUERY_LIMIT = 30;
+
+// =============================================================================
+// LOADING / RESILIENCE
+// =============================================================================
+
+/**
+ * How long a data hook will block the UI on a spinner before giving up and
+ * rendering whatever (cached/partial) data it already has. Backstops a wedged
+ * Firestore connection so a page can never spin forever. Brand-new loads with
+ * no cached data keep spinning past this — LoadingScreen surfaces its manual
+ * Reload/Reset escape hatch instead.
+ */
+export const LOAD_TIMEOUT_MS = 8000;

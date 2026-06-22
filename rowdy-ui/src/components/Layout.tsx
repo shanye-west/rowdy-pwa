@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   ChevronLeft,
@@ -15,6 +15,7 @@ import {
   Download,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
+import LoadingScreen from "./LoadingScreen";
 import BottomNav from "./BottomNav";
 import OfflineImage from "./OfflineImage";
 import { ConnectionBanner } from "./ConnectionBanner";
@@ -338,7 +339,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
         )}
 
         <main className={`app-container${hideBottomNav ? "" : " has-bottom-nav"}`}>
-          {pageContent}
+          {/* Routes are React.lazy. On a hard reload onto a lazy route there's no
+              prior UI, so without a boundary the user sees a blank screen while
+              the chunk downloads — this shows the spinner instead. On client
+              navigation React Router runs in a transition, so the old page stays
+              and this fallback does not flash (smooth View Transitions preserved). */}
+          <Suspense fallback={<LoadingScreen />}>
+            {pageContent}
+          </Suspense>
         </main>
       </PullToRefresh>
 

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, doc, query, where, onSnapshot, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { useTournamentContextOptional, usePlayers } from "../contexts/TournamentContext";
+import { getDocCacheFirst, getDocsCacheFirst } from "../utils/firestoreReads";
+import { useResolvedLoading } from "./useResolvedLoading";
 
 interface UseRoundDataResult {
   loading: boolean;
@@ -26,7 +28,7 @@ interface UseRoundDataResult {
  * Handles cascading subscriptions: round → tournament/course → matches → players
  */
 export function useRoundData(roundId: string | undefined): UseRoundDataResult {
-  const [loading, setLoading] = useState(true);
+  const [rawLoading, setRawLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const [round, setRound] = useState<RoundDoc | null>(null);
@@ -49,12 +51,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   // 1) Subscribe to round document
   useEffect(() => {
     if (!roundId) {
-      setLoading(false);
+      setRawLoading(false);
       setError("Round ID is missing.");
       return;
     }
 
-    setLoading(true);
+    setRawLoading(true);
     setError(null);
     setRoundLoaded(false);
     setTournamentLoaded(false);
@@ -113,7 +115,9 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     let cancelled = false;
     async function fetchTournament() {
       try {
-        const snap = await getDoc(doc(db, "tournaments", tournamentId));
+        // Cache-first: this branch only runs for a tournament not already in the
+        // shared context (historical/non-active), which is static for the session.
+        const snap = await getDocCacheFirst(doc(db, "tournaments", tournamentId));
         if (cancelled) return;
         if (snap.exists()) {
           const tournament = ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc);
@@ -161,7 +165,8 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     const courseIdToFetch = round.courseId;
     async function fetchCourse() {
       try {
-        const snap = await getDoc(doc(db, "courses", courseIdToFetch));
+        // Courses are static during a tournament — cache-first.
+        const snap = await getDocCacheFirst(doc(db, "courses", courseIdToFetch));
         if (cancelled) return;
         if (snap.exists()) {
           const courseData = { id: snap.id, ...snap.data() } as CourseDoc;
@@ -190,7 +195,8 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     if (round.locked) {
       const fetchStaticMatches = async () => {
         try {
-          const snap = await getDocs(
+          // Locked round = static result set, so read cache-first.
+          const snap = await getDocsCacheFirst(
             query(collection(db, "matches"), where("roundId", "==", roundId))
           );
           const ms = snap.docs
@@ -242,8 +248,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   // Coordinated loading state - wait for round, tournament, matches, and players
   useEffect(() => {
     const allLoaded = roundLoaded && tournamentLoaded && matchesLoaded && playersLoaded;
-    setLoading(!allLoaded);
+    setRawLoading(!allLoaded);
   }, [roundLoaded, tournamentLoaded, matchesLoaded, playersLoaded]);
+
+  // Backstop a wedged secondary read so the round page can't spin forever once
+  // the round itself is in hand — render cached/partial data after the timeout.
+  const loading = useResolvedLoading(rawLoading, round !== null);
 
   // Compute round stats
   const stats = useMemo(() => {

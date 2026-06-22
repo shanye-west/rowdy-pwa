@@ -13,6 +13,7 @@ import type { TournamentDoc, CourseDoc, PlayerDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { rosterPlayerIds } from "../utils/roster";
 import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
+import { useResolvedLoading } from "../hooks/useResolvedLoading";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
@@ -72,7 +73,7 @@ interface TournamentProviderProps {
 
 export function TournamentProvider({ children, tournamentId }: TournamentProviderProps) {
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [rawLoading, setRawLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<Record<string, CourseDoc>>({});
   
@@ -109,7 +110,7 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
 
   // Subscribe to the active tournament (or specific one if tournamentId provided)
   useEffect(() => {
-    setLoading(true);
+    setRawLoading(true);
     setError(null);
 
     if (tournamentId) {
@@ -125,12 +126,12 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
             setTournament(null);
             setError("Tournament not found.");
           }
-          setLoading(false);
+          setRawLoading(false);
         },
         (err) => {
           console.error("Tournament subscription error:", err);
           setError("Unable to load tournament.");
-          setLoading(false);
+          setRawLoading(false);
         }
       );
       return () => unsub();
@@ -147,17 +148,24 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
             setTournament(t);
             if (t) setTournamentsById(prev => ({ ...prev, [d.id]: t }));
           }
-          setLoading(false);
+          setRawLoading(false);
         },
         (err) => {
           console.error("Tournament subscription error:", err);
           setError("Unable to load tournament.");
-          setLoading(false);
+          setRawLoading(false);
         }
       );
       return () => unsub();
     }
   }, [tournamentId]);
+
+  // The tournament uses a cache-first onSnapshot, so returning users resolve
+  // from IndexedDB instantly. The watchdog backstops a wedged connection: once
+  // a (cached) tournament is in hand it stops blocking after the timeout, so the
+  // app renders instead of spinning forever. With no tournament at all it keeps
+  // spinning, letting LoadingScreen surface its manual Reload/Reset escape.
+  const loading = useResolvedLoading(rawLoading, tournament !== null);
 
   // Warm the cache with the active tournament's roster as soon as it loads, so
   // player names are ready before any route that needs them mounts. ensurePlayers

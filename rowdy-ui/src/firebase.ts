@@ -32,10 +32,16 @@ export const functions = getFunctions(app);
 // - persistentLocalCache: Enables IndexedDB persistence for offline support
 // - persistentMultipleTabManager: Allows multiple tabs to share the same cache
 // This is critical for golf courses with spotty cell coverage
+// - experimentalAutoDetectLongPolling: on flaky networks/proxies/WebViews the
+//   streaming WebChannel can stall, delaying the first connection (and the
+//   first snapshot) after a hard reload — which is what leaves pages spinning.
+//   Auto-detect falls back to long-polling when streaming is blocked, so the
+//   connection establishes far more reliably on spotty coverage.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
-  })
+  }),
+  experimentalAutoDetectLongPolling: true,
 });
 
 // Export auth utilities for use in AuthContext
