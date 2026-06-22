@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, HelpCircle } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import LoadingScreen from "../components/LoadingScreen";
 import Layout from "../components/Layout";
@@ -29,6 +29,7 @@ import { betsApi } from "../api/bets";
 import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
+import SportsbookHowTo from "../components/SportsbookHowTo";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
 
 type Tab = "markets" | "mybets";
@@ -82,6 +83,8 @@ export default function Sportsbook() {
   const [selectedEvent, setSelectedEvent] = useState<BetEvent | null>(null);
   // The tournament-long player-props sheet (matchups + player point O/Us).
   const [propSheetOpen, setPropSheetOpen] = useState(false);
+  // The "How it works" guide (betting mechanics + the list of markets).
+  const [howToOpen, setHowToOpen] = useState(false);
 
   // Wall-clock used to tell whether a match has teed off; refreshed periodically
   // (read via state to keep Date.now() out of the render path). The interval is
@@ -389,8 +392,8 @@ export default function Sportsbook() {
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-4 p-4">
-        {/* Tabs */}
-        <div className="flex gap-1.5">
+        {/* Tabs + How-it-works */}
+        <div className="flex items-center gap-1.5">
           {(
             [
               { id: "markets", label: "Open Bets" },
@@ -408,6 +411,15 @@ export default function Sportsbook() {
               {t.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setHowToOpen(true)}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted active:scale-95"
+            aria-label="How the sportsbook works"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            How it works
+          </button>
         </div>
 
         {loading ? (
@@ -902,6 +914,9 @@ export default function Sportsbook() {
           </div>
         )}
       </div>
+
+      {/* How-it-works guide: mechanics + the full list of markets. */}
+      <SportsbookHowTo isOpen={howToOpen} onClose={() => setHowToOpen(false)} />
 
       {confirmState && (
         <ConfirmDialog
