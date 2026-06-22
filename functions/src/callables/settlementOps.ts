@@ -8,8 +8,9 @@
  * settled bets — they never touch the Money Leaders standings.
  *
  * All writes go through these callables — betSettlements is locked to clients by
- * the security rules. Bet volume is small, so the outstanding-owed guard reads
- * the tournament's settled bets + settlements and filters in code (no new index).
+ * the security rules. The outstanding-owed guard scopes its settled-bets read to
+ * the payer (via participantIds) so it doesn't grow with the tournament's bet
+ * history; the handful of settlements are read in full and filtered in code.
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -39,7 +40,15 @@ function requireSettlementId(data: unknown): string {
  */
 async function outstandingOwed(tournamentId: string, payerId: string, payeeId: string): Promise<number> {
   const [betsSnap, settlementsSnap] = await Promise.all([
-    db().collection("bets").where("tournamentId", "==", tournamentId).where("status", "==", "settled").get(),
+    // Only the payer's settled bets can contribute to what they owe — every
+    // settled bet carries both players in participantIds (set on accept), so we
+    // scope by it instead of scanning the whole tournament's settled history.
+    db()
+      .collection("bets")
+      .where("tournamentId", "==", tournamentId)
+      .where("status", "==", "settled")
+      .where("participantIds", "array-contains", payerId)
+      .get(),
     db().collection("betSettlements").where("tournamentId", "==", tournamentId).get(),
   ]);
 

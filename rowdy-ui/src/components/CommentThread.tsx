@@ -34,16 +34,33 @@ export interface CommentThreadProps {
 export default function CommentThread({ threadType, threadId, tournamentId, title }: CommentThreadProps) {
   const { player } = useAuth();
   const { showToast } = useToast();
-  const { comments, loading, canInteract, post, react, remove, canDelete } = useCommentThread({
-    tournamentId,
-    threadType,
-    threadId,
-  });
+  const { comments, loading, hasMore, loadingOlder, loadOlder, canInteract, post, react, remove, canDelete } =
+    useCommentThread({
+      tournamentId,
+      threadType,
+      threadId,
+    });
 
   const [text, setText] = useState("");
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Loading older history prepends rows above the viewport, which would shove the
+  // user's place down the page. Capture the document height at click time and,
+  // once the older rows have rendered, scroll by the growth so their view holds.
+  const beforeHeightRef = useRef<number | null>(null);
+  const handleLoadOlder = useCallback(() => {
+    const el = document.scrollingElement ?? document.documentElement;
+    beforeHeightRef.current = el.scrollHeight;
+    loadOlder();
+  }, [loadOlder]);
+  useLayoutEffect(() => {
+    if (beforeHeightRef.current === null) return;
+    const el = document.scrollingElement ?? document.documentElement;
+    el.scrollTop += el.scrollHeight - beforeHeightRef.current;
+    beforeHeightRef.current = null;
+  }, [comments]);
 
   const pendingDelete = confirmDeleteId ? comments.find((c) => c.id === confirmDeleteId) : undefined;
 
@@ -120,21 +137,35 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
       ) : comments.length === 0 ? (
         <div className="py-3 text-center text-xs text-muted-foreground">No comments yet — be the first.</div>
       ) : (
-        <ul className="space-y-3">
-          {comments.map((c) => (
-            <CommentRow
-              key={c.id}
-              comment={c}
-              meId={player?.id}
-              canDelete={!c.pending && canDelete(c)}
-              canReact={canInteract && !c.pending}
-              pickerOpen={pickerFor === c.id}
-              onTogglePicker={() => setPickerFor((cur) => (cur === c.id ? null : c.id))}
-              onReact={(emoji) => handleReact(c.id, emoji)}
-              onDelete={() => setConfirmDeleteId(c.id)}
-            />
-          ))}
-        </ul>
+        <>
+          {hasMore && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={handleLoadOlder}
+                disabled={loadingOlder}
+                className="rounded-full px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-muted disabled:text-muted-foreground"
+              >
+                {loadingOlder ? "Loading…" : "Load earlier comments"}
+              </button>
+            </div>
+          )}
+          <ul className="space-y-3">
+            {comments.map((c) => (
+              <CommentRow
+                key={c.id}
+                comment={c}
+                meId={player?.id}
+                canDelete={!c.pending && canDelete(c)}
+                canReact={canInteract && !c.pending}
+                pickerOpen={pickerFor === c.id}
+                onTogglePicker={() => setPickerFor((cur) => (cur === c.id ? null : c.id))}
+                onReact={(emoji) => handleReact(c.id, emoji)}
+                onDelete={() => setConfirmDeleteId(c.id)}
+              />
+            ))}
+          </ul>
+        </>
       )}
       <div ref={bottomRef} />
 

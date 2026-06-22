@@ -108,15 +108,28 @@ function matchStartedPlay(m: FirebaseFirestore.DocumentData): boolean {
   return teeMs !== null && teeMs <= Date.now();
 }
 
+// matchStartedPlay only reads status + teeTime; project to those so these scans
+// transfer/deserialize a fraction of each match doc (trims payload, not the
+// billed read count — that's bounded by match count, so it doesn't grow).
+const STARTED_FIELDS = ["status", "teeTime"] as const;
+
 /** True once a tournament's play has begun — used to lock Cup-futures betting. */
 async function isTournamentStarted(tournamentId: string): Promise<boolean> {
-  const snap = await db().collection("matches").where("tournamentId", "==", tournamentId).get();
+  const snap = await db()
+    .collection("matches")
+    .where("tournamentId", "==", tournamentId)
+    .select(...STARTED_FIELDS)
+    .get();
   return snap.docs.some((d) => matchStartedPlay(d.data()));
 }
 
 /** True once any match in a round has begun — used to lock round/session betting. */
 async function isRoundStarted(roundId: string): Promise<boolean> {
-  const snap = await db().collection("matches").where("roundId", "==", roundId).get();
+  const snap = await db()
+    .collection("matches")
+    .where("roundId", "==", roundId)
+    .select(...STARTED_FIELDS)
+    .get();
   return snap.docs.some((d) => matchStartedPlay(d.data()));
 }
 

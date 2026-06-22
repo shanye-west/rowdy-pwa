@@ -2,10 +2,12 @@
  * Comments data hooks (match threads + the sportsbook trash-talk feed).
  *
  * Two layers:
- *  - `useComments(threadId)` is the raw subscription: a single onSnapshot
- *    filtered by `threadId`, sorted oldest -> newest client-side (a thread reads
- *    top-to-bottom), mirroring useBets. `threadId` is a single-field equality
- *    filter, so no composite index is required.
+ *  - `useComments(threadId)` is the raw subscription, bounded to the newest
+ *    PAGE_SIZE messages (a `threadId`-filtered onSnapshot ordered newest-first,
+ *    reversed to oldest-first for display since a thread reads top-to-bottom).
+ *    Older history loads on demand via cursor-based one-time reads (`loadOlder`),
+ *    so reads/renders stay bounded as the thread grows. The ordered query needs a
+ *    `(threadId, createdAt DESC)` composite index.
  *  - `useCommentThread(...)` wraps that subscription with *optimistic* post /
  *    react / delete. Writes go through Cloud Function callables (the `comments`
  *    collection is locked to clients), so a naive UI waits a full round-trip —
@@ -15,7 +17,17 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  onSnapshot,
+  getDocs,
+  type QueryDocumentSnapshot,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { commentsApi } from "../api/comments";
 import { useAuth } from "../contexts/AuthContext";
@@ -25,31 +37,70 @@ import type { CommentDoc, CommentThreadType } from "../types";
 /** Emoji reactions a comment may carry. Keep in sync with commentOps.ts. */
 export const REACTION_EMOJI = ["👍", "🔥", "😂", "⛳", "💀"] as const;
 
+/** Newest messages kept on the live listener; also the older-page size. */
+const PAGE_SIZE = 50;
+
 export interface UseCommentsResult {
   comments: CommentDoc[];
   loading: boolean;
   error: string | null;
+  /** True while older history may still exist below the loaded window. */
+  hasMore: boolean;
+  /** True while an older page is being fetched. */
+  loadingOlder: boolean;
+  /** Pull the next older page (one-time read); no-op if none remain or already loading. */
+  loadOlder: () => void;
 }
 
-/** Subscribe to a single comment thread, oldest first. */
+/**
+ * Subscribe to a comment thread, oldest first, bounded to the newest PAGE_SIZE
+ * messages. Older history is pulled on demand via cursor-based one-time reads
+ * (`loadOlder`) — the live listener only ever carries the newest page, so reads
+ * and renders stay bounded no matter how large the thread grows (mirrors the
+ * live/settled split in useBets). Trade-off: a reaction/delete on a message that
+ * has scrolled out of the newest-PAGE_SIZE live window (i.e. only present via a
+ * loaded older page) won't update in real time until the thread is reopened.
+ */
 export function useComments(threadId: string | undefined): UseCommentsResult {
-  const [comments, setComments] = useState<CommentDoc[]>([]);
+  const [liveDocs, setLiveDocs] = useState<CommentDoc[]>([]);
+  const [olderDocs, setOlderDocs] = useState<CommentDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [reachedEnd, setReachedEnd] = useState(false);
+  const [liveFull, setLiveFull] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Oldest snapshot in each region, kept as `startAfter` cursors for loadOlder.
+  const liveOldestRef = useRef<QueryDocumentSnapshot | null>(null);
+  const olderOldestRef = useRef<QueryDocumentSnapshot | null>(null);
+
   useEffect(() => {
+    // Reset paged state whenever the thread changes.
+    setOlderDocs([]);
+    setReachedEnd(false);
+    olderOldestRef.current = null;
+    liveOldestRef.current = null;
+
     if (!threadId) {
-      setComments([]);
+      setLiveDocs([]);
+      setLiveFull(false);
       setLoading(false);
       return;
     }
     setLoading(true);
     const unsub = onSnapshot(
-      query(collection(db, "comments"), where("threadId", "==", threadId)),
+      query(
+        collection(db, "comments"),
+        where("threadId", "==", threadId),
+        orderBy("createdAt", "desc"),
+        limit(PAGE_SIZE)
+      ),
       (snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommentDoc));
-        rows.sort((a, b) => commentMillis(a) - commentMillis(b));
-        setComments(rows);
+        // Query is newest-first; reverse to oldest-first for display.
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommentDoc)).reverse();
+        liveOldestRef.current = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+        setLiveFull(snap.docs.length >= PAGE_SIZE);
+        setLiveDocs(rows);
         setLoading(false);
       },
       (err) => {
@@ -61,7 +112,43 @@ export function useComments(threadId: string | undefined): UseCommentsResult {
     return () => unsub();
   }, [threadId]);
 
-  return { comments, loading, error };
+  const loadOlder = useCallback(() => {
+    if (!threadId || loadingOlder || reachedEnd) return;
+    const cursor = olderOldestRef.current ?? liveOldestRef.current;
+    if (!cursor) return;
+    setLoadingOlder(true);
+    getDocs(
+      query(
+        collection(db, "comments"),
+        where("threadId", "==", threadId),
+        orderBy("createdAt", "desc"),
+        startAfter(cursor),
+        limit(PAGE_SIZE)
+      )
+    )
+      .then((snap) => {
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommentDoc)).reverse();
+        if (snap.docs.length) olderOldestRef.current = snap.docs[snap.docs.length - 1];
+        if (snap.docs.length < PAGE_SIZE) setReachedEnd(true);
+        // Prepend: older rows sort ahead of everything already loaded.
+        setOlderDocs((prev) => [...rows, ...prev]);
+      })
+      .catch((err) => console.error("Older comments fetch error:", err))
+      .finally(() => setLoadingOlder(false));
+  }, [threadId, loadingOlder, reachedEnd]);
+
+  // Common case (no older pages loaded): the live window is already sorted asc.
+  // Otherwise merge, deduping by id with the live (fresher) copy winning, since a
+  // deletion can slide an already-loaded older message back into the live window.
+  const comments = useMemo(() => {
+    if (olderDocs.length === 0) return liveDocs;
+    const byId = new Map<string, CommentDoc>();
+    for (const c of olderDocs) byId.set(c.id, c);
+    for (const c of liveDocs) byId.set(c.id, c);
+    return [...byId.values()].sort((a, b) => commentMillis(a) - commentMillis(b));
+  }, [olderDocs, liveDocs]);
+
+  return { comments, loading, error, hasMore: liveFull && !reachedEnd, loadingOlder, loadOlder };
 }
 
 // ============================================================================
@@ -85,6 +172,12 @@ export interface UseCommentThreadResult {
   comments: DisplayComment[];
   loading: boolean;
   error: string | null;
+  /** True while older history may still exist below the loaded window. */
+  hasMore: boolean;
+  /** True while an older page is being fetched. */
+  loadingOlder: boolean;
+  /** Pull the next older page of history (one-time read). */
+  loadOlder: () => void;
   /** True once a player is logged in and can post/react. */
   canInteract: boolean;
   /** Optimistically post; resolves when the server accepts, rejects (after rollback) otherwise. */
@@ -111,7 +204,7 @@ export function useCommentThread({
   threadId,
 }: UseCommentThreadArgs): UseCommentThreadResult {
   const { player } = useAuth();
-  const { comments: server, loading, error } = useComments(threadId);
+  const { comments: server, loading, error, hasMore, loadingOlder, loadOlder } = useComments(threadId);
 
   const meId = player?.id;
   const myName = player?.displayName || player?.id || "";
@@ -238,7 +331,19 @@ export function useCommentThread({
     return [...fromServer, ...fromPending].sort((a, b) => displayMillis(a) - displayMillis(b));
   }, [server, pending, removing, reactionOverrides, meId, tournamentId, threadType, threadId]);
 
-  return { comments, loading, error, canInteract: !!player, post, react, remove, canDelete };
+  return {
+    comments,
+    loading,
+    error,
+    hasMore,
+    loadingOlder,
+    loadOlder,
+    canInteract: !!player,
+    post,
+    react,
+    remove,
+    canDelete,
+  };
 }
 
 /** Force the caller's membership in a comment's reactions per local overrides. */

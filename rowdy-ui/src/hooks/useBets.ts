@@ -111,10 +111,13 @@ function betMillis(b: BetDoc): number {
   return toDateOrNull(b.createdAt)?.getTime() ?? 0;
 }
 
+/** Settle-up statuses worth reading — cancelled ones are dropped server-side. */
+const LIVE_SETTLEMENT_STATUSES = ["pending", "confirmed"] as const;
+
 /**
- * Realtime listener over a tournament's settle-up records (the in-play
- * pending + confirmed ones; cancelled are dropped). Volume is tiny, so a single
- * tournamentId-equality listener — no composite index — backs the whole feature.
+ * Realtime listener over a tournament's in-play settle-up records (pending +
+ * confirmed; cancelled are dropped). The status filter keeps the listener from
+ * ever reading the cancelled noise — backed by the (tournamentId, status) index.
  */
 export function useBetSettlements(tournamentId: string | undefined): BetSettlementDoc[] {
   const [settlements, setSettlements] = useState<BetSettlementDoc[]>([]);
@@ -124,13 +127,13 @@ export function useBetSettlements(tournamentId: string | undefined): BetSettleme
       return;
     }
     const unsub = onSnapshot(
-      query(collection(db, "betSettlements"), where("tournamentId", "==", tournamentId)),
+      query(
+        collection(db, "betSettlements"),
+        where("tournamentId", "==", tournamentId),
+        where("status", "in", [...LIVE_SETTLEMENT_STATUSES])
+      ),
       (snap) => {
-        setSettlements(
-          snap.docs
-            .map((d) => ({ id: d.id, ...d.data() }) as BetSettlementDoc)
-            .filter((s) => s.status === "pending" || s.status === "confirmed")
-        );
+        setSettlements(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BetSettlementDoc));
       },
       (err) => console.error("Bet settlements subscription error:", err)
     );
