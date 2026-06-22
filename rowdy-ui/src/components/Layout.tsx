@@ -14,6 +14,7 @@ import {
   BellOff,
   Download,
   Settings,
+  Loader2,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import LoadingScreen from "./LoadingScreen";
@@ -54,7 +55,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
-  const { pushOn, pushUnsupported, toggle: togglePush } = usePushNotifications();
+  const { pushOn, busy: pushBusy, pushUnsupported, toggle: togglePush } = usePushNotifications();
   const { canInstall, guideOpen, openGuide, closeGuide } = useInstallPrompt();
   // Offer "Install app" whenever the app isn't already installed and we can either
   // fire the native prompt (Android/Chromium) or walk an iPhone user through it.
@@ -270,13 +271,16 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         variant="ghost"
                         className="w-full justify-start gap-2 text-foreground hover:bg-muted"
                         onClick={handleTogglePush}
+                        disabled={pushBusy}
                       >
-                        {pushOn ? (
+                        {pushBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : pushOn ? (
                           <BellOff className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <Bell className="h-4 w-4 text-muted-foreground" />
                         )}
-                        {pushOn ? "Turn off notifications" : "Enable notifications"}
+                        {pushBusy ? "Working…" : pushOn ? "Turn off notifications" : "Enable notifications"}
                       </Button>
                     )}
 
