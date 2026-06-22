@@ -25,6 +25,7 @@ const Teams = lazyWithRecovery(() => import("./routes/Teams"));
 const DraftPool = lazyWithRecovery(() => import("./routes/DraftPool"));
 const Leaderboard = lazyWithRecovery(() => import("./routes/Leaderboard"));
 const Sportsbook = lazyWithRecovery(() => import("./routes/Sportsbook"));
+const Chat = lazyWithRecovery(() => import("./routes/Chat"));
 const Player = lazyWithRecovery(() => import("./routes/Player"));
 const Login = lazyWithRecovery(() => import("./routes/Login"));
 const History = lazyWithRecovery(() => import("./routes/History"));
@@ -64,6 +65,7 @@ const router = createBrowserRouter(
         { path: "draft", element: <DraftPool /> },
         { path: "leaderboard", element: <Leaderboard /> },
         { path: "sportsbook", element: <Sportsbook /> },
+        { path: "chat", element: <Chat /> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
         { path: "settings/notifications", element: <NotificationSettings /> },

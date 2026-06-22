@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Home, Users, History, DollarSign } from "lucide-react";
+import { Home, Users, MessageCircle, DollarSign } from "lucide-react";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useNotifications } from "../contexts/NotificationsContext";
 
@@ -32,15 +32,16 @@ const TABS: Tab[] = [
     label: "Bets",
     Icon: DollarSign,
     isActive: (p) => p.startsWith("/sportsbook"),
-    // Badge bet challenges/accepts + sportsbook-feed chat (all link to /sportsbook).
+    // Badge bet challenges/accepts (they deep-link to /sportsbook).
     badgePrefix: "/sportsbook",
   },
   {
-    to: "/history",
-    label: "History",
-    Icon: History,
-    // Past-tournament detail pages are reached from History.
-    isActive: (p) => p.startsWith("/history") || p.startsWith("/tournament"),
+    to: "/chat",
+    label: "Chat",
+    Icon: MessageCircle,
+    isActive: (p) => p.startsWith("/chat"),
+    // Badge new sportsbook-feed comments/replies (they deep-link to /chat).
+    badgePrefix: "/chat",
   },
 ];
 

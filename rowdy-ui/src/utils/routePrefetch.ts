@@ -19,6 +19,7 @@ const PREFETCHERS: Array<[RegExp, () => Promise<unknown>]> = [
   [/^\/draft/, () => import("../routes/DraftPool")],
   [/^\/leaderboard/, () => import("../routes/Leaderboard")],
   [/^\/sportsbook/, () => import("../routes/Sportsbook")],
+  [/^\/chat/, () => import("../routes/Chat")],
   [/^\/player\//, () => import("../routes/Player")],
   [/^\/history/, () => import("../routes/History")],
   [/^\/tournament\//, () => import("../routes/Tournament")],

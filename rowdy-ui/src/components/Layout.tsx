@@ -6,6 +6,7 @@ import {
   X,
   Shield,
   Trophy,
+  History,
   ClipboardList,
   LogOut,
   LogIn,
@@ -250,6 +251,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       <ViewTransitionLink to="/leaderboard" onClick={closeMenu}>
                         <Trophy className="h-4 w-4 text-muted-foreground" />
                         Player Leaderboard
+                      </ViewTransitionLink>
+                    </Button>
+
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
+                      <ViewTransitionLink to="/history" onClick={closeMenu}>
+                        <History className="h-4 w-4 text-muted-foreground" />
+                        History
                       </ViewTransitionLink>
                     </Button>
 

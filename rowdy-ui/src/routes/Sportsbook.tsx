@@ -27,12 +27,11 @@ import {
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
 import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
-import CommentThread from "../components/CommentThread";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
 
-type Tab = "markets" | "mybets" | "chat";
+type Tab = "markets" | "mybets";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide =>
@@ -68,12 +67,7 @@ export default function Sportsbook() {
   // not a freshly-mounted default. `replace` keeps tab switches out of history.
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const tab: Tab =
-    tabParam === "mybets"
-      ? "mybets"
-      : tabParam === "chat" && tournament?.commentsEnabled
-        ? "chat"
-        : "markets";
+  const tab: Tab = tabParam === "mybets" ? "mybets" : "markets";
   const setTab = (t: Tab) =>
     setSearchParams(
       (prev) => {
@@ -401,7 +395,6 @@ export default function Sportsbook() {
             [
               { id: "markets", label: "Open Bets" },
               { id: "mybets", label: "My Bets" },
-              ...(tournament.commentsEnabled ? [{ id: "chat", label: "Chat" }] : []),
             ] as { id: Tab; label: string }[]
           ).map((t) => (
             <button
@@ -574,7 +567,7 @@ export default function Sportsbook() {
               </>
             )}
           </div>
-        ) : tab === "mybets" ? (
+        ) : (
           // ============== MY BETS (your tab + active/completed) ===============
           <div className="space-y-4">
             {/* Summary hero: settled net + record + outstanding tab totals */}
@@ -907,14 +900,6 @@ export default function Sportsbook() {
               </>
             )}
           </div>
-        ) : (
-          // ============================ CHAT ============================
-          <CommentThread
-            threadType="sportsbook"
-            threadId={`sb_${tournament.id}`}
-            tournamentId={tournament.id}
-            title="Trash talk"
-          />
         )}
       </div>
 

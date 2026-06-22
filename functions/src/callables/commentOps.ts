@@ -99,7 +99,7 @@ async function postReply(args: {
       category: "chat",
       title: threadType === "sportsbook" ? "Sportsbook chat" : "Match chat",
       body: `${authorName} replied: ${preview}`,
-      link: threadType === "sportsbook" ? "/sportsbook" : `/match/${threadId}`,
+      link: threadType === "sportsbook" ? "/chat" : `/match/${threadId}`,
     });
   } catch (err) {
     console.error("postReply notify failed:", err);
@@ -186,7 +186,7 @@ export const postComment = onCall(async (request: CallableRequest) => {
       category: "chat",
       title: threadType === "sportsbook" ? "Sportsbook chat" : "Match chat",
       body: `${authorName}: ${preview}`,
-      link: threadType === "sportsbook" ? "/sportsbook" : `/match/${threadId}`,
+      link: threadType === "sportsbook" ? "/chat" : `/match/${threadId}`,
     });
   } catch (err) {
     console.error("postComment notify failed:", err);
