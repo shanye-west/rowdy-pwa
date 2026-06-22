@@ -761,6 +761,11 @@ export type CommentDoc = {
   text: string;
   reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
   createdAt?: FirestoreTimestampLike;
+  // Threading: top-level comments live in `comments` and carry `replyCount`;
+  // replies live in `comments/{parentId}/replies` and carry `parentId` (one level
+  // deep — you can't reply to a reply). Reactions are top-level only.
+  replyCount?: number;             // denormalized # of replies (top-level comments)
+  parentId?: string;               // set on reply docs; the comment they answer
 };
 
 // ============================================================================

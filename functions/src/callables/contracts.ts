@@ -389,15 +389,20 @@ export interface PostCommentRequest {
   /** matchId for match threads; `sb_${tournamentId}` for the feed. */
   threadId: string;
   text: string;
+  /** When set, posts a one-level reply under this top-level comment. */
+  parentId?: string;
 }
 
 export interface PostCommentResult extends AdminResult {
+  /** Id of the created comment (or reply, when parentId was supplied). */
   commentId: string;
 }
 
-/** Delete a comment (author or admin). */
+/** Delete a comment or reply (author or admin). */
 export interface DeleteCommentRequest {
   commentId: string;
+  /** Set when deleting a reply: the top-level comment it lives under. */
+  parentId?: string;
 }
 
 /** Toggle the caller's emoji reaction on a comment. */

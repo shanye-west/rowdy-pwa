@@ -221,11 +221,20 @@ export function useCommentThread({
     serverRef.current = server;
   }, [server]);
 
-  // We deliberately don't prune overlays in an effect (synchronous setState in an
-  // effect causes cascading renders). The merge below already hides an overlay
-  // once the server snapshot reflects it, and an overlay that matches server truth
-  // is a no-op — so correctness never depends on pruning. The pending list is the
-  // only overlay that grows with use, so `post` trims it opportunistically.
+  // Drop a pending post from the overlay the moment the server snapshot first
+  // includes it. Merely *hiding* it while the server currently has it isn't
+  // enough: deleting that comment later removes the id from the snapshot, which
+  // would un-hide the stale overlay and resurface it as "Sending…". Pruning it
+  // outright means there's nothing left to resurrect. The length guard keeps this
+  // a no-op in the steady state, so it doesn't cascade renders.
+  useEffect(() => {
+    setPending((prev) => {
+      if (prev.length === 0) return prev;
+      const liveIds = new Set(server.map((c) => c.id));
+      const next = prev.filter((p) => !(p.realId && liveIds.has(p.realId)));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [server]);
 
   const post = useCallback(
     async (text: string) => {
@@ -344,6 +353,145 @@ export function useCommentThread({
     remove,
     canDelete,
   };
+}
+
+// ============================================================================
+// REPLIES (one-level sub-threads under a top-level comment)
+// ============================================================================
+
+export interface UseReplyThreadResult {
+  replies: DisplayComment[];
+  loading: boolean;
+  canInteract: boolean;
+  post: (text: string) => Promise<void>;
+  remove: (replyId: string) => Promise<void>;
+  canDelete: (reply: CommentDoc) => boolean;
+}
+
+/**
+ * Optimistic controller for one comment's reply sub-thread. Mirrors
+ * useCommentThread (instant post/delete reconciled against the live snapshot,
+ * with the same delivered-overlay pruning) but simpler: sub-threads are small so
+ * there's no pagination, and replies don't carry reactions. The live listener
+ * only runs while the caller mounts this (i.e. while the thread is expanded), so
+ * collapsed threads cost no reads.
+ */
+export function useReplyThread({
+  tournamentId,
+  threadType,
+  threadId,
+  parentId,
+}: UseCommentThreadArgs & { parentId: string }): UseReplyThreadResult {
+  const { player } = useAuth();
+  const meId = player?.id;
+  const myName = player?.displayName || player?.id || "";
+
+  const [server, setServer] = useState<CommentDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState<PendingPost[]>([]);
+  const [removing, setRemoving] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setLoading(true);
+    const unsub = onSnapshot(
+      query(collection(db, "comments", parentId, "replies"), orderBy("createdAt", "asc")),
+      (snap) => {
+        setServer(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CommentDoc)));
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Replies subscription error:", err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [parentId]);
+
+  // Latest server state for the action handlers, plus delivered-overlay pruning
+  // (see useCommentThread: hiding alone would resurface a deleted reply as
+  // "Sending…" once the server drops its id).
+  const serverRef = useRef<CommentDoc[]>(server);
+  useEffect(() => {
+    serverRef.current = server;
+  }, [server]);
+  useEffect(() => {
+    setPending((prev) => {
+      if (prev.length === 0) return prev;
+      const liveIds = new Set(server.map((c) => c.id));
+      const next = prev.filter((p) => !(p.realId && liveIds.has(p.realId)));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [server]);
+
+  const post = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || !meId) return;
+      const tempId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `tmp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      setPending((prev) => {
+        const liveIds = new Set(serverRef.current.map((c) => c.id));
+        const live = prev.filter((p) => !(p.realId && liveIds.has(p.realId)));
+        return [...live, { tempId, authorId: meId, authorName: myName, text: trimmed, createdAt: new Date() }];
+      });
+      try {
+        const res = await commentsApi.postComment({ tournamentId, threadType, threadId, text: trimmed, parentId });
+        const realId = res?.commentId;
+        if (realId) setPending((prev) => prev.map((p) => (p.tempId === tempId ? { ...p, realId } : p)));
+      } catch (e) {
+        setPending((prev) => prev.filter((p) => p.tempId !== tempId));
+        throw e;
+      }
+    },
+    [meId, myName, tournamentId, threadType, threadId, parentId]
+  );
+
+  const remove = useCallback(
+    async (replyId: string) => {
+      setRemoving((prev) => new Set(prev).add(replyId));
+      try {
+        await commentsApi.deleteComment({ commentId: replyId, parentId });
+      } catch (e) {
+        setRemoving((prev) => {
+          const next = new Set(prev);
+          next.delete(replyId);
+          return next;
+        });
+        throw e;
+      }
+    },
+    [parentId]
+  );
+
+  const canDelete = useCallback(
+    (reply: CommentDoc) => !!player && (player.id === reply.authorId || !!player.isAdmin),
+    [player]
+  );
+
+  const replies = useMemo<DisplayComment[]>(() => {
+    const liveIds = new Set(server.map((c) => c.id));
+    const fromServer = server.filter((c) => !removing.has(c.id));
+    const fromPending: DisplayComment[] = pending
+      .filter((p) => !(p.realId && liveIds.has(p.realId)))
+      .map((p) => ({
+        id: p.tempId,
+        tournamentId,
+        threadType,
+        threadId,
+        parentId,
+        authorId: p.authorId,
+        authorName: p.authorName,
+        text: p.text,
+        reactions: {},
+        createdAt: p.createdAt,
+        pending: true,
+      }));
+    return [...fromServer, ...fromPending].sort((a, b) => displayMillis(a) - displayMillis(b));
+  }, [server, pending, removing, tournamentId, threadType, threadId, parentId]);
+
+  return { replies, loading, canInteract: !!player, post, remove, canDelete };
 }
 
 /** Force the caller's membership in a comment's reactions per local overrides. */

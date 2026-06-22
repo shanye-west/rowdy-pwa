@@ -467,6 +467,11 @@ export interface CommentDoc {
   text: string;
   reactions?: Record<string, string[]>; // emoji -> playerIds who reacted
   createdAt?: Timestamp | FieldValue;
+  // Threading: top-level comments live in `comments` and carry `replyCount`;
+  // replies live in `comments/{parentId}/replies` and carry `parentId` (one level
+  // deep). Reactions are top-level only.
+  replyCount?: number;             // denormalized # of replies (top-level comments)
+  parentId?: string;               // set on reply docs; the comment they answer
 }
 
 // ============================================================================

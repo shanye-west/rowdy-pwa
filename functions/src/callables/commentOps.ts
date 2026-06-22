@@ -72,12 +72,74 @@ async function requireCommentsTournament(tournamentId: string): Promise<void> {
   }
 }
 
+/**
+ * Create a one-level reply under a top-level comment: written to that comment's
+ * `replies` subcollection, bumping its denormalized `replyCount`. Replies can't
+ * have replies — the parent is looked up in the top-level `comments` collection,
+ * so a reply id (which lives in a subcollection) can never be a parent.
+ */
+async function postReply(args: {
+  playerId: string;
+  authorName: string;
+  tournamentId: string;
+  threadType: CommentThreadType;
+  threadId: string;
+  parentId: string;
+  text: string;
+}): Promise<{ success: true; commentId: string }> {
+  const { playerId, authorName, tournamentId, threadType, threadId, parentId, text } = args;
+  const parentRef = db().collection("comments").doc(parentId);
+  const replyRef = parentRef.collection("replies").doc();
+
+  let parentAuthorId = "";
+  await db().runTransaction(async (tx) => {
+    const parentSnap = await tx.get(parentRef);
+    if (!parentSnap.exists) throw new HttpsError("not-found", "Comment not found");
+    const parent = parentSnap.data()!;
+    if (parent.parentId) throw new HttpsError("failed-precondition", "You can only reply to a top-level comment");
+    if (parent.tournamentId !== tournamentId || parent.threadType !== threadType || parent.threadId !== threadId) {
+      throw new HttpsError("invalid-argument", "Reply target is not in this thread");
+    }
+    parentAuthorId = (parent.authorId as string) || "";
+    tx.set(replyRef, {
+      id: replyRef.id,
+      parentId,
+      tournamentId,
+      threadType,
+      threadId,
+      authorId: playerId,
+      authorName,
+      text,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    tx.update(parentRef, { replyCount: FieldValue.increment(1) });
+  });
+
+  // Best-effort push to the parent author + everyone already in the sub-thread.
+  try {
+    const repliesSnap = await parentRef.collection("replies").get();
+    const replierIds = repliesSnap.docs.map((d) => d.data().authorId as string);
+    const recipients = [...new Set([parentAuthorId, ...replierIds])].filter((id) => !!id && id !== playerId);
+    const preview = text.length > 80 ? `${text.slice(0, 79)}…` : text;
+    await notify(recipients, {
+      category: "chat",
+      title: threadType === "sportsbook" ? "Sportsbook chat" : "Match chat",
+      body: `${authorName} replied: ${preview}`,
+      link: threadType === "sportsbook" ? "/sportsbook" : `/match/${threadId}`,
+    });
+  } catch (err) {
+    console.error("postReply notify failed:", err);
+  }
+
+  return { success: true, commentId: replyRef.id };
+}
+
 /** Post a comment to a match thread or the sportsbook feed. */
 export const postComment = onCall(async (request: CallableRequest) => {
   const { playerId } = await requirePlayer(request, "postComment", { maxCalls: 30, windowSeconds: 60 });
 
   const data = (request.data || {}) as Record<string, unknown>;
-  const { tournamentId, threadType, threadId, text } = data;
+  const { tournamentId, threadType, threadId, text, parentId } = data;
 
   if (!tournamentId || typeof tournamentId !== "string") {
     throw new HttpsError("invalid-argument", "Missing tournamentId");
@@ -87,6 +149,9 @@ export const postComment = onCall(async (request: CallableRequest) => {
   }
   if (!threadId || typeof threadId !== "string") {
     throw new HttpsError("invalid-argument", "Missing threadId");
+  }
+  if (parentId !== undefined && (typeof parentId !== "string" || !parentId)) {
+    throw new HttpsError("invalid-argument", "parentId must be a non-empty string");
   }
   if (typeof text !== "string") {
     throw new HttpsError("invalid-argument", "text must be a string");
@@ -117,6 +182,12 @@ export const postComment = onCall(async (request: CallableRequest) => {
   const playerSnap = await db().collection("players").doc(playerId).get();
   const authorName = (playerSnap.data()?.displayName as string | undefined) || playerId;
 
+  // A reply takes its own path: written to the parent's `replies` subcollection,
+  // bumping the parent's denormalized count and pinging the sub-thread.
+  if (typeof parentId === "string") {
+    return postReply({ playerId, authorName, tournamentId, threadType, threadId, parentId, text: trimmed });
+  }
+
   const ref = db().collection("comments").doc();
   await ref.set({
     id: ref.id,
@@ -127,6 +198,7 @@ export const postComment = onCall(async (request: CallableRequest) => {
     authorName,
     text: trimmed,
     reactions: {},
+    replyCount: 0,
     createdAt: FieldValue.serverTimestamp(),
   });
 
@@ -149,12 +221,53 @@ export const postComment = onCall(async (request: CallableRequest) => {
   return { success: true, commentId: ref.id };
 });
 
-/** Delete a comment. The author may delete their own; admins may delete any. */
+/** Batch-delete every reply under a top-level comment (chunked for safety). */
+async function deleteRepliesOf(parentRef: FirebaseFirestore.DocumentReference): Promise<void> {
+  const replies = await parentRef.collection("replies").get();
+  if (replies.empty) return;
+  let batch = db().batch();
+  let n = 0;
+  for (const d of replies.docs) {
+    batch.delete(d.ref);
+    if (++n % 450 === 0) {
+      await batch.commit();
+      batch = db().batch();
+    }
+  }
+  await batch.commit();
+}
+
+/**
+ * Delete a comment or reply. The author may delete their own; admins may delete
+ * any. Deleting a reply decrements its parent's count; deleting a top-level
+ * comment cascades — its replies are removed too so none are left orphaned.
+ */
 export const deleteComment = onCall(async (request: CallableRequest) => {
   const { playerId, isAdmin } = await requirePlayer(request, "deleteComment", { maxCalls: 30, windowSeconds: 60 });
   const commentId = requireCommentId(request.data);
-  const ref = db().collection("comments").doc(commentId);
+  const parentId = (request.data as { parentId?: unknown } | null)?.parentId;
+  if (parentId !== undefined && (typeof parentId !== "string" || !parentId)) {
+    throw new HttpsError("invalid-argument", "parentId must be a non-empty string");
+  }
 
+  // Reply: delete from the subcollection and decrement the parent's count.
+  if (typeof parentId === "string") {
+    const parentRef = db().collection("comments").doc(parentId);
+    const replyRef = parentRef.collection("replies").doc(commentId);
+    await db().runTransaction(async (tx) => {
+      const [replySnap, parentSnap] = await Promise.all([tx.get(replyRef), tx.get(parentRef)]);
+      if (!replySnap.exists) throw new HttpsError("not-found", "Comment not found");
+      if (replySnap.data()!.authorId !== playerId && !isAdmin) {
+        throw new HttpsError("permission-denied", "You can only delete your own comments");
+      }
+      tx.delete(replyRef);
+      if (parentSnap.exists) tx.update(parentRef, { replyCount: FieldValue.increment(-1) });
+    });
+    return { success: true };
+  }
+
+  // Top-level: delete the comment, then cascade its replies.
+  const ref = db().collection("comments").doc(commentId);
   await db().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Comment not found");
@@ -164,6 +277,11 @@ export const deleteComment = onCall(async (request: CallableRequest) => {
     }
     tx.delete(ref);
   });
+  try {
+    await deleteRepliesOf(ref);
+  } catch (err) {
+    console.error("cascade delete replies failed:", err);
+  }
 
   return { success: true };
 });
