@@ -36,6 +36,8 @@ import {
   isValidGross
 } from "./scoring/matchScoring.js";
 import { settleMatchBet, settleOverUnderBet, settleRoundBet } from "./scoring/betSettlement.js";
+import { handleMatchNotify } from "./messaging/matchNotify.js";
+import { handleTournamentNotify } from "./messaging/tournamentNotify.js";
 
 initializeApp();
 const db = getFirestore();
@@ -1613,6 +1615,26 @@ export const computeRoundTotals = onDocumentWritten("matches/{matchId}", withTri
 }));
 
 // ============================================================================
+// NOTIFICATIONS (web push + in-app history)
+// Match notifications (lead change / result) react to the status write-back from
+// computeMatchOnWrite; tournament milestones (overall lead / round final /
+// champion) react to the pointTotals write-back from computeRoundTotals. Both
+// only READ those writes and store their own idempotency markers in dedicated
+// *NotifyState collections, so they never re-trigger the scoring/stats chain.
+// Per-category delivery preferences are applied inside notify().
+// ============================================================================
+
+export const notifyMatchEvents = onDocumentWritten(
+  "matches/{matchId}",
+  withTriggerLogging("notifyMatchEvents", handleMatchNotify)
+);
+
+export const notifyTournamentEvents = onDocumentWritten(
+  "rounds/{roundId}",
+  withTriggerLogging("notifyTournamentEvents", handleTournamentNotify)
+);
+
+// ============================================================================
 // PLAYER STATS AGGREGATION
 // Aggregates PlayerMatchFact documents into PlayerStats by series, tournament, and round
 // Collections: 
@@ -2098,7 +2120,7 @@ export { postComment, deleteComment, toggleReaction } from "./callables/commentO
 // See callables/pushOps.ts.
 // ============================================================================
 
-export { registerPushToken, unregisterPushToken } from "./callables/pushOps.js";
+export { registerPushToken, unregisterPushToken, setNotificationPrefs } from "./callables/pushOps.js";
 
 // ============================================================================
 // MCP SERVER (read-only)

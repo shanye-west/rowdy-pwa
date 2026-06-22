@@ -28,6 +28,7 @@ const Sportsbook = lazyWithRecovery(() => import("./routes/Sportsbook"));
 const Player = lazyWithRecovery(() => import("./routes/Player"));
 const Login = lazyWithRecovery(() => import("./routes/Login"));
 const History = lazyWithRecovery(() => import("./routes/History"));
+const NotificationSettings = lazyWithRecovery(() => import("./routes/NotificationSettings"));
 const Tournament = lazyWithRecovery(() => import("./routes/Tournament"));
 const AdminDashboard = lazyWithRecovery(() => import("./routes/admin/AdminDashboard"));
 const AdminTournamentLayout = lazyWithRecovery(() => import("./routes/admin/AdminTournamentLayout"));
@@ -65,6 +66,7 @@ const router = createBrowserRouter(
         { path: "sportsbook", element: <Sportsbook /> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
+        { path: "settings/notifications", element: <NotificationSettings /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },
         { path: "admin", element: <RequireAdmin><AdminDashboard /></RequireAdmin> },

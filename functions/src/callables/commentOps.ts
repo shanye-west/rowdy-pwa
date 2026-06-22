@@ -12,6 +12,7 @@
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requirePlayer } from "../helpers/adminAuth.js";
+import { matchPlayerIds, tournamentPlayerIds } from "../helpers/roster.js";
 import { notify, resolveCommentRecipients } from "../messaging/notify.js";
 import type { CommentThreadType } from "../types.js";
 
@@ -20,33 +21,6 @@ function db() {
 }
 
 const MAX_COMMENT_LENGTH = 1000;
-
-/** Player ids playing in a match (both teams), from the match doc. */
-function matchPlayerIds(m: FirebaseFirestore.DocumentData): string[] {
-  const fromTeam = (team: unknown): string[] =>
-    Array.isArray(team)
-      ? team.map((p) => (p as { playerId?: unknown })?.playerId).filter((id): id is string => typeof id === "string")
-      : [];
-  return [...fromTeam(m.teamAPlayers), ...fromTeam(m.teamBPlayers)];
-}
-
-/** Every player on either team's roster for a tournament (deduped). */
-async function tournamentPlayerIds(tournamentId: string): Promise<string[]> {
-  const t = (await db().collection("tournaments").doc(tournamentId).get()).data();
-  if (!t) return [];
-  const ids: string[] = [];
-  for (const team of [t.teamA, t.teamB]) {
-    const tiers = (team as { rosterByTier?: Record<string, unknown> } | undefined)?.rosterByTier;
-    if (tiers) {
-      for (const tier of Object.values(tiers)) {
-        if (Array.isArray(tier)) ids.push(...tier.filter((x): x is string => typeof x === "string"));
-      }
-    }
-    const handicaps = (team as { handicapByPlayer?: Record<string, unknown> } | undefined)?.handicapByPlayer;
-    if (handicaps) ids.push(...Object.keys(handicaps));
-  }
-  return [...new Set(ids)];
-}
 
 /** Emoji reactions a comment may carry. Keep in sync with the UI palette. */
 const REACTION_EMOJI = ["👍", "🔥", "😂", "⛳", "💀"] as const;

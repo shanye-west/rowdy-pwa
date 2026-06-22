@@ -483,8 +483,22 @@ export interface CommentDoc {
 // Keep this block in sync with rowdy-ui/src/types.ts.
 // ============================================================================
 
-/** Which feature a notification belongs to (gates badges + future prefs). */
-export type NotificationCategory = "chat" | "sportsbook";
+/**
+ * Which feature a notification belongs to. Drives in-app badges and the
+ * per-category delivery preference (players/{id}.notificationPrefs), checked at
+ * send time in messaging/notify.ts. Keep in lockstep with rowdy-ui/src/types.ts.
+ *  - chat:            match-thread + sportsbook-feed comments/replies
+ *  - sportsbook:      bet challenge / accept
+ *  - matchResult:     a match closes (won / lost / halved)
+ *  - matchLeadChange: the leader in a match flips
+ *  - tournament:      overall team lead flips · a round goes final · champion decided
+ */
+export type NotificationCategory =
+  | "chat"
+  | "sportsbook"
+  | "matchResult"
+  | "matchLeadChange"
+  | "tournament";
 
 /** A registered web-push device token for a player (doc id === the token). */
 export interface PushTokenDoc {

@@ -13,6 +13,7 @@ import {
   Bell,
   BellOff,
   Download,
+  Settings,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import LoadingScreen from "./LoadingScreen";
@@ -276,6 +277,15 @@ export function LayoutShell({ children }: LayoutShellProps) {
                           <Bell className="h-4 w-4 text-muted-foreground" />
                         )}
                         {pushOn ? "Turn off notifications" : "Enable notifications"}
+                      </Button>
+                    )}
+
+                    {player && (
+                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
+                        <ViewTransitionLink to="/settings/notifications" onClick={closeMenu}>
+                          <Settings className="h-4 w-4 text-muted-foreground" />
+                          Notification settings
+                        </ViewTransitionLink>
                       </Button>
                     )}
 

@@ -11,10 +11,20 @@
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requirePlayer } from "../helpers/adminAuth.js";
+import type { NotificationCategory } from "../types.js";
 
 function db() {
   return getFirestore();
 }
+
+/** Categories a player may toggle; anything else in the payload is ignored. */
+const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+  "chat",
+  "sportsbook",
+  "matchResult",
+  "matchLeadChange",
+  "tournament",
+];
 
 /** Validate and return the FCM registration token from the request. */
 function requireToken(data: unknown): string {
@@ -55,5 +65,29 @@ export const unregisterPushToken = onCall(async (request: CallableRequest) => {
   await requirePlayer(request, "unregisterPushToken", { maxCalls: 30, windowSeconds: 60 });
   const token = requireToken(request.data);
   await db().collection("pushTokens").doc(token).delete();
+  return { success: true };
+});
+
+/**
+ * Save the calling player's per-category notification preferences onto their
+ * player doc (players/{id}.notificationPrefs). A callable (not a client write +
+ * rule) keeps the player doc server-write-locked — the security rule deliberately
+ * restricts client self-writes to account-linking fields to block privilege
+ * escalation. Unknown keys / non-boolean values are dropped; the client sends the
+ * full map on each save. Delivery uses these via messaging/notify.ts.
+ */
+export const setNotificationPrefs = onCall(async (request: CallableRequest) => {
+  const { playerId } = await requirePlayer(request, "setNotificationPrefs", { maxCalls: 30, windowSeconds: 60 });
+  const raw = (request.data as { prefs?: unknown } | null)?.prefs;
+  if (!raw || typeof raw !== "object") {
+    throw new HttpsError("invalid-argument", "Missing prefs");
+  }
+  const prefs: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (NOTIFICATION_CATEGORIES.includes(key as NotificationCategory) && typeof value === "boolean") {
+      prefs[key] = value;
+    }
+  }
+  await db().collection("players").doc(playerId).set({ notificationPrefs: prefs }, { merge: true });
   return { success: true };
 });

@@ -119,6 +119,9 @@ export type PlayerDoc = {
   email?: string;         // Email for login (set after account setup)
   isAdmin?: boolean;      // Admin access flag
   scoutingNotes?: string; // Subjective free-text take used by AI for draft/pairing help (not shown in stats)
+  // Per-category push preferences (opt-out; absent => server defaults). Saved via
+  // the setNotificationPrefs callable from the Notifications settings screen.
+  notificationPrefs?: NotificationPrefs;
 };
 
 // NEW: Helper for the Tier Arrays
@@ -774,8 +777,20 @@ export type CommentDoc = {
 // notify() whenever a push is sent. Keep in sync with functions/src/types.ts.
 // ============================================================================
 
-/** Which feature a notification belongs to. */
-export type NotificationCategory = "chat" | "sportsbook";
+/**
+ * Which feature a notification belongs to. Drives in-app badges and the
+ * per-category delivery preference (PlayerDoc.notificationPrefs), enforced at
+ * send time server-side. Keep in lockstep with functions/src/types.ts.
+ */
+export type NotificationCategory =
+  | "chat"
+  | "sportsbook"
+  | "matchResult"
+  | "matchLeadChange"
+  | "tournament";
+
+/** Per-player opt-out map: category -> whether the player wants that category. */
+export type NotificationPrefs = Partial<Record<NotificationCategory, boolean>>;
 
 export type NotificationDoc = {
   id: string;
