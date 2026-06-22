@@ -55,7 +55,7 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
 
         {/* Lifecycle */}
         <Section title="From offer to locked in">
-          <ol className="ml-4 list-decimal space-y-1.5 text-muted-foreground">
+          <ol className="list-decimal space-y-1.5 pl-6 text-muted-foreground">
             <li>
               Someone posts an offer or sends a challenge, and someone takes/accepts it. The bet moves to{" "}
               <strong className="text-foreground">Awaiting confirmation</strong>.
