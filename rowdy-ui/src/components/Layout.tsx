@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, useMatches, Outlet } from "react-router-dom";
 import {
   ChevronLeft,
   Menu,
@@ -30,7 +30,7 @@ import { isIOS, isStandalone } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
-import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/useViewTransition";
+import { useViewTransitionDirection, startViewTransitionSafe } from "../hooks/useViewTransition";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -66,21 +66,25 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
   const location = useLocation();
-  
+  // Key the route Suspense by the matched leaf route (NOT the full pathname), so
+  // it remounts when switching to a different route template — forcing a fresh
+  // boundary that DOES show its fallback while the lazy chunk loads (an already-
+  // mounted boundary is suppressed during a navigation transition, which is why
+  // a slow/hanging route used to look frozen). Param-only changes (e.g.
+  // /match/a → /match/b) keep the same key, so they don't remount or flash.
+  const matches = useMatches();
+  const routeKey = matches[matches.length - 1]?.id ?? location.pathname;
+
   // Track navigation direction for CSS View Transitions
   useViewTransitionDirection();
   // PUSH → top, POP → restore previous scroll position.
   useScrollRestoration();
 
-  // Handle back navigation with view transition
+  // Handle back navigation with view transition. startViewTransitionSafe runs
+  // navigate() even when the API is unsupported or throws, so going back can
+  // never be swallowed by the animation layer.
   const handleBack = () => {
-    if (supportsViewTransitions() && (document as any).startViewTransition) {
-      (document as any).startViewTransition(() => {
-        navigate(-1);
-      });
-    } else {
-      navigate(-1);
-    }
+    startViewTransitionSafe(() => navigate(-1));
   };
 
   // Turn web push on/off for this device (toast feedback + iOS guidance handled
@@ -344,7 +348,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
               the chunk downloads — this shows the spinner instead. On client
               navigation React Router runs in a transition, so the old page stays
               and this fallback does not flash (smooth View Transitions preserved). */}
-          <Suspense fallback={<LoadingScreen />}>
+          <Suspense key={routeKey} fallback={<LoadingScreen />}>
             {pageContent}
           </Suspense>
         </main>

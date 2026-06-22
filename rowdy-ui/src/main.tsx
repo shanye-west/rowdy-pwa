@@ -1,9 +1,10 @@
-import React, { lazy } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 import "./firebase";
+import { lazyWithRecovery } from "./utils/lazyWithRecovery";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
 import { LayoutProvider } from "./contexts/LayoutContext";
@@ -15,30 +16,30 @@ import { LayoutShell } from "./components/Layout";
 import RequireAdmin from "./components/RequireAdmin";
 
 // Lazy load routes for code splitting - reduces initial bundle size
-const Match = lazy(() => import("./routes/Match"));
-const Round = lazy(() => import("./routes/Round"));
-const Pairings = lazy(() => import("./routes/Pairings"));
-const Skins = lazy(() => import("./routes/Skins"));
-const RoundRecap = lazy(() => import("./routes/RoundRecap"));
-const Teams = lazy(() => import("./routes/Teams"));
-const DraftPool = lazy(() => import("./routes/DraftPool"));
-const Leaderboard = lazy(() => import("./routes/Leaderboard"));
-const Sportsbook = lazy(() => import("./routes/Sportsbook"));
-const Player = lazy(() => import("./routes/Player"));
-const Login = lazy(() => import("./routes/Login"));
-const History = lazy(() => import("./routes/History"));
-const Tournament = lazy(() => import("./routes/Tournament"));
-const AdminDashboard = lazy(() => import("./routes/admin/AdminDashboard"));
-const AdminTournamentLayout = lazy(() => import("./routes/admin/AdminTournamentLayout"));
-const TournamentHome = lazy(() => import("./routes/admin/TournamentHome"));
-const TournamentSettings = lazy(() => import("./routes/admin/TournamentSettings"));
-const RoundAdmin = lazy(() => import("./routes/admin/RoundAdmin"));
-const MatchCreate = lazy(() => import("./routes/admin/MatchCreate"));
-const MatchAdmin = lazy(() => import("./routes/admin/MatchAdmin"));
-const PlayersAdmin = lazy(() => import("./routes/admin/PlayersAdmin"));
-const CoursesAdmin = lazy(() => import("./routes/admin/CoursesAdmin"));
-const CourseEdit = lazy(() => import("./routes/admin/CourseEdit"));
-const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTournamentStats"));
+const Match = lazyWithRecovery(() => import("./routes/Match"));
+const Round = lazyWithRecovery(() => import("./routes/Round"));
+const Pairings = lazyWithRecovery(() => import("./routes/Pairings"));
+const Skins = lazyWithRecovery(() => import("./routes/Skins"));
+const RoundRecap = lazyWithRecovery(() => import("./routes/RoundRecap"));
+const Teams = lazyWithRecovery(() => import("./routes/Teams"));
+const DraftPool = lazyWithRecovery(() => import("./routes/DraftPool"));
+const Leaderboard = lazyWithRecovery(() => import("./routes/Leaderboard"));
+const Sportsbook = lazyWithRecovery(() => import("./routes/Sportsbook"));
+const Player = lazyWithRecovery(() => import("./routes/Player"));
+const Login = lazyWithRecovery(() => import("./routes/Login"));
+const History = lazyWithRecovery(() => import("./routes/History"));
+const Tournament = lazyWithRecovery(() => import("./routes/Tournament"));
+const AdminDashboard = lazyWithRecovery(() => import("./routes/admin/AdminDashboard"));
+const AdminTournamentLayout = lazyWithRecovery(() => import("./routes/admin/AdminTournamentLayout"));
+const TournamentHome = lazyWithRecovery(() => import("./routes/admin/TournamentHome"));
+const TournamentSettings = lazyWithRecovery(() => import("./routes/admin/TournamentSettings"));
+const RoundAdmin = lazyWithRecovery(() => import("./routes/admin/RoundAdmin"));
+const MatchCreate = lazyWithRecovery(() => import("./routes/admin/MatchCreate"));
+const MatchAdmin = lazyWithRecovery(() => import("./routes/admin/MatchAdmin"));
+const PlayersAdmin = lazyWithRecovery(() => import("./routes/admin/PlayersAdmin"));
+const CoursesAdmin = lazyWithRecovery(() => import("./routes/admin/CoursesAdmin"));
+const CourseEdit = lazyWithRecovery(() => import("./routes/admin/CourseEdit"));
+const RecalculateTournamentStats = lazyWithRecovery(() => import("./routes/RecalculateTournamentStats"));
 
 // No loading fallback - CSS View Transitions handle page navigation smoothly
 const router = createBrowserRouter(
@@ -113,6 +114,15 @@ registerSW({
       setInterval(() => {
         registration.update().catch(() => {});
       }, 60_000);
+      // iOS home-screen PWAs spend most of their life backgrounded; check for a
+      // new version the moment the app is brought back to the foreground, so a
+      // deploy is picked up on resume instead of waiting out the 60s poll (which
+      // shrinks the window where a navigation can hit a now-stale chunk).
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          registration.update().catch(() => {});
+        }
+      });
     }
   },
 });

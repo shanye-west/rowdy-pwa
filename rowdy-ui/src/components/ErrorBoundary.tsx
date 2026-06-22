@@ -1,40 +1,7 @@
 import { useEffect } from "react";
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
-import { hardResetApp } from "../utils/swRecovery";
-
-/**
- * Recover from a stale chunk-load failure (a lazy route's chunk 404s after a
- * deploy because the active SW is still serving an old shell). Reloading once
- * normally picks up the fresh bundle, but a plain reload can loop against the
- * same stale SW — so we count attempts and, after a few, unregister the SW and
- * drop all caches to force a clean network fetch. That breaks the loop without
- * the user having to force-close the app. No-op while offline (a reload or
- * cache wipe would only strand them on a blank screen).
- */
-function recoverFromStaleChunk() {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-
-  const KEY = "sw-chunk-recovery";
-  let count = 0;
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(KEY) || "null") as { count: number; at: number } | null;
-    // Anything older than 30s is treated as a fresh incident, not a loop.
-    if (parsed && Date.now() - parsed.at < 30_000) count = parsed.count;
-  } catch { /* ignore malformed state */ }
-
-  count += 1;
-  try { sessionStorage.setItem(KEY, JSON.stringify({ count, at: Date.now() })); } catch { /* ignore */ }
-
-  if (count < 3) {
-    window.location.reload();
-    return;
-  }
-
-  // Repeated failures → nuke the SW + caches, then reload from the network.
-  try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
-  void hardResetApp();
-}
+import { recoverFromStaleChunk } from "../utils/swRecovery";
 
 /**
  * Error boundary for route errors.

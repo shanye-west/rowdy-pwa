@@ -52,3 +52,36 @@ export function startViewTransition(callback: () => void | Promise<void>): void 
   }
 }
 
+/** Minimal typing for the View Transitions API (not yet in the TS DOM lib). */
+interface DomViewTransition {
+  ready: Promise<void>;
+  finished: Promise<void>;
+}
+type StartViewTransitionFn = (callback: () => void) => DomViewTransition;
+
+/**
+ * Start a view transition without ever letting the animation layer swallow the
+ * navigation. Returns the transition (so callers can hook `ready`/`finished`,
+ * e.g. for scroll), or `null` when unsupported or the API throws — in which case
+ * `callback` has already run. `ready`/`finished` reject when a transition is
+ * skipped (the route suspended, or the DOM didn't change) — common on iOS — so
+ * we pre-attach a catch to avoid unhandled-rejection noise.
+ */
+export function startViewTransitionSafe(callback: () => void): DomViewTransition | null {
+  const start = (document as unknown as { startViewTransition?: StartViewTransitionFn }).startViewTransition;
+  if (!supportsViewTransitions() || typeof start !== "function") {
+    callback();
+    return null;
+  }
+  try {
+    const transition = start.call(document, callback);
+    transition.ready?.catch?.(() => {});
+    transition.finished?.catch?.(() => {});
+    return transition;
+  } catch {
+    // The API threw synchronously — never let that swallow the navigation.
+    callback();
+    return null;
+  }
+}
+
