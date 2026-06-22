@@ -21,7 +21,7 @@ import { betsApi } from "../api/bets";
 import type { CreateBetOfferRequest } from "../api/adminContracts";
 import type { BetDoc } from "../types";
 
-const POINT_LINES = [1.5, 2.5, 3.5, 4.5];
+const POINT_LINES = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 const QUICK_AMOUNTS = [10, 20, 50, 100];
 const STEP = 5;
 const OVER_COLOR = "#059669"; // emerald-600
@@ -260,13 +260,13 @@ export default function PlayerPropSheet({
               </div>
               <div>
                 <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Points line</div>
-                <div className="mb-2 flex gap-2">
+                <div className="mb-2 grid grid-cols-4 gap-2">
                   {POINT_LINES.map((l) => (
                     <button
                       key={l}
                       type="button"
                       onClick={() => setLine(l)}
-                      className={`flex-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
+                      className={`rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
                         line === l ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
                       }`}
                     >

@@ -18,7 +18,7 @@ import { betsApi } from "../api/bets";
 import type { CreateBetOfferRequest } from "../api/adminContracts";
 import type { BetDoc, BetTeamSide } from "../types";
 
-const LINE_OPTIONS = [14.5, 15.5, 16.5, 17.5];
+const LINE_OPTIONS = [10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5];
 const QUICK_AMOUNTS = [10, 20, 50, 100];
 const STEP = 5;
 const OVER_COLOR = "#059669"; // emerald-600
@@ -193,13 +193,13 @@ export default function BetSheet({
               <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Holes played line
               </div>
-              <div className="mb-2 flex gap-2">
+              <div className="mb-2 grid grid-cols-4 gap-2">
                 {LINE_OPTIONS.map((l) => (
                   <button
                     key={l}
                     type="button"
                     onClick={() => setLine(l)}
-                    className={`flex-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
                       line === l ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
                     }`}
                   >

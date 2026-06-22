@@ -29,7 +29,7 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
         <Section title="The basics">
           <p className="text-muted-foreground">
             Every bet is head-to-head between two players, <strong className="text-foreground">even money at a flat
-            stake</strong> — both sides risk the same amount. The winner is owed the stake, the loser pays it, and a
+              stake</strong> — both sides risk the same amount. The winner is owed the stake, the loser pays it, and a
             tie is a <em>push</em> (no money changes hands). There's no house and no odds.
           </p>
           <p className="text-muted-foreground">
@@ -81,7 +81,7 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             emoji="🏆"
             name="Cup Winner"
             window="Open until the tournament starts"
-            desc="Pick which team wins the overall Cup. Settles when the Cup is decided; a tied Cup is a push."
+            desc="Pick which team wins the overall Cup. Settles when the Cup is decided."
           />
           <Market
             emoji="🗓️"
@@ -99,7 +99,7 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             emoji="📏"
             name="Match Holes O/U"
             window="Open until the match tees off"
-            desc="Over or under on how many holes a match goes before it closes. Lines run 14.5–17.5 — half-lines, so there are no pushes."
+            desc="Over or under on how many holes a match goes before it closes. Lines run 10.5–17.5 — half-lines, so there are no pushes."
             sides={[
               { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },
@@ -115,7 +115,7 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             emoji="📊"
             name="Player Points O/U"
             window="Open until the tournament starts"
-            desc="Over or under on a single player's total tournament points. Lines run 1.5–4.5 (half-lines, no pushes)."
+            desc="Over or under on a single player's total tournament points. Lines run 0.5–6.5 (half-lines, no pushes)."
             sides={[
               { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },

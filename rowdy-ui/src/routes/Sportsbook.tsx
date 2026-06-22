@@ -52,16 +52,24 @@ export default function Sportsbook() {
   const { matchesByRound, rounds, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
   const settlements = useBetSettlements(tournament?.id);
-  const betParticipantIds = useMemo(
+  // Pre-draft, the team rosters are empty but a draft pool exists — surface those
+  // players so they can be bet on (player-prop subjects + challenge targets)
+  // before the draft assigns them to teams.
+  const draftPoolIds = useMemo(
+    () => (tournament?.draftPool ? Object.keys(tournament.draftPool) : []),
+    [tournament]
+  );
+  const extraPlayerIds = useMemo(
     () => [
       ...new Set([
         ...bets.flatMap((b) => [b.proposerId, b.acceptorId, b.targetId].filter(Boolean) as string[]),
         ...settlements.flatMap((s) => [s.payerId, s.payeeId]),
+        ...draftPoolIds,
       ]),
     ],
-    [bets, settlements]
+    [bets, settlements, draftPoolIds]
   );
-  const { players, loading: playersLoading } = useRosterPlayers(tournament, betParticipantIds);
+  const { players, loading: playersLoading } = useRosterPlayers(tournament, extraPlayerIds);
 
   // Back the active tab with a URL search param so it survives navigation: tap
   // into a match scorecard and the browser Back button returns to the same tab,
@@ -201,7 +209,8 @@ export default function Sportsbook() {
         .map((p) => ({ id: p.id, name: p.displayName || p.id })),
     [players, player?.id]
   );
-  // Player-prop subjects can be anyone in the field, including yourself.
+  // Player-prop subjects can be anyone in the field, including yourself — and the
+  // draft pool before the draft (see extraPlayerIds), so pool players are bettable early.
   const propSubjectOptions = useMemo(
     () => Object.values(players).map((p: PlayerDoc) => ({ id: p.id, name: p.displayName || p.id })),
     [players]
