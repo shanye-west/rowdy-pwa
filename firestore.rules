@@ -142,6 +142,14 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // Collection-group read for the `bySeries` stats query used by the All-Time
+    // leaderboard (useAllTimeLeaderboard). Same as byTournament: collectionGroup
+    // queries need their own recursive-wildcard rule; the path-based playerStats
+    // rule above only covers direct-path reads. These docs are already public-read.
+    match /{path=**}/bySeries/{statId} {
+      allow read: if true;
+    }
+
     // Round recaps: public read, server-only write
     match /roundRecaps/{recapId} {
       allow read: if true;
