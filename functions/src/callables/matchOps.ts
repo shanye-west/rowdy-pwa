@@ -131,12 +131,14 @@ export async function buildSeededMatchDoc(params: {
     matchNumberToUse = candidate;
   }
 
-  // Fetch player auth UIDs for security rules optimization
+  // Fetch player auth UIDs for security rules optimization — one batched getAll
+  // round-trip instead of a getDoc per player.
   const allPlayerIds = [...teamAPlayers, ...teamBPlayers].map((p: PlayerPayload) => p.playerId);
   const authorizedUids: string[] = [];
-  for (const playerId of allPlayerIds) {
-    const pSnap = await db().collection("players").doc(playerId).get();
-    if (pSnap.exists) {
+  if (allPlayerIds.length > 0) {
+    const playerRefs = allPlayerIds.map((pid) => db().collection("players").doc(pid));
+    const playerSnaps = await db().getAll(...playerRefs);
+    for (const pSnap of playerSnaps) {
       const authUid = pSnap.data()?.authUid;
       if (authUid) authorizedUids.push(authUid);
     }

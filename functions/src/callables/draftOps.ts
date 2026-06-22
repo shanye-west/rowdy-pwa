@@ -148,13 +148,14 @@ export const createPairingDraft = onCall(async (request) => {
     Boolean
   ) as string[];
   const authorizedUids = new Set<string>();
-  await Promise.all(
-    captainIds.map(async (pid) => {
-      const pSnap = await db().collection("players").doc(pid).get();
+  if (captainIds.length > 0) {
+    const captainRefs = captainIds.map((pid) => db().collection("players").doc(pid));
+    const captainSnaps = await db().getAll(...captainRefs);
+    captainSnaps.forEach((pSnap) => {
       const authUid = pSnap.data()?.authUid;
       if (authUid) authorizedUids.add(authUid);
-    })
-  );
+    });
+  }
   const adminSnap = await db().collection("players").where("isAdmin", "==", true).get();
   adminSnap.docs.forEach((d) => {
     const authUid = d.data()?.authUid;

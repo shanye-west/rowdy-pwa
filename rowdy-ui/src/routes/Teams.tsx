@@ -8,7 +8,7 @@ import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import type { TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
-import { usePlayers } from "../contexts/TournamentContext";
+import { usePlayers, useTournamentContext } from "../contexts/TournamentContext";
 import { rosterPlayerIds } from "../utils/roster";
 
 // We define a local type for the aggregated tournament stats
@@ -23,17 +23,25 @@ function TeamsComponent() {
   const teamParam = searchParams.get("team");
   const tournamentIdParam = searchParams.get("tournamentId");
   
-  // Use shared tournament hook instead of creating a duplicate subscription
-  // This eliminates 1 real-time subscription per Teams page view.
+  // Reuse the active-tournament subscription from TournamentContext whenever this
+  // page is showing the active tournament (no explicit id, or the id matches it),
+  // so we don't open a second real-time listener on the same tournament doc.
   // This page only reads tournament + rounds (never matches/stats), so prefer
   // denormalized round totals to skip the all-matches subscription as well.
+  const { tournament: activeTournament, loading: contextLoading } = useTournamentContext();
+  const useContextTournament = !tournamentIdParam || tournamentIdParam === activeTournament?.id;
+
   const tournamentOptions = useMemo(() =>
-    tournamentIdParam
-      ? { tournamentId: tournamentIdParam, preferDenormalizedTotals: true }
-      : { fetchActive: true, preferDenormalizedTotals: true },
-    [tournamentIdParam]
+    useContextTournament
+      ? { prefetchedTournament: activeTournament, preferDenormalizedTotals: true }
+      : { tournamentId: tournamentIdParam!, preferDenormalizedTotals: true },
+    [useContextTournament, activeTournament, tournamentIdParam]
   );
-  const { tournament, rounds, loading: tournamentLoading, error: tournamentError } = useTournamentData(tournamentOptions);
+  const { tournament, rounds, loading: hookLoading, error: tournamentError } = useTournamentData(tournamentOptions);
+
+  // The hook reports a prefetched tournament as "loaded" immediately, so while the
+  // context is still resolving the active tournament we must keep showing loading.
+  const tournamentLoading = useContextTournament ? contextLoading || hookLoading : hookLoading;
 
   // Roster player docs from the shared cache (warmed once per session) instead of
   // a per-view fetch.

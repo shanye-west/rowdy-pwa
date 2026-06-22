@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
+import { useTournamentContext } from "../contexts/TournamentContext";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import LoadingScreen from "../components/LoadingScreen";
 import Layout from "../components/Layout";
@@ -19,16 +20,28 @@ import { formatRoundType, getTournamentWinner } from "../utils";
  */
 function TournamentComponent() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
-  
+
+  // This view is normally a historical tournament by id, but if the id happens to
+  // be the active tournament, reuse the context's existing subscription instead of
+  // opening a duplicate listener on the same doc.
+  const { tournament: activeTournament, loading: contextLoading } = useTournamentContext();
+  const isActive = !!tournamentId && tournamentId === activeTournament?.id;
+
   const {
-    loading,
+    loading: hookLoading,
     tournament,
     rounds,
     coursesByRound,
     stats,
     roundStats,
     totalPointsAvailable,
-  } = useTournamentData({ tournamentId, preferDenormalizedTotals: true });
+  } = useTournamentData(
+    isActive
+      ? { prefetchedTournament: activeTournament, preferDenormalizedTotals: true }
+      : { tournamentId, preferDenormalizedTotals: true }
+  );
+
+  const loading = isActive ? contextLoading || hookLoading : hookLoading;
 
   if (loading) {
     return (

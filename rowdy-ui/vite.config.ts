@@ -2,8 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+
+// Opt-in bundle analysis: `ANALYZE=true npm run build` emits dist/stats.html
+// (treemap of the production bundle). Off by default so normal builds are
+// unaffected — the plugin is only added when the flag is set.
+const analyze = process.env.ANALYZE === 'true';
 
 // Build-time provenance, injected as compile-time constants (see vite-env.d.ts).
 // Lets the app print which build it's running so "am I on the latest version?"
@@ -129,6 +135,9 @@ export default defineConfig({
         ],
       },
     }),
+    ...(analyze
+      ? [visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true, open: true })]
+      : []),
   ],
   build: {
     rollupOptions: {

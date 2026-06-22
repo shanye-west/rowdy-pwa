@@ -1802,19 +1802,27 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
     return;
   }
 
+  // Denormalize the player's display name onto the stats docs so the all-time
+  // leaderboard can render names from a single collectionGroup("bySeries") query
+  // without a separate players read. One extra read per aggregation — and this
+  // only fires when a match closes/reopens, never on the per-keystroke hot path.
+  const playerSnap = await db.collection("players").doc(playerId).get();
+  const displayName = (playerSnap.data()?.displayName as string) || playerId;
+
   // Aggregate by series
   const seriesSnap = await db.collection("playerMatchFacts")
     .where("playerId", "==", playerId)
     .where("tournamentSeries", "==", series)
     .get();
-  
+
   const seriesStatsRef = db.collection("playerStats").doc(playerId)
     .collection("bySeries").doc(series);
-  
+
   if (seriesSnap.empty) {
     await seriesStatsRef.delete();
   } else {
     const seriesStats = buildStatsFromFacts(seriesSnap.docs, "series", series);
+    seriesStats.displayName = displayName;
     await seriesStatsRef.set(seriesStats);
   }
 
@@ -1832,6 +1840,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       await tournamentStatsRef.delete();
     } else {
       const tournamentStats = buildStatsFromFacts(tournamentSnap.docs, "tournamentId", tournamentId);
+      tournamentStats.displayName = displayName;
       await tournamentStatsRef.set(tournamentStats);
     }
   }
@@ -1850,6 +1859,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       await roundStatsRef.delete();
     } else {
       const roundStats = buildStatsFromFacts(roundSnap.docs, "roundId", roundId);
+      roundStats.displayName = displayName;
       await roundStatsRef.set(roundStats);
     }
   }

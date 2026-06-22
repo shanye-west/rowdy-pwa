@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, onSnapshot, query, getDoc, getDocs } from "firebase/firestore";
+import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
@@ -101,16 +101,19 @@ export function usePlayerStatsBySeries(playerId: string | undefined) {
  * All-time leaderboard for a series across EVERY player who has ever played in
  * it — not limited to the current tournament roster (retired players, guests,
  * and anyone no longer on a team still appear). Test accounts are excluded:
- * their ids are `_`-prefixed (real players are `p`-prefixed). The `_testSeed`
- * flag alone is insufficient — older seeded test players predate it.
+ * their ids are `_`-prefixed (real players are `p`-prefixed), which is the
+ * comprehensive filter — the `_testSeed` flag only covers newer seeds, and all
+ * seeded test players are `_`-prefixed regardless.
  *
- * Reads the `players` collection once, then fetches each real player's
- * `bySeries/{series}` doc by path. This deliberately avoids a `bySeries`
- * collection-group query so it needs no extra Firestore index — only a hosting
- * deploy. `enabled` defers the reads until the all-time tab is opened.
+ * A single `collectionGroup("bySeries")` query (filtered to this series) reads
+ * only players who actually have a record for it — no whole-`players` scan and
+ * no N round-trips, replacing the previous 1+N read pattern. It relies on the
+ * existing `bySeries.series` COLLECTION_GROUP field override (firestore.indexes.json),
+ * so no new index is required. `enabled` defers the read until the tab is opened.
  *
- * Returns a `names` map (playerId → displayName) sourced from the same players
- * read, so callers don't need a second name lookup.
+ * The player's name is denormalized onto the stats doc (`displayName`, written by
+ * `aggregatePlayerStats`), so the returned `names` map needs no second lookup.
+ * Pre-backfill docs without `displayName` fall back to the playerId.
  */
 export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enabled: boolean) {
   const [leaderboard, setLeaderboard] = useState<PlayerStatsBySeries[]>([]);
@@ -130,31 +133,23 @@ export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enab
 
     (async () => {
       try {
-        // All real players (skip test accounts: `_`-prefixed ids / _testSeed).
-        const playersSnap = await getDocs(collection(db, "players"));
-        if (cancelled) return;
-        const realPlayers = playersSnap.docs.filter(
-          (d) => !d.id.startsWith("_") && d.data()._testSeed !== true
+        const snap = await getDocs(
+          query(collectionGroup(db, "bySeries"), where("series", "==", series))
         );
+        if (cancelled) return;
 
         const nameMap: Record<string, string> = {};
-        realPlayers.forEach((d) => {
-          nameMap[d.id] = (d.data().displayName as string) || "Unknown";
+        const stats: PlayerStatsBySeries[] = [];
+        snap.docs.forEach((d) => {
+          // playerId is the grandparent doc id: playerStats/{playerId}/bySeries/{series}
+          const playerId = d.ref.parent.parent?.id;
+          if (!playerId || playerId.startsWith("_")) return; // skip test accounts
+          const data = d.data();
+          nameMap[playerId] = (data.displayName as string) || playerId;
+          stats.push({ ...data, playerId, series } as PlayerStatsBySeries);
         });
 
-        // Each real player's all-time stats for this series (skip never-played).
-        const results = await Promise.all(
-          realPlayers.map(async (p) => {
-            const snap = await getDoc(doc(db, "playerStats", p.id, "bySeries", series));
-            return snap.exists()
-              ? ({ ...snap.data(), playerId: p.id, series } as PlayerStatsBySeries)
-              : null;
-          })
-        );
-        if (cancelled) return;
-
-        const stats = results.filter((s): s is PlayerStatsBySeries => s !== null);
-        // Sort by points descending
+        // Sort by points descending (small list; client-side keeps it index-free)
         stats.sort((a, b) => b.points - a.points);
         setLeaderboard(stats);
         setNames(nameMap);

@@ -188,8 +188,9 @@ export const computeRoundRecap = onCall(async (request) => {
   const playerIds = [...new Set(allFacts.map(f => f.playerId))];
   const playerNames: Record<string, string> = {};
 
-  for (let i = 0; i < playerIds.length; i += 10) {
-    const batch = playerIds.slice(i, i + 10);
+  // Firestore's `in` supports up to 30 values — batch at 30 to minimize queries.
+  for (let i = 0; i < playerIds.length; i += 30) {
+    const batch = playerIds.slice(i, i + 30);
     const playersSnap = await db().collection("players")
       .where("__name__", "in", batch)
       .get();

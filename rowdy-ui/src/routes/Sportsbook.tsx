@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
@@ -1081,7 +1081,12 @@ function BetCard({
  * live (green when ahead, red when behind), and the final result when closed.
  * A chevron signals the tile taps through to the scorecard.
  */
-function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null }) {
+// Memoized: a pure function of {match, pick}. The Sportsbook re-renders every 30s
+// (the `nowMs` tick) and on any bet change; without memo each render re-runs the
+// string interpolation + formatTeeTime() for every match bet. Match references are
+// stable between snapshots (see `matchesById`) and `pick` is a primitive, so this
+// bails out unless the underlying match actually changed.
+const MatchTrackLine = memo(function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null }) {
   const st = match.status;
   const thru = st?.thru ?? 0;
   const closed = st?.closed === true;
@@ -1138,7 +1143,7 @@ function MatchTrackLine({ match, pick }: { match: MatchDoc; pick: BetSide | null
       </span>
     </div>
   );
-}
+});
 
 /** Leaderboard rank chip — medal colors for the top 3, neutral circle otherwise. */
 function RankBadge({ rank }: { rank: number }) {
