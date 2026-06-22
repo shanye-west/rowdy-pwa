@@ -66,6 +66,25 @@ export function isStandalone(): boolean {
   );
 }
 
+export type IosBrowser = "safari" | "chrome" | "other";
+
+/**
+ * Which iOS browser we're in. Every iOS browser runs on WebKit but stamps a
+ * distinct UA token: Chrome = "CriOS", Firefox = "FxiOS", Edge = "EdgiOS", etc.
+ * Real Safari has "Safari" without any of those. Used only to pick the matching
+ * Add-to-Home-Screen walkthrough — the install UI differs by browser, but once
+ * installed it's all WebKit, so push works regardless of how it was added.
+ * In-app webviews (Instagram/Facebook) and other engines fall back to "other".
+ */
+export function iosBrowser(): IosBrowser {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  if (/CriOS/.test(ua)) return "chrome";
+  if (/FxiOS|EdgiOS|OPiOS|GSA/.test(ua)) return "other";
+  if (/Safari/.test(ua)) return "safari";
+  return "other";
+}
+
 /**
  * Whether web push can be enabled here. iOS only delivers web push to PWAs added
  * to the Home Screen (iOS 16.4+); when on iOS Safari un-installed we return

@@ -49,8 +49,10 @@ export default defineConfig({
         // caching and background push (a second FCM SW would conflict at "/").
         importScripts: ['firebase-messaging-sw.js'],
         // ...but don't precache that handler — it pulls the FCM compat SDK from
-        // gstatic at runtime and isn't an app asset to cache-bust.
-        globIgnores: ['**/firebase-messaging-sw.js'],
+        // gstatic at runtime and isn't an app asset to cache-bust. Also skip the
+        // install-guide videos (~2MB each): they're only needed pre-install, when
+        // the user is online in the browser, so precaching them just bloats the SW.
+        globIgnores: ['**/firebase-messaging-sw.js', '**/videos/**'],
         // Prevent returning index.html for files with extensions (.js, .css, .png, etc.)
         // This fixes "text/html is not a valid JavaScript MIME type" errors after deployments
         navigateFallbackDenylist: [/\.[a-z0-9]+$/i],
