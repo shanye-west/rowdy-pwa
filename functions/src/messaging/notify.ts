@@ -74,6 +74,14 @@ export interface NotifyPayload {
   body: string;
   /** App-relative deep link opened on tap, e.g. "/sportsbook" or "/match/abc". */
   link: string;
+  /**
+   * Id of the entity that spawned this notification (e.g. a comment id). When
+   * set, it's stamped on every in-app history doc so the source's deletion can
+   * find and remove them via `deleteNotificationsBySource` — keeping the bell in
+   * sync when a message is deleted before it's read or expires. The web push
+   * itself is fire-and-forget and isn't (can't be) recalled.
+   */
+  sourceId?: string;
 }
 
 /**
@@ -179,6 +187,7 @@ export async function notify(recipientPlayerIds: string[], payload: NotifyPayloa
       read: false,
       createdAt: FieldValue.serverTimestamp(),
       expireAt,
+      ...(payload.sourceId ? { sourceId: payload.sourceId } : {}),
     });
   }
   await historyBatch.commit();
@@ -208,4 +217,30 @@ export async function notify(recipientPlayerIds: string[], payload: NotifyPayloa
     dead.forEach((tok) => pruneBatch.delete(db().collection("pushTokens").doc(tok)));
     await pruneBatch.commit();
   }
+}
+
+/**
+ * Delete every in-app notification that was spawned by a given source entity,
+ * across all recipients. Used when the source (e.g. a comment) is deleted so the
+ * bell/unread badge don't keep showing a message that no longer exists — even if
+ * the recipient never opened it and it hasn't hit its TTL yet.
+ *
+ * Relies on a COLLECTION_GROUP single-field index on `notifications.sourceId`
+ * (see firestore.indexes.json). Best-effort: callers wrap it in try/catch so a
+ * cleanup failure can't fail the underlying delete.
+ */
+export async function deleteNotificationsBySource(sourceId: string): Promise<void> {
+  if (!sourceId) return;
+  const snap = await db().collectionGroup("notifications").where("sourceId", "==", sourceId).get();
+  if (snap.empty) return;
+  let batch = db().batch();
+  let n = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    if (++n % 450 === 0) {
+      await batch.commit();
+      batch = db().batch();
+    }
+  }
+  await batch.commit();
 }

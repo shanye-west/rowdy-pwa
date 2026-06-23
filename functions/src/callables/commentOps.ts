@@ -13,7 +13,7 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requirePlayer } from "../helpers/adminAuth.js";
 import { matchPlayerIds, tournamentPlayerIds } from "../helpers/roster.js";
-import { notify, resolveCommentRecipients } from "../messaging/notify.js";
+import { notify, resolveCommentRecipients, deleteNotificationsBySource } from "../messaging/notify.js";
 import type { CommentThreadType } from "../types.js";
 
 function db() {
@@ -100,6 +100,7 @@ async function postReply(args: {
       title: threadType === "sportsbook" ? "Sportsbook chat" : "Match chat",
       body: `${authorName} replied: ${preview}`,
       link: threadType === "sportsbook" ? "/chat" : `/match/${threadId}`,
+      sourceId: replyRef.id,
     });
   } catch (err) {
     console.error("postReply notify failed:", err);
@@ -187,6 +188,7 @@ export const postComment = onCall(async (request: CallableRequest) => {
       title: threadType === "sportsbook" ? "Sportsbook chat" : "Match chat",
       body: `${authorName}: ${preview}`,
       link: threadType === "sportsbook" ? "/chat" : `/match/${threadId}`,
+      sourceId: ref.id,
     });
   } catch (err) {
     console.error("postComment notify failed:", err);
@@ -195,10 +197,13 @@ export const postComment = onCall(async (request: CallableRequest) => {
   return { success: true, commentId: ref.id };
 });
 
-/** Batch-delete every reply under a top-level comment (chunked for safety). */
-async function deleteRepliesOf(parentRef: FirebaseFirestore.DocumentReference): Promise<void> {
+/**
+ * Batch-delete every reply under a top-level comment (chunked for safety).
+ * Returns the deleted reply ids so the caller can also clear their notifications.
+ */
+async function deleteRepliesOf(parentRef: FirebaseFirestore.DocumentReference): Promise<string[]> {
   const replies = await parentRef.collection("replies").get();
-  if (replies.empty) return;
+  if (replies.empty) return [];
   let batch = db().batch();
   let n = 0;
   for (const d of replies.docs) {
@@ -209,6 +214,7 @@ async function deleteRepliesOf(parentRef: FirebaseFirestore.DocumentReference): 
     }
   }
   await batch.commit();
+  return replies.docs.map((d) => d.id);
 }
 
 /**
@@ -237,6 +243,12 @@ export const deleteComment = onCall(async (request: CallableRequest) => {
       tx.delete(replyRef);
       if (parentSnap.exists) tx.update(parentRef, { replyCount: FieldValue.increment(-1) });
     });
+    // Clear any in-app notifications this reply spawned (best-effort).
+    try {
+      await deleteNotificationsBySource(commentId);
+    } catch (err) {
+      console.error("deleteComment notification cleanup failed:", err);
+    }
     return { success: true };
   }
 
@@ -251,10 +263,17 @@ export const deleteComment = onCall(async (request: CallableRequest) => {
     }
     tx.delete(ref);
   });
+  let replyIds: string[] = [];
   try {
-    await deleteRepliesOf(ref);
+    replyIds = await deleteRepliesOf(ref);
   } catch (err) {
     console.error("cascade delete replies failed:", err);
+  }
+  // Clear in-app notifications spawned by the comment and any cascaded replies.
+  try {
+    await Promise.all([commentId, ...replyIds].map((id) => deleteNotificationsBySource(id)));
+  } catch (err) {
+    console.error("deleteComment notification cleanup failed:", err);
   }
 
   return { success: true };

@@ -802,4 +802,5 @@ export type NotificationDoc = {
   createdAt?: FirestoreTimestampLike;
   readAt?: FirestoreTimestampLike;
   expireAt?: FirestoreTimestampLike;  // TTL reap time (server-set); see functions notify()
+  sourceId?: string;  // id of the entity that spawned this (e.g. a comment); removed when it's deleted
 };
