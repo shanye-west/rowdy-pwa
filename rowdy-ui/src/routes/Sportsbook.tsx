@@ -32,7 +32,7 @@ import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import SportsbookHowTo from "../components/SportsbookHowTo";
 import type { BetDoc, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
 
-type Tab = "markets" | "mybets";
+type Tab = "markets" | "inplay" | "mybets";
 
 const money = (n: number): string => (n < 0 ? `-$${Math.abs(n)}` : `$${n}`);
 const oppositeSide = (s: BetSide): BetSide =>
@@ -76,7 +76,7 @@ export default function Sportsbook() {
   // not a freshly-mounted default. `replace` keeps tab switches out of history.
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const tab: Tab = tabParam === "mybets" ? "mybets" : "markets";
+  const tab: Tab = tabParam === "mybets" ? "mybets" : tabParam === "inplay" ? "inplay" : "markets";
   const setTab = (t: Tab) =>
     setSearchParams(
       (prev) => {
@@ -272,6 +272,25 @@ export default function Sportsbook() {
   const myBets = selectMyBets(bets, player?.id);
   const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
 
+  // In Play: every locked-in (active) bet across the whole field — not just the
+  // viewer's. These already arrive in the `useBets` listener (it carries
+  // open/pending/active), so this is a pure client-side regroup with no extra
+  // reads. Split by market so it reads like the Open Bets board.
+  const activeBets = bets.filter((b) => b.status === "active");
+  const teeMs = (b: BetDoc): number => {
+    const m = b.matchId ? matchesById[b.matchId] : undefined;
+    return toDateOrNull(m?.teeTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  };
+  // Cluster bets on the same match together, soonest tee time first.
+  const inPlayMatches = activeBets
+    .filter((b) => b.market === "match" || (b.market === "overUnder" && b.metric !== "playerTournamentPoints"))
+    .sort((a, z) => teeMs(a) - teeMs(z) || (a.matchId ?? "").localeCompare(z.matchId ?? ""));
+  const inPlaySessions = activeBets.filter((b) => b.market === "round");
+  const inPlayCup = activeBets.filter((b) => b.market === "cupFuture");
+  const inPlayProps = activeBets.filter(
+    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && b.metric === "playerTournamentPoints")
+  );
+
   // Bettable events for the Open Bets list. A round/match is bettable until it
   // tees off; the Cup until the tournament starts.
   const roundsById: Record<string, RoundDoc> = Object.fromEntries(rounds.map((r) => [r.id, r]));
@@ -398,6 +417,40 @@ export default function Sportsbook() {
     };
   };
 
+  /**
+   * One market group on the In Play board. Each locked-in bet reuses the My-Bets
+   * matchup tile, so both bettors' names show on their side; the viewer's side is
+   * highlighted (and tagged "Your bet") when they're a participant, neutral
+   * otherwise. Match bets also get the live scorecard link + pulse via matchTrack.
+   */
+  const renderInPlayGroup = (title: string, groupBets: BetDoc[]): ReactNode => {
+    if (groupBets.length === 0) return null;
+    return (
+      <Collapsible title={title} count={groupBets.length} defaultOpen>
+        {groupBets.map((b) => {
+          const highlight = player ? mySide(b, player.id) : null;
+          const sides = matchupSides(b, highlight);
+          return (
+            <BetCard
+              key={b.id}
+              {...matchTrack(b)}
+              live={isBetLive(b)}
+              teamA={sides.teamA}
+              teamB={sides.teamB}
+              amount={b.amount}
+            >
+              {highlight !== null && (
+                <div>
+                  <StatusPill tone="emerald">Your bet</StatusPill>
+                </div>
+              )}
+            </BetCard>
+          );
+        })}
+      </Collapsible>
+    );
+  };
+
   return (
     <Layout title="Sportsbook" series={tournament.series} showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-4 p-4">
@@ -406,6 +459,7 @@ export default function Sportsbook() {
           {(
             [
               { id: "markets", label: "Open Bets" },
+              { id: "inplay", label: "In Play" },
               { id: "mybets", label: "My Bets" },
             ] as { id: Tab; label: string }[]
           ).map((t) => (
@@ -413,7 +467,7 @@ export default function Sportsbook() {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 tab === t.id ? "bg-slate-900 text-white" : "bg-muted text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -423,11 +477,11 @@ export default function Sportsbook() {
           <button
             type="button"
             onClick={() => setHowToOpen(true)}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted active:scale-95"
+            className="flex shrink-0 items-center justify-center rounded-full bg-muted p-2 text-muted-foreground transition-colors hover:bg-muted active:scale-95"
             aria-label="How the sportsbook works"
+            title="How it works"
           >
-            <HelpCircle className="h-3.5 w-3.5" />
-            How it works
+            <HelpCircle className="h-4 w-4" />
           </button>
         </div>
 
@@ -585,6 +639,31 @@ export default function Sportsbook() {
                     </Card>
                   </Collapsible>
                 )}
+              </>
+            )}
+          </div>
+        ) : tab === "inplay" ? (
+          // ============================ IN PLAY ===============================
+          // The public "who's backing whom" board: every locked-in bet across
+          // the whole field, grouped by market. A golfer can scan the Matches
+          // group to see exactly who bet on — or against — his match.
+          <div className="space-y-4">
+            {activeBets.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🤝</div>
+                <div className="empty-state-text">
+                  No bets are locked in yet. Once two players confirm a bet, it shows up here for the whole field to see.
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="px-1 text-xs text-muted-foreground">
+                  Every locked-in bet across the field — see who's backing whom. Tap a match to follow it live.
+                </p>
+                {renderInPlayGroup("⛳ Matches", inPlayMatches)}
+                {renderInPlayGroup("🗓️ Sessions", inPlaySessions)}
+                {renderInPlayGroup("🏆 Cup", inPlayCup)}
+                {renderInPlayGroup("👤 Player Props", inPlayProps)}
               </>
             )}
           </div>
