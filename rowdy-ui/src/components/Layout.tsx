@@ -65,6 +65,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
     : 0;
+  const showDraftPool = draftPoolCount > 0 && !tournamentCtx?.tournament?.hideDraftPool;
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
@@ -238,7 +239,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                   {!authLoading && player && <div className="h-px bg-border/80" />}
 
                   <div className="space-y-1 p-2">
-                    {draftPoolCount > 0 && (
+                    {showDraftPool && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                         <ViewTransitionLink to="/draft" onClick={closeMenu}>
                           <ClipboardList className="h-4 w-4 text-muted-foreground" />

@@ -45,8 +45,10 @@ export default function App() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
   const showPoints = totalPointsAvailable > 0;
-  // Pre-draft: surface the available-player pool when one has been posted.
+  // Pre-draft: surface the available-player pool when one has been posted, unless
+  // the admin has hidden it (e.g. once the draft is done).
   const draftPoolCount = tournament?.draftPool ? Object.keys(tournament.draftPool).length : 0;
+  const showDraftPool = draftPoolCount > 0 && !tournament?.hideDraftPool;
 
   return (
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
@@ -75,7 +77,7 @@ export default function App() {
             totalPointsAvailable={totalPointsAvailable}
           />
 
-          {draftPoolCount > 0 && (
+          {showDraftPool && (
             <section>
               <ViewTransitionLink to="/draft" className="card-link-hover block">
                 <Card className="border-border/80 bg-card/80">

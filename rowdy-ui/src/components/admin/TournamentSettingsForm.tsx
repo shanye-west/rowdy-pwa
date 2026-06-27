@@ -67,7 +67,9 @@ export default function TournamentSettingsForm({
   const [openPublicEdits, setOpenPublicEdits] = useState(!!tournament.openPublicEdits);
   const [sportsbookEnabled, setSportsbookEnabled] = useState(!!tournament.sportsbookEnabled);
   const [commentsEnabled, setCommentsEnabled] = useState(!!tournament.commentsEnabled);
+  const [hideDraftPool, setHideDraftPool] = useState(!!tournament.hideDraftPool);
   const [test, setTest] = useState(!!tournament.test);
+  const hasDraftPool = !!tournament.draftPool && Object.keys(tournament.draftPool).length > 0;
   const [tiebreakerWinner, setTiebreakerWinner] = useState<"" | "teamA" | "teamB">(
     tournament.tiebreakerWinner ?? ""
   );
@@ -144,6 +146,7 @@ export default function TournamentSettingsForm({
         openPublicEdits,
         sportsbookEnabled,
         commentsEnabled,
+        hideDraftPool,
         test,
         tiebreakerWinner: tiebreakerWinner === "" ? null : tiebreakerWinner,
         teamA: buildTeam(teamA),
@@ -301,6 +304,13 @@ export default function TournamentSettingsForm({
           <span className="font-semibold">Comments</span>
           <span className="text-gray-500">(match threads + sportsbook trash talk)</span>
         </label>
+        {hasDraftPool && (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={hideDraftPool} onChange={(e) => setHideDraftPool(e.target.checked)} />
+            <span className="font-semibold">Hide Draft Pool</span>
+            <span className="text-gray-500">(hides the Draft Pool card + menu link; pool data is kept)</span>
+          </label>
+        )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} />
           <span className="font-semibold">Test tournament</span>

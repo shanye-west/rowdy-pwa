@@ -46,6 +46,7 @@ export interface TournamentUpdates {
   commentsEnabled?: boolean;
   test?: boolean;
   archived?: boolean;
+  hideDraftPool?: boolean;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }

@@ -181,6 +181,10 @@ export type TournamentDoc = {
   // yet assigned to teamA/teamB. Drives the public Draft Pool dashboard; its
   // presence (non-empty) is what gates that page + the Home card / menu link.
   draftPool?: Record<string, number>;
+  // When true, hide the Draft Pool from the UI (Home card + menu link) even
+  // though `draftPool` data is still present. Set after the draft is complete
+  // so the pool stops surfacing without deleting the underlying data.
+  hideDraftPool?: boolean;
 };
 
 // NEW: Hole definition (static data)

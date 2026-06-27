@@ -40,6 +40,8 @@ export interface TournamentUpdates {
   archived?: boolean;
   // "teamA" | "teamB" designates the tiebreaker winner; null clears it.
   tiebreakerWinner?: "teamA" | "teamB" | null;
+  // Hide the Draft Pool from the UI without deleting the pool data.
+  hideDraftPool?: boolean;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }
