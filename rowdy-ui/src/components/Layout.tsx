@@ -132,16 +132,20 @@ export function LayoutShell({ children }: LayoutShellProps) {
     meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
   }, [series]);
 
-  // Close menu when clicking outside it (tapping the bell counts as outside, so
-  // it closes the menu too). The containment check is what lets the menu button
-  // open the menu without the same click immediately closing it.
+  // Close menu when tapping outside it (tapping the bell counts as outside, so
+  // it closes the menu too). We listen on pointerdown rather than click because
+  // the toggle button swaps its icon (Menu ↔ X) on open: a click landing on the
+  // center icon would re-render and detach that node before the click bubbles
+  // here, making a contains() check on the click target spuriously read as
+  // "outside". pointerdown fires before that swap and only after the opening
+  // tap, so the menu opens reliably and still closes on any genuine outside tap.
   useEffect(() => {
     if (!menuOpen) return;
-    const handleClick = (e: MouseEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [menuOpen]);
 
   // Hide the bottom tab bar on admin/login routes (they have their own navigation context).
