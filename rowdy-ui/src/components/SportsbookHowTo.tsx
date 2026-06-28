@@ -56,18 +56,15 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
         {/* Lifecycle */}
         <Section title="From offer to locked in">
           <ol className="list-decimal space-y-1.5 pl-6 text-muted-foreground">
+            <li>Someone posts an offer or sends a challenge.</li>
             <li>
-              Someone posts an offer or sends a challenge. Posting it is your commitment — there's nothing more for you
-              to do.
+              When another player <strong className="text-foreground">takes the offer</strong> (or the challenged player{" "}
+              <strong className="text-foreground">accepts</strong>), the bet <strong className="text-foreground">locks
+              in</strong> and goes live.
             </li>
             <li>
-              As soon as another player <strong className="text-foreground">takes the offer</strong> (or the challenged
-              player <strong className="text-foreground">accepts</strong>), the bet <strong className="text-foreground">locks
-              in</strong> — it's live right away. No second confirmation needed.
-            </li>
-            <li>
-              Either player can still <strong className="text-foreground">call it off</strong> until the market starts
-              (the match tees off / the tournament begins) — after that it's set.
+              Either player can <strong className="text-foreground">call it off</strong> until the market starts (the
+              match tees off / the tournament begins) — after that it's set.
             </li>
             <li>
               When the result is known, the bet <strong className="text-foreground">settles automatically</strong> and
@@ -102,8 +99,8 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             window="Open until the match tees off"
             desc="Over or under on how many holes a match goes before it closes. Lines run 10.5–17.5 — half-lines, so there are no pushes."
             sides={[
-              { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },
+              { label: "Over", color: OVER_COLOR },
             ]}
           />
           <Market
@@ -118,8 +115,8 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             window="Open until the tournament starts"
             desc="Over or under on a single player's total tournament points. Lines run every half-point 0.5–3.5, so whole-point lines (1/2/3) can push if the player lands exactly there."
             sides={[
-              { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },
+              { label: "Over", color: OVER_COLOR },
             ]}
           />
           <Market
@@ -128,8 +125,8 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             window="Open until the tournament starts"
             desc="Over or under on how many matches a single player wins (halved matches don't count). Lines are 0.5/1.5/2.5/3.5 — half-lines, so there are no pushes."
             sides={[
-              { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },
+              { label: "Over", color: OVER_COLOR },
             ]}
           />
         </Section>

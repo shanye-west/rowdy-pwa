@@ -340,8 +340,8 @@ export default function Sportsbook() {
   // ---- shared render helpers ----
   /**
    * Head-to-head tile data for a bet, filling `highlightSide`. Team markets put
-   * teamA on the left / teamB on the right; over/under markets put Over on the
-   * left / Under on the right. The bettor on each side fills in by name.
+   * teamA on the left / teamB on the right; over/under markets put Under on the
+   * left / Over on the right. The bettor on each side fills in by name.
    */
   const matchupSides = (b: BetDoc, highlightSide: BetSide | null): { teamA: MatchupSide; teamB: MatchupSide } => {
     // The proposer sits on proposerSide; the counterparty (acceptor/target) on the other.
@@ -365,8 +365,8 @@ export default function Sportsbook() {
       const prefix = isPlayerProp && b.subjectId ? `${lastName(playerName(b.subjectId))} ` : "";
       const unit = b.metric === "playerTournamentWins" ? " wins" : isPlayerProp ? " pts" : "";
       return {
-        teamA: tile("over", `${prefix}Over ${line}${unit}`, OVER_COLOR),
-        teamB: tile("under", `${prefix}Under ${line}${unit}`, UNDER_COLOR),
+        teamA: tile("under", `${prefix}Under ${line}${unit}`, UNDER_COLOR),
+        teamB: tile("over", `${prefix}Over ${line}${unit}`, OVER_COLOR),
       };
     }
     const labels = sideLabelsForBet(b);

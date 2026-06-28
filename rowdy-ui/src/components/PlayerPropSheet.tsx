@@ -294,7 +294,7 @@ export default function PlayerPropSheet({
                   ))}
                 </div>
                 <div className="flex items-stretch gap-2">
-                  {(["over", "under"] as const).map((s) => {
+                  {(["under", "over"] as const).map((s) => {
                     const selected = ouSide === s;
                     const color = s === "over" ? OVER_COLOR : UNDER_COLOR;
                     return (
