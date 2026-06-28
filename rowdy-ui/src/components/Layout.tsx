@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation, useMatches, Outlet } from "react-router-dom";
 import {
   ChevronLeft,
@@ -53,6 +53,7 @@ type LayoutShellProps = {
 export function LayoutShell({ children }: LayoutShellProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
@@ -131,10 +132,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
     meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
   }, [series]);
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside it (tapping the bell counts as outside, so
+  // it closes the menu too). The containment check is what lets the menu button
+  // open the menu without the same click immediately closing it.
   useEffect(() => {
     if (!menuOpen) return;
-    const handleClick = () => setMenuOpen(false);
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, [menuOpen]);
@@ -199,7 +204,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
         {/* Right: Notification bell + Hamburger Menu */}
         <div className="flex items-center justify-end gap-0.5">
           <NotificationBell />
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
           <Button
             type="button"
             variant="ghost"
