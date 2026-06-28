@@ -72,10 +72,7 @@ export function NotificationBell() {
         size="icon"
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         className="relative text-white/90 hover:bg-white/10 hover:text-white"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
+        onClick={() => setOpen((o) => !o)}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

@@ -204,10 +204,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
+            onClick={() => setMenuOpen(!menuOpen)}
             className="text-white/90 hover:bg-white/10 hover:text-white"
             aria-label="Menu"
           >
