@@ -1,7 +1,7 @@
 /**
  * The Sportsbook "How it works" guide — a read-only explainer opened from a Help
  * button on the Open Bets tab. Covers the betting mechanics (even-money stakes,
- * offer vs. challenge, the confirm/lock/settle lifecycle, pushes, the tab) and
+ * offer vs. challenge, the accept/lock/settle lifecycle, pushes, the tab) and
  * lists every market a player can bet, with what settles each one.
  *
  * Pure presentational content — no data, no callables. Keep it in sync with the
@@ -57,16 +57,17 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
         <Section title="From offer to locked in">
           <ol className="list-decimal space-y-1.5 pl-6 text-muted-foreground">
             <li>
-              Someone posts an offer or sends a challenge, and someone takes/accepts it. The bet moves to{" "}
-              <strong className="text-foreground">Awaiting confirmation</strong>.
+              Someone posts an offer or sends a challenge. Posting it is your commitment — there's nothing more for you
+              to do.
             </li>
             <li>
-              <strong className="text-foreground">Both players confirm</strong> to lock it in. Until both confirm,
-              either side can back out (withdraw or cancel).
+              As soon as another player <strong className="text-foreground">takes the offer</strong> (or the challenged
+              player <strong className="text-foreground">accepts</strong>), the bet <strong className="text-foreground">locks
+              in</strong> — it's live right away. No second confirmation needed.
             </li>
             <li>
-              Once locked, it's <strong className="text-foreground">live</strong>. Either player can still call it off
-              until the market starts (the match tees off / the tournament begins) — after that it's set.
+              Either player can still <strong className="text-foreground">call it off</strong> until the market starts
+              (the match tees off / the tournament begins) — after that it's set.
             </li>
             <li>
               When the result is known, the bet <strong className="text-foreground">settles automatically</strong> and

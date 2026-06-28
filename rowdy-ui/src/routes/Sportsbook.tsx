@@ -19,7 +19,6 @@ import {
   useBetSettlements,
   useRosterPlayers,
   selectMyBets,
-  needsMyConfirm,
   settledDelta,
   computeLedger,
   headToHead,
@@ -319,7 +318,7 @@ export default function Sportsbook() {
   const pendingSettlements = selectPendingSettlements(settlements, player?.id);
   const outgoingPendingTo = new Set(pendingSettlements.outgoing.map((s) => s.payeeId));
   const activeCount =
-    myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.pending.length + myBets.active.length;
+    myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.active.length;
 
   // My Bets summary hero: settled P&L + record, plus outstanding tab totals.
   const summary = (() => {
@@ -656,7 +655,7 @@ export default function Sportsbook() {
               <div className="empty-state">
                 <div className="empty-state-icon">🤝</div>
                 <div className="empty-state-text">
-                  No bets are locked in yet. Once two players confirm a bet, it shows up here for the whole field to see.
+                  No bets are locked in yet. As soon as someone takes a bet, it shows up here for the whole field to see.
                 </div>
               </div>
             ) : (
@@ -824,7 +823,7 @@ export default function Sportsbook() {
                           <div className="flex gap-2">
                             <SmallBtn
                               variant="primary"
-                              onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Accepted — now confirm to lock it in.")}
+                              onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Bet accepted and locked in!")}
                             >
                               Accept
                             </SmallBtn>
@@ -863,64 +862,6 @@ export default function Sportsbook() {
                             >
                               Cancel
                             </SmallBtn>
-                          </div>
-                        </BetCard>
-                      );
-                    })}
-                  </Section>
-
-                  <Section title="Awaiting confirmation" count={myBets.pending.length}>
-                    {myBets.pending.map((b) => {
-                      const iConfirm = needsMyConfirm(b, player.id);
-                      const iAmAcceptor = b.acceptorId === player.id;
-                      const sides = matchupSides(b, mySide(b, player.id));
-                      return (
-                        <BetCard key={b.id} {...matchTrack(b)} teamA={sides.teamA} teamB={sides.teamB} amount={b.amount}>
-                          <div>
-                            <StatusPill tone="amber">
-                              {iConfirm ? "Confirm to lock in" : "Waiting on them"}
-                            </StatusPill>
-                          </div>
-                          <div className="flex gap-2">
-                            {iConfirm && (
-                              <SmallBtn
-                                variant="primary"
-                                onClick={() => runAction(() => betsApi.confirmBet({ betId: b.id }), "Confirmed.")}
-                              >
-                                Confirm
-                              </SmallBtn>
-                            )}
-                            {iAmAcceptor ? (
-                              <SmallBtn
-                                variant="muted"
-                                onClick={() =>
-                                  confirmThen({
-                                    title: "Withdraw from this bet?",
-                                    body: `Withdraw from this $${b.amount} bet with ${opponentName(b)}? It isn't locked in yet.`,
-                                    confirmLabel: "Withdraw",
-                                    run: () => betsApi.withdrawAcceptance({ betId: b.id }),
-                                    success: "Withdrawn.",
-                                  })
-                                }
-                              >
-                                Withdraw
-                              </SmallBtn>
-                            ) : (
-                              <SmallBtn
-                                variant="muted"
-                                onClick={() =>
-                                  confirmThen({
-                                    title: "Cancel this bet?",
-                                    body: `${opponentName(b)} has taken this $${b.amount} bet but it isn't locked in yet. Cancelling removes it.`,
-                                    confirmLabel: "Cancel bet",
-                                    run: () => betsApi.cancelBet({ betId: b.id }),
-                                    success: "Cancelled.",
-                                  })
-                                }
-                              >
-                                Cancel
-                              </SmallBtn>
-                            )}
                           </div>
                         </BetCard>
                       );
@@ -1056,7 +997,7 @@ export default function Sportsbook() {
               meId={player?.id}
               rosterOptions={rosterOptions}
               bettorName={playerName}
-              onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")}
+              onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Bet taken and locked in!")}
             />
           );
         })()}
@@ -1072,7 +1013,7 @@ export default function Sportsbook() {
           meId={player?.id}
           rosterOptions={propSubjectOptions}
           bettorName={playerName}
-          onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Taken — confirm it in My Bets.")}
+          onTake={(b) => runAction(() => betsApi.acceptBet({ betId: b.id }), "Bet taken and locked in!")}
         />
       )}
     </Layout>

@@ -63,8 +63,8 @@ export default function BetSlipReview({
 
       <p className="text-center text-xs text-muted-foreground">
         {directed
-          ? `Challenge to ${targetName || "your pick"} — both of you confirm to lock it in.`
-          : "Open to anyone — both of you confirm to lock it in."}
+          ? `Challenge to ${targetName || "your pick"} — it locks in as soon as they accept.`
+          : "Open to anyone — it locks in the moment someone takes it."}
       </p>
 
       <div className="flex gap-3 pt-1">

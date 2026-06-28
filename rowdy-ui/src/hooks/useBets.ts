@@ -17,7 +17,7 @@ import { usePlayers } from "../contexts/TournamentContext";
 import type { BetDoc, BetSettlementDoc, PlayerDoc, TournamentDoc } from "../types";
 
 /** Bet statuses a player can still act on — the only ones worth a realtime listener. */
-const LIVE_BET_STATUSES = ["open", "pending", "active"] as const;
+const LIVE_BET_STATUSES = ["open", "active"] as const;
 
 // ============================================================================
 // SUBSCRIPTION
@@ -178,14 +178,13 @@ export function isMatchBettable(m: { status?: { thru?: number; closed?: boolean 
 export interface MyBets {
   incomingChallenges: BetDoc[]; // open challenges where I'm the target
   myOpenOffers: BetDoc[]; // open offers/challenges I posted, not yet taken
-  pending: BetDoc[]; // taken, awaiting confirmation (I'm involved)
   active: BetDoc[]; // locked, not yet settled (I'm involved)
   settled: BetDoc[]; // resolved (I'm involved)
 }
 
 /** Split the bets that involve `playerId` into the My-Bets sections. */
 export function selectMyBets(bets: BetDoc[], playerId: string | undefined): MyBets {
-  const empty: MyBets = { incomingChallenges: [], myOpenOffers: [], pending: [], active: [], settled: [] };
+  const empty: MyBets = { incomingChallenges: [], myOpenOffers: [], active: [], settled: [] };
   if (!playerId) return empty;
   const mine = bets.filter((b) => b.participantIds?.includes(playerId));
   return {
@@ -193,18 +192,9 @@ export function selectMyBets(bets: BetDoc[], playerId: string | undefined): MyBe
       (b) => b.status === "open" && b.kind === "challenge" && b.targetId === playerId
     ),
     myOpenOffers: mine.filter((b) => b.status === "open" && b.proposerId === playerId),
-    pending: mine.filter((b) => b.status === "pending"),
     active: mine.filter((b) => b.status === "active"),
     settled: mine.filter((b) => b.status === "settled"),
   };
-}
-
-/** Whether `playerId` still needs to confirm a pending bet. */
-export function needsMyConfirm(bet: BetDoc, playerId: string): boolean {
-  if (bet.status !== "pending") return false;
-  if (bet.proposerId === playerId) return !bet.proposerConfirmed;
-  if (bet.acceptorId === playerId) return !bet.acceptorConfirmed;
-  return false;
 }
 
 /** Signed result of a settled bet from `playerId`'s perspective (+win / -loss / 0 push). */

@@ -355,9 +355,11 @@ export const createBetChallenge = onCall(async (request) => {
 });
 
 /**
- * Take the other side of an open offer (or accept a directed challenge). Moves
- * the bet to `pending` — it is NOT locked until both parties confirm. The
- * transaction prevents two players grabbing the same offer.
+ * Take the other side of an open offer (or accept a directed challenge). Posting
+ * the offer/challenge was the proposer's commitment, so accepting locks the bet
+ * in straight away (`active`) — no separate confirmation step. Either party can
+ * still cancel it until the market starts. The transaction prevents two players
+ * grabbing the same offer.
  */
 export const acceptBet = onCall(async (request) => {
   const { playerId } = await requirePlayer(request, "acceptBet", { maxCalls: 60, windowSeconds: 60 });
@@ -384,102 +386,27 @@ export const acceptBet = onCall(async (request) => {
     tx.update(ref, {
       acceptorId: playerId,
       acceptorSide: oppositeSide(bet.proposerSide),
-      status: "pending",
-      proposerConfirmed: false,
-      acceptorConfirmed: false,
+      status: "active",
+      proposerConfirmed: true,
+      acceptorConfirmed: true,
       acceptedAt: FieldValue.serverTimestamp(),
+      lockedAt: FieldValue.serverTimestamp(),
       participantIds: dedupe([bet.proposerId, playerId]),
     });
   });
 
-  // Best-effort push to the proposer that someone took their bet.
+  // Best-effort push to the proposer that someone locked in their bet.
   try {
     const name = await displayName(playerId);
     await notify([preBet.proposerId], {
       category: "sportsbook",
-      title: "Bet accepted",
-      body: `${name} took your $${preBet.amount} bet — confirm to lock it in`,
+      title: "Bet locked in",
+      body: `${name} took your $${preBet.amount} bet — it's locked in`,
       link: "/sportsbook",
     });
   } catch (err) {
     console.error("acceptBet notify failed:", err);
   }
-
-  return { success: true };
-});
-
-/**
- * Record one party's confirmation. When both proposer and acceptor have
- * confirmed, the bet locks (`active`). If the market started in the meantime,
- * the bet is voided instead of activated.
- */
-export const confirmBet = onCall(async (request) => {
-  const { playerId } = await requirePlayer(request, "confirmBet", { maxCalls: 60, windowSeconds: 60 });
-  const betId = requireBetId(request.data);
-  const ref = db().collection("bets").doc(betId);
-
-  const pre = await ref.get();
-  if (!pre.exists) throw new HttpsError("not-found", "Bet not found");
-  const closed = await marketClosed(pre.data() as BetDoc);
-
-  await db().runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
-    const bet = snap.data() as BetDoc;
-    if (bet.status !== "pending") throw new HttpsError("failed-precondition", "This bet is not awaiting confirmation");
-    const isProposer = bet.proposerId === playerId;
-    const isAcceptor = bet.acceptorId === playerId;
-    if (!isProposer && !isAcceptor) throw new HttpsError("permission-denied", "You are not part of this bet");
-
-    const proposerConfirmed = isProposer ? true : bet.proposerConfirmed;
-    const acceptorConfirmed = isAcceptor ? true : bet.acceptorConfirmed;
-    const update: Record<string, unknown> = { proposerConfirmed, acceptorConfirmed };
-
-    if (proposerConfirmed && acceptorConfirmed) {
-      if (closed) {
-        update.status = "void";
-      } else {
-        update.status = "active";
-        update.lockedAt = FieldValue.serverTimestamp();
-      }
-    }
-    tx.update(ref, update);
-  });
-
-  return { success: true };
-});
-
-/**
- * Acceptor backs out while pending. An open offer becomes available again; a
- * directed challenge is cancelled.
- */
-export const withdrawAcceptance = onCall(async (request) => {
-  const { playerId } = await requirePlayer(request, "withdrawAcceptance", { maxCalls: 60, windowSeconds: 60 });
-  const betId = requireBetId(request.data);
-  const ref = db().collection("bets").doc(betId);
-
-  await db().runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new HttpsError("not-found", "Bet not found");
-    const bet = snap.data() as BetDoc;
-    if (bet.status !== "pending") throw new HttpsError("failed-precondition", "This bet is not pending");
-    if (bet.acceptorId !== playerId) {
-      throw new HttpsError("permission-denied", "Only the player who took the bet can withdraw");
-    }
-    if (bet.kind === "offer") {
-      tx.update(ref, {
-        status: "open",
-        acceptorId: FieldValue.delete(),
-        acceptorSide: FieldValue.delete(),
-        acceptedAt: FieldValue.delete(),
-        proposerConfirmed: false,
-        acceptorConfirmed: false,
-        participantIds: [bet.proposerId],
-      });
-    } else {
-      tx.update(ref, { status: "cancelled" });
-    }
-  });
 
   return { success: true };
 });

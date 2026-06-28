@@ -132,7 +132,7 @@ export default function PlayerPropSheet({
       }
       if (directed) {
         await betsApi.createBetChallenge({ ...base, targetId });
-        showToast({ variant: "success", message: "Challenge sent — both players confirm to lock it in." });
+        showToast({ variant: "success", message: "Challenge sent — it locks in as soon as they accept." });
       } else {
         await betsApi.createBetOffer(base);
         showToast({ variant: "success", message: "Offer posted to the marketplace." });

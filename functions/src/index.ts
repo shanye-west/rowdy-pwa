@@ -2094,8 +2094,6 @@ export {
   createBetOffer,
   createBetChallenge,
   acceptBet,
-  confirmBet,
-  withdrawAcceptance,
   cancelBet,
   declineBet,
   settleCupFutures,

@@ -30,8 +30,6 @@ export const betsApi = {
   createBetOffer: call<CreateBetOfferRequest, CreateBetResult>("createBetOffer"),
   createBetChallenge: call<CreateBetChallengeRequest, CreateBetResult>("createBetChallenge"),
   acceptBet: call<BetActionRequest, AdminResult>("acceptBet"),
-  confirmBet: call<BetActionRequest, AdminResult>("confirmBet"),
-  withdrawAcceptance: call<BetActionRequest, AdminResult>("withdrawAcceptance"),
   cancelBet: call<BetActionRequest, AdminResult>("cancelBet"),
   declineBet: call<BetActionRequest, AdminResult>("declineBet"),
   settleCupFutures: call<SettleCupFuturesRequest, SettleCupFuturesResult>("settleCupFutures"),
