@@ -46,7 +46,12 @@ function isMarket(v: unknown): v is BetMarket {
 }
 
 function isMetric(v: unknown): v is BetOverUnderMetric {
-  return v === "matchHolesPlayed" || v === "matchMargin" || v === "playerTournamentPoints";
+  return (
+    v === "matchHolesPlayed" ||
+    v === "matchMargin" ||
+    v === "playerTournamentPoints" ||
+    v === "playerTournamentWins"
+  );
 }
 
 /** Confirm a player doc exists; returns its id for persistence. */
@@ -251,7 +256,8 @@ async function createBet(
         throw new HttpsError("failed-precondition", "Betting on this match is closed — it has already started");
       }
     } else {
-      // playerTournamentPoints: tournament-scoped prop on a single player.
+      // playerTournamentPoints / playerTournamentWins: tournament-scoped prop
+      // on a single player.
       subjectId = await requirePlayerExists(data.subjectId, "subjectId");
       if (await isTournamentStarted(tournamentId)) {
         throw new HttpsError("failed-precondition", "Player props betting is closed — the tournament has started");
@@ -579,7 +585,7 @@ export const settleCupFutures = onCall(async (request) => {
 
 /**
  * Admin: resolve the tournament-long player-futures markets (playerMatchup +
- * player tournament-points over/unders). Like settleCupFutures, this is an
+ * player tournament-points/-wins over/unders). Like settleCupFutures, this is an
  * explicit admin action — there is no single authoritative "tournament over"
  * signal. Each player's total points are summed from their playerMatchFacts
  * (the same source aggregatePlayerStats rolls up), so matches must be closed for
@@ -593,13 +599,15 @@ export const settlePlayerFutures = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Missing tournamentId");
   }
 
-  // Total tournament points per player from playerMatchFacts.
+  // Total tournament points (and won matches) per player from playerMatchFacts.
   const factsSnap = await db().collection("playerMatchFacts").where("tournamentId", "==", tournamentId).get();
   const points = new Map<string, number>();
+  const wins = new Map<string, number>();
   factsSnap.docs.forEach((d) => {
     const f = d.data();
     if (typeof f.playerId !== "string") return;
     points.set(f.playerId, (points.get(f.playerId) ?? 0) + (f.pointsEarned ?? 0));
+    if (f.outcome === "win") wins.set(f.playerId, (wins.get(f.playerId) ?? 0) + 1);
   });
 
   const betsSnap = await db()
@@ -617,6 +625,8 @@ export const settlePlayerFutures = onCall(async (request) => {
       result = settlePlayerMatchupBet(bet, points.get(bet.subjectAId ?? "") ?? 0, points.get(bet.subjectBId ?? "") ?? 0);
     } else if (bet.market === "overUnder" && bet.metric === "playerTournamentPoints" && typeof bet.line === "number") {
       result = settleOverUnderBet(bet, points.get(bet.subjectId ?? "") ?? 0, bet.line);
+    } else if (bet.market === "overUnder" && bet.metric === "playerTournamentWins" && typeof bet.line === "number") {
+      result = settleOverUnderBet(bet, wins.get(bet.subjectId ?? "") ?? 0, bet.line);
     } else {
       return; // other markets settle via their own triggers / settleCupFutures
     }

@@ -1,9 +1,12 @@
 /**
- * Bet sheet for tournament-long player props — the two markets that aren't tied
+ * Bet sheet for tournament-long player props — the markets that aren't tied
  * to a single match or round:
  *   - Matchup: which of two players scores more tournament points (sides teamA/teamB,
  *     backing subjectAId / subjectBId).
- *   - Total points O/U: over/under on one player's total tournament points.
+ *   - Points O/U: over/under on one player's total tournament points. Lines run
+ *     every half-point 0.5–3.5, so whole-point lines can push.
+ *   - Wins O/U: over/under on a player's count of won matches. Half-point lines
+ *     only (0.5/1.5/2.5/3.5) so it never pushes.
  *
  * Mirrors BetSheet's builder (stake stepper, open-offer vs challenge, bet-slip
  * review) but with player pickers instead of an event's fixed two sides. Posts
@@ -19,10 +22,12 @@ import BetSlipReview from "./BetSlipReview";
 import { useToast } from "../contexts/ToastContext";
 import { betsApi } from "../api/bets";
 import type { CreateBetOfferRequest } from "../api/adminContracts";
-import type { BetDoc } from "../types";
+import type { BetDoc, BetOverUnderMetric } from "../types";
 
-// Each round is worth 1 point, so a player's tournament-points O/U runs 0.5–3.5.
-const POINT_LINES = [0.5, 1.5, 2.5, 3.5];
+// Each round is worth 1 point. Points O/U runs every half-point 0.5–3.5, so the
+// whole-point lines (1/2/3) can push; Wins O/U uses half-points only (no push).
+const POINT_LINES = [0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+const WIN_LINES = [0.5, 1.5, 2.5, 3.5];
 const QUICK_AMOUNTS = [10, 20, 50, 100];
 const STEP = 5;
 const OVER_COLOR = "#059669"; // emerald-600
@@ -30,7 +35,7 @@ const UNDER_COLOR = "#475569"; // slate-600
 const A_COLOR = "#2563eb"; // blue-600
 const B_COLOR = "#d97706"; // amber-600
 
-type PropType = "matchup" | "ou";
+type PropType = "matchup" | "points" | "wins";
 
 export interface PlayerPropSheetProps {
   isOpen: boolean;
@@ -81,10 +86,20 @@ export default function PlayerPropSheet({
   const nameOf = (id: string) => rosterOptions.find((p) => p.id === id)?.name ?? "—";
 
   const isMatchup = propType === "matchup";
+  const ouMetric: BetOverUnderMetric = propType === "wins" ? "playerTournamentWins" : "playerTournamentPoints";
+  const ouLines = propType === "wins" ? WIN_LINES : POINT_LINES;
+  const ouUnit = propType === "wins" ? "wins" : "pts";
+  const ouNoun = propType === "wins" ? "tournament wins" : "tournament points";
   const market: CreateBetOfferRequest["market"] = isMatchup ? "playerMatchup" : "overUnder";
   const relevantOffers = openOffers.filter((b) =>
-    isMatchup ? b.market === "playerMatchup" : b.market === "overUnder" && b.metric === "playerTournamentPoints"
+    isMatchup ? b.market === "playerMatchup" : b.market === "overUnder" && b.metric === ouMetric
   );
+
+  // Switching to Wins narrows the available lines — snap an out-of-range line back.
+  const selectPropType = (t: PropType) => {
+    setPropType(t);
+    if (t === "wins" && !WIN_LINES.includes(line)) setLine(2.5);
+  };
 
   const matchupReady = !!subjectAId && !!subjectBId && subjectAId !== subjectBId && !!teamSide;
   const ouReady = !!subjectId && !!ouSide;
@@ -111,7 +126,7 @@ export default function PlayerPropSheet({
         base.subjectAId = subjectAId;
         base.subjectBId = subjectBId;
       } else {
-        base.metric = "playerTournamentPoints";
+        base.metric = ouMetric;
         base.subjectId = subjectId;
         base.line = line;
       }
@@ -142,8 +157,8 @@ export default function PlayerPropSheet({
     }
     if (!isMatchup && ouSide) {
       return {
-        contextLabel: `${nameOf(subjectId)} · tournament points`,
-        sideLabel: `${ouSide === "over" ? "Over" : "Under"} ${line} pts`,
+        contextLabel: `${nameOf(subjectId)} · ${ouNoun}`,
+        sideLabel: `${ouSide === "over" ? "Over" : "Under"} ${line} ${ouUnit}`,
         sideColor: ouSide === "over" ? OVER_COLOR : UNDER_COLOR,
       };
     }
@@ -187,14 +202,15 @@ export default function PlayerPropSheet({
           <div className="flex gap-1 rounded-full bg-muted p-0.5">
             {(
               [
-                { id: "matchup", label: "Player matchup" },
-                { id: "ou", label: "Points O/U" },
+                { id: "matchup", label: "Matchup" },
+                { id: "points", label: "Points O/U" },
+                { id: "wins", label: "Wins O/U" },
               ] as { id: PropType; label: string }[]
             ).map((t) => (
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setPropType(t.id)}
+                onClick={() => selectPropType(t.id)}
                 className={`flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                   propType === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -260,9 +276,11 @@ export default function PlayerPropSheet({
                 {playerSelect(subjectId, setSubjectId)}
               </div>
               <div>
-                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Points line</div>
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {propType === "wins" ? "Wins line" : "Points line"}
+                </div>
                 <div className="mb-2 grid grid-cols-4 gap-2">
-                  {POINT_LINES.map((l) => (
+                  {ouLines.map((l) => (
                     <button
                       key={l}
                       type="button"
@@ -301,7 +319,7 @@ export default function PlayerPropSheet({
                           {s}
                         </span>
                         <span className={`block text-sm font-semibold ${selected ? "text-white" : "text-foreground"}`}>
-                          {s === "over" ? `Over ${line}` : `Under ${line}`}
+                          {s === "over" ? `Over ${line} ${ouUnit}` : `Under ${line} ${ouUnit}`}
                         </span>
                       </button>
                     );

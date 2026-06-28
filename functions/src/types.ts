@@ -350,9 +350,16 @@ export type BetMarket = "match" | "round" | "cupFuture" | "overUnder" | "playerM
  *  - matchHolesPlayed:        holes the match went before closing (status.thru)
  *  - matchMargin:             final margin of victory
  *  - playerTournamentPoints:  a single player's total tournament points (subjectId).
- *    Match-scoped metrics close with their match; playerTournamentPoints is
- *    tournament-scoped (closes when the tournament starts). */
-export type BetOverUnderMetric = "matchHolesPlayed" | "matchMargin" | "playerTournamentPoints";
+ *    Lines run every half-point 0.5–3.5, so whole-point lines can push.
+ *  - playerTournamentWins:    a single player's count of won matches (subjectId).
+ *    Lines are half-points only (0.5/1.5/2.5/3.5) so it can never push.
+ *    Match-scoped metrics close with their match; the player-tournament metrics
+ *    are tournament-scoped (close when the tournament starts). */
+export type BetOverUnderMetric =
+  | "matchHolesPlayed"
+  | "matchMargin"
+  | "playerTournamentPoints"
+  | "playerTournamentWins";
 
 /** open marketplace offer (anyone may take) vs directed challenge (one target). */
 export type BetKind = "offer" | "challenge";

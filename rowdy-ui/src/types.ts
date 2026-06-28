@@ -650,8 +650,15 @@ export type BetMarket = "match" | "round" | "cupFuture" | "overUnder" | "playerM
 
 /** What an over/under bet is measured against. matchHolesPlayed = holes the match
  *  went before closing (status.thru); matchMargin = final margin of victory;
- *  playerTournamentPoints = a single player's total tournament points (subjectId). */
-export type BetOverUnderMetric = "matchHolesPlayed" | "matchMargin" | "playerTournamentPoints";
+ *  playerTournamentPoints = a single player's total tournament points (subjectId),
+ *  lines every half-point 0.5–3.5 (whole-point lines can push);
+ *  playerTournamentWins = a single player's count of won matches (subjectId),
+ *  half-point lines only (0.5/1.5/2.5/3.5) so it never pushes. */
+export type BetOverUnderMetric =
+  | "matchHolesPlayed"
+  | "matchMargin"
+  | "playerTournamentPoints"
+  | "playerTournamentWins";
 
 /** open marketplace offer (anyone may take) vs directed challenge (one target). */
 export type BetKind = "offer" | "challenge";

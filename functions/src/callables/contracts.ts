@@ -316,7 +316,7 @@ export interface CreateBetOfferRequest {
   metric?: BetOverUnderMetric;
   /** The over/under line (required when market === "overUnder"). */
   line?: number;
-  /** Player O/U (metric === "playerTournamentPoints"): the player bet on. */
+  /** Player O/U (playerTournamentPoints / playerTournamentWins): the player bet on. */
   subjectId?: string;
   /** playerMatchup: player backed by the teamA side. */
   subjectAId?: string;

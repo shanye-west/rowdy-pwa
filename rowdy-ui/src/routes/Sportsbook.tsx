@@ -30,7 +30,7 @@ import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import SportsbookHowTo from "../components/SportsbookHowTo";
-import type { BetDoc, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
+import type { BetDoc, BetOverUnderMetric, BetSide, MatchDoc, PlayerDoc, RoundDoc } from "../types";
 
 type Tab = "markets" | "inplay" | "mybets";
 
@@ -44,6 +44,10 @@ const UNDER_COLOR = "#475569";
 // Player-matchup tile colors (mirror PlayerPropSheet): subject A = blue, B = amber.
 const SUBJECT_A_COLOR = "#2563eb";
 const SUBJECT_B_COLOR = "#d97706";
+
+// Tournament-long player O/U metrics (vs match-scoped over/unders like holes/margin).
+const isPlayerOuMetric = (m?: BetOverUnderMetric): boolean =>
+  m === "playerTournamentPoints" || m === "playerTournamentWins";
 
 export default function Sportsbook() {
   const { player } = useAuth();
@@ -161,7 +165,7 @@ export default function Sportsbook() {
     // Tournament-long futures (Cup, player matchups, player point O/Us) stay
     // callable until any match starts.
     if (b.market === "cupFuture" || b.market === "playerMatchup") return !tournamentStarted;
-    if (b.market === "overUnder" && b.metric === "playerTournamentPoints") return !tournamentStarted;
+    if (b.market === "overUnder" && isPlayerOuMetric(b.metric)) return !tournamentStarted;
     if (b.market === "round") {
       const ms = b.roundId ? (matchesByRound[b.roundId] ?? []) : [];
       return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
@@ -283,12 +287,12 @@ export default function Sportsbook() {
   };
   // Cluster bets on the same match together, soonest tee time first.
   const inPlayMatches = activeBets
-    .filter((b) => b.market === "match" || (b.market === "overUnder" && b.metric !== "playerTournamentPoints"))
+    .filter((b) => b.market === "match" || (b.market === "overUnder" && !isPlayerOuMetric(b.metric)))
     .sort((a, z) => teeMs(a) - teeMs(z) || (a.matchId ?? "").localeCompare(z.matchId ?? ""));
   const inPlaySessions = activeBets.filter((b) => b.market === "round");
   const inPlayCup = activeBets.filter((b) => b.market === "cupFuture");
   const inPlayProps = activeBets.filter(
-    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && b.metric === "playerTournamentPoints")
+    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && isPlayerOuMetric(b.metric))
   );
 
   // Bettable events for the Open Bets list. A round/match is bettable until it
@@ -303,7 +307,7 @@ export default function Sportsbook() {
   /** How many open offers sit on an event — drives the row's hint chip. */
   const cupOfferCount = openOffers.filter((b) => b.market === "cupFuture").length;
   const playerPropOffers = openOffers.filter(
-    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && b.metric === "playerTournamentPoints")
+    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && isPlayerOuMetric(b.metric))
   );
   const roundOfferCount = (roundId: string) =>
     openOffers.filter((b) => b.market === "round" && b.roundId === roundId).length;
@@ -356,11 +360,11 @@ export default function Sportsbook() {
 
     if (b.market === "overUnder") {
       const line = b.line ?? 0;
-      // Player point props carry the player's name + a "pts" unit; match-scoped
+      // Player props carry the player's name + a unit ("pts"/"wins"); match-scoped
       // over/unders (holes, margin) read as a bare number.
-      const isPlayerPts = b.metric === "playerTournamentPoints";
-      const prefix = isPlayerPts && b.subjectId ? `${lastName(playerName(b.subjectId))} ` : "";
-      const unit = isPlayerPts ? " pts" : "";
+      const isPlayerProp = isPlayerOuMetric(b.metric);
+      const prefix = isPlayerProp && b.subjectId ? `${lastName(playerName(b.subjectId))} ` : "";
+      const unit = b.metric === "playerTournamentWins" ? " wins" : isPlayerProp ? " pts" : "";
       return {
         teamA: tile("over", `${prefix}Over ${line}${unit}`, OVER_COLOR),
         teamB: tile("under", `${prefix}Under ${line}${unit}`, UNDER_COLOR),
@@ -570,7 +574,7 @@ export default function Sportsbook() {
                     <Card className="overflow-hidden p-0">
                       <BetEventRow
                         label={<span className="block truncate">Player Props</span>}
-                        subtitle="Matchups · tournament points O/U"
+                        subtitle="Matchups · points & wins O/U"
                         accent={{ teamA: SUBJECT_A_COLOR, teamB: SUBJECT_B_COLOR }}
                         hint={hintFor(playerPropOffers.length)}
                         hintActive={playerPropOffers.length > 0}

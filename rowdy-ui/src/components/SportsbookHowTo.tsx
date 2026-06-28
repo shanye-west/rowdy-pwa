@@ -115,7 +115,17 @@ export default function SportsbookHowTo({ isOpen, onClose }: SportsbookHowToProp
             emoji="📊"
             name="Player Points O/U"
             window="Open until the tournament starts"
-            desc="Over or under on a single player's total tournament points. Lines run 0.5–6.5 (half-lines, no pushes)."
+            desc="Over or under on a single player's total tournament points. Lines run every half-point 0.5–3.5, so whole-point lines (1/2/3) can push if the player lands exactly there."
+            sides={[
+              { label: "Over", color: OVER_COLOR },
+              { label: "Under", color: UNDER_COLOR },
+            ]}
+          />
+          <Market
+            emoji="🏆"
+            name="Player Wins O/U"
+            window="Open until the tournament starts"
+            desc="Over or under on how many matches a single player wins (halved matches don't count). Lines are 0.5/1.5/2.5/3.5 — half-lines, so there are no pushes."
             sides={[
               { label: "Over", color: OVER_COLOR },
               { label: "Under", color: UNDER_COLOR },
