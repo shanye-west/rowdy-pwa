@@ -50,7 +50,7 @@ const setNotificationPrefs = httpsCallable<{ prefs: NotificationPrefs }, { succe
 export default function NotificationSettings() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
-  const { pushOn, pushUnsupported } = usePushNotifications();
+  const { pushOn, busy: pushBusy, pushUnsupported, toggle: togglePush } = usePushNotifications();
   const { showToast } = useToast();
 
   const [prefs, setPrefs] = useState<Record<NotificationCategory, boolean> | null>(null);
@@ -114,27 +114,34 @@ export default function NotificationSettings() {
         <LoadingScreen />
       ) : (
         <div className="mx-auto max-w-xl space-y-4 p-4">
-          {/* Device master-switch context: per-category prefs decide WHICH alerts
-              you want; the device toggle (menu/bell) decides whether this device
-              receives push at all. */}
-          <Card className="flex items-start gap-3 p-4">
-            {pushOn ? (
-              <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            ) : (
-              <BellOff className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-            )}
-            <div className="text-sm">
-              <div className="font-semibold text-foreground">
-                Push is {pushOn ? "on" : "off"} for this device
+          {/* Device master switch: enables/disables push for THIS device. The
+              per-category prefs below decide WHICH alerts you want once push is on. */}
+          <Card className="flex items-center justify-between gap-4 p-4">
+            <div className="flex min-w-0 items-start gap-3">
+              {pushOn ? (
+                <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              ) : (
+                <BellOff className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0 text-sm">
+                <div className="font-semibold text-foreground">
+                  All notifications {pushOn ? "on" : "off"}
+                </div>
+                <p className="mt-0.5 text-muted-foreground">
+                  {pushUnsupported
+                    ? "This device can't receive push notifications, but your choices below apply on devices that can."
+                    : pushOn
+                      ? "This device will receive the alerts you choose below."
+                      : "Turn on to receive pushes on this device — your choices below still apply."}
+                </p>
               </div>
-              <p className="mt-0.5 text-muted-foreground">
-                {pushUnsupported
-                  ? "This device can't receive push notifications, but your choices below apply on devices that can."
-                  : pushOn
-                    ? "Choose which alerts you want below."
-                    : "Turn notifications on for this device from the menu to receive pushes — your choices below still apply."}
-              </p>
             </div>
+            <Switch
+              checked={pushOn}
+              onCheckedChange={() => void togglePush()}
+              disabled={pushBusy || pushUnsupported}
+              aria-label="Enable all notifications"
+            />
           </Card>
 
           <Card className="divide-y divide-border/70">

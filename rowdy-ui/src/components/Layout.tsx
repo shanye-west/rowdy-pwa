@@ -12,7 +12,6 @@ import {
   LogIn,
   Wifi,
   Bell,
-  BellOff,
   Download,
   Settings,
   Loader2,
@@ -280,7 +279,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       </Button>
                     )}
 
-                    {player && !pushUnsupported && (
+                    {player && !pushUnsupported && !pushOn && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -290,16 +289,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       >
                         {pushBusy ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : pushOn ? (
-                          <BellOff className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <Bell className="h-4 w-4 text-muted-foreground" />
                         )}
-                        {pushBusy ? "Working…" : pushOn ? "Turn off notifications" : "Enable notifications"}
+                        {pushBusy ? "Working…" : "Enable notifications"}
                       </Button>
                     )}
 
-                    {player && (
+                    {player && pushOn && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                         <ViewTransitionLink to="/settings/notifications" onClick={closeMenu}>
                           <Settings className="h-4 w-4 text-muted-foreground" />
