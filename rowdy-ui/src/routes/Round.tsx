@@ -7,7 +7,7 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
-import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
+import { getPlayerShortName as getPlayerShortNameFromLookup, sortPlayersByTier } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
@@ -258,8 +258,10 @@ function RoundComponent() {
                   teamAColor,
                   teamBColor
                 );
-                const teamANames = (match.teamAPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
-                const teamBNames = (match.teamBPlayers || []).map((p) => getPlayerShortName(p.playerId)).join(", ");
+                const teamAPlayersOrdered = sortPlayersByTier(match.teamAPlayers || [], tournament?.teamA?.rosterByTier);
+                const teamBPlayersOrdered = sortPlayersByTier(match.teamBPlayers || [], tournament?.teamB?.rosterByTier);
+                const teamANames = teamAPlayersOrdered.map((p) => getPlayerShortName(p.playerId)).join(", ");
+                const teamBNames = teamBPlayersOrdered.map((p) => getPlayerShortName(p.playerId)).join(", ");
 
                 return (
                   <div key={match.id} role="listitem">
@@ -275,7 +277,7 @@ function RoundComponent() {
                         <CardContent className="space-y-4 py-4">
                           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                             <div className={cn("text-left text-sm leading-tight", textColor)}>
-                              {(match.teamAPlayers || []).map((player, index) => (
+                              {teamAPlayersOrdered.map((player, index) => (
                                 <div key={index} className="font-semibold">
                                   {getPlayerShortName(player.playerId)}
                                 </div>
@@ -295,7 +297,7 @@ function RoundComponent() {
                             />
 
                             <div className={cn("text-right text-sm leading-tight", textColor)}>
-                              {(match.teamBPlayers || []).map((player, index) => (
+                              {teamBPlayersOrdered.map((player, index) => (
                                 <div key={index} className="font-semibold">
                                   {getPlayerShortName(player.playerId)}
                                 </div>

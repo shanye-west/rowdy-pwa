@@ -11,7 +11,7 @@ import {
   MIN_DRIVES_PER_ROUND,
 } from "../constants";
 
-import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
+import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup, buildTierRank } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { MatchPageSkeleton } from "../components/Skeleton";
@@ -754,13 +754,21 @@ export default function Match() {
   const playerRows: PlayerRowConfig[] = useMemo(() => {
     if (!match) return [];
     if (isFourPlayerRows) {
-      // 4 players: A1, A2, B1, B2 (Best Ball & Shamble)
-      return [
-        { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
-        { team: "A", pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
-        { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
-        { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
-      ];
+      // 4 players: A1, A2, B1, B2 (Best Ball & Shamble). Each row stays bound to
+      // its data index (pIdx) for score lookups; we only reorder the two rows
+      // within each team for display so the higher tier (A before B/C/D) is
+      // listed first. Sort is stable, so equal/unranked players keep order.
+      const aRank = buildTierRank(tournament?.teamA?.rosterByTier);
+      const bRank = buildTierRank(tournament?.teamB?.rosterByTier);
+      const aRows = [
+        { team: "A" as const, pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+        { team: "A" as const, pIdx: 1, label: getPlayerName(match.teamAPlayers?.[1]?.playerId), color: teamAColor, onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
+      ].sort((x, y) => (aRank[match.teamAPlayers?.[x.pIdx]?.playerId ?? ""] ?? 99) - (aRank[match.teamAPlayers?.[y.pIdx]?.playerId ?? ""] ?? 99));
+      const bRows = [
+        { team: "B" as const, pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
+        { team: "B" as const, pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: teamBColor, onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
+      ].sort((x, y) => (bRank[match.teamBPlayers?.[x.pIdx]?.playerId ?? ""] ?? 99) - (bRank[match.teamBPlayers?.[y.pIdx]?.playerId ?? ""] ?? 99));
+      return [...aRows, ...bRows];
     }
     if (isTeamFormat) {
       // 2 rows with TEAM NAMES for scramble only
