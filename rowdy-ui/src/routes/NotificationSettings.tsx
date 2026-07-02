@@ -91,6 +91,12 @@ export default function NotificationSettings() {
   };
 
   const toggle = (key: NotificationCategory) => {
+    // Prefs save through a callable, which can't queue offline — don't flip the
+    // switch optimistically only to snap it back after a network error.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast({ message: "You're offline — settings need a connection.", variant: "error" });
+      return;
+    }
     setPrefs((cur) => {
       if (!cur) return cur;
       const next = { ...cur, [key]: !cur[key] };

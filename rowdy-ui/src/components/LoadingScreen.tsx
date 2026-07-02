@@ -16,17 +16,15 @@ interface LoadingScreenProps {
 type Phase = "loading" | "slow" | "stuck";
 
 /**
- * Centered loading spinner with a timed escape hatch. A genuinely stuck load
- * (first Firestore snapshot never arrives, wedged SW cache, dead connection)
- * used to spin forever with no way out but force-closing the app. After a few
- * seconds this surfaces a Reload, and after a while a "Reset app" that clears
- * the SW + caches.
+ * The timed escape hatch on its own: renders nothing at first, then a Reload
+ * hint after `slowAfterMs`, then a "Reset app" after `stuckAfterMs`. Use it
+ * under skeleton loaders (e.g. the Match scorecard) so a wedged load always
+ * offers a way out even where a full LoadingScreen would be out of place.
  */
-export default function LoadingScreen({
-  className = "py-20",
+export function LoadingEscalation({
   slowAfterMs = 8000,
   stuckAfterMs = 18000,
-}: LoadingScreenProps) {
+}: Pick<LoadingScreenProps, "slowAfterMs" | "stuckAfterMs">) {
   const [phase, setPhase] = useState<Phase>("loading");
 
   useEffect(() => {
@@ -38,37 +36,53 @@ export default function LoadingScreen({
     };
   }, [slowAfterMs, stuckAfterMs]);
 
-  return (
-    <div className={`flex flex-col items-center justify-center gap-5 px-6 text-center ${className}`}>
-      <div className="spinner-lg" />
+  if (phase === "loading") return null;
 
-      {phase !== "loading" && (
-        <div className="space-y-3">
-          <p className="max-w-xs text-sm text-muted-foreground">
-            {phase === "stuck"
-              ? "Still loading. This can happen right after an update or on a weak signal."
-              : "Taking longer than usual…"}
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              Reload
-            </button>
-            {phase === "stuck" && (
-              <button
-                type="button"
-                onClick={() => { void hardResetApp(); }}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-              >
-                Reset app
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+  return (
+    <div className="space-y-3 px-6 py-4 text-center">
+      <p className="mx-auto max-w-xs text-sm text-muted-foreground">
+        {phase === "stuck"
+          ? "Still loading. This can happen right after an update or on a weak signal."
+          : "Taking longer than usual…"}
+      </p>
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Reload
+        </button>
+        {phase === "stuck" && (
+          <button
+            type="button"
+            onClick={() => { void hardResetApp(); }}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            Reset app
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Centered loading spinner with a timed escape hatch. A genuinely stuck load
+ * (first Firestore snapshot never arrives, wedged SW cache, dead connection)
+ * used to spin forever with no way out but force-closing the app. After a few
+ * seconds this surfaces a Reload, and after a while a "Reset app" that clears
+ * the SW + caches.
+ */
+export default function LoadingScreen({
+  className = "py-20",
+  slowAfterMs = 8000,
+  stuckAfterMs = 18000,
+}: LoadingScreenProps) {
+  return (
+    <div className={`flex flex-col items-center justify-center gap-2 px-6 text-center ${className}`}>
+      <div className="spinner-lg" />
+      <LoadingEscalation slowAfterMs={slowAfterMs} stuckAfterMs={stuckAfterMs} />
     </div>
   );
 }

@@ -136,6 +136,56 @@ export const MatchPageSkeleton = memo(function MatchPageSkeleton() {
   );
 });
 
+/** Full page skeleton for the Home route (score hero + schedule cards) */
+export const HomePageSkeleton = memo(function HomePageSkeleton() {
+  return (
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-6 animate-pulse">
+      {/* Score hero */}
+      <div className="card space-y-6 p-4">
+        <div className="space-y-2">
+          <Skeleton width={110} height={16} className="mx-auto" />
+          <Skeleton width="100%" height={34} rounded="lg" />
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <div className="flex flex-col items-center gap-2">
+            <Skeleton width={96} height={96} rounded="full" />
+            <Skeleton width={48} height={36} />
+          </div>
+          <div className="flex h-12 items-center justify-center">
+            <div className="h-10 w-px bg-muted/80" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <Skeleton width={96} height={96} rounded="full" />
+            <Skeleton width={48} height={36} />
+          </div>
+        </div>
+      </div>
+      {/* Schedule cards */}
+      <div className="space-y-3">
+        <Skeleton width={80} height={12} className="ml-3" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="card p-4">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="flex items-center gap-3">
+                <Skeleton width={22} height={22} rounded="full" />
+                <Skeleton width={32} height={22} />
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <Skeleton width={64} height={14} />
+                <Skeleton width={80} height={16} rounded="full" />
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <Skeleton width={32} height={22} />
+                <Skeleton width={22} height={22} rounded="full" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
 /** Full page skeleton for Round route */
 export const RoundPageSkeleton = memo(function RoundPageSkeleton() {
   return (

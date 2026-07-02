@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromCache, getDocFromServer } from "firebase/firestore";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import { AlertTriangle } from "lucide-react";
 import { db } from "../firebase";
@@ -39,19 +39,38 @@ function RoundComponent() {
   useEffect(() => {
     if (!roundId) return;
 
+    // Existence check for the "Recap" link. Cache-first: once a recap exists in
+    // cache this is a zero-read lookup. A cached *negative* still revalidates in
+    // the background (the recap may have been computed since), so the link isn't
+    // pinned hidden by a stale cache.
+    let cancelled = false;
     const checkRecap = async () => {
+      const ref = doc(db, "roundRecaps", roundId);
       try {
-        const recapSnap = await getDoc(doc(db, "roundRecaps", roundId));
-        setHasRecap(recapSnap.exists());
-      } catch (err) {
-        console.error("Failed to check recap:", err);
-        setHasRecap(false);
+        const cached = await getDocFromCache(ref);
+        if (cancelled) return;
+        setHasRecap(cached.exists());
+        if (!cached.exists()) {
+          getDocFromServer(ref)
+            .then((snap) => { if (!cancelled) setHasRecap(snap.exists()); })
+            .catch(() => {});
+        }
+      } catch {
+        // Not in cache — normal (cache-or-server) read.
+        try {
+          const snap = await getDoc(ref);
+          if (!cancelled) setHasRecap(snap.exists());
+        } catch (err) {
+          console.error("Failed to check recap:", err);
+          if (!cancelled) setHasRecap(false);
+        }
       } finally {
-        setCheckingRecap(false);
+        if (!cancelled) setCheckingRecap(false);
       }
     };
 
     checkRecap();
+    return () => { cancelled = true; };
   }, [roundId]);
 
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);

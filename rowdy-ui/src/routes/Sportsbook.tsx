@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight, HelpCircle } from "lucide-react";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
@@ -52,7 +52,12 @@ export default function Sportsbook() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
   const { showToast } = useToast();
-  const { matchesByRound, rounds, loading: tdLoading } = useTournamentData({ prefetchedTournament: tournament });
+  // Needs per-match data for bet gating (so no denormalized-totals fast path),
+  // but locked rounds are static — only unlocked rounds keep a live listener.
+  const { matchesByRound, rounds, loading: tdLoading } = useTournamentData({
+    prefetchedTournament: tournament,
+    splitLockedRounds: true,
+  });
   const { bets, loading: betsLoading } = useBets(tournament?.id);
   const settlements = useBetSettlements(tournament?.id);
   // Pre-draft, the team rosters are empty but a draft pool exists — surface those
@@ -152,13 +157,13 @@ export default function Sportsbook() {
   );
 
   /** Mirror of the backend's matchStartedPlay: scored, closed, locked, or teed off. */
-  const matchHasStarted = (m: MatchDoc | undefined): boolean => {
+  const matchHasStarted = useCallback((m: MatchDoc | undefined): boolean => {
     if (!m) return true; // unknown match -> treat as locked, hide cancel
     if (m.locked === true || m.status?.closed === true) return true;
     if ((m.status?.thru ?? 0) > 0) return true;
     const tee = toDateOrNull(m.teeTime);
     return tee !== null && tee.getTime() <= nowMs;
-  };
+  }, [nowMs]);
   /** A locked-in bet can still be called off until its market starts. */
   const canCancelLocked = (b: BetDoc): boolean => {
     // Tournament-long futures (Cup, player matchups, player point O/Us) stay
@@ -219,12 +224,24 @@ export default function Sportsbook() {
     [players]
   );
 
+  // One in-flight callable at a time: a rapid double-tap on Accept/Take would
+  // otherwise fire the Cloud Function twice. Callables also can't queue offline
+  // (unlike score writes), so say so instead of surfacing a network error.
+  const [actionBusy, setActionBusy] = useState(false);
   async function runAction(fn: () => Promise<unknown>, successMsg: string) {
+    if (actionBusy) return;
+    if (!navigator.onLine) {
+      showToast({ variant: "error", message: "You're offline — betting actions need a connection." });
+      return;
+    }
+    setActionBusy(true);
     try {
       await fn();
       showToast({ variant: "success", message: successMsg });
     } catch (e) {
       showToast({ variant: "error", message: e instanceof Error ? e.message : "Something went wrong" });
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -244,6 +261,86 @@ export default function Sportsbook() {
     run: () => Promise<unknown>;
     success: string;
   }) => setConfirmState(opts);
+
+  // ---- derived bet/market data ----
+  // Memoized so the 30s clock tick (and unrelated state changes) don't redo the
+  // ledger math or churn child props; only the tee-time gates depend on the
+  // clock. Hooks, so they live above the gating returns.
+  const myBets = useMemo(() => selectMyBets(bets, player?.id), [bets, player?.id]);
+  const openOffers = useMemo(() => bets.filter((b) => b.status === "open" && b.kind === "offer"), [bets]);
+
+  // In Play: every locked-in (active) bet across the whole field — not just the
+  // viewer's. These already arrive in the `useBets` listener (it carries
+  // open/pending/active), so this is a pure client-side regroup with no extra
+  // reads. Split by market so it reads like the Open Bets board.
+  const activeBets = useMemo(() => bets.filter((b) => b.status === "active"), [bets]);
+  // Cluster bets on the same match together, soonest tee time first.
+  const inPlayMatches = useMemo(() => {
+    const teeMs = (b: BetDoc): number => {
+      const m = b.matchId ? matchesById[b.matchId] : undefined;
+      return toDateOrNull(m?.teeTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    };
+    return activeBets
+      .filter((b) => b.market === "match" || (b.market === "overUnder" && !isPlayerOuMetric(b.metric)))
+      .sort((a, z) => teeMs(a) - teeMs(z) || (a.matchId ?? "").localeCompare(z.matchId ?? ""));
+  }, [activeBets, matchesById]);
+  const inPlaySessions = useMemo(() => activeBets.filter((b) => b.market === "round"), [activeBets]);
+  const inPlayCup = useMemo(() => activeBets.filter((b) => b.market === "cupFuture"), [activeBets]);
+  const inPlayProps = useMemo(
+    () =>
+      activeBets.filter(
+        (b) => b.market === "playerMatchup" || (b.market === "overUnder" && isPlayerOuMetric(b.metric))
+      ),
+    [activeBets]
+  );
+
+  // Bettable events for the Open Bets list. A round/match is bettable until it
+  // tees off; the Cup until the tournament starts. These do depend on the clock
+  // (via matchHasStarted) — markets close as tee times pass with no data change.
+  const roundsById = useMemo<Record<string, RoundDoc>>(
+    () => Object.fromEntries(rounds.map((r) => [r.id, r])),
+    [rounds]
+  );
+  const bettableRounds = useMemo(
+    () =>
+      rounds.filter((r) => {
+        const ms = matchesByRound[r.id] ?? [];
+        return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
+      }),
+    [rounds, matchesByRound, matchHasStarted]
+  );
+  const bettableMatches = useMemo(
+    () => allMatches.filter((m) => !matchHasStarted(m)),
+    [allMatches, matchHasStarted]
+  );
+
+  const ledger = useMemo(() => computeLedger(bets), [bets]);
+  const h2h = useMemo(() => headToHead(bets, settlements, player?.id), [bets, settlements, player?.id]);
+  const pendingSettlements = useMemo(
+    () => selectPendingSettlements(settlements, player?.id),
+    [settlements, player?.id]
+  );
+  const outgoingPendingTo = useMemo(
+    () => new Set(pendingSettlements.outgoing.map((s) => s.payeeId)),
+    [pendingSettlements]
+  );
+
+  // My Bets summary hero: settled P&L + record, plus outstanding tab totals.
+  const summary = useMemo(() => {
+    const acc = { net: 0, wins: 0, losses: 0, pushes: 0 };
+    if (player) {
+      for (const b of myBets.settled) {
+        const d = settledDelta(b, player.id);
+        acc.net += d;
+        if (d > 0) acc.wins++;
+        else if (d < 0) acc.losses++;
+        else acc.pushes++;
+      }
+    }
+    const owedToYou = h2h.reduce((s, r) => (r.net > 0 ? s + r.net : s), 0);
+    const youOwe = h2h.reduce((s, r) => (r.net < 0 ? s + Math.abs(r.net) : s), 0);
+    return { ...acc, owedToYou, youOwe };
+  }, [myBets, h2h, player]);
 
   // ---- gating ----
   if (!tournament) {
@@ -272,36 +369,6 @@ export default function Sportsbook() {
   // names, a later real-time bet update shouldn't blank the whole page.
   const namesPending = playersLoading && Object.keys(players).length === 0;
   const loading = tdLoading || betsLoading || namesPending;
-  const myBets = selectMyBets(bets, player?.id);
-  const openOffers = bets.filter((b) => b.status === "open" && b.kind === "offer");
-
-  // In Play: every locked-in (active) bet across the whole field — not just the
-  // viewer's. These already arrive in the `useBets` listener (it carries
-  // open/pending/active), so this is a pure client-side regroup with no extra
-  // reads. Split by market so it reads like the Open Bets board.
-  const activeBets = bets.filter((b) => b.status === "active");
-  const teeMs = (b: BetDoc): number => {
-    const m = b.matchId ? matchesById[b.matchId] : undefined;
-    return toDateOrNull(m?.teeTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-  };
-  // Cluster bets on the same match together, soonest tee time first.
-  const inPlayMatches = activeBets
-    .filter((b) => b.market === "match" || (b.market === "overUnder" && !isPlayerOuMetric(b.metric)))
-    .sort((a, z) => teeMs(a) - teeMs(z) || (a.matchId ?? "").localeCompare(z.matchId ?? ""));
-  const inPlaySessions = activeBets.filter((b) => b.market === "round");
-  const inPlayCup = activeBets.filter((b) => b.market === "cupFuture");
-  const inPlayProps = activeBets.filter(
-    (b) => b.market === "playerMatchup" || (b.market === "overUnder" && isPlayerOuMetric(b.metric))
-  );
-
-  // Bettable events for the Open Bets list. A round/match is bettable until it
-  // tees off; the Cup until the tournament starts.
-  const roundsById: Record<string, RoundDoc> = Object.fromEntries(rounds.map((r) => [r.id, r]));
-  const bettableRounds = rounds.filter((r) => {
-    const ms = matchesByRound[r.id] ?? [];
-    return ms.length > 0 && ms.every((m) => !matchHasStarted(m));
-  });
-  const bettableMatches = allMatches.filter((m) => !matchHasStarted(m));
 
   /** How many open offers sit on an event — drives the row's hint chip. */
   const cupOfferCount = openOffers.filter((b) => b.market === "cupFuture").length;
@@ -313,29 +380,8 @@ export default function Sportsbook() {
   const matchOfferCount = (matchId: string) => openOffers.filter((b) => b.matchId === matchId).length;
   const hintFor = (count: number) => (count > 0 ? `${count} open` : "Tap to bet");
 
-  const ledger = computeLedger(bets);
-  const h2h = headToHead(bets, settlements, player?.id);
-  const pendingSettlements = selectPendingSettlements(settlements, player?.id);
-  const outgoingPendingTo = new Set(pendingSettlements.outgoing.map((s) => s.payeeId));
   const activeCount =
     myBets.incomingChallenges.length + myBets.myOpenOffers.length + myBets.active.length;
-
-  // My Bets summary hero: settled P&L + record, plus outstanding tab totals.
-  const summary = (() => {
-    const acc = { net: 0, wins: 0, losses: 0, pushes: 0 };
-    if (player) {
-      for (const b of myBets.settled) {
-        const d = settledDelta(b, player.id);
-        acc.net += d;
-        if (d > 0) acc.wins++;
-        else if (d < 0) acc.losses++;
-        else acc.pushes++;
-      }
-    }
-    const owedToYou = h2h.reduce((s, r) => (r.net > 0 ? s + r.net : s), 0);
-    const youOwe = h2h.reduce((s, r) => (r.net < 0 ? s + Math.abs(r.net) : s), 0);
-    return { ...acc, owedToYou, youOwe };
-  })();
 
   // ---- shared render helpers ----
   /**
@@ -746,6 +792,7 @@ export default function Sportsbook() {
                       <span className="flex shrink-0 gap-2">
                         <SmallBtn
                           variant="primary"
+                          disabled={actionBusy}
                           onClick={() =>
                             runAction(() => betsApi.confirmSettlement({ settlementId: s.id }), "Confirmed — tab updated.")
                           }
@@ -823,12 +870,14 @@ export default function Sportsbook() {
                           <div className="flex gap-2">
                             <SmallBtn
                               variant="primary"
+                              disabled={actionBusy}
                               onClick={() => runAction(() => betsApi.acceptBet({ betId: b.id }), "Bet accepted and locked in!")}
                             >
                               Accept
                             </SmallBtn>
                             <SmallBtn
                               variant="muted"
+                              disabled={actionBusy}
                               onClick={() => runAction(() => betsApi.declineBet({ betId: b.id }), "Challenge declined.")}
                             >
                               Decline
@@ -1226,10 +1275,12 @@ function NetBadge({ net }: { net: number }) {
 function SmallBtn({
   variant,
   onClick,
+  disabled = false,
   children,
 }: {
   variant: "primary" | "muted";
   onClick: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   const cls =
@@ -1238,7 +1289,10 @@ function SmallBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-semibold transition-transform active:scale-95 ${cls}`}
+      disabled={disabled}
+      // Visual size stays compact; the ::after overlay pads the hit area out to
+      // ~44px so it meets the touch-target guideline without moving the layout.
+      className={`relative rounded-full px-3 py-1 text-xs font-semibold transition-transform active:scale-95 after:absolute after:-inset-y-3 after:-inset-x-2 after:content-[''] disabled:opacity-50 ${cls}`}
     >
       {children}
     </button>

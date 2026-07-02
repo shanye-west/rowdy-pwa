@@ -109,6 +109,12 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
   const submit = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    // Comments post through a callable, which (unlike score writes) can't queue
+    // offline — say so up front and keep the draft instead of failing obscurely.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast({ variant: "error", message: "You're offline — chat needs a connection." });
+      return;
+    }
     setText("");
     // Optimistic insert is synchronous, so the new row exists by next frame.
     const result = post(trimmed);
@@ -479,6 +485,10 @@ function RepliesSection({
   const submit = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      showToast({ variant: "error", message: "You're offline — chat needs a connection." });
+      return;
+    }
     setText("");
     try {
       await post(trimmed);

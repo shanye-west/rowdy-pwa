@@ -24,8 +24,15 @@ interface OfflineReadyCheckProps {
   matchId: string;
   roundId?: string;
   courseId?: string;
+  tournamentId?: string;
   /** Roster player IDs to pre-cache. Memoize in the parent to avoid reruns. */
   playerIds: string[];
+  /**
+   * Image URLs (team/tournament logos) to pull through the service worker's
+   * runtime cache so they render offline too. Best-effort — a failed image
+   * never fails the check. Memoize in the parent.
+   */
+  imageUrls?: string[];
 }
 
 const STEP_DEFS = [
@@ -62,7 +69,9 @@ export function OfflineReadyCheck({
   matchId,
   roundId,
   courseId,
+  tournamentId,
   playerIds,
+  imageUrls,
 }: OfflineReadyCheckProps) {
   const [steps, setSteps] = useState<StepInfo[]>(makeInitial);
   const [running, setRunning] = useState(false);
@@ -115,14 +124,21 @@ export function OfflineReadyCheck({
       await getDocFromServer(doc(db, "matches", matchId));
       if (roundId) await getDocFromServer(doc(db, "rounds", roundId));
       if (courseId) await getDocFromServer(doc(db, "courses", courseId));
+      if (tournamentId) await getDocFromServer(doc(db, "tournaments", tournamentId));
       await Promise.all(playerIds.map((id) => getDocFromServer(doc(db, "players", id))));
+      // Pull logos through the SW's image cache — best-effort, never blocks the
+      // checkmark (a missing logo degrades to the emoji fallback offline).
+      (imageUrls ?? []).filter(Boolean).forEach((url) => {
+        const img = new Image();
+        img.src = url;
+      });
       set("warm", { state: "ok", detail: "Scorecard, players & course cached on this device." });
       finish(true);
     } catch {
       set("warm", { state: "fail", detail: "Couldn't reach the server. Check your connection and retry." });
       finish(false);
     }
-  }, [canEdit, playerName, matchId, roundId, courseId, playerIds]);
+  }, [canEdit, playerName, matchId, roundId, courseId, tournamentId, playerIds, imageUrls]);
 
   // Auto-run whenever the dialog opens. Deferred a tick so we kick off the
   // checks after the dialog has committed open (and to avoid setState directly

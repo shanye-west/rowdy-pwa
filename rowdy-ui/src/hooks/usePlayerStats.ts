@@ -9,8 +9,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs } from "firebase/firestore";
+import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs, type QuerySnapshot } from "firebase/firestore";
 import { db } from "../firebase";
+import { getDocsCacheFirst } from "../utils/firestoreReads";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
 /**
@@ -56,7 +57,12 @@ export function usePlayerStats(playerId: string | undefined, series: TournamentS
 }
 
 /**
- * Fetch stats for a single player across all series
+ * Fetch stats for a single player across all series.
+ *
+ * Career stats only change after a post-match recompute, so a live listener is
+ * overkill — read cache-first for an instant paint and refresh once from the
+ * server in the background (stale-while-revalidate) instead of holding a
+ * subscription open for the whole page visit.
  */
 export function usePlayerStatsBySeries(playerId: string | undefined) {
   const [allSeriesStats, setAllSeriesStats] = useState<PlayerStatsBySeries[]>([]);
@@ -71,27 +77,30 @@ export function usePlayerStatsBySeries(playerId: string | undefined) {
     }
 
     setLoading(true);
-    const colRef = collection(db, "playerStats", playerId, "bySeries");
-    
-    const unsub = onSnapshot(
-      query(colRef),
-      (snap) => {
-        const stats: PlayerStatsBySeries[] = [];
-        snap.forEach((doc) => {
-          stats.push({ ...doc.data(), playerId, series: doc.id } as PlayerStatsBySeries);
-        });
-        setAllSeriesStats(stats);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error("Error fetching player stats by series:", err);
-        setError(err);
-        setLoading(false);
-      }
-    );
+    let cancelled = false;
 
-    return () => unsub();
+    const apply = (snap: QuerySnapshot) => {
+      if (cancelled) return;
+      const stats: PlayerStatsBySeries[] = [];
+      snap.forEach((doc) => {
+        stats.push({ ...doc.data(), playerId, series: doc.id } as PlayerStatsBySeries);
+      });
+      setAllSeriesStats(stats);
+      setLoading(false);
+      setError(null);
+    };
+
+    getDocsCacheFirst(query(collection(db, "playerStats", playerId, "bySeries")), apply)
+      .then(apply)
+      .catch((err) => {
+        console.error("Error fetching player stats by series:", err);
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [playerId]);
 
   return { allSeriesStats, loading, error };

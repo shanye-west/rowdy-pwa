@@ -21,6 +21,8 @@ export interface BetOfferRowProps {
   amount: number;
   /** True if this is your own offer (Take is disabled). */
   mine: boolean;
+  /** True while a take is already in flight — disables Take against double-fires. */
+  busy?: boolean;
   loggedIn: boolean;
   onTake: () => void;
 }
@@ -34,6 +36,7 @@ function BetOfferRow({
   proposerName,
   amount,
   mine,
+  busy = false,
   loggedIn,
   onTake,
 }: BetOfferRowProps) {
@@ -47,9 +50,9 @@ function BetOfferRow({
       content: loggedIn ? (
         <button
           type="button"
-          disabled={mine}
+          disabled={mine || busy}
           onClick={onTake}
-          style={mine ? undefined : { backgroundColor: color }}
+          style={mine || busy ? undefined : { backgroundColor: color }}
           className="rounded-full px-3.5 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground"
         >
           {mine ? "Yours" : "Take"}

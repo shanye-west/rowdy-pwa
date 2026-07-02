@@ -347,8 +347,19 @@ export function LayoutShell({ children }: LayoutShellProps) {
         </div>
       </header>
 
-      {/* WRAP CONTENT IN PULL-TO-REFRESH */}
-      <PullToRefresh>
+      {/* WRAP CONTENT IN PULL-TO-REFRESH. Data is already live via Firestore
+          listeners, so the honest refresh action is an app-update check — with
+          autoUpdate, finding a new version reloads the page on its own. */}
+      <PullToRefresh
+        onRefresh={async () => {
+          try {
+            const regs = await navigator.serviceWorker?.getRegistrations?.();
+            await Promise.all((regs ?? []).map((r) => r.update().catch(() => {})));
+          } catch {
+            /* no SW (dev/unsupported browser) — the gesture still resolves */
+          }
+        }}
+      >
         {/* Offline Status Banner — app-wide so every route signals offline state */}
         <ConnectionBanner isOnline={isOnline} />
 

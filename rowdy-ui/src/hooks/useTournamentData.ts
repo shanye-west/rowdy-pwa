@@ -10,11 +10,13 @@
  */
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, doc, query, where, onSnapshot, limit, documentId, getDocs } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot, limit, documentId, getDocs, type QuerySnapshot, type DocumentData } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { useResolvedLoading } from "./useResolvedLoading";
+import { getDocsCacheFirst } from "../utils/firestoreReads";
+import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
 
 // ============================================================================
 // TYPES
@@ -80,6 +82,14 @@ export interface UseTournamentDataOptions {
    * views. Falls back to the matches subscription for rounds without totals.
    */
   preferDenormalizedTotals?: boolean;
+  /**
+   * For callers that need per-match data (so can't use denormalized totals):
+   * fetch matches of locked rounds once, cache-first (they're static), and keep
+   * a live subscription only on matches of unlocked rounds. Mirrors the
+   * locked/unlocked split in useRoundData. With every round locked, no live
+   * match listener remains at all.
+   */
+  splitLockedRounds?: boolean;
 }
 
 // ============================================================================
@@ -87,7 +97,7 @@ export interface UseTournamentDataOptions {
 // ============================================================================
 
 export function useTournamentData(options: UseTournamentDataOptions = {}): UseTournamentDataResult {
-  const { fetchActive = false, tournamentId, prefetchedTournament, preferDenormalizedTotals = false } = options;
+  const { fetchActive = false, tournamentId, prefetchedTournament, preferDenormalizedTotals = false, splitLockedRounds = false } = options;
 
   // State
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
@@ -210,9 +220,24 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   const allRoundsHaveTotals = rounds.length > 0 && rounds.every(r => r.pointTotals !== undefined);
   const useDenormalized = preferDenormalizedTotals && allRoundsHaveTotals;
 
+  // Stable signatures of the locked/unlocked round-id sets. The rounds snapshot
+  // fires on every score change (pointTotals is denormalized live), so keying
+  // the matches effect on these strings — not the rounds array — keeps a round
+  // doc update from tearing down and recreating the match listeners.
+  const lockedRoundIdsKey = useMemo(
+    () => rounds.filter(r => r.locked).map(r => r.id).sort().join(","),
+    [rounds]
+  );
+  const unlockedRoundIdsKey = useMemo(
+    () => rounds.filter(r => !r.locked).map(r => r.id).sort().join(","),
+    [rounds]
+  );
+
   // -------------------------------------------------------------------------
   // 3) Subscribe to matches for the tournament (grouped by roundId)
   // Skipped when denormalized round totals are available — the big read win.
+  // With `splitLockedRounds`, locked rounds are read once (cache-first) and
+  // only unlocked rounds keep a live subscription.
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!tournament?.id) {
@@ -233,22 +258,112 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       }
     }
 
+    const bucketSnap = (snap: QuerySnapshot<DocumentData>) => {
+      const bucket: Record<string, MatchDoc[]> = {};
+      snap.docs.forEach(d => {
+        const match = { id: d.id, ...d.data() } as MatchDoc;
+        if (match.roundId) {
+          if (!bucket[match.roundId]) bucket[match.roundId] = [];
+          bucket[match.roundId].push(match);
+        }
+      });
+      Object.values(bucket).forEach(arr => {
+        arr.sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0) || a.id.localeCompare(b.id));
+      });
+      return bucket;
+    };
+
+    if (splitLockedRounds) {
+      if (!roundsLoaded) return; // need the lock state of each round first
+      const lockedIds = lockedRoundIdsKey ? lockedRoundIdsKey.split(",") : [];
+      const unlockedIds = unlockedRoundIdsKey ? unlockedRoundIdsKey.split(",") : [];
+
+      if (lockedIds.length === 0 && unlockedIds.length === 0) {
+        setMatchesByRound({});
+        setMatchesLoaded(true);
+        return;
+      }
+
+      let cancelled = false;
+      const unsubs: Array<() => void> = [];
+      // Locked and unlocked cover disjoint roundIds, and each `in` chunk covers
+      // disjoint roundIds within its source, so merging by key is safe.
+      const staticBucket: Record<string, MatchDoc[]> = {};
+      const liveBuckets: Record<number, Record<string, MatchDoc[]>> = {};
+      let staticPending = lockedIds.length > 0 ? 1 : 0;
+      let livePending = 0;
+
+      const publish = () => {
+        if (cancelled) return;
+        const merged: Record<string, MatchDoc[]> = { ...staticBucket };
+        Object.values(liveBuckets).forEach(chunkBucket => {
+          Object.assign(merged, chunkBucket);
+        });
+        setMatchesByRound(merged);
+        if (staticPending === 0 && livePending === 0) setMatchesLoaded(true);
+      };
+
+      const chunk = (ids: string[]) => {
+        const out: string[][] = [];
+        for (let i = 0; i < ids.length; i += FIRESTORE_IN_QUERY_LIMIT) {
+          out.push(ids.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
+        }
+        return out;
+      };
+
+      if (lockedIds.length > 0) {
+        // Locked rounds = static result sets → one-time cache-first reads.
+        Promise.all(
+          chunk(lockedIds).map(async ids => {
+            const snap = await getDocsCacheFirst(
+              query(collection(db, "matches"), where("roundId", "in", ids))
+            );
+            Object.assign(staticBucket, bucketSnap(snap));
+          })
+        )
+          .catch(err => console.error("Locked-round matches fetch error:", err))
+          .finally(() => {
+            staticPending = 0;
+            publish();
+          });
+      }
+
+      chunk(unlockedIds).forEach((ids, i) => {
+        livePending += 1;
+        let delivered = false;
+        unsubs.push(
+          onSnapshot(
+            query(collection(db, "matches"), where("roundId", "in", ids)),
+            (snap) => {
+              liveBuckets[i] = bucketSnap(snap);
+              if (!delivered) {
+                delivered = true;
+                livePending -= 1;
+              }
+              publish();
+            },
+            (err) => {
+              console.error("Matches subscription error:", err);
+              if (!delivered) {
+                delivered = true;
+                livePending -= 1;
+              }
+              publish();
+            }
+          )
+        );
+      });
+
+      return () => {
+        cancelled = true;
+        unsubs.forEach(u => u());
+      };
+    }
+
     const unsub = onSnapshot(
       query(collection(db, "matches"), where("tournamentId", "==", tournament.id)),
       (snap) => {
-        const bucket: Record<string, MatchDoc[]> = {};
-        snap.docs.forEach(d => {
-          const match = { id: d.id, ...d.data() } as MatchDoc;
-          if (match.roundId) {
-            if (!bucket[match.roundId]) bucket[match.roundId] = [];
-            bucket[match.roundId].push(match);
-          }
-        });
-        // Sort matches within each round by matchNumber
-        Object.values(bucket).forEach(arr => {
-          arr.sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0) || a.id.localeCompare(b.id));
-        });
-        setMatchesByRound(bucket);
+        setMatchesByRound(bucketSnap(snap));
         setMatchesLoaded(true);
       },
       (err) => {
@@ -257,7 +372,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       }
     );
     return () => unsub();
-  }, [tournament?.id, tournamentLoaded, preferDenormalizedTotals, roundsLoaded, useDenormalized]);
+  }, [tournament?.id, tournamentLoaded, preferDenormalizedTotals, roundsLoaded, useDenormalized, splitLockedRounds, lockedRoundIdsKey, unlockedRoundIdsKey]);
 
   // -------------------------------------------------------------------------
   // 4) Fetch courses needed by current tournament rounds (ONE-TIME, not subscription)

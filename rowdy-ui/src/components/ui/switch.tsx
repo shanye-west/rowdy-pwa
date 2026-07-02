@@ -26,8 +26,10 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
+      // The ::after overlay pads the tap area out to ~44px (touch-target
+      // guideline) without changing the 24px visual track.
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ring-offset-background after:absolute after:-inset-x-2 after:-inset-y-2.5 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         checked ? "bg-primary" : "bg-input"
       )}
       {...aria}

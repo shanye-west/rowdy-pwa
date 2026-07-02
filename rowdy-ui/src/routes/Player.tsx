@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
 import BadgeGrid from "../components/player/BadgeGrid";
 import { getBadges } from "../lib/badges";
 import { usePlayerStatsBySeries } from "../hooks/usePlayerStats";
-import { useTournamentContext } from "../contexts/TournamentContext";
-import type { PlayerDoc, PlayerStatsBySeries, TournamentDoc } from "../types";
+import { usePlayers, useTournamentContext } from "../contexts/TournamentContext";
+import type { PlayerStatsBySeries, TournamentDoc } from "../types";
 
 const SERIES_LABELS: Record<string, string> = {
   rowdyCup: "Rowdy Cup",
@@ -70,22 +68,11 @@ export default function Player() {
   const { tournament } = useTournamentContext();
   const { allSeriesStats, loading } = usePlayerStatsBySeries(playerId);
 
-  // Player identity (name) — global player doc, read once.
-  const [playerDoc, setPlayerDoc] = useState<PlayerDoc | null>(null);
-  useEffect(() => {
-    if (!playerId) return;
-    let cancelled = false;
-    getDoc(doc(db, "players", playerId))
-      .then((snap) => {
-        if (!cancelled) setPlayerDoc(snap.exists() ? ({ id: snap.id, ...snap.data() } as PlayerDoc) : null);
-      })
-      .catch(() => {
-        if (!cancelled) setPlayerDoc(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [playerId]);
+  // Player identity (name) — resolve through the shared player cache; roster
+  // players are already warmed there, so this is usually a zero-read lookup.
+  const playerIdList = useMemo(() => (playerId ? [playerId] : []), [playerId]);
+  const { players: cachedPlayers } = usePlayers(playerIdList);
+  const playerDoc = (playerId && cachedPlayers[playerId]) || null;
 
   // Series selector — derive the shown series (override -> active tournament -> first).
   const seriesOptions = useMemo(() => allSeriesStats.map((s) => s.series as string), [allSeriesStats]);

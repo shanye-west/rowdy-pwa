@@ -11,8 +11,42 @@ import {
   onAuthStateChanged,
   type User
 } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
+import { getDocCacheFirst, getDocsCacheFirst } from "../utils/firestoreReads";
 import type { PlayerDoc } from "../types";
+
+// Last successfully-resolved "authUid:playerId" pair. The player doc is found
+// via a *query* (authUid == uid), which needs either the network or that exact
+// query in the local cache — on a cold-cache offline launch it fails and would
+// silently disable scoring. This hint lets us fall back to a direct doc lookup
+// (which the persistent cache can answer) so a returning player can still score.
+const LAST_PLAYER_KEY = "rowdycup:lastPlayer";
+
+function savePlayerHint(uid: string, playerId: string) {
+  try {
+    localStorage.setItem(LAST_PLAYER_KEY, `${uid}:${playerId}`);
+  } catch {
+    /* storage unavailable (private mode) — hint is best-effort */
+  }
+}
+
+/** Resolve the player from the stored hint; verifies the doc still maps to `uid`. */
+async function resolvePlayerFromHint(uid: string): Promise<PlayerDoc | null> {
+  try {
+    const raw = localStorage.getItem(LAST_PLAYER_KEY);
+    if (!raw) return null;
+    const sep = raw.indexOf(":");
+    const hintUid = raw.slice(0, sep);
+    const playerId = raw.slice(sep + 1);
+    if (hintUid !== uid || !playerId) return null;
+    const snap = await getDocCacheFirst(doc(db, "players", playerId));
+    if (!snap.exists()) return null;
+    const p = { id: snap.id, ...snap.data() } as PlayerDoc;
+    return p.authUid === uid ? p : null;
+  } catch {
+    return null;
+  }
+}
 
 type AuthContextType = {
   // Current Firebase Auth user
@@ -44,23 +78,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        // User is logged in - find their player doc by authUid
+        const uid = firebaseUser.uid;
+        const applyPlayer = (p: PlayerDoc) => {
+          setPlayer(p);
+          savePlayerHint(uid, p.id);
+        };
+
+        // Find the player doc by authUid — cache-first so a returning user
+        // resolves instantly (and offline) from IndexedDB. The mapping can
+        // change (admin relinks), so a cache hit still revalidates quietly.
         try {
-          const playersRef = collection(db, "players");
-          const q = query(playersRef, where("authUid", "==", firebaseUser.uid));
-          const snap = await getDocs(q);
-          
+          const q = query(collection(db, "players"), where("authUid", "==", uid));
+          const snap = await getDocsCacheFirst(q, (fresh) => {
+            if (!fresh.empty) {
+              const d = fresh.docs[0];
+              applyPlayer({ id: d.id, ...d.data() } as PlayerDoc);
+            }
+          });
+
           if (!snap.empty) {
             const playerDoc = snap.docs[0];
-            setPlayer({ id: playerDoc.id, ...playerDoc.data() } as PlayerDoc);
+            applyPlayer({ id: playerDoc.id, ...playerDoc.data() } as PlayerDoc);
           } else {
-            // Auth user exists but no linked player doc
-            console.warn("No player doc found for auth user:", firebaseUser.uid);
-            setPlayer(null);
+            // Empty can also mean "offline with a cold query cache" — try the
+            // last-known player id before concluding there's no linked doc.
+            const hinted = await resolvePlayerFromHint(uid);
+            if (hinted) {
+              setPlayer(hinted);
+            } else {
+              // Auth user exists but no linked player doc
+              console.warn("No player doc found for auth user:", uid);
+              setPlayer(null);
+            }
           }
         } catch (e) {
-          console.error("Error fetching player doc:", e);
-          setPlayer(null);
+          // Query failed outright (typically offline). Fall back to the hint so
+          // scoring stays enabled for a returning player with a warmed cache.
+          const hinted = await resolvePlayerFromHint(uid);
+          if (hinted) {
+            setPlayer(hinted);
+          } else {
+            console.error("Error fetching player doc:", e);
+            setPlayer(null);
+          }
         }
       } else {
         setPlayer(null);

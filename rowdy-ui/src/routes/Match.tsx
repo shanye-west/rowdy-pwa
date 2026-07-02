@@ -15,6 +15,7 @@ import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlay
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { MatchPageSkeleton } from "../components/Skeleton";
+import { LoadingEscalation } from "../components/LoadingScreen";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { SyncStatusBadge } from "../components/SyncStatusBadge";
 import { OfflineReadyCheck } from "../components/OfflineReadyCheck";
@@ -218,6 +219,14 @@ export default function Match() {
   const rosterPlayerIds = useMemo(
     () => Array.from(new Set([...teamAPlayerIds, ...teamBPlayerIds])),
     [teamAPlayerIds, teamBPlayerIds]
+  );
+  // Logos to pull through the SW image cache during the offline-readiness check.
+  const offlineImageUrls = useMemo(
+    () =>
+      [tournament?.tournamentLogo, tournament?.teamA?.logo, tournament?.teamB?.logo].filter(
+        (u): u is string => !!u
+      ),
+    [tournament?.tournamentLogo, tournament?.teamA?.logo, tournament?.teamB?.logo]
   );
 
   // Check if current user can edit this match. Also allow editing when
@@ -795,15 +804,21 @@ export default function Match() {
   if (loading) return (
     <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <MatchPageSkeleton />
+      {/* A wedged/cold-offline load shouldn't strand players on the skeleton —
+          surface the same Reload/Reset escape hatch other routes get. */}
+      <LoadingEscalation />
     </Layout>
   );
-  
+
   if (error) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">⚠️</div>
-      <div className="empty-state-text">Error loading match</div>
-      <div className="text-sm text-gray-500 mt-2">{error}</div>
-    </div>
+    <Layout title="Match Scoring" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <div className="empty-state">
+        <div className="empty-state-icon">⚠️</div>
+        <div className="empty-state-text">Error loading match</div>
+        <div className="text-sm text-gray-500 mt-2">{error}</div>
+        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+      </div>
+    </Layout>
   );
   
   if (!match) {
@@ -1205,7 +1220,9 @@ export default function Match() {
           matchId={match.id}
           roundId={round?.id}
           courseId={course?.id}
+          tournamentId={tournament?.id}
           playerIds={rosterPlayerIds}
+          imageUrls={offlineImageUrls}
         />
       </div>
     </Layout>

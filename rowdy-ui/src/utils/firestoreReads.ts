@@ -15,6 +15,7 @@ import {
   getDocFromServer,
   getDocs,
   getDocsFromCache,
+  getDocsFromServer,
   type DocumentData,
   type DocumentReference,
   type DocumentSnapshot,
@@ -52,13 +53,23 @@ export async function getDocCacheFirst<T = DocumentData>(
  * Run a query cache-first. Returns cached results when the cache holds any
  * matches; otherwise falls back to a normal read. Use for static result sets
  * (locked-round matches, closed-match facts) where freshness isn't critical.
+ *
+ * As with `getDocCacheFirst`, pass `onFresh` only when the results can change
+ * while on screen — it triggers a background server read after the cached
+ * results are returned (stale-while-revalidate).
  */
 export async function getDocsCacheFirst<T = DocumentData>(
   q: Query<T>,
+  onFresh?: (snap: QuerySnapshot<T>) => void,
 ): Promise<QuerySnapshot<T>> {
   try {
     const cached = await getDocsFromCache(q);
-    if (!cached.empty) return cached;
+    if (!cached.empty) {
+      if (onFresh) {
+        getDocsFromServer(q).then(onFresh).catch(() => {});
+      }
+      return cached;
+    }
   } catch {
     /* cache miss / persistence unavailable — fall through to a normal read */
   }

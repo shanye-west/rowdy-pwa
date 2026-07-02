@@ -7,7 +7,8 @@ import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import ChampionBanner from "./components/ChampionBanner";
 import OfflineImage from "./components/OfflineImage";
-import LoadingScreen from "./components/LoadingScreen";
+import { LoadingEscalation } from "./components/LoadingScreen";
+import { HomePageSkeleton } from "./components/Skeleton";
 import { ViewTransitionLink } from "./components/ViewTransitionLink";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
@@ -35,7 +36,14 @@ export default function App() {
   
   const loading = tournamentLoading || dataLoading;
 
-  if (loading) return <LoadingScreen />;
+  // Skeleton of the score hero + schedule instead of a bare spinner — first
+  // paint reads as the page taking shape, and content swaps in without a jump.
+  if (loading) return (
+    <Layout title="Rowdy Cup" series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <HomePageSkeleton />
+      <LoadingEscalation />
+    </Layout>
+  );
 
   const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"

@@ -50,8 +50,8 @@ export interface BetSheetProps {
   meId?: string;
   rosterOptions: { id: string; name: string }[];
   bettorName: (pid?: string) => string;
-  /** Take an existing open offer. */
-  onTake: (b: BetDoc) => void;
+  /** Take an existing open offer. Return the action promise so Take buttons can lock while in flight. */
+  onTake: (b: BetDoc) => void | Promise<unknown>;
 }
 
 export default function BetSheet({
@@ -84,6 +84,18 @@ export default function BetSheet({
   const [targetId, setTargetId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  // Bet id whose Take is in flight — locks every Take button so a double-tap
+  // (or tapping two offers) can't fire the accept callable twice.
+  const [takingId, setTakingId] = useState<string | null>(null);
+  const takeOffer = async (b: BetDoc) => {
+    if (takingId) return;
+    setTakingId(b.id);
+    try {
+      await onTake(b);
+    } finally {
+      setTakingId(null);
+    }
+  };
 
   const sortedRoster = useMemo(
     () => [...rosterOptions].sort((a, b) => a.name.localeCompare(b.name)),
@@ -404,11 +416,11 @@ export default function BetSheet({
                           {loggedIn ? (
                             <button
                               type="button"
-                              disabled={meId === b.proposerId}
-                              onClick={() => onTake(b)}
+                              disabled={meId === b.proposerId || takingId !== null}
+                              onClick={() => void takeOffer(b)}
                               className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white active:scale-95 disabled:bg-muted disabled:text-muted-foreground"
                             >
-                              {meId === b.proposerId ? "Yours" : "Take"}
+                              {meId === b.proposerId ? "Yours" : takingId === b.id ? "Taking…" : "Take"}
                             </button>
                           ) : (
                             <Link to="/login" className="text-xs font-semibold text-blue-600">
@@ -433,8 +445,9 @@ export default function BetSheet({
                       proposerName={bettorName(b.proposerId)}
                       amount={b.amount}
                       mine={meId === b.proposerId}
+                      busy={takingId !== null}
                       loggedIn={loggedIn}
-                      onTake={() => onTake(b)}
+                      onTake={() => void takeOffer(b)}
                     />
                   ))}
                 </ul>

@@ -175,34 +175,36 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
     if (rosterKey) ensurePlayers(rosterKey.split(","));
   }, [rosterKey, ensurePlayers]);
 
-  // Utility to add courses to shared cache
-  const addCourse = (course: CourseDoc) => {
+  // Cache helpers are useCallback-stable so the context value only changes when
+  // actual data does — otherwise every consumer re-renders each time a roster
+  // batch resolves or the provider re-renders for any reason.
+  const addCourse = useCallback((course: CourseDoc) => {
     if (course.id) {
       setCourses(prev => {
         if (prev[course.id]) return prev; // Already cached
         return { ...prev, [course.id]: course };
       });
     }
-  };
+  }, []);
 
   // Get tournament by ID from cache (for components that need a non-active tournament)
-  const getTournamentById = (id: string): TournamentDoc | null => {
+  const getTournamentById = useCallback((id: string): TournamentDoc | null => {
     return tournamentsById[id] || null;
-  };
+  }, [tournamentsById]);
 
   // Add tournament to cache (for components that fetch historical tournaments)
-  const addTournament = (tournament: TournamentDoc) => {
+  const addTournament = useCallback((tournament: TournamentDoc) => {
     if (tournament.id) {
       setTournamentsById(prev => {
         if (prev[tournament.id]) return prev; // Already cached
         return { ...prev, [tournament.id]: tournament };
       });
     }
-  };
+  }, []);
 
   const value = useMemo(
     () => ({ tournament, loading, error, courses, addCourse, getTournamentById, addTournament, players, resolvedPlayerIds, ensurePlayers }),
-    [tournament, loading, error, courses, tournamentsById, players, resolvedPlayerIds, ensurePlayers]
+    [tournament, loading, error, courses, addCourse, getTournamentById, addTournament, players, resolvedPlayerIds, ensurePlayers]
   );
 
   return (

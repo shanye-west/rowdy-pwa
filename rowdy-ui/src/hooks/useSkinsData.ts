@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { onSnapshot, doc, getDoc } from "firebase/firestore";
+import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
+import { getDocCacheFirst } from "../utils/firestoreReads";
 import type { 
   RoundDoc, 
   TournamentDoc, 
@@ -54,20 +55,28 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
       setRoundLoaded(true);
       return;
     }
-    
+
     if (!roundId) {
       setRoundLoaded(true);
       return;
     }
-    
+
     setRoundLoaded(false);
 
-    const unsub = onSnapshot(
+    // Self-detaching: a locked round is static, so drop the realtime listener
+    // once the server confirms it's locked (not on a cache-only snapshot, which
+    // could pin a round that was since unlocked). Same pattern as useMatchData.
+    let unsub: (() => void) | undefined = onSnapshot(
       doc(db, "rounds", roundId),
       (snap) => {
         if (snap.exists()) {
-          setLocalRound({ id: snap.id, ...snap.data() } as RoundDoc);
+          const rData = { id: snap.id, ...snap.data() } as RoundDoc;
+          setLocalRound(rData);
           setRoundLoaded(true);
+          if (rData.locked === true && !snap.metadata.fromCache) {
+            unsub?.();
+            unsub = undefined;
+          }
         } else {
           setLocalRound(null);
           setError("Round not found");
@@ -81,7 +90,7 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
       }
     );
 
-    return () => unsub();
+    return () => unsub?.();
   }, [roundId, prefetchedRound]);
 
   // Get tournament from context cache or fetch once
@@ -110,12 +119,13 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
       return;
     }
 
-    // Not in cache - fetch it and add to cache
+    // Not in cache - fetch it (cache-first: tournaments referenced here are
+    // effectively static, so IndexedDB usually answers without a billed read)
     setTournamentLoaded(false);
     let cancelled = false;
     async function fetchTournament() {
       try {
-        const snap = await getDoc(doc(db, "tournaments", tournamentId));
+        const snap = await getDocCacheFirst(doc(db, "tournaments", tournamentId));
         if (cancelled) return;
         if (snap.exists()) {
           const tournament = ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc);
@@ -136,14 +146,51 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
     return () => { cancelled = true; };
   }, [round?.tournamentId, tournamentContext?.tournament, roundLoaded]);
 
-  // Subscribe to pre-computed skins results
+  // Check if skins are enabled and format is valid. Computed before the results
+  // effect below so the subscription can be skipped entirely for non-skins rounds.
+  const skinsEnabled = useMemo(() => {
+    const hasGross = (round?.skinsGrossPot ?? 0) > 0;
+    const hasNet = (round?.skinsNetPot ?? 0) > 0;
+    const validFormat = round?.format === "singles" || round?.format === "twoManBestBall";
+    return validFormat && (hasGross || hasNet);
+  }, [round]);
+  const roundLocked = round?.locked === true;
+
+  // Read the pre-computed skins results — but only for rounds that actually
+  // have skins (this hook mounts on every match view). Locked rounds get a
+  // one-shot cache-first read (results are final); live rounds subscribe.
   useEffect(() => {
     if (!roundId) {
+      setSkinsResult(null);
       setSkinsLoaded(true);
       return;
     }
-    
+    if (!roundLoaded) return; // need the round to know whether skins exist
+
+    if (!skinsEnabled) {
+      setSkinsResult(null);
+      setSkinsLoaded(true);
+      return;
+    }
+
     setSkinsLoaded(false);
+
+    if (roundLocked) {
+      let cancelled = false;
+      getDocCacheFirst(doc(db, "rounds", roundId, "skinsResults", "computed"))
+        .then((snap) => {
+          if (cancelled) return;
+          setSkinsResult(snap.exists() ? (snap.data() as SkinsResultDoc) : null);
+          setSkinsLoaded(true);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          console.error("Error loading skins results:", err);
+          setSkinsResult(null);
+          setSkinsLoaded(true);
+        });
+      return () => { cancelled = true; };
+    }
 
     const unsub = onSnapshot(
       doc(db, "rounds", roundId, "skinsResults", "computed"),
@@ -164,7 +211,7 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
     );
 
     return () => unsub();
-  }, [roundId]);
+  }, [roundId, roundLoaded, skinsEnabled, roundLocked]);
 
   // Coordinate all loading states
   useEffect(() => {
@@ -176,14 +223,6 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
   const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
     ? tournamentContext.tournament 
     : localTournament;
-
-  // Check if skins are enabled and format is valid
-  const skinsEnabled = useMemo(() => {
-    const hasGross = (round?.skinsGrossPot ?? 0) > 0;
-    const hasNet = (round?.skinsNetPot ?? 0) > 0;
-    const validFormat = round?.format === "singles" || round?.format === "twoManBestBall";
-    return validFormat && (hasGross || hasNet);
-  }, [round]);
 
   // Get hole-by-hole skins data from pre-computed results
   const holeSkinsData = useMemo((): HoleSkinData[] => {
