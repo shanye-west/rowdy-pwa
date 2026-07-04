@@ -15,6 +15,7 @@ import {
   Download,
   Settings,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import LoadingScreen from "./LoadingScreen";
@@ -265,6 +266,20 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         <History className="h-4 w-4 text-muted-foreground" />
                         History
                       </ViewTransitionLink>
+                    </Button>
+
+                    {/* MVP: links out to the shared NotebookLM. Replace with an in-app
+                        /rules-official route when the Sonnet-backed Rules Official ships. */}
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
+                      <a
+                        href="https://notebooklm.google.com/notebook/630e0ae9-191c-44e8-b7e2-8af132884afa"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={closeMenu}
+                      >
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        Rules Official
+                      </a>
                     </Button>
 
                     {showInstall && (
