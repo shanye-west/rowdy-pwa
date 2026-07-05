@@ -152,7 +152,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const hideBottomNav =
     location.pathname.startsWith("/admin") || location.pathname === "/login";
   const closeMenu = () => setMenuOpen(false);
-  
+
   // Simple page content - CSS View Transitions handle the animation
   const pageContent = children ?? <Outlet />;
 
@@ -179,16 +179,16 @@ export function LayoutShell({ children }: LayoutShellProps) {
             </Button>
           )}
           <ViewTransitionLink to="/" aria-label="Home" className="flex items-center">
-            <OfflineImage 
-              src={tournamentLogo} 
+            <OfflineImage
+              src={tournamentLogo}
               alt="Tournament Logo"
               fallbackIcon="⛳"
               fallbackSrc={
-                series === "christmasClassic" 
-                  ? "/images/rowdycup-logo-christmas.svg" 
+                series === "christmasClassic"
+                  ? "/images/rowdycup-logo-christmas.svg"
                   : "/images/rowdycup-logo.svg"
               }
-              style={{ height: 40, width: 40, objectFit: "contain" }} 
+              style={{ height: 40, width: 40, objectFit: "contain" }}
             />
           </ViewTransitionLink>
         </div>
@@ -209,23 +209,23 @@ export function LayoutShell({ children }: LayoutShellProps) {
         <div className="flex items-center justify-end gap-0.5">
           <NotificationBell />
           <div className="relative" ref={menuRef}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-white/90 hover:bg-white/10 hover:text-white"
-            aria-label="Menu"
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-
-          {menuOpen && (
-            <div
-              className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right animate-menu-open"
-              onClick={(e) => e.stopPropagation()}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="text-white/90 hover:bg-white/10 hover:text-white"
+              aria-label="Menu"
             >
-              <Card className="border border-border/60 bg-card/95 shadow-2xl backdrop-blur">
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right animate-menu-open"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Card className="border border-border/60 bg-card/95 shadow-2xl backdrop-blur">
                   {!authLoading && player && (
                     <div className="px-4 py-3">
                       <div className="text-sm font-semibold text-foreground">
@@ -272,7 +272,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         /rules-official route when the Sonnet-backed Rules Official ships. */}
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                       <a
-                        href="https://gemini.google.com/gem/1tj2X1q__WRIhjnKolHyM1wA0BdBRvlT6?usp=sharing"
+                        href="https://notebooklm.google.com/notebook/630e0ae9-191c-44e8-b7e2-8af132884afa"
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={closeMenu}
@@ -369,7 +369,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
         onRefresh={async () => {
           try {
             const regs = await navigator.serviceWorker?.getRegistrations?.();
-            await Promise.all((regs ?? []).map((r) => r.update().catch(() => {})));
+            await Promise.all((regs ?? []).map((r) => r.update().catch(() => { })));
           } catch {
             /* no SW (dev/unsupported browser) — the gesture still resolves */
           }
