@@ -32,10 +32,15 @@ function vibrate(pattern: number | number[]) {
  *
  * @param saveFn - The actual save function to call after debounce. Must reject on failure.
  * @param delay - Debounce delay in milliseconds (default 400ms)
+ * @param merge - Optional combiner for repeated saves to the same key while a
+ *   save is still pending/in-flight. When provided, a new save for a key merges
+ *   with the outstanding data instead of replacing it, so partial edits to
+ *   different fields of the same key accumulate rather than dropping earlier ones.
  */
 export function useDebouncedSave<T>(
   saveFn: (key: string, data: T) => void | Promise<void>,
-  delay: number = 400
+  delay: number = 400,
+  merge?: (prev: T, next: T) => T
 ) {
   // Map of key -> timeout ID for per-key debouncing
   const timersRef = useRef<Map<string, TimeoutId>>(new Map());
@@ -85,6 +90,17 @@ export function useDebouncedSave<T>(
     });
   }, []);
 
+  // Re-arm a key's pending data after a failed save, merge-aware: if newer
+  // edits arrived while the save was in flight, the newer edits win per-field.
+  const rearm = useCallback((key: string, failed: T) => {
+    const newer = pendingRef.current.get(key);
+    if (newer === undefined) {
+      pendingRef.current.set(key, failed);
+    } else {
+      pendingRef.current.set(key, merge ? merge(failed, newer) : newer);
+    }
+  }, [merge]);
+
   // Update aggregate status with auto-reset to idle after a terminal state.
   const updateStatus = useCallback((status: SaveStatus) => {
     if (!mountedRef.current) return;
@@ -126,9 +142,19 @@ export function useDebouncedSave<T>(
         // "Saving…". Firestore syncs it automatically when connectivity returns.
         updateStatus("queued");
         vibrate(10);
-        // A queued write can still reject later (e.g. rules); the SDK rolls the
-        // local write back. Swallow so it isn't an unhandled rejection.
-        savePromise.catch(() => {});
+        // A queued write can still reject once connectivity returns (e.g. an admin
+        // locked the match, or authorization changed) — the SDK then rolls the
+        // local write back. Surface it as an error so the user isn't left believing
+        // a rejected score was saved. (If the app is closed before reconnect, the
+        // SDK replays the mutation on next launch with no in-app handler — an
+        // accepted residual we can't catch client-side.)
+        savePromise.catch(() => {
+          if (!mountedRef.current) return;
+          rearm(key, data);
+          markErrored(key, true);
+          updateStatus("error");
+          vibrate([40, 30, 40]);
+        });
         return;
       }
 
@@ -154,18 +180,19 @@ export function useDebouncedSave<T>(
         clearTimeout(queuedTimer);
         if (!mountedRef.current) return;
         // Genuine failure (e.g. permission): re-arm pending so the user can retry.
-        pendingRef.current.set(key, data);
+        rearm(key, data);
         markErrored(key, true);
         updateStatus("error");
         vibrate([40, 30, 40]);
       }
     },
-    [saveFn, updateStatus, markErrored]
+    [saveFn, updateStatus, markErrored, rearm]
   );
 
   const debouncedSave = useCallback(
     (key: string, data: T) => {
-      pendingRef.current.set(key, data);
+      const prev = pendingRef.current.get(key);
+      pendingRef.current.set(key, prev !== undefined && merge ? merge(prev, data) : data);
       markErrored(key, false); // re-editing clears a prior error for this key
       updateStatus("pending");
 
@@ -178,7 +205,7 @@ export function useDebouncedSave<T>(
       }, delay);
       timersRef.current.set(key, timer);
     },
-    [attempt, delay, markErrored, updateStatus]
+    [attempt, delay, markErrored, updateStatus, merge]
   );
 
   // Manually retry a failed (or still-pending) key immediately.

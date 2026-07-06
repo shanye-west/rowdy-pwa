@@ -115,16 +115,23 @@ registerSW({
   immediate: true,
   onRegisteredSW(_swUrl, registration) {
     if (registration) {
-      setInterval(() => {
+      // Don't pull a new version (which, in autoUpdate mode, reloads the page)
+      // while the user is actively on a match scorecard — a reload mid-entry
+      // risks losing an in-flight keystroke. The update is picked up as soon as
+      // they leave the scorecard; stale-chunk recovery covers that navigation.
+      const onScorecard = () => location.pathname.startsWith("/match/");
+      const maybeUpdate = () => {
+        if (onScorecard()) return;
         registration.update().catch(() => {});
-      }, 60_000);
+      };
+      setInterval(maybeUpdate, 60_000);
       // iOS home-screen PWAs spend most of their life backgrounded; check for a
       // new version the moment the app is brought back to the foreground, so a
       // deploy is picked up on resume instead of waiting out the 60s poll (which
       // shrinks the window where a navigation can hit a now-stale chunk).
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
-          registration.update().catch(() => {});
+          maybeUpdate();
         }
       });
     }

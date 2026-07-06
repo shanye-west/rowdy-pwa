@@ -32,6 +32,7 @@ import { InstallGuideModal } from "./InstallGuideModal";
 import { isIOS, isStandalone } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
+import { useSyncFlush } from "../hooks/useSyncFlush";
 import { useLayout } from "../contexts/LayoutContext";
 import { useViewTransitionDirection, startViewTransitionSafe } from "../hooks/useViewTransition";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
@@ -67,7 +68,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
     ? Object.keys(tournamentCtx.tournament.draftPool).length
     : 0;
   const showDraftPool = draftPoolCount > 0 && !tournamentCtx?.tournament?.hideDraftPool;
-  const { isOnline, wasOffline } = useOnlineStatusWithHistory();
+  const { isOnline } = useOnlineStatusWithHistory();
+  // Global write-queue drain state, surfaced as a reconnect banner below.
+  const flushState = useSyncFlush(isOnline);
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
   const location = useLocation();
@@ -378,11 +381,19 @@ export function LayoutShell({ children }: LayoutShellProps) {
         {/* Offline Status Banner — app-wide so every route signals offline state */}
         <ConnectionBanner isOnline={isOnline} />
 
-        {/* Back Online Banner (auto-dismisses after 3s) */}
-        {wasOffline && isOnline && (
+        {/* Reconnect banner — reflects the real Firestore write-queue drain:
+            "syncing" until every queued offline write is acknowledged by the
+            server, then a brief "all synced" confirmation. */}
+        {isOnline && flushState === "syncing" && (
           <div className="flex items-center justify-center gap-2 bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm">
             <Wifi className="h-4 w-4" />
-            <span>Back online — syncing changes</span>
+            <span>Back online — syncing changes…</span>
+          </div>
+        )}
+        {isOnline && flushState === "synced" && (
+          <div className="flex items-center justify-center gap-2 bg-emerald-600/90 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+            <Wifi className="h-4 w-4" />
+            <span>All changes synced ✓</span>
           </div>
         )}
 

@@ -14,13 +14,26 @@
  * plain, pre-bundled scripts — keep the version in sync with `firebase` in
  * package.json (12.6.0).
  */
-importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js");
+// Import the Firebase compat SDK. These are cross-origin fetches; if they fail
+// (e.g. gstatic unreachable at SW install/update time), we must NOT let the
+// throw escape — this script is importScripts'd into the Workbox offline-caching
+// SW, so an uncaught error here would abort the whole SW and take offline
+// caching (the precached app shell) down with it. On failure, `firebase` stays
+// undefined and the guarded block below is skipped; push is simply disabled for
+// this session while offline caching keeps working.
+try {
+  importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js");
+  importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js");
+} catch (err) {
+  console.warn("[fcm-sw] failed to load Firebase SDK — push disabled this session:", err);
+}
 
 // Guard the whole FCM setup: firebase.messaging() throws
-// "messaging/unsupported-browser" where push isn't available, and this script
-// also runs as the offline-caching SW — a throw here would break caching too.
+// "messaging/unsupported-browser" where push isn't available, `firebase` may be
+// undefined if the imports above failed, and this script also runs as the
+// offline-caching SW — a throw here would break caching too.
 try {
+  if (typeof firebase === "undefined") throw new Error("Firebase SDK unavailable");
   firebase.initializeApp({
     apiKey: "AIzaSyAt561vHNjQZKEAbQbLYTbg15EfODb3o4k",
     authDomain: "rowdy-pwa.firebaseapp.com",

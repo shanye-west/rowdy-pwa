@@ -94,11 +94,24 @@ service cloud.firestore {
         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['holes']);
       }
 
+      // Shape guard: `holes` must stay a map, and a write may never DROP an
+      // existing hole key. affectedKeys() can't tell a surgical `holes.5.input`
+      // update from a full-map replacement, so without this a single client
+      // could overwrite `holes` with `{ "5": {...} }` and wipe every other
+      // hole's already-entered scores. Per-hole score VALUE validation is left
+      // to the server (isValidGross in computeMatchOnWrite) — the nested,
+      // format-specific shapes are impractical to validate in rules.
+      function holesShapeValid() {
+        return request.resource.data.holes is map
+          && request.resource.data.holes.keys().hasAll(resource.data.get('holes', {}).keys());
+      }
+
       allow read: if true;
       // `locked != true` enforces the admin per-match lock (set via the
       // setMatchLock callable); undefined/false on existing docs passes.
       allow update: if (isAuthorizedPlayer() || isTournamentOpen())
         && onlyHolesChanged()
+        && holesShapeValid()
         && resource.data.get('locked', false) != true;
       allow create, delete: if false;
     }

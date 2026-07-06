@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Modal } from "../Modal";
 import TeamName from "../TeamName";
 import type { TournamentDoc, MatchDoc } from "../../types";
@@ -28,7 +29,19 @@ export function DrivePickerModal({
   teamBColor,
   getPlayerName,
 }: DrivePickerModalProps) {
+  // Guard against a double-tap selecting twice before the modal dismisses.
+  const busyRef = useRef(false);
+  useEffect(() => {
+    if (isOpen) busyRef.current = false;
+  }, [isOpen]);
+
   if (!isOpen || !hole || !team) return null;
+
+  const handleSelect = (playerIdx: 0 | 1 | 2 | 3 | null) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    onSelect(playerIdx);
+  };
 
   const teamPlayers = team === "A" ? match.teamAPlayers : match.teamBPlayers;
   const numPlayers = teamPlayers?.length || 2;
@@ -56,7 +69,7 @@ export function DrivePickerModal({
             <button
               key={i}
               type="button"
-              onClick={() => onSelect(i as 0 | 1 | 2 | 3)}
+              onClick={() => handleSelect(i as 0 | 1 | 2 | 3)}
               aria-label={`Select ${getPlayerName(playerId)}'s drive`}
               className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95"
               style={{ backgroundColor: color }}
@@ -68,7 +81,7 @@ export function DrivePickerModal({
         {/* Clear button */}
         <button
           type="button"
-          onClick={() => onSelect(null)}
+          onClick={() => handleSelect(null)}
           aria-label="Clear drive selection"
           className="w-full py-3 px-4 rounded-lg bg-muted text-muted-foreground font-semibold text-base transition-transform active:scale-95 hover:bg-muted"
         >

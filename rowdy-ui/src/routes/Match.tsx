@@ -5,6 +5,14 @@ import { WifiOff } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundFormat, HoleInputLoose } from "../types";
+import {
+  type HoleEdits,
+  mergeHoleEdits,
+  cellScoreEdit,
+  driveEdit,
+  buildHoleUpdate,
+} from "../utils/holeEdits";
+import { warmMatchForOffline } from "../utils/offlineWarm";
 import { 
   SCORECARD_CELL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
@@ -132,7 +140,7 @@ export default function Match() {
   // CONFIRM CLOSE: Modal state for confirming match close
   const [confirmCloseModal, setConfirmCloseModal] = useState<{
     holeKey: string;
-    pendingInput: HoleInputLoose;
+    pendingEdits: HoleEdits;
     winner: "teamA" | "teamB" | "AS" | null;
     margin: number;
     thru: number;
@@ -242,6 +250,46 @@ export default function Match() {
     return null;
   }, [player, canEdit, tournament?.openPublicEdits]);
 
+  // Silently warm Firestore's persistent cache the first time a scorer opens
+  // this match while online — so if they lose signal on the course, the
+  // scorecard, roster and course still load. Once per match per session, run at
+  // idle so it never competes with rendering. The manual "Prepare for offline"
+  // button remains for an explicit, visible warm.
+  const warmedMatchRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!match?.id || !canEdit || isMatchClosed || !isOnline) return;
+    if (warmedMatchRef.current === match.id) return;
+    const sessionKey = `rowdycup:warmed:${match.id}`;
+    try {
+      if (sessionStorage.getItem(sessionKey)) return;
+    } catch { /* sessionStorage unavailable (private mode) — warm anyway */ }
+    warmedMatchRef.current = match.id;
+    const matchId = match.id;
+    const args = {
+      matchId,
+      roundId: round?.id,
+      courseId: course?.id,
+      tournamentId: tournament?.id,
+      playerIds: rosterPlayerIds,
+      imageUrls: offlineImageUrls,
+    };
+    const kick = () => {
+      warmMatchForOffline(args)
+        .then(() => { try { sessionStorage.setItem(sessionKey, "1"); } catch { /* ignore */ } })
+        .catch(() => { warmedMatchRef.current = null; }); // allow a later retry
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (h: number) => void;
+    };
+    const useIdle = typeof w.requestIdleCallback === "function";
+    const id = useIdle ? w.requestIdleCallback!(kick) : window.setTimeout(kick, 1200);
+    return () => {
+      if (useIdle && typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+  }, [match?.id, canEdit, isMatchClosed, isOnline, round?.id, course?.id, tournament?.id, rosterPlayerIds, offlineImageUrls]);
+
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo((): HoleData[] => {
     const hMatch = match?.holes || {};
@@ -254,6 +302,17 @@ export default function Match() {
       return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex, yards: info?.yards };
     });
   }, [match, round, course]);
+
+  // Latest hole inputs, kept in a ref so saveHole can compose per-team score
+  // arrays against the freshest snapshot at flush time (not at tap time). This
+  // is what lets a debounced write preserve a teammate's score instead of
+  // overwriting it from a stale local copy.
+  const latestInputRef = useRef<Record<string, HoleInputLoose>>({});
+  useEffect(() => {
+    const map: Record<string, HoleInputLoose> = {};
+    for (const h of holes) map[h.k] = h.input;
+    latestInputRef.current = map;
+  }, [holes]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -364,30 +423,36 @@ export default function Match() {
 
   const { showToast } = useToast();
 
-  // Immediate, throwing save primitive. Rejects on real failures so the debounce
-  // hook (and saveHoleNow) can surface them instead of silently dropping writes.
-  const saveHole = useCallback(async (k: string, nextInput: HoleInputLoose) => {
+  // Immediate, throwing save primitive. Writes only the changed leaf field paths
+  // (composed from the latest snapshot for per-team score arrays) so concurrent
+  // scorers on the same hole don't clobber each other. Rejects on real failures
+  // so the debounce hook (and saveHoleNow) can surface them.
+  const saveHole = useCallback(async (k: string, edits: HoleEdits) => {
     if (!match?.id || roundLocked || !canEdit) return;
-    await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
+    const update = buildHoleUpdate(k, edits, latestInputRef.current[k]);
+    if (Object.keys(update).length === 0) return;
+    await updateDoc(doc(db, "matches", match.id), update);
   }, [match?.id, roundLocked, canEdit]);
 
   // Immediate save with a user-facing error toast + retry (drive picks, match close).
-  const saveHoleNow = useCallback(async (k: string, nextInput: HoleInputLoose) => {
+  const saveHoleNow = useCallback(async (k: string, edits: HoleEdits) => {
     try {
-      await saveHole(k, nextInput);
+      await saveHole(k, edits);
     } catch {
       showToast({
         variant: "error",
         message: `Couldn't save hole ${k}. Check your connection.`,
-        action: { label: "Retry", onClick: () => { void saveHole(k, nextInput).catch(() => {}); } },
+        action: { label: "Retry", onClick: () => { void saveHole(k, edits).catch(() => {}); } },
       });
     }
   }, [saveHole, showToast]);
 
   // Debounced save for score inputs - prevents Firestore writes on every keystroke
-  // Uses 400ms delay so typing "45" only fires one save with "45", not two saves
+  // Uses 400ms delay so typing "45" only fires one save with "45", not two saves.
+  // mergeHoleEdits accumulates edits to different cells of the same hole within
+  // the debounce window so none are dropped.
   const { debouncedSave: debouncedSaveHole, saveStatus, flushAll, erroredKeys, retry: retrySaveHole } =
-    useDebouncedSave(saveHole, 400);
+    useDebouncedSave<HoleEdits>(saveHole, 400, mergeHoleEdits);
 
   // Surface a retry toast the first time each hole's debounced save fails.
   const prevErroredRef = useRef<Set<string>>(new Set());
@@ -417,32 +482,10 @@ export default function Match() {
 
   // DRIVE_TRACKING: Update drive selection for a hole (playerIdx can be null to clear)
   const updateDrive = useCallback((hole: typeof holes[0], team: "A" | "B", playerIdx: 0 | 1 | 2 | 3 | null) => {
-    const { k, input } = hole;
-    
-    if (format === "twoManScramble") {
-      const newInput = {
-        teamAGross: input?.teamAGross ?? null,
-        teamBGross: input?.teamBGross ?? null,
-        teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
-        teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
-      };
-      void saveHoleNow(k, newInput);
-    } else if (format === "fourManScramble") {
-      const newInput = {
-        teamAGross: input?.teamAGross ?? null,
-        teamBGross: input?.teamBGross ?? null,
-        teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
-        teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
-      };
-      void saveHoleNow(k, newInput);
-    } else if (format === "twoManShamble") {
-      const newInput = {
-        teamAPlayersGross: input?.teamAPlayersGross ?? [null, null],
-        teamBPlayersGross: input?.teamBPlayersGross ?? [null, null],
-        teamADrive: team === "A" ? playerIdx : (input?.teamADrive ?? null),
-        teamBDrive: team === "B" ? playerIdx : (input?.teamBDrive ?? null),
-      };
-      void saveHoleNow(k, newInput);
+    if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
+      // Write only the drive field path — never re-send the scores, so a drive
+      // pick can't clobber a score entered on another device for this hole.
+      void saveHoleNow(hole.k, driveEdit(team, playerIdx));
     }
   }, [format, saveHoleNow]);
 
@@ -679,10 +722,13 @@ export default function Match() {
       const hole = holes.find(h => h.k === holeKey);
       if (!hole) return;
       
-      const newInput = buildNewInput(hole, team, pIdx, value);
-      
+      const edits = cellScoreEdit(format, team, pIdx, value);
+
       // Check if this score change would close the match (and match isn't already closed)
       if (!isMatchClosed) {
+        // buildNewInput produces the full prospective input for the close
+        // prediction / confirm tile; the actual write uses the sparse `edits`.
+        const newInput = buildNewInput(hole, team, pIdx, value);
         const closeCheck = wouldCloseMatch(
           holes,
           holeKey,
@@ -691,12 +737,12 @@ export default function Match() {
           match?.teamAPlayers,
           match?.teamBPlayers
         );
-        
+
         if (closeCheck.wouldClose) {
           // Show confirmation modal instead of saving
           setConfirmCloseModal({
             holeKey,
-            pendingInput: newInput,
+            pendingEdits: edits,
             winner: closeCheck.winner,
             margin: closeCheck.margin,
             thru: closeCheck.thru,
@@ -704,9 +750,9 @@ export default function Match() {
           return;
         }
       }
-      
+
       // Not closing match, save normally with debounce
-      debouncedSaveHole(holeKey, newInput);
+      debouncedSaveHole(holeKey, edits);
     };
   }, [holes, format, debouncedSaveHole, isMatchClosed, match?.teamAPlayers, match?.teamBPlayers, buildNewInput]);
 
@@ -715,7 +761,7 @@ export default function Match() {
     if (!confirmCloseModal) return;
     
     // Save immediately (no debounce) since user confirmed
-    await saveHoleNow(confirmCloseModal.holeKey, confirmCloseModal.pendingInput);
+    await saveHoleNow(confirmCloseModal.holeKey, confirmCloseModal.pendingEdits);
     setConfirmCloseModal(null);
   }, [confirmCloseModal, saveHoleNow]);
 

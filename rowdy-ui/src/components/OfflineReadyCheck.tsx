@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { doc, getDocFromServer } from "firebase/firestore";
 import { CheckCircle2, XCircle, Loader2, Circle } from "lucide-react";
-import { db } from "../firebase";
 import { Modal } from "./Modal";
+import { warmMatchForOffline } from "../utils/offlineWarm";
 
 type StepState = "pending" | "running" | "ok" | "fail";
 
@@ -121,17 +120,7 @@ export function OfflineReadyCheck({
     // 3. Warm the persistent cache straight from the server
     set("warm", { state: "running" });
     try {
-      await getDocFromServer(doc(db, "matches", matchId));
-      if (roundId) await getDocFromServer(doc(db, "rounds", roundId));
-      if (courseId) await getDocFromServer(doc(db, "courses", courseId));
-      if (tournamentId) await getDocFromServer(doc(db, "tournaments", tournamentId));
-      await Promise.all(playerIds.map((id) => getDocFromServer(doc(db, "players", id))));
-      // Pull logos through the SW's image cache — best-effort, never blocks the
-      // checkmark (a missing logo degrades to the emoji fallback offline).
-      (imageUrls ?? []).filter(Boolean).forEach((url) => {
-        const img = new Image();
-        img.src = url;
-      });
+      await warmMatchForOffline({ matchId, roundId, courseId, tournamentId, playerIds, imageUrls });
       set("warm", { state: "ok", detail: "Scorecard, players & course cached on this device." });
       finish(true);
     } catch {

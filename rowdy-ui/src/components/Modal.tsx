@@ -105,6 +105,8 @@ export interface ModalActionsProps {
   secondaryLabel?: string;
   /** Secondary action handler */
   onSecondary?: () => void;
+  /** Disable the primary button (e.g. while a confirm action is in flight) */
+  primaryDisabled?: boolean;
 }
 
 export function ModalActions({
@@ -113,6 +115,7 @@ export function ModalActions({
   primaryClass = "bg-green-600 hover:bg-green-700",
   secondaryLabel = "Cancel",
   onSecondary,
+  primaryDisabled = false,
 }: ModalActionsProps) {
   return (
     <div className="flex gap-3">
@@ -128,7 +131,8 @@ export function ModalActions({
       <button
         type="button"
         onClick={onPrimary}
-        className={`flex-1 py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95 ${primaryClass}`}
+        disabled={primaryDisabled}
+        className={`flex-1 py-3 px-4 rounded-lg text-white font-semibold text-base transition-transform active:scale-95 disabled:opacity-60 disabled:pointer-events-none ${primaryClass}`}
       >
         {primaryLabel}
       </button>

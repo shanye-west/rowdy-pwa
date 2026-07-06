@@ -230,21 +230,26 @@ export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async 
 // Computes match status and result on every match write
 // ============================================================================
 
-export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTriggerLogging("computeMatchOnWrite", async (event) => {
+// `retry: true`: the handler is idempotent (the _computeSig guard + the
+// transactional read-modify-write below make re-execution a no-op once derived
+// state is current), so redelivering a transiently-failed execution is safe and
+// closes the durability gap where a throw on the match-closing write would
+// otherwise leave the match un-closed until the next edit.
+export const computeMatchOnWrite = onDocumentWritten({ document: "matches/{matchId}", retry: true }, withTriggerLogging("computeMatchOnWrite", async (event) => {
   const before = event.data?.before?.data() || {};
   const after = event.data?.after?.data();
   if (!after) return;
-  
-  // Prevent loops - only run if meaningful data changed
+
+  // Cheap pre-filters on the event snapshot to skip the common no-op writes
+  // (our own write-back, unchanged holes) WITHOUT opening a transaction.
   const changed = [
     ...Object.keys(after).filter(k => JSON.stringify(after[k]) !== JSON.stringify(before[k])),
     ...Object.keys(before).filter(k => after[k] === undefined)
   ];
-  if (changed.every(k => ["status", "result", "_computeSig", "_lastComputed"].includes(k))) return;
-  
-  // Compute signature from holes data to detect actual changes
-  const holesSig = JSON.stringify(after.holes || {});
-  if (after._computeSig === holesSig) return;
+  if (changed.every(k => ["status", "result", "_computeSig", "_lastComputed", "completed"].includes(k))) return;
+
+  const eventHolesSig = JSON.stringify(after.holes || {});
+  if (after._computeSig === eventHolesSig) return;
 
   const roundId = after.roundId;
   if (!roundId) return;
@@ -270,61 +275,81 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTr
     format = (roundData?.format as RoundFormat) || "twoManBestBall";
   }
 
-  // Use imported scoring functions
-  const summary = summarize(format, after);
-  const { status, result } = buildStatusAndResult(summary);
+  const matchRef = event.data!.after.ref;
 
-  if (JSON.stringify(before.status) === JSON.stringify(status) && 
-      JSON.stringify(before.result) === JSON.stringify(result)) return;
+  // Recompute derived state against the CURRENT doc inside a transaction. This
+  // is what makes a burst of queued offline writes replaying on reconnect (or
+  // any out-of-order / duplicate trigger delivery) safe: an older event no
+  // longer overwrites fresh status/result with a stale computation, because it
+  // reads the latest holes at commit time. If the current holes already match
+  // the stored signature, another execution has already handled this state.
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(matchRef);
+    const cur = snap.data();
+    if (!cur) return;
 
-  // Check if all 18 holes have scores entered
-  const holesData = after.holes || {};
-  let completedHolesCount = 0;
-  for (const key of Object.keys(holesData)) {
-    const holeNum = parseInt(key, 10);
-    if (holeNum >= 1 && holeNum <= 18) {
-      const input = holesData[key]?.input;
-      let hasScore = false;
-      if (format === "singles") {
-        hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
-      } else if (format === "twoManScramble" || format === "fourManScramble") {
-        hasScore = input?.teamAGross != null || input?.teamBGross != null;
-      } else if (format === "twoManBestBall" || format === "twoManShamble") {
-        const aArr = input?.teamAPlayersGross;
-        const bArr = input?.teamBPlayersGross;
-        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
-                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+    const curHolesSig = JSON.stringify(cur.holes || {});
+    if (cur._computeSig === curHolesSig) return; // derived state already current
+
+    const summary = summarize(format, cur);
+    const { status, result } = buildStatusAndResult(summary);
+
+    // Check if all 18 holes have scores entered
+    const holesData = cur.holes || {};
+    let completedHolesCount = 0;
+    for (const key of Object.keys(holesData)) {
+      const holeNum = parseInt(key, 10);
+      if (holeNum >= 1 && holeNum <= 18) {
+        const input = holesData[key]?.input;
+        let hasScore = false;
+        if (format === "singles") {
+          hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
+        } else if (format === "twoManScramble" || format === "fourManScramble") {
+          hasScore = input?.teamAGross != null || input?.teamBGross != null;
+        } else if (format === "twoManBestBall" || format === "twoManShamble") {
+          const aArr = input?.teamAPlayersGross;
+          const bArr = input?.teamBPlayersGross;
+          hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                     (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+        }
+        if (hasScore) completedHolesCount++;
       }
-      if (hasScore) completedHolesCount++;
     }
-  }
-  const allHolesCompleted = completedHolesCount === 18;
-  
-  // Auto-complete match when it's closed AND all 18 holes are scored
-  const shouldAutoComplete = status.closed && allHolesCompleted && !before.completed;
+    const allHolesCompleted = completedHolesCount === 18;
 
-  // Store computation signature and context for updateMatchFacts to avoid re-fetching
-  // This denormalization reduces Firestore reads in updateMatchFacts by caching
-  // frequently-needed round data that doesn't change during a match
-  // (roundData is resolved above from the cache or a one-time read).
-  const updateData: any = {
-    status, 
-    result, 
-    _computeSig: holesSig,
-    _lastComputed: { 
-      format, 
-      roundId, 
-      courseId: roundData?.courseId,
-      pointsValue: roundData?.pointsValue ?? 1,
-      day: roundData?.day ?? 0,
-    },
-  };
-  
-  if (shouldAutoComplete) {
-    updateData.completed = true;
-  }
-  
-  await event.data!.after.ref.set(updateData, { merge: true });
+    // Auto-complete match when it's closed AND all 18 holes are scored
+    const shouldAutoComplete = status.closed && allHolesCompleted && !cur.completed;
+
+    // If the derived state is already current, don't write (avoids a needless
+    // write-back + retrigger). _computeSig advances on the next status-changing
+    // write; recompute cost per hole edit is unchanged from before.
+    const statusUnchanged =
+      JSON.stringify(cur.status) === JSON.stringify(status) &&
+      JSON.stringify(cur.result) === JSON.stringify(result);
+    if (statusUnchanged && !shouldAutoComplete) return;
+
+    // Store computation signature and context for updateMatchFacts to avoid
+    // re-fetching. This denormalization caches round data that doesn't change
+    // during a match (resolved above from the cache or a one-time read).
+    const updateData: any = {
+      status,
+      result,
+      _computeSig: curHolesSig,
+      _lastComputed: {
+        format,
+        roundId,
+        courseId: roundData?.courseId,
+        pointsValue: roundData?.pointsValue ?? 1,
+        day: roundData?.day ?? 0,
+      },
+    };
+
+    if (shouldAutoComplete) {
+      updateData.completed = true;
+    }
+
+    tx.set(matchRef, updateData, { merge: true });
+  });
 }));
 
 // ============================================================================
@@ -332,7 +357,10 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", withTr
 // Generates PlayerMatchFact documents when matches close
 // ============================================================================
 
-export const updateMatchFacts = onDocumentWritten("matches/{matchId}", withTriggerLogging("updateMatchFacts", async (event) => {
+// `retry: true`: idempotent (facts are written via batch.set with deterministic
+// `${matchId}_${playerId}` IDs and fully recomputed from the match doc), so a
+// transiently-failed close is safely redelivered instead of leaving stats missing.
+export const updateMatchFacts = onDocumentWritten({ document: "matches/{matchId}", retry: true }, withTriggerLogging("updateMatchFacts", async (event) => {
   const matchId = event.params.matchId;
   const after = event.data?.after?.data();
   const before = event.data?.before?.data();
@@ -1809,15 +1837,18 @@ function buildStatsFromFacts(facts: FirebaseFirestore.QueryDocumentSnapshot[], i
   return statsDoc;
 }
 
-export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", withTriggerLogging("aggregatePlayerStats", async (event) => {
+// `retry: true`: idempotent — every stats doc is rebuilt from source (a fresh
+// query of the player's facts) and committed in one batch, so redelivering a
+// transiently-failed run converges rather than corrupting.
+export const aggregatePlayerStats = onDocumentWritten({ document: "playerMatchFacts/{factId}", retry: true }, withTriggerLogging("aggregatePlayerStats", async (event) => {
   const data = event.data?.after?.data() || event.data?.before?.data();
   if (!data?.playerId) return;
-  
+
   const playerId = data.playerId;
   const series = data.tournamentSeries;
   const tournamentId = data.tournamentId;
   const roundId = data.roundId;
-  
+
   // If no series, skip aggregation (shouldn't happen but be safe)
   if (!series) {
     console.warn(`playerMatchFact ${event.params.factId} has no tournamentSeries, skipping aggregation`);
@@ -1831,6 +1862,11 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
   const playerSnap = await db.collection("players").doc(playerId).get();
   const displayName = (playerSnap.data()?.displayName as string) || playerId;
 
+  // Collect all three scope rebuilds, then commit atomically. Writing them via
+  // separate awaits risked leaving bySeries/byTournament/byRound inconsistent if
+  // an execution died between them; one batch keeps the player's stats coherent.
+  const batch = db.batch();
+
   // Aggregate by series
   const seriesSnap = await db.collection("playerMatchFacts")
     .where("playerId", "==", playerId)
@@ -1841,11 +1877,11 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
     .collection("bySeries").doc(series);
 
   if (seriesSnap.empty) {
-    await seriesStatsRef.delete();
+    batch.delete(seriesStatsRef);
   } else {
     const seriesStats = buildStatsFromFacts(seriesSnap.docs, "series", series);
     seriesStats.displayName = displayName;
-    await seriesStatsRef.set(seriesStats);
+    batch.set(seriesStatsRef, seriesStats);
   }
 
   // Aggregate by tournament
@@ -1854,16 +1890,16 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       .where("playerId", "==", playerId)
       .where("tournamentId", "==", tournamentId)
       .get();
-    
+
     const tournamentStatsRef = db.collection("playerStats").doc(playerId)
       .collection("byTournament").doc(tournamentId);
-    
+
     if (tournamentSnap.empty) {
-      await tournamentStatsRef.delete();
+      batch.delete(tournamentStatsRef);
     } else {
       const tournamentStats = buildStatsFromFacts(tournamentSnap.docs, "tournamentId", tournamentId);
       tournamentStats.displayName = displayName;
-      await tournamentStatsRef.set(tournamentStats);
+      batch.set(tournamentStatsRef, tournamentStats);
     }
   }
 
@@ -1873,18 +1909,20 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
       .where("playerId", "==", playerId)
       .where("roundId", "==", roundId)
       .get();
-    
+
     const roundStatsRef = db.collection("playerStats").doc(playerId)
       .collection("byRound").doc(roundId);
-    
+
     if (roundSnap.empty) {
-      await roundStatsRef.delete();
+      batch.delete(roundStatsRef);
     } else {
       const roundStats = buildStatsFromFacts(roundSnap.docs, "roundId", roundId);
       roundStats.displayName = displayName;
-      await roundStatsRef.set(roundStats);
+      batch.set(roundStatsRef, roundStats);
     }
   }
+
+  await batch.commit();
 }));
 
 // ============================================================================

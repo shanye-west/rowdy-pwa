@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Modal, ModalActions } from "../Modal";
 import { MatchStatusBadge } from "../MatchStatusBadge";
 import type { FirestoreTimestampLike, TournamentDoc } from "../../types";
@@ -27,7 +28,20 @@ export function ConfirmMatchCloseModal({
   tournament,
   teeTime,
 }: ConfirmMatchCloseModalProps) {
+  // Guard against a double-tap firing the (async) close twice before the modal
+  // dismisses. Reset whenever the modal reopens for a new hole.
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (isOpen) setSubmitting(false);
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handlePrimary = () => {
+    if (submitting) return;
+    setSubmitting(true);
+    onConfirm();
+  };
 
   return (
     <Modal
@@ -66,7 +80,8 @@ export function ConfirmMatchCloseModal({
 
       <ModalActions
         primaryLabel="Confirm"
-        onPrimary={onConfirm}
+        onPrimary={handlePrimary}
+        primaryDisabled={submitting}
         secondaryLabel="Cancel"
         onSecondary={onClose}
       />
