@@ -1,350 +1,108 @@
-LAST UPDATED ON FRI NOV 28 3:53PM
+# Rowdy Cup PWA 🏌️
 
-What the app is
+A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournament**. Players enter gross scores on their phones; the app computes net scores, hole winners, live match status, and full historical stats in real time. Everyone else watches live, read-only.
 
-A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Our webpage (for styling, etc. is www.rowdycup.com). Admins manage setup data through the in-app Admin UI (`/admin`): tournaments, rounds, matches, players, handicaps, locks, and score corrections. Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
+- **Live app:** [app.rowdycup.com](https://app.rowdycup.com) &nbsp;·&nbsp; Marketing site: [www.rowdycup.com](https://www.rowdycup.com) *(separate)*
+- **In production** for the annual Rowdy Cup. The same engine also runs a "Christmas Classic" series.
 
-If you want the longer spec you drafted earlier, it’s here: /mnt/data/Golf Tournament PWA - Project Blueprint (Final MVP).docx
-And the current “compute & stats” contract lives here (latest): Golf Pwa — Compute & Stats Contract V1 (Canvas)
-
-Who uses it
-
-Players: enter hole scores on phones; see live match status.
-
-Spectators: read-only live matches, leaderboard, roster by tier.
-
-Admin: manages tournaments (rosters, handicaps, captains, active flag), rounds (format, course, points, skins, lock/unlock), matches (create, edit, lock/unlock, score override, delete), and players (create, rename, link login accounts) — all from the in-app Admin UI. Courses are still seeded via Firestore console or scripts.
-
-Core behavior
-
-Multiple tournaments stored; exactly one active=true live at a time; others are read-only history.
-
-Rounds own the format; matches inherit it (no per-match overrides).
-
-Formats supported: Singles, Two-man Best Ball, Two-man Shamble (gross entry; scoring like best ball), Two-man Scramble.
-
-Matches are auto-templated with 18 holes and format-specific inputs on create.
-
-Handicaps are pre-seeded as per-player strokesReceived arrays (length 18, each 0 or 1). Course handicaps capped at 18, so never >1 stroke per hole.
-
-Players type gross numbers only:
-
-Singles: one gross per side.
-
-Best Ball/Shamble: two gross inputs per side.
-
-Scramble: one team gross per side.
-
-Net calculation = gross − strokesReceived[holeIndex].
-
-Hole winners:
-
-Scramble: team gross vs team gross.
-
-Best Ball/Shamble: side score = min(player net); lower wins; equal = AS.
-
-Singles: player net vs player net.
-
-Match status/result:
-
-Win = full pointsValue; halve (AS) = half; loss = 0.
-
-Early closure when lead > holes remaining → closed=true; “dormie” when lead == holes remaining.
-
-End of 18 tied → AS; each gets half points.
-
-Editing earlier holes can reopen a closed match if the math changes.
-
-Player Tier tracking per tournament (A/B/C/D) for roster display and lifetime stats “by tier.”
-
-Head-to-head counts include team formats as agreed.
-
-Data (Firestore, simplified)
-
-tournaments/{id}: { active, name, teamA:{ id,name,color, rosterByTier:{A:[],B:[],C:[],D:[]} }, teamB:{...}, roundIds[] }
-
-players/{id}: { displayName? }
-
-rounds/{id}: { tournamentId, day, format, course:{ name, holes:[{number,par,hcpIndex}] }, matchIds[] }
-
-matches/{id}:
-
-Setup: { tournamentId, roundId, pointsValue, teamAPlayers:[{playerId,strokesReceived:number[18]}], teamBPlayers:[...] }
-
-Inputs per hole:
-
-Singles: { teamAPlayerGross?, teamBPlayerGross? }
-
-Best Ball/Shamble: { teamAPlayersGross:[n|null,n|null], teamBPlayersGross:[n|null,n|null] }
-
-Scramble: { teamAGross?, teamBGross? }
-
-Computed: status:{ leader|null, margin, thru, dormie, closed }, result:{ winner|'AS', holesWonA, holesWonB }
-
-Security (development → production)
-
-Dev: public read; any authenticated (anonymous) user can update matches.
-
-Production tightening: only allow writes to matches/{id}.holes.*.input.*. Deny writes to status, result, rosters, or setup fields. Optional: restrict writers to rostered players or admin; lock when closed.
-
-Tech stack
-
-Firebase: Firestore, Cloud Functions (Gen-2), Auth (Anonymous), Hosting.
-
-Frontend: Vite + React (TypeScript), PWA-ready.
-
-Live updates: Firestore onSnapshot on match docs.
-
-What you want long-term
-
-Simple, reliable scoring for all formats with minimal UI.
-
-Read-only public access; phones show live status.
-
-Full historical stats:
-
-Per-player lifetime and per-tournament records.
-
-Head-to-head totals (team formats count).
-
-Records by match type and by Tier (A/B/C/D).
-
-In-app admin (`/admin`, admin-only): tournament/round/match/player management, stroke and stats recalculation, round recaps. Admin operations run through server-side callables that verify `isAdmin` — the UI gate is convenience only. Course documents are the one remaining Firestore-console task.
-
-Step-by-step plan
-Phase 1 — Core UX (now)
-
-Lock dev rules to “holes-only” writes (keep public read).
-
-Match page:
-
-Live subscription, format-specific inputs.
-
-Team names/colors, player names.
-
-Inputs disabled when status.closed.
-
-Stroke badges per hole (visual check of strokesReceived).
-
-Leaderboard route (/leaderboard): sum points from result by team and by round.
-
-Roster route (/roster): list Tier A/B/C/D per team from rosterByTier.
-
-Hosting deploy. Verify on phones.
-
-Phase 2 — Stats engine
-
-Cloud Function updatePlayerStatsOnMatch:
-
-On matches/{id} write, if result changed, upsert immutable playerMatchFacts for each rostered player with an outcome signature.
-
-Apply idempotent increments to playerStats (lifetime, by type, by tournament) and headToHead (lifetime/by type/by tournament).
-
-Player page (/player/:playerId): show lifetime record, per-type splits, head-to-head, by-tier slices.
-
-Phase 3 — Admin conveniences (DONE except where noted)
-
-✅ In-UI lock/unlock: per-round (Manage Rounds) and per-match (Match Controls); the per-match lock is also enforced in security rules.
-
-✅ Admin score override, match delete, tournament/round/player management — all in `/admin`.
-
-✅ Rules tightened to rostered-player writes on the `holes` map only (admin writes go through callables, which bypass rules via the Admin SDK).
-
-⬜ Seed validator script (Node/TS) to sanity-check Firestore docs before events: valid strokes arrays; hole keys “1”..“18”; players exist; format present; pointsValue>0.
-
-Phase 4 — PWA polish
-
-vite-plugin-pwa manifest + icons; registerType:'autoUpdate'.
-
-Offline read caching verification; install banners.
+> **AI agents / coding assistants:** read [AGENTS.md](AGENTS.md) — it's the canonical technical guide.
 
 ---
 
-## Stats Reference
+## What it does
 
-Every stat tracked in `playerMatchFacts` and how it's calculated.
+- **Live match-play scoring** in four formats — Singles, Two-Man Best Ball, Two-Man Shamble, Two-Man Scramble — with automatic net scoring, hole winners, dormie/early-close logic, and per-hole stroke handicaps.
+- **Cup leaderboard** with a live score tracker (points to win, confirmed vs. projected).
+- **Round pages & recaps** — schedule, per-round scores, skins games (gross/net pots), and rich Round Recaps (scoring leaders, per-hole averages, vs-all records).
+- **Teams & rosters** by tier (A/B/C/D), team colors and logos.
+- **Player profiles** — lifetime and per-series records, format breakdowns, badges, head-to-head.
+- **Tournament history** — every past event, read-only.
+- **Captains' live snake-draft** for setting pairings, and a pre-draft **Draft Pool** dashboard.
+- **Sportsbook** — peer-to-peer wagers (match bets, over/unders, round & futures markets) with an in-play view and a settle-up ledger.
+- **Chat & trash talk** — match threads and a tournament-wide feed with emoji reactions and replies.
+- **Push notifications** (chat, bets, match & tournament events) with per-category preferences.
+- **Installable PWA** — offline-tolerant scoring that queues and syncs on reconnect; auto-updates after deploys.
+- **Admin console** (`/admin`) — manage tournaments, rounds, matches, players, courses, handicaps, locks, and score corrections.
+- **Read-only AI access** via a hosted [MCP server](functions/src/mcp/README.md) so players can point their own AI assistant at tournament data.
 
-### Core Match Stats
+## Tech stack
 
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `outcome` | `"win"` / `"loss"` / `"halve"` based on match result | Did you win, lose, or tie the match? |
-| `pointsEarned` | Full `pointsValue` for win, half for halve, 0 for loss | Points you earned from this match |
-| `holesWon` | Count of holes where your team/side had the lower net (or gross for scramble) | How many holes you won |
-| `holesLost` | Count of holes where opponent had the lower score | How many holes you lost |
-| `holesHalved` | `finalThru - holesWon - holesLost` | How many holes ended in a tie |
-| `finalMargin` | Number of holes up/down when match ended | How many holes you won or lost by |
-| `finalThru` | Last hole played (1-18, may end early if closed) | What hole the match ended on |
+- **Frontend:** React 19, Vite 7, TypeScript 5.9 (strict), Tailwind CSS 4, `vite-plugin-pwa`. PWA served via Firebase Hosting.
+- **Backend:** Firebase Cloud Functions Gen-2 (TypeScript, Node 20) — Firestore triggers + HTTPS callables.
+- **Data / auth:** Cloud Firestore (real-time `onSnapshot`), Firebase Anonymous Auth (score entry), FCM (web push).
 
-### Momentum Stats
+## Repository layout
 
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `comebackWin` | `true` if you were down 3+ holes at any point on back 9 and still won | Did you mount a big comeback to win? |
-| `blownLead` | `true` if you were up 3+ holes at any point on back 9 and lost | Did you blow a big lead? |
-| `wasNeverBehind` | `true` if you never trailed at any point during the match | Were you always ahead or tied? |
-| `leadChanges` | Count of times the leader changed during the match | How many times did the lead swap? |
-| `winningHole` | Hole number where match was clinched (`null` if went 18 or halved) | What hole did the match end on? |
+| Path | What's there |
+|---|---|
+| [`rowdy-ui/`](rowdy-ui/) | React + Vite frontend (the PWA) |
+| [`functions/`](functions/) | Cloud Functions — scoring, stats, betting, chat, notifications, drafts, admin, MCP |
+| [`scripts/`](scripts/) | Break-glass admin scripts (seeding, exports, auth linking) — see [`scripts/README.md`](scripts/README.md) |
+| Root | `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `.firebaserc` |
+| [`AGENTS.md`](AGENTS.md) | Deep technical guide (architecture, data model, scoring contracts) |
 
-### Clutch Stats (18th Hole Pressure)
+## Getting started (local dev)
 
-These stats track matches that were decided by the 18th hole result.
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `decidedOn18` | `true` if the 18th hole result directly determined the match outcome | Was the match decided on the final hole? |
-| `won18thHole` | `true` if your team won, `false` if lost, `null` if pushed | Did your team win the 18th hole? |
-
-**What counts as "Decided on 18":**
-- Match went to 18 holes (not closed early)
-- The 18th hole result changed the outcome
-
-**Scenarios:**
-| Going into 18 | 18th Hole | Match Result | Decided on 18? |
-|---------------|-----------|--------------|----------------|
-| AS (tied) | Team wins | Winner 1UP | ✅ Yes |
-| AS (tied) | Push | Match halved | ❌ No |
-| 1UP | Trailing team wins | Match halved | ✅ Yes |
-| 1UP | Push | Leader wins 1UP | ❌ No |
-| 1UP | Leader wins | Leader wins 2UP | ❌ No |
-| 2UP+ | Any | N/A | ❌ No (closed early) |
-
-**Derived Stats:**
-- **Clutch Win**: `decidedOn18 && won18thHole === true && outcome === "win"` — Won the match by winning 18
-- **Clutch Save**: `decidedOn18 && won18thHole === true && outcome === "halve"` — Saved a halve by winning 18 when down 1
-- **Choke Loss**: `decidedOn18 && won18thHole === false && outcome === "loss"` — Lost the match by losing 18
-- **Choke Halve**: `decidedOn18 && won18thHole === false && outcome === "halve"` — Let opponent halve by losing 18 when up 1
-
-### Ball Usage Stats (Best Ball & Shamble Only)
-
-These stats track when your individual score was used as the team score. Best Ball compares **net** scores; Shamble compares **gross** scores.
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `ballsUsed` | Holes where your score ≤ partner's score (includes ties) | How many times was your ball "in play"? |
-| `ballsUsedSolo` | Holes where your score < partner's score (strictly better) | How many times did you carry the team alone? |
-| `ballsUsedShared` | Holes where your score = partner's score | How many times did you and your partner tie? |
-| `ballsUsedSoloWonHole` | Holes where you were solo AND your team won the hole | Times you single-handedly won a hole |
-| `ballsUsedSoloPush` | Holes where you were solo AND the hole was halved | Times you single-handedly pushed (tied) a hole |
-| `ballUsedOn18` | `true` if your ball was used solo on 18, `false` if partner's, `null` if tied | Was your ball the counting ball on the final hole? |
-
-**Derived Clutch Stats (combining with 18th hole stats):**
-- **Clutch Hero**: `decidedOn18 && won18thHole === true && ballUsedOn18 === true` — Your ball won the decisive 18th
-- **Clutch Goat**: `decidedOn18 && won18thHole === false && ballUsedOn18 === true` — Your ball lost the decisive 18th
-
-### Drive Usage Stats (Scramble & Shamble Only)
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `drivesUsed` | Count of holes where your drive was selected | How many of your drives did the team use? |
-
-### Individual Scoring Stats (Singles & Best Ball Only)
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `totalGross` | Sum of your gross scores for all holes played | Your raw score before handicap |
-| `totalNet` | Sum of `gross - strokesReceived` for each hole | Your score after handicap strokes |
-| `strokesVsParGross` | `totalGross - coursePar` | How many over/under par (gross)? E.g., +5 or -2 |
-| `strokesVsParNet` | `totalNet - coursePar` | How many over/under par (net)? |
-
-### Team Scoring Stats (Scramble & Shamble Only)
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `teamTotalGross` | Sum of team gross scores for all holes played | The team's combined score |
-| `teamStrokesVsParGross` | `teamTotalGross - coursePar` | Team's strokes over/under par |
-
-### Handicap & Strokes Stats
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `playerHandicap` | Player's handicap index from tournament settings | Your handicap going into this match |
-| `strokesGiven` | Sum of `strokesReceived` array (0s and 1s) | Total strokes you received in the match |
-
-### Context Stats
-
-| Stat | Source | Plain English |
-|------|--------|---------------|
-| `playerTier` | From `tournament.rosterByTier` (A/B/C/D) | What tier were you playing in? |
-| `partnerIds` / `partnerTiers` / `partnerHandicaps` | From match player arrays | Who was your partner and their details? |
-| `opponentIds` / `opponentTiers` / `opponentHandicaps` | From match player arrays | Who did you play against? |
-| `coursePar` | From course document | What was par for the course? |
-| `courseId` / `day` | From round document | Which course and which day? |
-| `tournamentYear` / `tournamentName` / `tournamentSeries` | From tournament document | What tournament was this? |
-
-### Aggregated Lifetime Stats (playerStats)
-
-| Stat | Calculation | Plain English |
-|------|-------------|---------------|
-| `wins` | Count of `outcome = "win"` across all matches | Total career wins |
-| `losses` | Count of `outcome = "loss"` across all matches | Total career losses |
-| `halves` | Count of `outcome = "halve"` across all matches | Total career ties |
-| `totalPoints` | Sum of `pointsEarned` across all matches | Total career points |
-| `matchesPlayed` | Count of all `playerMatchFacts` for this player | How many matches you've played |
-
-### Format-Specific Notes
-
-- **Singles**: 1v1, net scoring (`gross - strokesReceived`). Individual stats tracked.
-- **Two-Man Best Ball**: 2v2, each player plays their own ball, best **net** score per team counts. Ball usage stats tracked.
-- **Two-Man Shamble**: 2v2, players select a drive then play their own ball, best **gross** score counts (no handicap). Ball usage and drive stats tracked.
-- **Two-Man Scramble**: 2v2, team picks best shot each time, one team gross score. Drive stats tracked.
-
----
-
-## Export & Seed Firestore (Manual Workflow)
-
-Use these scripts to export a production Firestore snapshot to JSON and to seed a (clean) development Firestore from that snapshot. Both steps are intentionally manual so you control which project / key is used.
-
-Files & location
-- `scripts/exportFirestore.js` — exports all top-level collections to `scripts/data/firestore-snapshot.json`
-- `scripts/seedFirestore.js` — seeds Firestore from the snapshot (only runs on an EMPTY target DB)
-- `service-account.json` (repo root) — preferred location for your service account key (DO NOT commit)
-- `scripts/serviceAccountKey.json` — local fallback for the scripts folder (also DO NOT commit)
-- `dev-service-account.json` (repo root) — optional/dev-only key (useful for seeding dev without overwriting your main key)
-
-Important safety rules
-- The `export` script ONLY reads from the production service account file at the repository root: `service-account.json`. This prevents exporting from a non-prod project.
-
-- The `seed` script ONLY writes using the dev service account file at the repository root: `dev-service-account.json`. This prevents seeding a production database.
-
-	(Both filenames are gitignored; use them intentionally and never commit them.)
-	You can also place a dev-specific key at the repository root named `dev-service-account.json` and the scripts will pick it up.
-- The `seed` script will refuse to run unless the target Firestore is completely empty. You must manually delete all collections/documents in the Firebase Console before running the seed script.
-- Service account keys and the snapshot file are ignored in `.gitignore` (`scripts/serviceAccountKey.json`, `scripts/data/firestore-snapshot.json`).
-
-How to export (PROD → JSON)
-
-1. Download a service account key for your **PROD** project (Firebase Console → Project Settings → Service Accounts → Generate new private key).
-2. Save the key as `service-account.json` in the repository root (recommended) or as `scripts/serviceAccountKey.json` (local fallback). Both locations are gitignored.
-3. Run the export script from the repository root:
+**Prerequisites:** Node 20+, `npm`, and the Firebase CLI (`npm i -g firebase-tools`).
 
 ```bash
-cd scripts
-npm run export
+# 1. Frontend
+cd rowdy-ui
+cp .env.example .env.local        # fill in Firebase web config + VAPID key
+npm install
+npm run dev                       # http://localhost:5173
+
+# 2. Functions (optional — for backend work)
+cd ../functions
+npm install
+npm run build
+npm run serve                     # Firebase emulators (functions + Firestore)
 ```
 
-4. The script will produce `scripts/data/firestore-snapshot.json` containing all top-level collections and documents. Timestamps in the snapshot are serialized and will be restored as Firestore `Timestamp`s by the seed script.
+The Firebase web config in `.env.local` is **not secret** (Firestore security rules are what protect data). Get the values from Firebase Console → Project Settings → Your apps.
 
-How to seed (JSON → DEV)
-
-1. In the Firebase Console, manually delete all data in your DEV Firestore project. The seed script will abort if it finds any existing documents.
-2. Download a service account key for your **DEV** project and save it as `service-account.json` in the repository root (recommended) or `scripts/serviceAccountKey.json` (fallback), replacing the prod key.
-3. Ensure `scripts/data/firestore-snapshot.json` exists (created by the export step).
-4. Run the seed script from the repository root:
+### Everyday commands
 
 ```bash
-cd scripts
-npm run seed
+# rowdy-ui/
+npm run build      # tsc -b && vite build   (type errors block the build)
+npm run lint       # eslint .
+npm run test:run   # vitest, single run
+
+# functions/
+npm run build      # tsc
+npm run test:run   # vitest (scoring + stats suites)
 ```
 
-5. The script will run a safety check (database must be empty). If it passes, it writes every collection and document from the snapshot into the target Firestore.
+## Deploying
 
-Notes & Limitations
-- The scripts discover and export all top-level collections automatically, and are future-proof if you add more collections.
-- These scripts do not traverse nested subcollections. You indicated you do not use subcollections; if that changes I can update the scripts to recurse subcollections.
-- Keep `scripts/serviceAccountKey.json` local and never commit it to source control. The repo `.gitignore` already ignores the key and the snapshot file.
-- If you want the seed script to allow an explicit override (for example, to permit seeding into a non-empty but known dev snapshot), I can add a `--force` flag with clear warnings.
+> ⚠️ **There is only one Firebase project: production (`rowdy-pwa`).** No staging exists — every deploy hits **live tournament data**. Build first (there are no predeploy build hooks) and double-check before deploying.
 
-Questions or next steps
-- Want me to add a `--force` option (requires typing a confirmation phrase)?
-- Prefer TypeScript versions of the scripts instead of plain Node? I can convert them.
+```bash
+# Frontend
+cd rowdy-ui && npm run build && firebase deploy --only hosting
+
+# Cloud Functions
+cd functions && npm run build && firebase deploy --only functions
+
+# Security rules / indexes  (deploy indexes BEFORE code that queries them)
+firebase deploy --only firestore:rules
+firebase deploy --only firestore:indexes
+```
+
+## How the app works (in one breath)
+
+Players write a gross score to a single field (`matches/{id}.holes.{N}.input`). A Cloud Function recomputes match `status` and `result` on every write. When a match closes, per-player stat records are written and rolled up into lifetime/per-series aggregates. The UI subscribes to Firestore in real time, so scores, standings, and stats update live on every phone. Security rules keep the whole database public-read while allowing players to write **only** their own hole scores; everything else is written server-side.
+
+Full data model, collection reference, scoring contracts, and the Cloud Functions map are in **[AGENTS.md](AGENTS.md)**.
+
+## For tournament admins
+
+Day-to-day setup lives in the in-app **Admin console** at `/admin` (admin accounts only): create/edit tournaments, rounds, matches, players, and courses; set handicaps; lock/unlock rounds and matches; override scores; and recompute stats. The [`scripts/`](scripts/) folder holds break-glass equivalents (bulk seeding, auth-account linking, exports) for when the UI can't do something or auth is down mid-event — see [`scripts/README.md`](scripts/README.md), including the player onboarding / login flow.
+
+## Further reading
+
+- **[AGENTS.md](AGENTS.md)** — architecture, Firestore collections, scoring & stats contracts, function map, conventions (the technical bible).
+- **[SCORING-LEADERS-IMPLEMENTATION.md](SCORING-LEADERS-IMPLEMENTATION.md)** — round-recap scoring-leaders feature.
+- **[functions/src/mcp/README.md](functions/src/mcp/README.md)** — the read-only AI (MCP) endpoint and how to connect a client.
+- **[scripts/README.md](scripts/README.md)** — seeding, exports, and player auth workflow.
