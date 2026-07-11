@@ -1,5 +1,6 @@
 import { Check, Clock } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Badge } from "../ui/badge";
 import DraftPlayerPill from "./DraftPlayerPill";
 import type { DraftMatch, DraftTeamKey } from "../../types";
 import type { PairingsMeta } from "./types";
@@ -35,7 +36,7 @@ function Slot({
   return (
     <div
       className={cn(
-        "text-xs font-medium text-slate-300",
+        "text-xs font-medium text-muted-foreground/70",
         alignRight ? "text-right" : "text-left"
       )}
     >
@@ -68,13 +69,13 @@ export default function DraftMatchCard({ match, meta, isCurrent }: DraftMatchCar
           Match {match.matchNumber}
         </span>
         {bothSet ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+          <Badge variant="success" className="gap-1 tracking-wide">
             <Check size={11} strokeWidth={3} /> Set
-          </span>
+          </Badge>
         ) : isCurrent ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">
+          <Badge variant="info" className="gap-1 tracking-wide">
             <Clock size={11} strokeWidth={3} /> On the clock
-          </span>
+          </Badge>
         ) : (
           <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             Nom. {meta.teamName(match.nominatedBy)}
@@ -83,7 +84,7 @@ export default function DraftMatchCard({ match, meta, isCurrent }: DraftMatchCar
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <Slot ids={match.teamAPlayers} team="teamA" meta={meta} />
-        <span className="text-[10px] font-bold uppercase text-slate-300">vs</span>
+        <span className="text-[10px] font-bold uppercase text-muted-foreground/70">vs</span>
         <Slot ids={match.teamBPlayers} team="teamB" meta={meta} alignRight />
       </div>
     </div>

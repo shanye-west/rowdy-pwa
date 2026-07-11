@@ -19,6 +19,8 @@ export interface PairingsMeta {
   teamName: (team: DraftTeamKey) => string;
   /** Team color (css value), honoring the active theme. */
   teamColor: (team: DraftTeamKey) => string;
+  /** Team logo URL, or undefined when the team has none. */
+  teamLogo: (team: DraftTeamKey) => string | undefined;
   /** True for scramble/shamble: course handicaps shown for reference only. */
   grossOnly: boolean;
 }

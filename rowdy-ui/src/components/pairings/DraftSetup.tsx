@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Dices, Check } from "lucide-react";
+import { Dices, Check, CheckCircle2, AlertTriangle } from "lucide-react";
 import PlayerAvatar from "../PlayerAvatar";
+import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { tierStyle } from "../../utils/tierColors";
 import { tierPlayerIds } from "../../utils/roster";
@@ -36,7 +37,7 @@ function TeamAvailabilityPicker({
         <h3 className="font-bold" style={{ color }}>
           {meta.teamName(team)}
         </h3>
-        <span className="text-xs font-semibold text-muted-foreground">{sel.size} playing</span>
+        <Badge variant="muted">{sel.size} playing</Badge>
       </div>
       {ids.length === 0 ? (
         <p className="text-sm text-muted-foreground">No roster set for this team.</p>
@@ -137,6 +138,7 @@ export default function DraftSetup({
     const winner: DraftTeamKey = Math.random() < 0.5 ? "teamA" : "teamB";
     setFirstPick(winner);
     setFlashed(winner);
+    navigator.vibrate?.(20);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashed(null), 800);
   };
@@ -181,22 +183,29 @@ export default function DraftSetup({
           onClick={flipCoin}
           className="btn-ghost mx-auto inline-flex items-center gap-1.5 text-sm text-muted-foreground"
         >
-          <Dices size={16} /> Flip a coin
+          <Dices size={16} className={cn(flashed && "motion-safe:animate-spin")} /> Flip a coin
         </button>
       </div>
 
       {/* Balance status */}
       <div
         className={cn(
-          "rounded-xl border px-4 py-3 text-sm font-medium",
+          "flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium",
           balanced
             ? "border-emerald-200 bg-emerald-50 text-emerald-800"
             : "border-amber-200 bg-amber-50 text-amber-800"
         )}
       >
-        {balanced
-          ? `✓ ${countA} v ${countB} · ${totalMatches} matchup${totalMatches > 1 ? "s" : ""}`
-          : `Both teams need the same number of players, divisible by ${perSide}. Currently ${countA} v ${countB}.`}
+        {balanced ? (
+          <CheckCircle2 size={16} className="shrink-0" />
+        ) : (
+          <AlertTriangle size={16} className="shrink-0" />
+        )}
+        <span>
+          {balanced
+            ? `${countA} v ${countB} — ${totalMatches} matchup${totalMatches > 1 ? "s" : ""} ready`
+            : `Both teams need the same number of players, divisible by ${perSide}. Currently ${countA} v ${countB}.`}
+        </span>
       </div>
 
       <button className="btn btn-primary w-full" disabled={!balanced || busy} onClick={onStart}>

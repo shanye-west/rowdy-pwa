@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { doc, getDoc, getDocFromCache, getDocFromServer } from "firebase/firestore";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ListChecks } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
@@ -249,7 +249,7 @@ function RoundComponent() {
               className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
             >
               <ViewTransitionLink to={`/round/${round.id}/pairings`}>
-                ⛳ Set pairings (captains' draft)
+                <ListChecks className="mr-2 h-4 w-4" /> Set pairings (captains' draft)
               </ViewTransitionLink>
             </Button>
           </section>

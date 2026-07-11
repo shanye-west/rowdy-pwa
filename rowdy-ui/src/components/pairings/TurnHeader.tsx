@@ -1,4 +1,5 @@
-import { cn } from "../../lib/utils";
+import { Hourglass } from "lucide-react";
+import OfflineImage from "../OfflineImage";
 import type { DraftTeamKey, PairingDraftDoc } from "../../types";
 import type { PairingsMeta } from "./types";
 
@@ -19,7 +20,8 @@ export interface TurnHeaderProps {
 export default function TurnHeader({ draft, actingTeam, meta, isResponse, myMove }: TurnHeaderProps) {
   const turn = draft.turn!;
   const color = meta.teamColor(actingTeam);
-  const pct = Math.round((turn.matchIndex / draft.totalMatches) * 100);
+  const logo = meta.teamLogo(actingTeam);
+  const teamName = meta.teamName(actingTeam);
 
   return (
     <div
@@ -33,18 +35,43 @@ export default function TurnHeader({ draft, actingTeam, meta, isResponse, myMove
         </span>
         <span className="uppercase tracking-wide">{isResponse ? "Response" : "Nomination"}</span>
       </div>
-      <div className="mt-1 text-lg font-extrabold leading-tight">
-        {meta.teamName(actingTeam)} to {isResponse ? "respond" : "nominate"}
-        {myMove && <span className="ml-1 opacity-90">— your move</span>}
+
+      <div className="mt-1.5 flex items-center gap-3">
+        {logo && (
+          <OfflineImage
+            src={logo}
+            alt=""
+            loading="lazy"
+            style={{ width: 40, height: 40, objectFit: "contain" }}
+          />
+        )}
+        <div className="min-w-0">
+          <div className="text-lg font-extrabold leading-tight">
+            {teamName} to {isResponse ? "respond" : "nominate"}
+          </div>
+          {myMove ? (
+            <span className="mt-1 inline-flex items-center rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold uppercase tracking-wide">
+              Your move — pick below
+            </span>
+          ) : (
+            <span className="mt-1 inline-flex items-center gap-1.5 text-xs opacity-90">
+              <Hourglass size={13} className="motion-safe:animate-pulse" /> Waiting for {teamName}…
+            </span>
+          )}
+        </div>
       </div>
-      {!myMove && (
-        <div className="text-xs opacity-90">Waiting for {meta.teamName(actingTeam)}…</div>
-      )}
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/25">
-        <div
-          className={cn("h-full rounded-full bg-card/90 transition-all duration-500")}
-          style={{ width: `${pct}%` }}
-        />
+
+      {/* One segment per match: filled = done, half = on the clock, faint = upcoming. */}
+      <div className="mt-3 flex gap-1">
+        {Array.from({ length: draft.totalMatches }, (_, i) => (
+          <span
+            key={i}
+            className={
+              "h-1.5 flex-1 rounded-full transition-colors " +
+              (i < turn.matchIndex ? "bg-white/90" : i === turn.matchIndex ? "bg-white/50" : "bg-white/25")
+            }
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { Lock, Hourglass, Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import { Modal, ModalActions } from "../components/Modal";
+import { ViewTransitionLink } from "../components/ViewTransitionLink";
+import { Skeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { useRosterPlayers } from "../hooks/admin/useRosterPlayers";
 import { usePairingDraft } from "../hooks/usePairingDraft";
 import { draftApi } from "../api/draft";
@@ -18,6 +21,7 @@ import DraftSetup from "../components/pairings/DraftSetup";
 import DraftBoard from "../components/pairings/DraftBoard";
 import TurnHeader from "../components/pairings/TurnHeader";
 import PickPanel from "../components/pairings/PickPanel";
+import WaitingPanel from "../components/pairings/WaitingPanel";
 import PairingsMessage from "../components/pairings/PairingsMessage";
 import type { PairingsMeta } from "../components/pairings/types";
 import type { CourseDoc, DraftTeamKey, RoundDoc, RoundFormat, TournamentDoc } from "../types";
@@ -34,9 +38,9 @@ const TEAM_FALLBACK: Record<DraftTeamKey, string> = { teamA: "Team A", teamB: "T
 function BoardSkeleton() {
   return (
     <div className="p-4 space-y-2 max-w-2xl mx-auto">
-      <div className="h-20 rounded-2xl bg-muted animate-pulse" />
+      <Skeleton height={80} rounded="lg" className="rounded-2xl" />
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
+        <Skeleton key={i} height={64} rounded="lg" className="rounded-xl" />
       ))}
     </div>
   );
@@ -54,10 +58,10 @@ export default function Pairings() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // The live, captain/admin-gated draft doc.
-  const { draft, loading: draftLoading, denied } = usePairingDraft(roundId);
+  const { draft, loading: draftLoading, denied, error } = usePairingDraft(roundId);
   const { players } = useRosterPlayers(tournament);
+  const { showToast } = useToast();
 
-  const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmAction, setConfirmAction] = useState<"finalize" | "reset" | null>(null);
@@ -110,8 +114,25 @@ export default function Pairings() {
   const turnKey = draft?.turn ? `${draft.turn.matchIndex}-${draft.turn.awaiting}-${draft.turn.team}` : draft?.phase;
   useEffect(() => {
     setSelected([]);
-    setActionError(null);
   }, [turnKey]);
+
+  // The onSnapshot error listener doesn't recover once the live subscription
+  // dies. If we already had draft data, surface a persistent "reload" toast
+  // (once) so a stale board can't masquerade as live. A first-load error with
+  // no data is handled by a full-screen state below.
+  const staleErrorToasted = useRef(false);
+  useEffect(() => {
+    if (error && draft && !staleErrorToasted.current) {
+      staleErrorToasted.current = true;
+      showToast({
+        variant: "error",
+        message: "Live updates interrupted — reload to reconnect.",
+        duration: 0,
+        action: { label: "Reload", onClick: () => window.location.reload() },
+      });
+    }
+    if (!error) staleErrorToasted.current = false;
+  }, [error, draft, showToast]);
 
   // ---- Derived lookups ----
   const isAdmin = !!player?.isAdmin;
@@ -166,17 +187,17 @@ export default function Pairings() {
     tierOf: (pid) => tierLookup[pid] as Tier | undefined,
     teamName,
     teamColor,
+    teamLogo: (team) => tournament?.[team]?.logo,
     grossOnly,
   };
 
   // ---- Actions ----
   const run = async (fn: () => Promise<unknown>, fallback: string) => {
     setBusy(true);
-    setActionError(null);
     try {
       await fn();
     } catch (e) {
-      setActionError(getErrorMessage(e, fallback));
+      showToast({ variant: "error", message: getErrorMessage(e, fallback) });
     } finally {
       setBusy(false);
     }
@@ -211,6 +232,27 @@ export default function Pairings() {
     );
   }
 
+  // The live subscription failed before any data arrived (a real network/read
+  // error, not a permission denial). Offer a reload rather than falling through
+  // to a misleading "draft hasn't started" state.
+  if (error && !draft) {
+    return (
+      <Layout title="Pairings" showBack>
+        <PairingsMessage
+          icon={<AlertTriangle size={26} />}
+          title="Connection problem"
+          action={
+            <button className="btn btn-secondary w-full" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          }
+        >
+          Couldn't load the live draft. Check your connection and try again.
+        </PairingsMessage>
+      </Layout>
+    );
+  }
+
   // A draft exists but this viewer isn't a captain/co-captain or admin.
   if (denied || (!draft && !isAdmin && !myTeam)) {
     return (
@@ -224,9 +266,6 @@ export default function Pairings() {
   }
 
   const title = `Pairings — Day ${round?.day ?? ""}`.trim();
-  const errorBanner = actionError && (
-    <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{actionError}</div>
-  );
 
   // ===========================================================================
   // No draft yet
@@ -262,7 +301,6 @@ export default function Pairings() {
     return (
       <Layout title={title} showBack>
         <div className="p-4 max-w-2xl mx-auto space-y-4">
-          {errorBanner}
           {tournament && (
             <DraftSetup
               tournament={tournament}
@@ -301,13 +339,13 @@ export default function Pairings() {
     return (
       <Layout title={title} showBack>
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-sm font-medium text-green-800">
-            <CheckCircle2 size={18} /> Matches created for this round.
+          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <CheckCircle2 size={18} className="shrink-0" /> Matches created for this round.
           </div>
           <DraftBoard draft={draft} meta={meta} />
-          <Link to={`/round/${roundId}`} className="btn btn-primary w-full text-center">
+          <ViewTransitionLink to={`/round/${roundId}`} className="btn btn-primary w-full text-center">
             View round
-          </Link>
+          </ViewTransitionLink>
         </div>
       </Layout>
     );
@@ -320,9 +358,8 @@ export default function Pairings() {
     return (
       <Layout title={title} showBack>
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
-          {errorBanner}
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm font-medium text-amber-800">
-            <Trophy size={18} />
+          <div className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            <Trophy size={18} className="shrink-0" />
             {isAdmin ? "Draft complete — review, then create the matches." : "Draft complete — waiting for an admin to confirm."}
           </div>
           <DraftBoard draft={draft} meta={meta} />
@@ -365,8 +402,6 @@ export default function Pairings() {
   return (
     <Layout title={title} showBack>
       <div className="p-4 space-y-4 max-w-2xl mx-auto">
-        {errorBanner}
-
         <TurnHeader draft={draft} actingTeam={actingTeam} meta={meta} isResponse={isResponse} myMove={myMove} />
 
         <DraftBoard draft={draft} meta={meta} />
@@ -386,11 +421,14 @@ export default function Pairings() {
             onUndo={doUndo}
           />
         ) : (
-          canUndo && (
-            <button className="btn btn-secondary w-full" disabled={busy} onClick={doUndo}>
-              Undo last pick
-            </button>
-          )
+          <WaitingPanel
+            teamName={meta.teamName(actingTeam)}
+            teamColor={meta.teamColor(actingTeam)}
+            isResponse={isResponse}
+            canUndo={canUndo}
+            busy={busy}
+            onUndo={doUndo}
+          />
         )}
       </div>
     </Layout>
@@ -420,9 +458,14 @@ export default function Pairings() {
             const action = confirmAction;
             setConfirmAction(null);
             if (action === "finalize") {
+              const count = draft?.totalMatches ?? 0;
               run(async () => {
                 await draftApi.finalizePairingDraft({ roundId });
                 navigator.vibrate?.([30, 40, 30]);
+                showToast({
+                  variant: "success",
+                  message: `${count} match${count === 1 ? "" : "es"} created`,
+                });
               }, "Failed to create matches");
             } else if (action === "reset") {
               run(() => draftApi.resetPairingDraft({ roundId }), "Failed to reset");

@@ -45,7 +45,7 @@ export default function PlayerPickRow({
         selected
           ? "border-transparent ring-2"
           : disabled
-            ? "border-border opacity-45"
+            ? "border-border"
             : "border-border hover:bg-muted"
       )}
       style={
@@ -54,11 +54,15 @@ export default function PlayerPickRow({
           : undefined
       }
     >
-      <PlayerAvatar name={meta.nameOf(pid)} color={teamColor} size={32} />
+      <span className={cn("shrink-0", disabled && "opacity-50")}>
+        <PlayerAvatar name={meta.nameOf(pid)} color={teamColor} size={32} />
+      </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-foreground">{meta.nameOf(pid)}</div>
+        <div className={cn("truncate text-sm font-semibold text-foreground", disabled && "opacity-50")}>
+          {meta.nameOf(pid)}
+        </div>
         {disabled && disabledReason && (
-          <div className="truncate text-[11px] font-medium text-rose-500">{disabledReason}</div>
+          <div className="truncate text-xs font-medium text-destructive">{disabledReason}</div>
         )}
       </div>
       {tier && (
