@@ -68,6 +68,7 @@ export default function TournamentSettingsForm({
   const [sportsbookEnabled, setSportsbookEnabled] = useState(!!tournament.sportsbookEnabled);
   const [commentsEnabled, setCommentsEnabled] = useState(!!tournament.commentsEnabled);
   const [hideDraftPool, setHideDraftPool] = useState(!!tournament.hideDraftPool);
+  const [rulesOfficialUseGrok, setRulesOfficialUseGrok] = useState(!!tournament.rulesOfficialUseGrok);
   const [test, setTest] = useState(!!tournament.test);
   const hasDraftPool = !!tournament.draftPool && Object.keys(tournament.draftPool).length > 0;
   const [tiebreakerWinner, setTiebreakerWinner] = useState<"" | "teamA" | "teamB">(
@@ -147,6 +148,7 @@ export default function TournamentSettingsForm({
         sportsbookEnabled,
         commentsEnabled,
         hideDraftPool,
+        rulesOfficialUseGrok,
         test,
         tiebreakerWinner: tiebreakerWinner === "" ? null : tiebreakerWinner,
         teamA: buildTeam(teamA),
@@ -303,6 +305,11 @@ export default function TournamentSettingsForm({
           <input type="checkbox" checked={commentsEnabled} onChange={(e) => setCommentsEnabled(e.target.checked)} />
           <span className="font-semibold">Comments</span>
           <span className="text-gray-500">(match threads + sportsbook trash talk)</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={rulesOfficialUseGrok} onChange={(e) => setRulesOfficialUseGrok(e.target.checked)} />
+          <span className="font-semibold">Rules Official: use Grok</span>
+          <span className="text-gray-500">(on = in-app AI for live rounds; off = free NotebookLM link)</span>
         </label>
         {hasDraftPool && (
           <label className="flex items-center gap-2 text-sm">

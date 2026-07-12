@@ -39,6 +39,12 @@ import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
+// Fallback destination for the "Rules Official" menu link when a tournament has
+// NOT enabled the in-app Grok chat (tournament.rulesOfficialUseGrok). This is the
+// free, shared NotebookLM notebook used for pre-round rules Q&A.
+const RULES_NOTEBOOKLM_URL =
+  "https://notebooklm.google.com/notebook/630e0ae9-191c-44e8-b7e2-8af132884afa";
+
 type LayoutProps = {
   title: string;
   series?: string; // "rowdyCup" | "christmasClassic"
@@ -68,6 +74,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
     ? Object.keys(tournamentCtx.tournament.draftPool).length
     : 0;
   const showDraftPool = draftPoolCount > 0 && !tournamentCtx?.tournament?.hideDraftPool;
+  // When true, the Rules Official menu link opens the in-app Grok chat; otherwise
+  // it links out to the free NotebookLM notebook (see RULES_NOTEBOOKLM_URL).
+  const rulesUseGrok = !!tournamentCtx?.tournament?.rulesOfficialUseGrok;
   const { isOnline } = useOnlineStatusWithHistory();
   // Global write-queue drain state, surfaced as a reconnect banner below.
   const flushState = useSyncFlush(isOnline);
@@ -271,13 +280,21 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       </ViewTransitionLink>
                     </Button>
 
-                    {/* In-app AI Rules Official (Grok-backed streaming callable),
-                        replacing the old link out to NotebookLM. */}
+                    {/* Rules Official: admin flag picks the backend. Grok (in-app,
+                        paid) is flipped on for live rounds; otherwise the free
+                        NotebookLM notebook so pre-round Q&A doesn't burn API usage. */}
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
-                      <ViewTransitionLink to="/rules-official" onClick={closeMenu}>
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        Rules Official
-                      </ViewTransitionLink>
+                      {rulesUseGrok ? (
+                        <ViewTransitionLink to="/rules-official" onClick={closeMenu}>
+                          <BookOpen className="h-4 w-4 text-muted-foreground" />
+                          Rules Official
+                        </ViewTransitionLink>
+                      ) : (
+                        <a href={RULES_NOTEBOOKLM_URL} target="_blank" rel="noopener noreferrer" onClick={closeMenu}>
+                          <BookOpen className="h-4 w-4 text-muted-foreground" />
+                          Rules Official
+                        </a>
+                      )}
                     </Button>
 
                     {showInstall && (

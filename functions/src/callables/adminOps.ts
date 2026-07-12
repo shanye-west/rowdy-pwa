@@ -109,6 +109,7 @@ function sanitizeTeamUpdates(team: Record<string, unknown>, label: string): Reco
  * - updates: {
  *     name?, year?, active?, openPublicEdits?, sportsbookEnabled?, commentsEnabled?, test?,
  *     hideDraftPool?,  // hide the Draft Pool from the UI without deleting the pool
+ *     rulesOfficialUseGrok?,  // true: menu "Rules Official" → in-app Grok chat; false/absent → NotebookLM link
  *     tiebreakerWinner?: "teamA" | "teamB" | null,  // null clears it
  *     teamA?: { name?, color?, logo?, captainId?, coCaptainId?, rosterByTier?, handicapByPlayer? },
  *     teamB?: { ...same }
@@ -152,6 +153,7 @@ export const updateTournament = onCall(async (request) => {
       case "test":
       case "archived":
       case "hideDraftPool":
+      case "rulesOfficialUseGrok":
         if (typeof value !== "boolean") {
           throw new HttpsError("invalid-argument", `updates.${key} must be a boolean`);
         }

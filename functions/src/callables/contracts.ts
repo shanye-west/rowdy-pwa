@@ -47,6 +47,7 @@ export interface TournamentUpdates {
   test?: boolean;
   archived?: boolean;
   hideDraftPool?: boolean;
+  rulesOfficialUseGrok?: boolean;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }

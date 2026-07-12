@@ -185,6 +185,11 @@ export type TournamentDoc = {
   // though `draftPool` data is still present. Set after the draft is complete
   // so the pool stops surfacing without deleting the underlying data.
   hideDraftPool?: boolean;
+  // Controls where the "Rules Official" menu link goes. When true, it opens the
+  // in-app AI Rules Official (the paid Grok chat) — flip this on for live rounds
+  // so real API usage is reserved for legitimate in-round questions. When false
+  // or absent (the default), it links out to the free NotebookLM notebook.
+  rulesOfficialUseGrok?: boolean;
 };
 
 // NEW: Hole definition (static data)

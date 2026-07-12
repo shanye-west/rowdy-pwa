@@ -42,6 +42,9 @@ export interface TournamentUpdates {
   tiebreakerWinner?: "teamA" | "teamB" | null;
   // Hide the Draft Pool from the UI without deleting the pool data.
   hideDraftPool?: boolean;
+  // true: the "Rules Official" menu link opens the in-app Grok chat; false/absent
+  // links out to the free NotebookLM notebook instead.
+  rulesOfficialUseGrok?: boolean;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }
