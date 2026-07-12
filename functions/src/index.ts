@@ -2167,3 +2167,12 @@ export { registerPushToken, unregisterPushToken, setNotificationPrefs } from "./
 // ============================================================================
 
 export { mcp } from "./mcp/index.js";
+
+// ============================================================================
+// RULES OFFICIAL (AI, streaming)
+// The in-app AI rules official — a streaming callable that proxies to xAI/Grok
+// with the in-round rules handbook as a cached system prompt.
+// See rulesOfficial/askRulesOfficial.ts.
+// ============================================================================
+
+export { askRulesOfficial } from "./rulesOfficial/askRulesOfficial.js";

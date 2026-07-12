@@ -30,6 +30,7 @@ const Player = lazyWithRecovery(() => import("./routes/Player"));
 const Login = lazyWithRecovery(() => import("./routes/Login"));
 const History = lazyWithRecovery(() => import("./routes/History"));
 const NotificationSettings = lazyWithRecovery(() => import("./routes/NotificationSettings"));
+const RulesOfficial = lazyWithRecovery(() => import("./routes/RulesOfficial"));
 const Tournament = lazyWithRecovery(() => import("./routes/Tournament"));
 const AdminDashboard = lazyWithRecovery(() => import("./routes/admin/AdminDashboard"));
 const AdminTournamentLayout = lazyWithRecovery(() => import("./routes/admin/AdminTournamentLayout"));
@@ -68,6 +69,7 @@ const router = createBrowserRouter(
         { path: "chat", element: <Chat /> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
+        { path: "rules-official", element: <RulesOfficial /> },
         { path: "settings/notifications", element: <NotificationSettings /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },

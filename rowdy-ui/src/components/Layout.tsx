@@ -271,18 +271,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       </ViewTransitionLink>
                     </Button>
 
-                    {/* MVP: links out to the shared Gemini Gem. Replace with an in-app
-                        /rules-official route when the Sonnet-backed Rules Official ships. */}
+                    {/* In-app AI Rules Official (Grok-backed streaming callable),
+                        replacing the old link out to NotebookLM. */}
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
-                      <a
-                        href="https://notebooklm.google.com/notebook/630e0ae9-191c-44e8-b7e2-8af132884afa"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={closeMenu}
-                      >
+                      <ViewTransitionLink to="/rules-official" onClick={closeMenu}>
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
                         Rules Official
-                      </a>
+                      </ViewTransitionLink>
                     </Button>
 
                     {showInstall && (
