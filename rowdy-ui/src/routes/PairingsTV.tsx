@@ -20,6 +20,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { cn } from "../lib/utils";
@@ -304,6 +305,12 @@ function FullScreenNote({ title, children, footer }: { title: string; children?:
         {children && <p className="mt-4 text-lg text-slate-500">{children}</p>}
       </div>
       {footer && <div className="mt-8">{footer}</div>}
+      <Link
+        to="/"
+        className="mt-8 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to home
+      </Link>
     </div>
   );
 }
@@ -523,7 +530,10 @@ export default function PairingsTV() {
   return (
     <div style={LIGHT_VARS}>
       {/* =================== Desktop broadcast board (lg+) =================== */}
-      <div className="hidden h-screen flex-col overflow-hidden bg-white text-slate-900 lg:flex">
+      <div
+        className="hidden h-screen flex-col overflow-hidden bg-white text-slate-900 lg:flex"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
         {/* Team-color split bar frames the board: left = Team A, right = Team B */}
         <div className="flex h-1.5 shrink-0">
           <div className="flex-1" style={{ background: teamAColor }} />
@@ -532,13 +542,22 @@ export default function PairingsTV() {
 
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-slate-200 px-6 py-3">
           <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              aria-label="Back to home"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
             {tournament.tournamentLogo && (
-              <OfflineImage
-                src={tournament.tournamentLogo}
-                alt={tournament.name}
-                fallbackIcon="🏌️"
-                style={{ width: 48, height: 48, objectFit: "contain" }}
-              />
+              <Link to="/" aria-label="Home" className="shrink-0">
+                <OfflineImage
+                  src={tournament.tournamentLogo}
+                  alt={tournament.name}
+                  fallbackIcon="🏌️"
+                  style={{ width: 48, height: 48, objectFit: "contain" }}
+                />
+              </Link>
             )}
             <div className="leading-tight">
               <div className="text-[0.6rem] font-black uppercase tracking-[0.28em] text-slate-400">Pairings Draft</div>
@@ -586,43 +605,59 @@ export default function PairingsTV() {
 
       {/* =================== Mobile board (< lg) =================== */}
       <div className="min-h-screen bg-white text-slate-900 lg:hidden">
-        {/* Team-color split bar */}
-        <div className="flex h-1.5">
-          <div className="flex-1" style={{ background: teamAColor }} />
-          <div className="flex-1" style={{ background: teamBColor }} />
-        </div>
-        <header className="sticky top-0 z-10 space-y-2.5 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-          <div className="flex items-center gap-2.5">
-            {tournament.tournamentLogo && (
-              <OfflineImage
-                src={tournament.tournamentLogo}
-                alt={tournament.name}
-                fallbackIcon="🏌️"
-                style={{ width: 34, height: 34, objectFit: "contain" }}
-              />
-            )}
-            <div className="min-w-0 leading-tight">
-              <div className="flex items-center gap-1.5">
-                <div className="text-[0.5rem] font-black uppercase tracking-[0.22em] text-slate-400">Pairings Draft</div>
-                {liveBadge}
+        {/* Sticky header pads for the status-bar safe area (this page renders
+            outside the app shell, so it must handle the notch inset itself). */}
+        <header
+          className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+          {/* Team-color split bar */}
+          <div className="flex h-1.5">
+            <div className="flex-1" style={{ background: teamAColor }} />
+            <div className="flex-1" style={{ background: teamBColor }} />
+          </div>
+          <div className="space-y-2.5 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <Link
+                to="/"
+                aria-label="Back to home"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              {tournament.tournamentLogo && (
+                <Link to="/" aria-label="Home" className="shrink-0">
+                  <OfflineImage
+                    src={tournament.tournamentLogo}
+                    alt={tournament.name}
+                    fallbackIcon="🏌️"
+                    style={{ width: 34, height: 34, objectFit: "contain" }}
+                  />
+                </Link>
+              )}
+              <div className="min-w-0 leading-tight">
+                <div className="flex items-center gap-1.5">
+                  <div className="text-[0.5rem] font-black uppercase tracking-[0.22em] text-slate-400">Pairings Draft</div>
+                  {liveBadge}
+                </div>
+                <div className="truncate text-base font-bold">{tournament.name}</div>
+                <div className="truncate text-[0.7rem] font-medium text-slate-500">{roundMeta}</div>
               </div>
-              <div className="truncate text-base font-bold">{tournament.name}</div>
-              <div className="truncate text-[0.7rem] font-medium text-slate-500">{roundMeta}</div>
+              <span className="ml-auto shrink-0 text-sm font-bold text-slate-600">
+                {setCount}<span className="font-medium text-slate-400">/{draft.totalMatches}</span>
+              </span>
             </div>
-            <span className="ml-auto shrink-0 text-sm font-bold text-slate-600">
-              {setCount}<span className="font-medium text-slate-400">/{draft.totalMatches}</span>
-            </span>
-          </div>
 
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[0.95rem]" style={{ background: statusBg, color: statusColor }}>
-            {draft.phase === "drafting" && (
-              <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "currentColor" }} />
-            )}
-            {statusInner}
-          </div>
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[0.95rem]" style={{ background: statusBg, color: statusColor }}>
+              {draft.phase === "drafting" && (
+                <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "currentColor" }} />
+              )}
+              {statusInner}
+            </div>
 
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
           </div>
         </header>
 
