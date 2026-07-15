@@ -6,6 +6,7 @@ import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
+import PlayerAvatar from "../components/PlayerAvatar";
 import type { TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
 import { usePlayers, useTournamentContext } from "../contexts/TournamentContext";
@@ -173,7 +174,9 @@ function TeamsComponent() {
                       key={pid} 
                       className="flex justify-between items-center px-4 py-2 border-b border-border hover:bg-muted transition-colors duration-150"
                     >
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <PlayerAvatar name={name} playerId={pid} color={teamColor} size={36} />
+                        <div className="flex min-w-0 items-baseline gap-2">
                         <Link
                           to={`/player/${pid}`}
                           className="font-semibold text-foreground hover:text-foreground"
@@ -200,6 +203,7 @@ function TeamsComponent() {
                             Captain
                           </span>
                         )}
+                        </div>
                       </div>
                       <div className="text-sm text-muted-foreground font-mono">
                         {s ? `${s.wins}-${s.losses}-${s.halves}` : "0-0-0"}

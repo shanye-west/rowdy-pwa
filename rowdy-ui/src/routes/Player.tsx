@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
+import PlayerAvatar from "../components/PlayerAvatar";
 import BadgeGrid from "../components/player/BadgeGrid";
 import { getBadges } from "../lib/badges";
 import { usePlayerStatsBySeries } from "../hooks/usePlayerStats";
@@ -119,7 +120,9 @@ export default function Player() {
       return (
         <div className="px-4 py-10">
           <Card className="mx-auto max-w-md border-border/80 bg-card/90 p-8 text-center">
-            <div className="text-3xl">🏌️</div>
+            <div className="flex justify-center">
+              <PlayerAvatar name={name} playerId={playerId} color={accent} size={72} />
+            </div>
             <div className="mt-2 text-lg font-semibold text-foreground">{name}</div>
             <p className="mt-1 text-sm text-muted-foreground">No match history yet — stats appear once matches are played.</p>
           </Card>
@@ -132,17 +135,22 @@ export default function Player() {
         {/* Identity + headline record */}
         <Card className="overflow-hidden p-0" style={{ borderTop: `4px solid ${accent}` }}>
           <div className="p-4">
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-2xl font-bold text-foreground">{name}</h1>
-              {(teamInfo?.isCaptain || teamInfo?.isCoCaptain) && (
-                <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white">
-                  {teamInfo.isCaptain ? "Captain" : "Co-Captain"}
-                </span>
-              )}
-            </div>
-            <div className="mt-0.5 text-sm text-muted-foreground">
-              {teamInfo?.name ? <span style={{ color: accent }} className="font-semibold">{teamInfo.name}</span> : null}
-              {teamInfo?.handicap != null && <span>{teamInfo?.name ? " · " : ""}HCP {Number(teamInfo.handicap).toFixed(1)}</span>}
+            <div className="flex items-center gap-3">
+              <PlayerAvatar name={name} playerId={playerId} color={accent} size={64} />
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <h1 className="text-2xl font-bold text-foreground">{name}</h1>
+                  {(teamInfo?.isCaptain || teamInfo?.isCoCaptain) && (
+                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white">
+                      {teamInfo.isCaptain ? "Captain" : "Co-Captain"}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-sm text-muted-foreground">
+                  {teamInfo?.name ? <span style={{ color: accent }} className="font-semibold">{teamInfo.name}</span> : null}
+                  {teamInfo?.handicap != null && <span>{teamInfo?.name ? " · " : ""}HCP {Number(teamInfo.handicap).toFixed(1)}</span>}
+                </div>
+              </div>
             </div>
 
             {/* Series toggle */}
