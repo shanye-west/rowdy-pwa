@@ -7,6 +7,10 @@
  * into the browser. It reads the live draft but never writes — no picking, no
  * setup, no admin controls.
  *
+ * The whole board is sized to fit one screen (no scrolling) so it reads cleanly
+ * on a shared screen: a compact header, a dense matchups grid, and the two
+ * teams' remaining players as wrapping chips along the bottom.
+ *
  * It auto-detects the round currently being drafted for the active tournament
  * (preferring an in-progress draft, then one awaiting confirmation, then the
  * most recently finalized), so there's no round id to remember. Reads of the
@@ -122,38 +126,26 @@ interface Meta {
 }
 
 /**
- * A single player line: avatar, name (in the team color), tier chip + course
- * handicap. Never truncates — long names wrap. `alignRight` mirrors the layout
- * so team B hugs the right edge of a match card.
+ * A player as they appear inside a match card: avatar, name in the team color,
+ * tier chip + course handicap. Never truncates. `alignRight` mirrors the layout
+ * so team B hugs the right edge of the card.
  */
-function PlayerRow({
-  pid,
-  team,
-  meta,
-  size = 42,
-  alignRight,
-}: {
-  pid: string;
-  team: DraftTeamKey;
-  meta: Meta;
-  size?: number;
-  alignRight?: boolean;
-}) {
+function MatchPlayer({ pid, team, meta, alignRight }: { pid: string; team: DraftTeamKey; meta: Meta; alignRight?: boolean }) {
   const color = meta.teamColor(team);
   const tier = meta.tierOf(pid);
   const ch = meta.chOf(pid);
   return (
-    <div className={cn("flex items-center gap-2.5 min-w-0", alignRight && "flex-row-reverse")}>
-      <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={color} size={size} />
-      <div className={cn("min-w-0", alignRight && "text-right")}>
-        <div className="text-[1.05rem] font-semibold leading-tight" style={{ color }}>
+    <div className={cn("flex items-center gap-2 min-w-0", alignRight && "flex-row-reverse")}>
+      <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={color} size={30} />
+      <div className={cn("min-w-0 leading-tight", alignRight && "text-right")}>
+        <div className="text-[0.9rem] font-semibold" style={{ color }}>
           {meta.nameOf(pid)}
         </div>
-        <div className={cn("mt-1 flex items-center gap-1.5", alignRight && "justify-end")}>
+        <div className={cn("mt-0.5 flex items-center gap-1", alignRight && "justify-end")}>
           {tier && (
-            <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-bold", tierStyle(tier).chip)}>{tier}</span>
+            <span className={cn("rounded px-1 text-[10px] font-bold leading-4", tierStyle(tier).chip)}>{tier}</span>
           )}
-          {ch != null && <span className="text-[11px] font-medium text-slate-400">CH {ch}</span>}
+          {ch != null && <span className="text-[10px] font-medium text-slate-400">CH {ch}</span>}
         </div>
       </div>
     </div>
@@ -165,26 +157,24 @@ function MatchStatus({ match, meta, isCurrent }: { match: PairingDraftDoc["match
   const bothSet = !!(match.teamAPlayers?.length && match.teamBPlayers?.length);
   if (bothSet) {
     return (
-      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
         Set
       </span>
     );
   }
   if (isCurrent) {
     return (
-      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
         On the clock
       </span>
     );
   }
   return (
-    <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-      Nom. {meta.teamName(match.nominatedBy)}
-    </span>
+    <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Nom. {meta.teamName(match.nominatedBy)}</span>
   );
 }
 
-/** One matchup: Team A side vs Team B side, with a status chip. */
+/** One matchup: Team A side vs Team B side, with a status chip. Compact. */
 function MatchCard({
   match,
   meta,
@@ -200,66 +190,91 @@ function MatchCard({
   const side = (ids: string[] | null, team: DraftTeamKey, alignRight?: boolean) => {
     if (ids && ids.length) {
       return (
-        <div className={cn("flex flex-col gap-2.5", alignRight ? "items-end" : "items-start")}>
+        <div className={cn("flex flex-col gap-1.5", alignRight ? "items-end" : "items-start")}>
           {ids.map((pid) => (
-            <PlayerRow key={pid} pid={pid} team={team} meta={meta} size={40} alignRight={alignRight} />
+            <MatchPlayer key={pid} pid={pid} team={team} meta={meta} alignRight={alignRight} />
           ))}
         </div>
       );
     }
     return (
-      <div className={cn("text-sm font-medium text-slate-300", alignRight ? "text-right" : "text-left")}>— to pick —</div>
+      <div className={cn("text-xs font-medium text-slate-300", alignRight ? "text-right" : "text-left")}>— to pick —</div>
     );
   };
 
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-white p-4 transition-all",
-        isCurrent
-          ? "border-transparent shadow-md ring-2"
-          : bothSet
-            ? "border-slate-200 shadow-sm"
-            : "border-dashed border-slate-200"
+        "rounded-xl border bg-white px-3 py-2.5 transition-all",
+        isCurrent ? "border-transparent shadow-sm ring-2" : bothSet ? "border-slate-200 shadow-sm" : "border-dashed border-slate-200"
       )}
       style={isCurrent ? ({ "--tw-ring-color": currentColor } as CSSProperties) : undefined}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Match {match.matchNumber}</span>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Match {match.matchNumber}</span>
         <MatchStatus match={match} meta={meta} isCurrent={isCurrent} />
       </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {side(match.teamAPlayers, "teamA")}
-        <span className="text-[11px] font-bold uppercase text-slate-300">vs</span>
+        <span className="text-[10px] font-bold uppercase text-slate-300">vs</span>
         {side(match.teamBPlayers, "teamB", true)}
       </div>
     </div>
   );
 }
 
-/** A team's "still available" pool (players not yet placed in a matchup). */
-function AvailablePool({ team, ids, meta }: { team: DraftTeamKey; ids: string[]; meta: Meta }) {
+/** A compact chip for an available (not-yet-placed) player. Wraps; never cuts off. */
+function AvailableChip({ pid, team, meta }: { pid: string; team: DraftTeamKey; meta: Meta }) {
+  const color = meta.teamColor(team);
+  const tier = meta.tierOf(pid);
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-2.5 shadow-sm">
+      <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={color} size={24} />
+      <span className="text-[0.82rem] font-semibold" style={{ color }}>
+        {meta.nameOf(pid)}
+      </span>
+      {tier && <span className={cn("rounded px-1 text-[9px] font-bold leading-4", tierStyle(tier).chip)}>{tier}</span>}
+    </div>
+  );
+}
+
+/** One team's remaining-players panel: header + wrapping chips. When it's this
+ *  team's turn, the panel is ringed in the team color with an "on the clock"
+ *  badge so it's obvious where the next pick comes from. */
+function AvailablePanel({ team, ids, meta, onClock }: { team: DraftTeamKey; ids: string[]; meta: Meta; onClock?: string | null }) {
   const color = meta.teamColor(team);
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div
-        className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5"
-        style={{ background: `color-mix(in srgb, ${color} 8%, #ffffff)` }}
-      >
-        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide" style={{ color }}>
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-          {meta.teamName(team)}
+    <div
+      className={cn(
+        "flex min-h-0 flex-col rounded-xl border p-3 transition-all",
+        onClock ? "border-transparent bg-white ring-2" : "border-slate-200 bg-slate-50/60"
+      )}
+      style={onClock ? ({ "--tw-ring-color": color } as CSSProperties) : undefined}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide" style={{ color }}>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+            {meta.teamName(team)}
+          </span>
+          {onClock && (
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide"
+              style={{ background: `color-mix(in srgb, ${color} 16%, #ffffff)`, color }}
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: color }} />
+              On the clock · {onClock}
+            </span>
+          )}
         </div>
-        <span className="text-xs font-semibold text-slate-400">{ids.length} left</span>
+        <span className="shrink-0 text-xs font-semibold text-slate-400">{ids.length} left</span>
       </div>
       {ids.length === 0 ? (
-        <div className="px-4 py-3 text-sm text-slate-400">All players placed</div>
+        <div className="text-sm text-slate-400">All players placed</div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="flex min-h-0 flex-wrap content-start gap-1.5 overflow-y-auto">
           {ids.map((pid) => (
-            <div key={pid} className="px-4 py-2.5">
-              <PlayerRow pid={pid} team={team} meta={meta} size={38} />
-            </div>
+            <AvailableChip key={pid} pid={pid} team={team} meta={meta} />
           ))}
         </div>
       )}
@@ -283,7 +298,7 @@ function RoundSwitcher({
 }) {
   if (rounds.length <= 1) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {rounds.map((r, i) => {
         const d = drafts[r.id];
         const isActive = r.id === currentRoundId;
@@ -299,14 +314,13 @@ function RoundSwitcher({
             key={r.id}
             to={`/pairings-tv/${i + 1}`}
             className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
+              "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[0.8rem] font-semibold transition-colors",
               isActive
                 ? "bg-slate-900 text-white"
                 : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             )}
           >
-            <span className={cn("h-2 w-2 rounded-full", dot)} />
-            Round {i + 1}
+            <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />R{i + 1}
           </Link>
         );
       })}
@@ -315,15 +329,7 @@ function RoundSwitcher({
 }
 
 /** Full-screen centered message (loading / waiting / access states). */
-function FullScreenNote({
-  title,
-  children,
-  footer,
-}: {
-  title: string;
-  children?: React.ReactNode;
-  footer?: React.ReactNode;
-}) {
+function FullScreenNote({ title, children, footer }: { title: string; children?: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-white p-8 text-center">
       <div className="max-w-lg">
@@ -489,92 +495,103 @@ export default function PairingsTV() {
   const remainingB = remainingPlayerIds(draft, "teamB");
   const pct = draft.totalMatches ? (setCount / draft.totalMatches) * 100 : 0;
 
-  // Whose move it is, in plain language.
+  // Whose move it is, in plain language. `actionText` fills the status pill next
+  // to the team name; `clockLabel` tags that team's bench as on the clock.
   let statusTeam: DraftTeamKey | null = null;
-  let statusText = "";
+  let statusText = ""; // used only when there's no acting team (review / finalized)
+  let actionText = "";
+  let clockLabel = "";
   if (draft.phase === "finalized") {
     statusText = "Pairings locked in";
   } else if (draft.phase === "review") {
-    statusText = "Draft complete — awaiting confirmation";
+    statusText = "Awaiting confirmation";
   } else if (draft.turn) {
     statusTeam = draft.turn.team;
-    const verb = draft.turn.awaiting === "nomination" ? "to send out a match" : "to answer";
-    statusText = `${meta.teamName(statusTeam)} ${verb}`;
+    if (draft.turn.awaiting === "nomination") {
+      actionText = "to nominate a pairing";
+      clockLabel = "Nominating";
+    } else {
+      actionText = "to match players";
+      clockLabel = "Matching";
+    }
   }
   const statusColor = statusTeam ? meta.teamColor(statusTeam) : "#0f172a";
   const currentIndex = draft.turn?.matchIndex ?? -1;
 
-  return (
-    <div className="min-h-screen bg-white text-slate-900" style={LIGHT_VARS}>
-      {/* Desktop-only hint on narrow screens */}
-      <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-700 lg:hidden">
-        This pairings board is designed for a desktop screen share.
-      </div>
+  // More columns for more matches keeps the grid short enough to fit the screen.
+  const matchCols = draft.matches.length > 8 ? "repeat(auto-fit, minmax(250px, 1fr))" : "repeat(auto-fit, minmax(300px, 1fr))";
 
-      <div className="mx-auto max-w-[1600px] px-8 py-7">
-        {/* Header */}
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div className="flex items-center gap-4">
-            {tournament.tournamentLogo && (
-              <OfflineImage
-                src={tournament.tournamentLogo}
-                alt={tournament.name}
-                fallbackIcon="🏌️"
-                style={{ width: 52, height: 52, objectFit: "contain" }}
-              />
-            )}
-            <div>
-              <div className="text-2xl font-bold leading-tight text-slate-900">{tournament.name}</div>
-              <div className="mt-0.5 text-sm font-medium text-slate-500">
-                {`Round ${roundIdx >= 0 ? roundIdx + 1 : round.day ?? ""}`.trim()}
-                {round.format ? ` • ${formatRoundType(round.format)}` : ""}
-                {course?.name ? ` • ${course.name}` : ""}
-              </div>
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-white text-slate-900" style={LIGHT_VARS}>
+      {/* Header */}
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-slate-200 px-6 py-3">
+        <div className="flex items-center gap-3">
+          {tournament.tournamentLogo && (
+            <OfflineImage
+              src={tournament.tournamentLogo}
+              alt={tournament.name}
+              fallbackIcon="🏌️"
+              style={{ width: 44, height: 44, objectFit: "contain" }}
+            />
+          )}
+          <div className="leading-tight">
+            <div className="text-xl font-bold text-slate-900">{tournament.name}</div>
+            <div className="text-[0.8rem] font-medium text-slate-500">
+              {`Round ${roundIdx >= 0 ? roundIdx + 1 : round.day ?? ""}`.trim()}
+              {round.format ? ` • ${formatRoundType(round.format)}` : ""}
+              {course?.name ? ` • ${course.name}` : ""}
             </div>
           </div>
+        </div>
 
+        <div className="flex items-center gap-4">
+          {switcher}
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="whitespace-nowrap text-[0.8rem] font-bold text-slate-600">
+              {setCount}<span className="font-medium text-slate-400">/{draft.totalMatches}</span>
+            </span>
+          </div>
           <div
-            className="flex items-center gap-2.5 rounded-full px-5 py-2.5 text-lg font-bold"
-            style={{ background: `color-mix(in srgb, ${statusColor} 12%, #ffffff)`, color: statusColor }}
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-base"
+            style={{ background: `color-mix(in srgb, ${statusColor} 14%, #ffffff)`, color: statusColor }}
           >
             {draft.phase === "drafting" && (
               <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full" style={{ background: "currentColor" }} />
             )}
-            {statusText}
-          </div>
-        </header>
-
-        {/* Round switcher + progress */}
-        <div className="flex flex-wrap items-center justify-between gap-4 py-5">
-          {switcher}
-          <div className="flex items-center gap-3">
-            <div className="h-2.5 w-48 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="whitespace-nowrap text-sm font-bold text-slate-700">
-              {setCount} <span className="font-medium text-slate-400">of</span> {draft.totalMatches} set
-            </div>
+            {statusTeam ? (
+              <span className="flex items-baseline gap-1.5">
+                <span className="font-extrabold">{meta.teamName(statusTeam)}</span>
+                <span className="font-semibold opacity-75">{actionText}</span>
+              </span>
+            ) : (
+              <span className="font-bold">{statusText}</span>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Body: matchups + available pools */}
-        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_380px]">
-          <div>
-            <div className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Matchups</div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {draft.matches.map((m, i) => (
-                <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
-              ))}
-            </div>
+      {/* Body: matchups (fill) + available players (bottom), all within one screen */}
+      <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-4 px-6 py-4">
+        <section className="flex min-h-0 flex-col">
+          <div className="mb-2 text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Matchups</div>
+          <div
+            className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-1"
+            style={{ gridTemplateColumns: matchCols }}
+          >
+            {draft.matches.map((m, i) => (
+              <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
+            ))}
           </div>
+        </section>
 
-          <aside className="space-y-4">
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-400">Still available</div>
-            <AvailablePool team="teamA" ids={remainingA} meta={meta} />
-            <AvailablePool team="teamB" ids={remainingB} meta={meta} />
-          </aside>
-        </div>
-      </div>
+        <section className="grid min-h-0 shrink-0 grid-cols-2 gap-4" style={{ maxHeight: "34vh" }}>
+          <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
+          <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
+        </section>
+      </main>
     </div>
   );
 }
