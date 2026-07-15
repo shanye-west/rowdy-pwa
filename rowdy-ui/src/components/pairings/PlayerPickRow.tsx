@@ -55,7 +55,7 @@ export default function PlayerPickRow({
       }
     >
       <span className={cn("shrink-0", disabled && "opacity-50")}>
-        <PlayerAvatar name={meta.nameOf(pid)} color={teamColor} size={32} />
+        <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={teamColor} size={32} />
       </span>
       <div className="min-w-0 flex-1">
         <div className={cn("truncate text-sm font-semibold text-foreground", disabled && "opacity-50")}>

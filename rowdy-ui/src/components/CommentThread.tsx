@@ -347,7 +347,7 @@ function CommentRow({
   return (
     <li>
       <div className={cn("flex gap-2.5 transition-opacity", comment.pending && "opacity-50")}>
-        <PlayerAvatar name={comment.authorName} size={32} />
+        <PlayerAvatar name={comment.authorName} playerId={comment.authorId} size={32} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="truncate text-sm font-semibold text-foreground">{comment.authorName}</span>
@@ -568,7 +568,7 @@ function ReplyRow({
 }) {
   return (
     <div className={cn("flex gap-2 transition-opacity", reply.pending && "opacity-50")}>
-      <PlayerAvatar name={reply.authorName} size={26} />
+      <PlayerAvatar name={reply.authorName} playerId={reply.authorId} size={26} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="truncate text-xs font-semibold text-foreground">{reply.authorName}</span>

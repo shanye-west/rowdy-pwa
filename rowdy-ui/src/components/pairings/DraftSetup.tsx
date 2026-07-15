@@ -63,7 +63,7 @@ function TeamAvailabilityPicker({
                     : undefined
                 }
               >
-                <PlayerAvatar name={meta.nameOf(pid)} color={color} size={30} />
+                <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={color} size={30} />
                 <div className="min-w-0 flex-1">
                   <div className={cn("truncate text-sm font-semibold", on ? "text-foreground" : "text-muted-foreground line-through")}>
                     {meta.nameOf(pid)}

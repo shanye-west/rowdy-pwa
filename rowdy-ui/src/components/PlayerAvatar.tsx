@@ -1,9 +1,15 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { cn } from "../lib/utils";
+import { playerPhotoUrl } from "../assets/players";
 
 export interface PlayerAvatarProps {
   /** Player display name; initials are derived from it. */
   name?: string;
+  /**
+   * Player id. When a headshot is bundled for this player it renders as the
+   * avatar; otherwise it falls back to the team-tinted initials.
+   */
+  playerId?: string | null;
   /** Team color (css value). Used as a tinted background + text color. */
   color?: string;
   /** Diameter in px (default 28). */
@@ -20,13 +26,37 @@ function initialsOf(name: string | undefined): string {
 }
 
 /**
- * Small circular initials avatar. Players have no photo field, so initials on a
- * team-tinted background are how we give each name a visual anchor. Deterministic
- * — same name + color always renders the same.
+ * Small circular avatar. When a headshot is bundled for `playerId` it renders
+ * the photo; otherwise (no id, no photo, or a load error) it falls back to the
+ * player's initials on a team-tinted background. Deterministic — same name +
+ * color always renders the same initials.
  */
-function PlayerAvatar({ name, color, size = 28, className }: PlayerAvatarProps) {
+function PlayerAvatar({ name, playerId, color, size = 28, className }: PlayerAvatarProps) {
   const initials = useMemo(() => initialsOf(name), [name]);
+  const photo = playerPhotoUrl(playerId);
+  const [failed, setFailed] = useState(false);
   const tint = color || "var(--team-a-default)";
+
+  if (photo && !failed) {
+    return (
+      <img
+        src={photo}
+        alt={name || ""}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={cn("inline-block shrink-0 rounded-full object-cover", className)}
+        style={{
+          width: size,
+          height: size,
+          background: `color-mix(in srgb, ${tint} 18%, var(--card-bg))`,
+        }}
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden="true"

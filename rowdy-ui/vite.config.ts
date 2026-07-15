@@ -59,6 +59,10 @@ export default defineConfig({
         // install-guide videos (~2MB each): they're only needed pre-install, when
         // the user is online in the browser, so precaching them just bloats the SW.
         globIgnores: ['**/firebase-messaging-sw.js', '**/videos/**'],
+        // Set explicitly (rather than relying on the plugin default, which
+        // varies by version) so bundled player headshots (.webp) are precached
+        // and render offline alongside the app shell.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
         // Prevent returning index.html for files with extensions (.js, .css, .png, etc.)
         // This fixes "text/html is not a valid JavaScript MIME type" errors after deployments
         navigateFallbackDenylist: [/\.[a-z0-9]+$/i],

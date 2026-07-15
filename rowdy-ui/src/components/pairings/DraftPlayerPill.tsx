@@ -22,7 +22,7 @@ export default function DraftPlayerPill({ pid, team, meta, alignRight }: DraftPl
   const ch = meta.chOf(pid);
   const color = meta.teamColor(team);
 
-  const avatar = <PlayerAvatar name={meta.nameOf(pid)} color={color} size={26} />;
+  const avatar = <PlayerAvatar name={meta.nameOf(pid)} playerId={pid} color={color} size={26} />;
   const text = (
     <div className={cn("min-w-0", alignRight && "text-right")}>
       <div className="truncate text-sm font-semibold leading-tight" style={{ color }}>
