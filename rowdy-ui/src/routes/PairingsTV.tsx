@@ -167,18 +167,26 @@ function MatchCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white px-3 py-2.5 transition-all",
-        isCurrent ? "border-transparent shadow-sm ring-2" : bothSet ? "border-slate-200 shadow-sm" : "border-dashed border-slate-200"
+        "rounded-2xl border bg-white px-4 py-3 transition-all",
+        isCurrent ? "border-transparent" : bothSet ? "border-slate-200 shadow-sm" : "border-dashed border-slate-300"
       )}
-      style={isCurrent ? ({ "--tw-ring-color": currentColor } as CSSProperties) : undefined}
+      style={
+        isCurrent
+          ? { boxShadow: `0 0 0 2px ${currentColor}, 0 0 26px -4px color-mix(in srgb, ${currentColor} 45%, transparent)` }
+          : undefined
+      }
     >
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Match {match.matchNumber}</span>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          Match {match.matchNumber}
+        </span>
         <MatchStatus match={match} meta={meta} isCurrent={isCurrent} />
       </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5">
         {side(match.teamAPlayers, "teamA")}
-        <span className="text-[10px] font-bold uppercase text-slate-300">vs</span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-950 text-[10px] font-black tracking-wider text-white shadow-md ring-2 ring-white">
+          VS
+        </span>
         {side(match.teamBPlayers, "teamB", true)}
       </div>
     </div>
@@ -208,33 +216,30 @@ function AvailablePanel({ team, ids, meta, onClock }: { team: DraftTeamKey; ids:
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col rounded-xl border p-3 transition-all",
-        onClock ? "border-transparent bg-white ring-2" : "border-slate-200 bg-slate-50/60"
+        "flex min-h-0 flex-col overflow-hidden rounded-xl border bg-white transition-all",
+        onClock ? "border-transparent" : "border-slate-200"
       )}
-      style={onClock ? ({ "--tw-ring-color": color } as CSSProperties) : undefined}
+      style={onClock ? { boxShadow: `0 0 0 3px ${color}, 0 0 22px -4px color-mix(in srgb, ${color} 55%, transparent)` } : undefined}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2 text-white"
+        style={{ background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 60%, #000))` }}
+      >
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide" style={{ color }}>
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-            {meta.teamName(team)}
-          </span>
+          <span className="truncate text-sm font-black uppercase tracking-wide">{meta.teamName(team)}</span>
           {onClock && (
-            <span
-              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide"
-              style={{ background: `color-mix(in srgb, ${color} 16%, #ffffff)`, color }}
-            >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: color }} />
-              On the clock · {onClock}
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+              {onClock}
             </span>
           )}
         </div>
-        <span className="shrink-0 text-xs font-semibold text-slate-400">{ids.length} left</span>
+        <span className="shrink-0 text-xs font-bold text-white/85">{ids.length} left</span>
       </div>
       {ids.length === 0 ? (
-        <div className="text-sm text-slate-400">All players placed</div>
+        <div className="px-3 py-3 text-sm text-slate-400">All players placed</div>
       ) : (
-        <div className="flex min-h-0 flex-wrap content-start gap-1.5 overflow-y-auto">
+        <div className="flex min-h-0 flex-wrap content-start gap-1.5 overflow-y-auto p-2.5">
           {ids.map((pid) => (
             <AvailableChip key={pid} pid={pid} team={team} meta={meta} />
           ))}
@@ -487,9 +492,6 @@ export default function PairingsTV() {
   const statusColor = statusTeam ? meta.teamColor(statusTeam) : "#0f172a";
   const currentIndex = draft.turn?.matchIndex ?? -1;
 
-  // More columns for more matches keeps the grid short enough to fit the screen.
-  const matchCols = draft.matches.length > 8 ? "repeat(auto-fit, minmax(250px, 1fr))" : "repeat(auto-fit, minmax(300px, 1fr))";
-
   // The whose-turn content + tint, shared by the desktop pill and mobile banner.
   const statusBg = `color-mix(in srgb, ${statusColor} 14%, #ffffff)`;
   const statusInner = statusTeam ? (
@@ -505,10 +507,29 @@ export default function PairingsTV() {
     `${round.format ? ` • ${formatRoundType(round.format)}` : ""}` +
     `${course?.name ? ` • ${course.name}` : ""}`;
 
+  // Team-color flair accents + a LIVE/FINAL badge.
+  const teamAColor = meta.teamColor("teamA");
+  const teamBColor = meta.teamColor("teamB");
+  const liveBadge =
+    draft.phase !== "finalized" ? (
+      <span className="flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-widest text-white shadow-sm">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+        Live
+      </span>
+    ) : (
+      <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-widest text-white">Final</span>
+    );
+
   return (
     <div style={LIGHT_VARS}>
       {/* =================== Desktop broadcast board (lg+) =================== */}
       <div className="hidden h-screen flex-col overflow-hidden bg-white text-slate-900 lg:flex">
+        {/* Team-color split bar frames the board: left = Team A, right = Team B */}
+        <div className="flex h-1.5 shrink-0">
+          <div className="flex-1" style={{ background: teamAColor }} />
+          <div className="flex-1" style={{ background: teamBColor }} />
+        </div>
+
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-slate-200 px-6 py-3">
           <div className="flex items-center gap-3">
             {tournament.tournamentLogo && (
@@ -516,16 +537,18 @@ export default function PairingsTV() {
                 src={tournament.tournamentLogo}
                 alt={tournament.name}
                 fallbackIcon="🏌️"
-                style={{ width: 44, height: 44, objectFit: "contain" }}
+                style={{ width: 48, height: 48, objectFit: "contain" }}
               />
             )}
             <div className="leading-tight">
+              <div className="text-[0.6rem] font-black uppercase tracking-[0.28em] text-slate-400">Pairings Draft</div>
               <div className="text-xl font-bold text-slate-900">{tournament.name}</div>
               <div className="text-[0.8rem] font-medium text-slate-500">{roundMeta}</div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            {liveBadge}
             {switcher}
             <div className="flex items-center gap-2">
               <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
@@ -544,25 +567,30 @@ export default function PairingsTV() {
           </div>
         </header>
 
-        <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-4 px-6 py-4">
+        {/* Each team's bench flanks its own side; matchups run down the middle. */}
+        <main className="grid min-h-0 flex-1 grid-cols-[minmax(210px,0.9fr)_minmax(0,2.4fr)_minmax(210px,0.9fr)] gap-5 px-6 py-4">
+          <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
+
           <section className="flex min-h-0 flex-col">
-            <div className="mb-2 text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Matchups</div>
-            <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-1" style={{ gridTemplateColumns: matchCols }}>
+            <div className="mb-2 text-center text-[0.7rem] font-black uppercase tracking-[0.3em] text-slate-400">Matchups</div>
+            <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2.5 overflow-y-auto p-1">
               {draft.matches.map((m, i) => (
                 <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
               ))}
             </div>
           </section>
 
-          <section className="grid min-h-0 shrink-0 grid-cols-2 gap-4" style={{ maxHeight: "34vh" }}>
-            <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
-            <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
-          </section>
+          <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
         </main>
       </div>
 
       {/* =================== Mobile board (< lg) =================== */}
       <div className="min-h-screen bg-white text-slate-900 lg:hidden">
+        {/* Team-color split bar */}
+        <div className="flex h-1.5">
+          <div className="flex-1" style={{ background: teamAColor }} />
+          <div className="flex-1" style={{ background: teamBColor }} />
+        </div>
         <header className="sticky top-0 z-10 space-y-2.5 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2.5">
             {tournament.tournamentLogo && (
@@ -574,6 +602,10 @@ export default function PairingsTV() {
               />
             )}
             <div className="min-w-0 leading-tight">
+              <div className="flex items-center gap-1.5">
+                <div className="text-[0.5rem] font-black uppercase tracking-[0.22em] text-slate-400">Pairings Draft</div>
+                {liveBadge}
+              </div>
               <div className="truncate text-base font-bold">{tournament.name}</div>
               <div className="truncate text-[0.7rem] font-medium text-slate-500">{roundMeta}</div>
             </div>
