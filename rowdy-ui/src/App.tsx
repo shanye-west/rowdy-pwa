@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { ArrowRight, ClipboardList, Flag } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
+import { useAuth } from "./contexts/AuthContext";
+import { useRoundDrafts, findLivePairing } from "./hooks/usePairingDrafts";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
@@ -35,6 +38,14 @@ export default function App() {
   } = useTournamentData({ prefetchedTournament: tournament, preferDenormalizedTotals: true });
   
   const loading = tournamentLoading || dataLoading;
+
+  // "RX Pairings Selection Live" banner: shown only while a round's pairings
+  // draft is in progress (drafting or awaiting confirm) and auto-hidden once the
+  // admin finalizes. Draft reads require auth, so only subscribe when signed in.
+  const { user } = useAuth();
+  const draftRoundIds = useMemo(() => (user ? rounds.map((r) => r.id) : []), [user, rounds]);
+  const { drafts: pairingDrafts } = useRoundDrafts(draftRoundIds);
+  const livePairing = useMemo(() => findLivePairing(rounds, pairingDrafts), [rounds, pairingDrafts]);
 
   // Skeleton of the score hero + schedule instead of a bare spinner — first
   // paint reads as the page taking shape, and content swaps in without a jump.
@@ -179,6 +190,28 @@ export default function App() {
               </CardContent>
             </Card>
           </section>
+
+          {livePairing && (
+            <section>
+              <ViewTransitionLink to={`/pairings-tv/${livePairing.number}`} className="card-link-hover block">
+                <Card className="border-red-200 bg-red-50/80">
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <span className="relative flex h-3 w-3 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-sm font-bold text-red-700">
+                        R{livePairing.number} Pairings Selection Live
+                      </div>
+                      <div className="text-xs text-red-600/80">Captains are picking matchups now — tap to watch</div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-red-600" />
+                  </CardContent>
+                </Card>
+              </ViewTransitionLink>
+            </section>
+          )}
 
           <section className="space-y-3">
               <div className="flex items-center justify-between px-1">

@@ -211,21 +211,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Pairings draft: NOT public — pairings are announced in person, so only
-    // the two teams' captains/co-captains and admins may read the live board.
-    // Like matches, the authorized auth uids are precomputed into an array on
-    // the doc (rules can't resolve captain/admin status by path). All writes
-    // go through the draft callables via the Admin SDK.
+    // Pairings draft: readable by any signed-in user so the live board — the
+    // full-screen /pairings-tv broadcast in particular — is viewable by all
+    // players (it's screen-shared during the draft anyway). The in-app captains'
+    // draft page still gates its editing UI to captains/admins client-side.
+    // Writes only ever happen through the admin-gated draftOps callables via the
+    // Admin SDK, which bypasses these rules.
     match /pairingDrafts/{roundId} {
-      function isAuthorized() {
-        return request.auth != null &&
-               resource.data.keys().hasAny(['authorizedUids']) &&
-               request.auth.uid in resource.data.authorizedUids;
-      }
-      // `resource == null` keeps a not-yet-created draft readable (empty), so
-      // admins/captains can tell "no draft yet" apart from "access denied".
-      // Once the doc exists, only authorizedUids may read it.
-      allow read: if resource == null || isAuthorized();
+      allow read: if request.auth != null;
       allow write: if false;
     }
   }

@@ -20,11 +20,12 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
-import { collection, doc, getDoc, onSnapshot, query, where, type FirestoreError } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { cn } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
+import { useRoundDrafts } from "../hooks/usePairingDrafts";
 import PlayerAvatar from "../components/PlayerAvatar";
 import OfflineImage from "../components/OfflineImage";
 import { tierStyle } from "../utils/tierColors";
@@ -71,45 +72,6 @@ function useRounds(tournamentId: string | undefined): RoundDoc[] {
     return () => unsub();
   }, [tournamentId]);
   return rounds;
-}
-
-/** Live map of roundId → pairing draft for the given round ids. `denied` flips
- *  true if the viewer isn't authorized to read drafts (not a captain/admin). */
-function useRoundDrafts(roundIds: string[]): {
-  drafts: Record<string, PairingDraftDoc>;
-  denied: boolean;
-} {
-  const [drafts, setDrafts] = useState<Record<string, PairingDraftDoc>>({});
-  const [denied, setDenied] = useState(false);
-  const key = roundIds.join(",");
-
-  useEffect(() => {
-    if (!key) {
-      setDrafts({});
-      return;
-    }
-    const ids = key.split(",");
-    const unsubs = ids.map((rid) =>
-      onSnapshot(
-        doc(db, "pairingDrafts", rid),
-        (snap) => {
-          setDrafts((prev) => {
-            const next = { ...prev };
-            if (snap.exists()) next[rid] = { ...snap.data() } as PairingDraftDoc;
-            else delete next[rid];
-            return next;
-          });
-        },
-        (err: FirestoreError) => {
-          if (err.code === "permission-denied") setDenied(true);
-          else console.error("PairingsTV draft subscription error:", err);
-        }
-      )
-    );
-    return () => unsubs.forEach((u) => u());
-  }, [key]);
-
-  return { drafts, denied };
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +317,7 @@ export default function PairingsTV() {
   const { roundNum } = useParams<{ roundNum?: string }>();
   const explicitIdx = roundNum && /^\d+$/.test(roundNum) ? parseInt(roundNum, 10) - 1 : null;
 
-  const { player, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { tournament, loading: tournamentLoading, players, ensurePlayers } = useTournamentContext();
 
   const rounds = useRounds(tournament?.id);
@@ -458,12 +420,19 @@ export default function PairingsTV() {
   if (!tournament) {
     return <FullScreenNote title="No active tournament">There's no active tournament to draft pairings for.</FullScreenNote>;
   }
-  if (denied || !player?.isAdmin) {
-    // Reads of the draft are captain/admin-only; make the fix obvious.
+  if (!user) {
+    // The board is open to any signed-in player; just need to be logged in.
     return (
-      <FullScreenNote title="Sign in to broadcast">
-        The pairings board is visible to team captains and admins. Sign in on this device as a captain or admin, then
-        reload this page.
+      <FullScreenNote title="Sign in to view">
+        The pairings board is available to anyone signed in to the app. Sign in on this device, then reload this
+        page.
+      </FullScreenNote>
+    );
+  }
+  if (denied) {
+    return (
+      <FullScreenNote title="Couldn't load the board">
+        There was a problem loading the pairings. Reload the page to try again.
       </FullScreenNote>
     );
   }
@@ -521,77 +490,129 @@ export default function PairingsTV() {
   // More columns for more matches keeps the grid short enough to fit the screen.
   const matchCols = draft.matches.length > 8 ? "repeat(auto-fit, minmax(250px, 1fr))" : "repeat(auto-fit, minmax(300px, 1fr))";
 
+  // The whose-turn content + tint, shared by the desktop pill and mobile banner.
+  const statusBg = `color-mix(in srgb, ${statusColor} 14%, #ffffff)`;
+  const statusInner = statusTeam ? (
+    <span className="flex items-baseline gap-1.5">
+      <span className="font-extrabold">{meta.teamName(statusTeam)}</span>
+      <span className="font-semibold opacity-75">{actionText}</span>
+    </span>
+  ) : (
+    <span className="font-bold">{statusText}</span>
+  );
+  const roundMeta =
+    `${`Round ${roundIdx >= 0 ? roundIdx + 1 : round.day ?? ""}`.trim()}` +
+    `${round.format ? ` • ${formatRoundType(round.format)}` : ""}` +
+    `${course?.name ? ` • ${course.name}` : ""}`;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white text-slate-900" style={LIGHT_VARS}>
-      {/* Header */}
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-slate-200 px-6 py-3">
-        <div className="flex items-center gap-3">
-          {tournament.tournamentLogo && (
-            <OfflineImage
-              src={tournament.tournamentLogo}
-              alt={tournament.name}
-              fallbackIcon="🏌️"
-              style={{ width: 44, height: 44, objectFit: "contain" }}
-            />
-          )}
-          <div className="leading-tight">
-            <div className="text-xl font-bold text-slate-900">{tournament.name}</div>
-            <div className="text-[0.8rem] font-medium text-slate-500">
-              {`Round ${roundIdx >= 0 ? roundIdx + 1 : round.day ?? ""}`.trim()}
-              {round.format ? ` • ${formatRoundType(round.format)}` : ""}
-              {course?.name ? ` • ${course.name}` : ""}
+    <div style={LIGHT_VARS}>
+      {/* =================== Desktop broadcast board (lg+) =================== */}
+      <div className="hidden h-screen flex-col overflow-hidden bg-white text-slate-900 lg:flex">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-slate-200 px-6 py-3">
+          <div className="flex items-center gap-3">
+            {tournament.tournamentLogo && (
+              <OfflineImage
+                src={tournament.tournamentLogo}
+                alt={tournament.name}
+                fallbackIcon="🏌️"
+                style={{ width: 44, height: 44, objectFit: "contain" }}
+              />
+            )}
+            <div className="leading-tight">
+              <div className="text-xl font-bold text-slate-900">{tournament.name}</div>
+              <div className="text-[0.8rem] font-medium text-slate-500">{roundMeta}</div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-4">
-          {switcher}
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="flex items-center gap-4">
+            {switcher}
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="whitespace-nowrap text-[0.8rem] font-bold text-slate-600">
+                {setCount}<span className="font-medium text-slate-400">/{draft.totalMatches}</span>
+              </span>
             </div>
-            <span className="whitespace-nowrap text-[0.8rem] font-bold text-slate-600">
+            <div className="flex items-center gap-2 rounded-full px-4 py-2 text-base" style={{ background: statusBg, color: statusColor }}>
+              {draft.phase === "drafting" && (
+                <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full" style={{ background: "currentColor" }} />
+              )}
+              {statusInner}
+            </div>
+          </div>
+        </header>
+
+        <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-4 px-6 py-4">
+          <section className="flex min-h-0 flex-col">
+            <div className="mb-2 text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Matchups</div>
+            <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-1" style={{ gridTemplateColumns: matchCols }}>
+              {draft.matches.map((m, i) => (
+                <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
+              ))}
+            </div>
+          </section>
+
+          <section className="grid min-h-0 shrink-0 grid-cols-2 gap-4" style={{ maxHeight: "34vh" }}>
+            <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
+            <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
+          </section>
+        </main>
+      </div>
+
+      {/* =================== Mobile board (< lg) =================== */}
+      <div className="min-h-screen bg-white text-slate-900 lg:hidden">
+        <header className="sticky top-0 z-10 space-y-2.5 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+          <div className="flex items-center gap-2.5">
+            {tournament.tournamentLogo && (
+              <OfflineImage
+                src={tournament.tournamentLogo}
+                alt={tournament.name}
+                fallbackIcon="🏌️"
+                style={{ width: 34, height: 34, objectFit: "contain" }}
+              />
+            )}
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-base font-bold">{tournament.name}</div>
+              <div className="truncate text-[0.7rem] font-medium text-slate-500">{roundMeta}</div>
+            </div>
+            <span className="ml-auto shrink-0 text-sm font-bold text-slate-600">
               {setCount}<span className="font-medium text-slate-400">/{draft.totalMatches}</span>
             </span>
           </div>
-          <div
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-base"
-            style={{ background: `color-mix(in srgb, ${statusColor} 14%, #ffffff)`, color: statusColor }}
-          >
+
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[0.95rem]" style={{ background: statusBg, color: statusColor }}>
             {draft.phase === "drafting" && (
-              <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full" style={{ background: "currentColor" }} />
+              <span className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full" style={{ background: "currentColor" }} />
             )}
-            {statusTeam ? (
-              <span className="flex items-baseline gap-1.5">
-                <span className="font-extrabold">{meta.teamName(statusTeam)}</span>
-                <span className="font-semibold opacity-75">{actionText}</span>
-              </span>
-            ) : (
-              <span className="font-bold">{statusText}</span>
-            )}
+            {statusInner}
           </div>
+
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-slate-800 transition-all duration-500" style={{ width: `${pct}%` }} />
+          </div>
+        </header>
+
+        <div className="space-y-5 px-4 py-4">
+          {rounds.length > 1 && <div>{switcher}</div>}
+
+          <section>
+            <div className="mb-2 text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Matchups</div>
+            <div className="space-y-2.5">
+              {draft.matches.map((m, i) => (
+                <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Still available</div>
+            <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
+            <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
+          </section>
         </div>
-      </header>
-
-      {/* Body: matchups (fill) + available players (bottom), all within one screen */}
-      <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-4 px-6 py-4">
-        <section className="flex min-h-0 flex-col">
-          <div className="mb-2 text-[0.7rem] font-bold uppercase tracking-widest text-slate-400">Matchups</div>
-          <div
-            className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-1"
-            style={{ gridTemplateColumns: matchCols }}
-          >
-            {draft.matches.map((m, i) => (
-              <MatchCard key={m.matchNumber} match={m} meta={meta} isCurrent={i === currentIndex} currentColor={statusColor} />
-            ))}
-          </div>
-        </section>
-
-        <section className="grid min-h-0 shrink-0 grid-cols-2 gap-4" style={{ maxHeight: "34vh" }}>
-          <AvailablePanel team="teamA" ids={remainingA} meta={meta} onClock={statusTeam === "teamA" ? clockLabel : null} />
-          <AvailablePanel team="teamB" ids={remainingB} meta={meta} onClock={statusTeam === "teamB" ? clockLabel : null} />
-        </section>
-      </main>
+      </div>
     </div>
   );
 }

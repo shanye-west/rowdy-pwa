@@ -253,8 +253,10 @@ export default function Pairings() {
     );
   }
 
-  // A draft exists but this viewer isn't a captain/co-captain or admin.
-  if (denied || (!draft && !isAdmin && !myTeam)) {
+  // Only captains/co-captains and admins get the in-app draft page. (Draft
+  // reads are now open to any signed-in user for the /pairings-tv broadcast, so
+  // this page gates on role rather than on a permission-denied read.)
+  if (denied || (!isAdmin && !myTeam)) {
     return (
       <Layout title="Pairings" showBack>
         <PairingsMessage icon={<Lock size={24} />} title="Captains & admins only">
