@@ -19,6 +19,7 @@ import RequireAdmin from "./components/RequireAdmin";
 const Match = lazyWithRecovery(() => import("./routes/Match"));
 const Round = lazyWithRecovery(() => import("./routes/Round"));
 const Pairings = lazyWithRecovery(() => import("./routes/Pairings"));
+const PairingsTV = lazyWithRecovery(() => import("./routes/PairingsTV"));
 const Skins = lazyWithRecovery(() => import("./routes/Skins"));
 const RoundRecap = lazyWithRecovery(() => import("./routes/RoundRecap"));
 const Teams = lazyWithRecovery(() => import("./routes/Teams"));
@@ -47,6 +48,12 @@ const RecalculateTournamentStats = lazyWithRecovery(() => import("./routes/Recal
 // No loading fallback - CSS View Transitions handle page navigation smoothly
 const router = createBrowserRouter(
   [
+    // Full-bleed, view-only pairings "broadcast" board for screen-sharing on a
+    // call. Intentionally sits OUTSIDE the LayoutShell (no header / bottom nav)
+    // and is not linked anywhere in the UI — you type the URL directly.
+    // `/pairings-tv` auto-detects the round; `/pairings-tv/2` pins round 2.
+    { path: "/pairings-tv", element: <PairingsTV /> },
+    { path: "/pairings-tv/:roundNum", element: <PairingsTV /> },
     {
       path: "/",
       element: <LayoutShell />,
