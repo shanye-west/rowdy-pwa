@@ -389,8 +389,10 @@ export default function Pairings() {
   const isResponse = turn.awaiting === "response";
   const nominatedIds = isResponse ? draft.matches[turn.matchIndex]?.[`${opponent}Players`] : null;
 
+  // Undo is an admin-only correction tool — captains can't take back a pick
+  // (matched server-side in undoDraftPick).
   const undoTeam = lastPlacementTeam(draft);
-  const canUndo = undoTeam != null && (isAdmin || myTeam === undoTeam) && !busy;
+  const canUndo = undoTeam != null && isAdmin && !busy;
 
   const submitPick = () =>
     run(async () => {

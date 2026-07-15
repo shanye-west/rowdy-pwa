@@ -224,26 +224,16 @@ export const submitDraftPick = onCall(async (request) => {
 });
 
 /**
- * Captain/admin: undo the most recent placement. A captain may only undo their
- * own team's last pick; an admin may undo any.
+ * Admin-only: undo the most recent placement. Captains draft forward only; an
+ * admin is the sole role that can take a pick back (matched in the UI, which
+ * hides the Undo control from captains).
  */
 export const undoDraftPick = onCall(async (request) => {
-  const { roundId, team } = request.data || {};
+  await requireAdmin(request, "undoDraftPick", { maxCalls: 60, windowSeconds: 60 });
+  const { roundId } = request.data || {};
   if (!roundId || typeof roundId !== "string") throw new HttpsError("invalid-argument", "Missing roundId");
-  if (!isTeam(team)) throw new HttpsError("invalid-argument", "team must be 'teamA' or 'teamB'");
 
   const draftRef = db().collection("pairingDrafts").doc(roundId);
-  const snap = await draftRef.get();
-  if (!snap.exists) throw new HttpsError("not-found", "Draft not found");
-  const tournamentId = snap.data()!.tournamentId as string;
-
-  const { isAdmin } = await requireCaptainOrAdmin(
-    request,
-    "undoDraftPick",
-    { maxCalls: 60, windowSeconds: 60 },
-    tournamentId,
-    team
-  );
 
   try {
     await db().runTransaction(async (tx) => {
@@ -254,9 +244,6 @@ export const undoDraftPick = onCall(async (request) => {
 
       const last = lastPlacement(state);
       if (!last) throw new DraftError("nothing-to-undo", "There is no pick to undo");
-      if (!isAdmin && team !== last.team) {
-        throw new DraftError("not-your-pick", "You can only undo your own team's last pick");
-      }
 
       const next = applyUndo(state);
       tx.update(draftRef, {
