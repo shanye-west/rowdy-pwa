@@ -169,17 +169,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Player recent rounds (GHIN last-~20 import): public read, server-only write.
-    // Data-only collection consumed by the read-only MCP server so players' AI /
-    // captains can assess current off-course form for draft analysis. Public-read
-    // (like all app data) so the unauthenticated MCP Web SDK can read it; it is
-    // intentionally NOT surfaced anywhere in the app UI. Written by the
-    // scripts/import-recent-rounds.js admin script, never by clients.
-    match /playerRecentRounds/{playerId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
     // Sportsbook bets: public read (the marketplace of open offers and the
     // shared who-owes-whom ledger are visible to everyone; bet docs reference
     // only playerIds). All mutations go through the betsOps callables via the
