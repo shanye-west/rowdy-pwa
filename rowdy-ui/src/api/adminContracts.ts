@@ -42,6 +42,9 @@ export interface TournamentUpdates {
   tiebreakerWinner?: "teamA" | "teamB" | null;
   // Hide the Draft Pool from the UI without deleting the pool data.
   hideDraftPool?: boolean;
+  // Total points contested across the whole tournament; null reverts to auto-sum
+  // of created matches.
+  totalPointsAvailable?: number | null;
   // true: the "Rules Official" menu link opens the in-app Grok chat; false/absent
   // links out to the free NotebookLM notebook instead.
   rulesOfficialUseGrok?: boolean;

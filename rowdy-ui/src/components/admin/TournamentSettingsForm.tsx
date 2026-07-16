@@ -70,6 +70,9 @@ export default function TournamentSettingsForm({
   const [hideDraftPool, setHideDraftPool] = useState(!!tournament.hideDraftPool);
   const [rulesOfficialUseGrok, setRulesOfficialUseGrok] = useState(!!tournament.rulesOfficialUseGrok);
   const [test, setTest] = useState(!!tournament.test);
+  const [totalPointsAvailable, setTotalPointsAvailable] = useState(
+    tournament.totalPointsAvailable != null ? String(tournament.totalPointsAvailable) : ""
+  );
   const hasDraftPool = !!tournament.draftPool && Object.keys(tournament.draftPool).length > 0;
   const [tiebreakerWinner, setTiebreakerWinner] = useState<"" | "teamA" | "teamB">(
     tournament.tiebreakerWinner ?? ""
@@ -140,6 +143,18 @@ export default function TournamentSettingsForm({
         };
       };
 
+      const totalPointsTrimmed = totalPointsAvailable.trim();
+      let totalPoints: number | null;
+      if (totalPointsTrimmed === "") {
+        totalPoints = null;
+      } else {
+        const num = Number(totalPointsTrimmed);
+        if (!Number.isFinite(num) || num <= 0) {
+          throw new Error("Total points available must be a positive number (or blank to auto-total).");
+        }
+        totalPoints = num;
+      }
+
       onSubmit({
         name,
         year: Number(year),
@@ -151,6 +166,7 @@ export default function TournamentSettingsForm({
         rulesOfficialUseGrok,
         test,
         tiebreakerWinner: tiebreakerWinner === "" ? null : tiebreakerWinner,
+        totalPointsAvailable: totalPoints,
         teamA: buildTeam(teamA),
         teamB: buildTeam(teamB),
       });
@@ -283,6 +299,24 @@ export default function TournamentSettingsForm({
             required
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold mb-1">Total points available</label>
+        <input
+          type="number"
+          step="0.5"
+          min="0"
+          value={totalPointsAvailable}
+          placeholder="Auto (sum of created matches)"
+          onChange={(e) => setTotalPointsAvailable(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Total points contested across the whole tournament (e.g. 24). Drives the score-tracker bar
+          and "points needed to win". Leave blank to auto-total from created matches — set it manually
+          when later rounds' matches don't exist yet.
+        </p>
       </div>
 
       <div className="space-y-2">

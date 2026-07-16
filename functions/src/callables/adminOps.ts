@@ -111,6 +111,7 @@ function sanitizeTeamUpdates(team: Record<string, unknown>, label: string): Reco
  *     hideDraftPool?,  // hide the Draft Pool from the UI without deleting the pool
  *     rulesOfficialUseGrok?,  // true: menu "Rules Official" → in-app Grok chat; false/absent → NotebookLM link
  *     tiebreakerWinner?: "teamA" | "teamB" | null,  // null clears it
+ *     totalPointsAvailable?: number | null,  // manual tournament point total; null reverts to auto-sum of created matches
  *     teamA?: { name?, color?, logo?, captainId?, coCaptainId?, rosterByTier?, handicapByPlayer? },
  *     teamB?: { ...same }
  *   }
@@ -167,6 +168,17 @@ export const updateTournament = onCall(async (request) => {
           toMerge.tiebreakerWinner = value;
         } else {
           throw new HttpsError("invalid-argument", 'updates.tiebreakerWinner must be "teamA", "teamB", or null');
+        }
+        break;
+      case "totalPointsAvailable":
+        // null/"" clears the manual override, reverting to the auto-sum of created
+        // matches; otherwise must be a positive number.
+        if (value === null || value === "") {
+          toMerge.totalPointsAvailable = FieldValue.delete();
+        } else if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+          toMerge.totalPointsAvailable = value;
+        } else {
+          throw new HttpsError("invalid-argument", "updates.totalPointsAvailable must be a positive number or null");
         }
         break;
       case "teamA":

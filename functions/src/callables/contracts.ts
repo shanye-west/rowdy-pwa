@@ -48,6 +48,9 @@ export interface TournamentUpdates {
   archived?: boolean;
   hideDraftPool?: boolean;
   rulesOfficialUseGrok?: boolean;
+  // Total points contested across the whole tournament (drives the score-tracker
+  // bar + points-to-win). null clears it, reverting to the sum of created matches.
+  totalPointsAvailable?: number | null;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }
