@@ -7,6 +7,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireAdmin } from "../helpers/adminAuth.js";
+import { parForPlayerHolesPlayed, parForTeamHolesPlayed } from "../helpers/parPlayed.js";
 import { computeVsAllForRound, type PlayerFactForSim } from "../helpers/vsAllSimulation.js";
 
 function db() {
@@ -121,25 +122,20 @@ export const recalculateAllStats = onCall(async (request) => {
 // Manually-triggered function to precompute round statistics including "vs All"
 // ============================================================================
 
-export const computeRoundRecap = onCall(async (request) => {
-  try {
-    const { uid } = await requireAdmin(request, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
-
-    // Extract data
-    const { roundId } = request.data;
-    if (!roundId) {
-      throw new HttpsError("invalid-argument", "roundId is required");
-    }
-
-  // Check if recap already exists - FAIL if it does
-  const existingRecapSnap = await db().collection("roundRecaps").doc(roundId).get();
-  if (existingRecapSnap.exists) {
-    throw new HttpsError(
-      "already-exists",
-      "Round recap already exists. Delete it manually before regenerating."
-    );
-  }
-
+/**
+ * Builds a round's recap document from its playerMatchFacts.
+ *
+ * Shared by the admin callable and the auto-regeneration path below, so the two
+ * can never drift. Throws HttpsError for genuine misconfiguration (missing
+ * round/format/course) and returns null for the one benign case: the round has
+ * no facts yet. That window is real — recalculateAllStats deletes every fact
+ * before the triggers rewrite them, and we must not stomp a good recap with an
+ * empty one while the fan-out is in flight.
+ */
+async function buildRoundRecap(
+  roundId: string,
+  computedBy: string
+): Promise<{ recapDoc: Record<string, any>; stats: Record<string, any> } | null> {
   // Fetch round metadata
   const roundSnap = await db().collection("rounds").doc(roundId).get();
   if (!roundSnap.exists) {
@@ -175,12 +171,9 @@ export const computeRoundRecap = onCall(async (request) => {
     .where("roundId", "==", roundId)
     .get();
 
-  if (factsSnap.empty) {
-    throw new HttpsError(
-      "failed-precondition",
-      "No player match facts found for this round. Ensure all matches are closed."
-    );
-  }
+  // Nothing to build from yet. Benign: the caller decides whether that's an
+  // error (callable) or a no-op (trigger, mid-backfill).
+  if (factsSnap.empty) return null;
 
   const allFacts = factsSnap.docs.map(d => d.data());
 
@@ -389,16 +382,8 @@ export const computeRoundRecap = onCall(async (request) => {
     const playerScores = new Map<string, { gross: number; net: number; holesPlayed: number; totalGross?: number; totalNet?: number }>();
     for (const fact of allFacts) {
       if (fact.totalGross != null && fact.holesPlayed && fact.holePerformance) {
-        // Calculate actual par for holes played using authoritative holePars
-        let actualPar = 0;
-        for (const perf of fact.holePerformance) {
-          if (perf.hole != null && perf.gross != null) {
-            const idx = typeof perf.hole === "number" ? perf.hole - 1 : null;
-            if (idx !== null && idx >= 0 && idx < holePars.length) {
-              actualPar += holePars[idx];
-            }
-          }
-        }
+        // Par for holes actually played, against the authoritative live holePars
+        const actualPar = parForPlayerHolesPlayed(fact.holePerformance, holePars);
         // Calculate strokes vs par for holes actually played
         const grossVsPar = fact.totalGross - actualPar;
         const netVsPar = (fact.totalNet != null) ? fact.totalNet - actualPar : 0;
@@ -544,13 +529,10 @@ export const computeRoundRecap = onCall(async (request) => {
       if (!teamGrossScores.has(teamKey) && fact.teamTotalGross != null && fact.holesPlayed && fact.holePerformance) {
         const teamPlayerNames = allPlayerIds.map(id => playerNames[id] || id);
 
-        // Calculate actual par for holes played
-        let actualPar = 0;
-        for (const perf of fact.holePerformance) {
-          if (perf.par != null) {
-            actualPar += perf.par;
-          }
-        }
+        // Par for holes actually played, against the authoritative live holePars.
+        // Format-aware: shamble stores individual gross + partnerGross, so the
+        // team played the hole if either partner has a ball.
+        const actualPar = parForTeamHolesPlayed(fact.holePerformance, round.format, holePars);
 
         // Calculate team gross vs par for holes actually played
         const teamGrossVsPar = fact.teamTotalGross - actualPar;
@@ -640,15 +622,11 @@ export const computeRoundRecap = onCall(async (request) => {
     holeAverages,
     leaders,
     computedAt: FieldValue.serverTimestamp(),
-    computedBy: uid,
+    computedBy,
   };
 
-  // Write to roundRecaps collection
-  await db().collection("roundRecaps").doc(roundId).set(recapDoc);
-
   return {
-    success: true,
-    roundId,
+    recapDoc,
     stats: {
       playersAnalyzed: playerIds.length,
       vsAllMatchupsSimulated: vsAllRecords.length > 0
@@ -659,8 +637,69 @@ export const computeRoundRecap = onCall(async (request) => {
       eaglesGrossLeader: eaglesGross[0]?.playerName || "None",
       eaglesGrossCount: eaglesGross[0]?.count || 0,
     },
-    message: "Round recap generated successfully",
   };
+}
+
+/**
+ * Regenerate a locked round's recap in place. No-op unless the round is locked
+ * — locking is the editorial signal that a recap should exist, and it keeps
+ * half-finished rounds from auto-publishing.
+ *
+ * Callers are triggers, so this never throws: a recap failure must not fail (and
+ * endlessly retry) the stats aggregation that invoked it.
+ */
+export async function regenerateRoundRecapIfLocked(roundId: string | undefined): Promise<void> {
+  if (!roundId) return;
+  try {
+    const roundSnap = await db().collection("rounds").doc(roundId).get();
+    if (!roundSnap.exists || roundSnap.data()?.locked !== true) return;
+
+    const built = await buildRoundRecap(roundId, "system:auto");
+    if (!built) return; // no facts yet — leave any existing recap alone
+
+    await db().collection("roundRecaps").doc(roundId).set(built.recapDoc);
+  } catch (err) {
+    console.error(`regenerateRoundRecapIfLocked(${roundId}) failed:`, err);
+  }
+}
+
+export const computeRoundRecap = onCall(async (request) => {
+  try {
+    const { uid } = await requireAdmin(request, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
+
+    const { roundId, force } = request.data;
+    if (!roundId) {
+      throw new HttpsError("invalid-argument", "roundId is required");
+    }
+
+    // Recaps are normally kept in sync automatically (see
+    // regenerateRoundRecapIfLocked). Overwriting by hand stays opt-in.
+    if (force !== true) {
+      const existingRecapSnap = await db().collection("roundRecaps").doc(roundId).get();
+      if (existingRecapSnap.exists) {
+        throw new HttpsError(
+          "already-exists",
+          "Round recap already exists. Pass force: true to regenerate it."
+        );
+      }
+    }
+
+    const built = await buildRoundRecap(roundId, uid);
+    if (!built) {
+      throw new HttpsError(
+        "failed-precondition",
+        "No player match facts found for this round. Ensure all matches are closed."
+      );
+    }
+
+    await db().collection("roundRecaps").doc(roundId).set(built.recapDoc);
+
+    return {
+      success: true,
+      roundId,
+      stats: built.stats,
+      message: "Round recap generated successfully",
+    };
   } catch (error: any) {
     console.error("computeRoundRecap error:", error);
     console.error("Error stack:", error.stack);

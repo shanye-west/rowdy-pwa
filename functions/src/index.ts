@@ -20,6 +20,8 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, BetDoc, BetResult, BetStatus } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateSkinsStrokes } from "./ghin.js";
+import { parForPlayerHolesPlayed, parForTeamHolesPlayed } from "./helpers/parPlayed.js";
+import { regenerateRoundRecapIfLocked } from "./callables/statsOps.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
   playersPerSide, 
@@ -128,6 +130,21 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
     await ref.set(toMerge, { merge: true });
   }
 });
+
+/**
+ * Locking a round is the signal that its recap should exist. Facts are already
+ * written by then (they land when each match closes), so no fact write would
+ * fire afterwards — the lock flip itself has to drive generation.
+ */
+export const generateRoundRecapOnLock = onDocumentWritten({ document: "rounds/{roundId}", retry: true }, withTriggerLogging("generateRoundRecapOnLock", async (event) => {
+  const after = event.data?.after?.data();
+  if (after?.locked !== true) return;
+  // Only on the false -> true transition; rounds are rewritten constantly by
+  // computeRoundTotals' pointTotals denormalization.
+  if (event.data?.before?.data()?.locked === true) return;
+
+  await regenerateRoundRecapIfLocked(event.params.roundId);
+}));
 
 export const linkRoundToTournament = onDocumentWritten("rounds/{roundId}", async (event) => {
   const after = event.data?.after.data();
@@ -982,7 +999,8 @@ export const updateMatchFacts = onDocumentWritten({ document: "matches/{matchId}
       strokesVsParNet = null;
     } else if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
-      teamStrokesVsParGross = teamTotalGross - coursePar;
+      // teamStrokesVsParGross is computed from holePerformance below — it needs
+      // the par of the holes actually played, which isn't known until then.
     }
 
     const myTier = playerTierLookup[p.playerId] || "Unknown";
@@ -1125,14 +1143,23 @@ export const updateMatchFacts = onDocumentWritten({ document: "matches/{matchId}
       0
     );
 
+    // Par of the holes this player/team actually has a score for. Matches close
+    // early (5&4 = 14 holes), so vs-par must never be measured against the full
+    // 18-hole coursePar. Equals coursePar when all 18 are played.
+    let parPlayed: number | null = null;
+
     if (format === "twoManBestBall" || format === "singles") {
       const grossSum = holePerformance.reduce((s, hh) => s + (typeof hh.gross === "number" ? hh.gross : 0), 0);
       totalGross = grossSum;
+      parPlayed = parForPlayerHolesPlayed(holePerformance);
       // totalNet should be based on course handicap, not strokesReceived
       totalNet = typeof totalGross === "number" ? totalGross - playerCourseHandicap : null;
-      strokesVsParGross = typeof totalGross === "number" ? (totalGross - coursePar) : null;
+      strokesVsParGross = typeof totalGross === "number" ? (totalGross - parPlayed) : null;
       // Use player's course handicap for strokesVsParNet calculation (not strokesReceived)
-      strokesVsParNet = typeof totalGross === "number" ? (totalGross - playerCourseHandicap - coursePar) : null;
+      strokesVsParNet = typeof totalGross === "number" ? (totalGross - playerCourseHandicap - parPlayed) : null;
+    } else if (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble") {
+      parPlayed = parForTeamHolesPlayed(holePerformance, format);
+      teamStrokesVsParGross = typeof teamTotalGross === "number" ? (teamTotalGross - parPlayed) : null;
     }
 
     // Opponent/Partner arrays
@@ -1222,10 +1249,10 @@ export const updateMatchFacts = onDocumentWritten({ document: "matches/{matchId}
       const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
       factData.bestBallTotal = bestBallTotal;
       factData.worstBallTotal = worstBallTotal;
-      factData.worstBallStrokesVsPar = worstBallTotal - coursePar;
     }
-    
+
     factData.coursePar = coursePar;
+    if (parPlayed !== null) factData.parPlayed = parPlayed;
     factData.playerCourseHandicap = playerCourseHandicap;
     if (totalGross !== null) factData.totalGross = totalGross;
     if (totalNet !== null) factData.totalNet = totalNet;
@@ -1923,6 +1950,11 @@ export const aggregatePlayerStats = onDocumentWritten({ document: "playerMatchFa
   }
 
   await batch.commit();
+
+  // These facts feed the round's recap, which is a precomputed doc — nothing
+  // else recomputes it. Keep it in step so a stats rebuild can't leave a stale
+  // recap on screen. No-ops unless the round is locked, and never throws.
+  await regenerateRoundRecapIfLocked(roundId as string | undefined);
 }));
 
 // ============================================================================

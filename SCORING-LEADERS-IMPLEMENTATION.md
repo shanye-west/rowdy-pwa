@@ -46,7 +46,11 @@ export interface RoundRecapDoc {
 Added to `computeRoundRecap` function (after birdie/eagle leaders):
 
 1. **Individual Scoring (Singles & Best Ball)**
-   - Extract `strokesVsParGross`, `strokesVsParNet`, `holesPlayed` from playerMatchFacts
+   - Recompute vs-par from the fact's `holePerformance` via `parForPlayerHolesPlayed`
+     (`functions/src/helpers/parPlayed.ts`), against the round's authoritative
+     `holePars`. Do NOT measure against the full 18-hole course par — matches close
+     early (5&4 = 14 holes), and a partial gross vs. a full par reads far too low.
+   - Take `holesPlayed` from the fact; it always agrees with the helper's par subset
    - Calculate per-18 normalized score: `(strokesVsPar * 18) / holesPlayed`
    - Sort by normalized score (ascending, lower is better)
    - Create separate arrays for gross and net
@@ -59,7 +63,11 @@ Added to `computeRoundRecap` function (after birdie/eagle leaders):
 
 3. **Team Gross (Shamble & Scramble)**
    - Group players by team
-   - Use `teamStrokesVsParGross` from playerMatchFacts (already computed)
+   - Recompute vs-par from `teamTotalGross` and `parForTeamHolesPlayed`
+     (`functions/src/helpers/parPlayed.ts`) — format-aware, because shamble stores
+     each player's individual gross plus `partnerGross` (only scramble stores a team
+     gross), so the team played a hole if EITHER partner has a ball. Gating on
+     `gross` alone makes the two partners' facts disagree about their own team.
    - Calculate per-18 normalized score
    - Sort by normalized score
 

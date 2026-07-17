@@ -7,17 +7,22 @@ import { describe, it, expect } from "vitest";
 
 // --- TEST HELPERS ---
 
-/** 
+/**
  * Simulates the strokesVsParNet calculation
  * Uses course handicap from match document (integer), not tournament handicap (decimal)
+ *
+ * `parPlayed` is the par of the holes actually scored, NOT the full 18-hole
+ * course par — see helpers/parPlayed.ts, which owns that computation and is
+ * unit-tested directly in helpers/parPlayed.test.ts. Every case below is a
+ * full round, where parPlayed === coursePar, so these numbers are unchanged.
  */
 function calculateStrokesVsParNet(
   totalGross: number,
   playerCourseHandicap: number,
-  coursePar: number
+  parPlayed: number
 ): number {
   // Uses course handicap from match.courseHandicaps array (integer)
-  return totalGross - playerCourseHandicap - coursePar;
+  return totalGross - playerCourseHandicap - parPlayed;
 }
 
 /**
@@ -26,9 +31,9 @@ function calculateStrokesVsParNet(
 function calculateStrokesVsParNetBuggy(
   totalGross: number,
   tournamentHandicap: number, // This was the bug - using decimal handicap from tournament
-  coursePar: number
+  parPlayed: number
 ): number {
-  return totalGross - tournamentHandicap - coursePar;
+  return totalGross - tournamentHandicap - parPlayed;
 }
 
 /**

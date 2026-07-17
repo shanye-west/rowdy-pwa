@@ -325,7 +325,7 @@ export type PairingDraftDoc = {
 export type HolePerformance = {
   hole: number;                           // 1-18
   par: number;                            // from course data
-  gross: number | null;                   // raw score (individual for singles/bestBall, team for scramble/shamble)
+  gross: number | null;                   // raw score: individual for singles/bestBall/shamble (shamble pairs it with partnerGross); TEAM gross for scramble only
   net?: number | null;                    // gross - strokesReceived (singles/bestBall only)
   strokes?: 0 | 1;                        // strokesReceived for this hole (singles/bestBall only)
   partnerNet?: number | null;             // partner's net score (bestBall only)
@@ -390,12 +390,12 @@ export type PlayerMatchFact = {
   // Individual scoring stats (twoManBestBall, singles only)
   totalGross?: number;        // Sum of player's gross scores
   totalNet?: number;          // Sum of player's net scores (gross - strokes received)
-  strokesVsParGross?: number; // totalGross - coursePar (e.g., +5, -2)
-  strokesVsParNet?: number;   // totalNet - coursePar
+  strokesVsParGross?: number; // totalGross - parPlayed (e.g., +5, -2)
+  strokesVsParNet?: number;   // totalGross - playerCourseHandicap - parPlayed
 
   // Team scoring stats (twoManScramble, twoManShamble only)
   teamTotalGross?: number;        // Team's combined gross score
-  teamStrokesVsParGross?: number; // teamTotalGross - coursePar
+  teamStrokesVsParGross?: number; // teamTotalGross - parPlayed
 
   // Per-hole performance array for advanced queries
   holePerformance?: HolePerformance[];
@@ -407,10 +407,15 @@ export type PlayerMatchFact = {
   // Team ball totals (twoManBestBall, twoManShamble only)
   bestBallTotal?: number;      // Sum of team's best ball (lowest net/gross) per hole
   worstBallTotal?: number;     // Sum of team's worst ball (highest net/gross) per hole
-  worstBallStrokesVsPar?: number; // Worst ball total minus course par
 
   // Course context
-  coursePar?: number;         // Course par for reference
+  coursePar?: number;         // Full 18-hole course par, for reference only
+  // Par of the holes actually scored — the basis for every strokesVsPar* field
+  // above. Matches close early (5&4 = 14 holes), so this is what vs-par is
+  // measured against; it equals coursePar only on a full 18. Pairs with
+  // whichever total the fact carries: totalGross for singles/bestBall,
+  // teamTotalGross for scramble/shamble (a fact never has both).
+  parPlayed?: number;
 
   // Round context
   courseId?: string;
