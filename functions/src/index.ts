@@ -135,8 +135,12 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
  * Locking a round is the signal that its recap should exist. Facts are already
  * written by then (they land when each match closes), so no fact write would
  * fire afterwards — the lock flip itself has to drive generation.
+ *
+ * No `retry`: regenerateRoundRecapIfLocked absorbs its own errors, so a retry
+ * could never fire. A dropped recap self-heals on the next fact write, or via
+ * computeRoundRecap({ force: true }).
  */
-export const generateRoundRecapOnLock = onDocumentWritten({ document: "rounds/{roundId}", retry: true }, withTriggerLogging("generateRoundRecapOnLock", async (event) => {
+export const generateRoundRecapOnLock = onDocumentWritten({ document: "rounds/{roundId}" }, withTriggerLogging("generateRoundRecapOnLock", async (event) => {
   const after = event.data?.after?.data();
   if (after?.locked !== true) return;
   // Only on the false -> true transition; rounds are rewritten constantly by
