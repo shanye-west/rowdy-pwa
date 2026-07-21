@@ -8,7 +8,6 @@ export default function Login() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,7 +39,7 @@ export default function Login() {
     }
 
     try {
-      const result = await login(email.trim(), password, rememberMe);
+      const result = await login(email.trim(), password);
 
       if (!result.success) {
         setError(result.error || "Login failed");
@@ -266,19 +265,6 @@ export default function Login() {
                   boxSizing: "border-box"
                 }}
               />
-            </div>
-
-            {/* Remember Me */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ width: 18, height: 18 }}
-                />
-                <span style={{ fontSize: "0.875rem" }}>Remember me</span>
-              </label>
             </div>
 
             {/* Error Message */}

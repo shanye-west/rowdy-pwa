@@ -2,10 +2,9 @@ import { initializeApp } from "firebase/app";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { 
-  getAuth, 
-  setPersistence, 
-  browserLocalPersistence, 
-  browserSessionPersistence,
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
@@ -48,7 +47,6 @@ export const db = initializeFirestore(app, {
 export {
   setPersistence,
   browserLocalPersistence,
-  browserSessionPersistence,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,

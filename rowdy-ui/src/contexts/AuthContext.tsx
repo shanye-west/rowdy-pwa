@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { 
-  auth, 
+  auth,
   db,
   setPersistence,
   browserLocalPersistence,
-  browserSessionPersistence,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
@@ -56,7 +55,7 @@ type AuthContextType = {
   // True while checking auth state
   loading: boolean;
   // Login with email + password
-  login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   // Send password reset email
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   // Log out
@@ -134,13 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login with email + password
   const login = useCallback(async (
-    email: string, 
-    password: string, 
-    rememberMe: boolean
+    email: string,
+    password: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Set persistence based on remember me
-      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      // Always local persistence: session persistence doesn't survive an app
+      // kill, so a scorer who cold-starts offline mid-round would lose auth
+      // and be unable to score until back online.
+      await setPersistence(auth, browserLocalPersistence);
       
       // Sign in with Firebase Auth
       await signInWithEmailAndPassword(auth, email, password);

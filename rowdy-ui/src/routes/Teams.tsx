@@ -56,6 +56,11 @@ function TeamsComponent() {
     [rounds]
   );
 
+  // Stable key for the roster ids: the shared player cache re-creates the
+  // `players` object as each batch resolves, and depending on its identity
+  // refired the stats collectionGroup query several times per visit.
+  const playerIdsKey = useMemo(() => Object.keys(players).sort().join(','), [players]);
+
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
@@ -81,7 +86,7 @@ function TeamsComponent() {
       return;
     }
 
-    const playerIds = Object.keys(players);
+    const playerIds = playerIdsKey ? playerIdsKey.split(',') : [];
     if (playerIds.length === 0) {
       setFactsLoaded(true);
       return;
@@ -120,7 +125,7 @@ function TeamsComponent() {
         console.error("Stats collection group query error:", err);
         setFactsLoaded(true);
       });
-  }, [tournament?.id, players, playersLoaded, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
+  }, [tournament?.id, playerIdsKey, playersLoaded, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
 
   // Coordinated loading state (derived during render — no effect needed)
   const allLoaded = !tournamentLoading && (!tournament || (playersLoaded && factsLoaded));

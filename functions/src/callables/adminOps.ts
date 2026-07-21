@@ -403,6 +403,19 @@ export const updateRound = onCall(async (request) => {
     }
   }
 
+  // computeRoundSkins caches static inputs (course, handicaps, player names)
+  // on the result doc (_static). Clear it when the settings it derives from
+  // change; re-saving a skins pot doubles as the manual escape hatch after a
+  // mid-round tournament handicap edit.
+  const skinsStaticRelevant = ["courseId", "skinsGrossPot", "skinsNetPot", "skinsHandicapPercent"];
+  if (skinsStaticRelevant.some((k) => k in fields)) {
+    const skinsResultRef = ref.collection("skinsResults").doc("computed");
+    const skinsSnap = await skinsResultRef.get();
+    if (skinsSnap.exists) {
+      await skinsResultRef.update({ _static: FieldValue.delete() });
+    }
+  }
+
   return { success: true, roundId, updatedFields: Object.keys(fields) };
 });
 

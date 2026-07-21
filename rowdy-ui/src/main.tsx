@@ -160,6 +160,16 @@ window.addEventListener("vite:preloadError", () => {
   window.location.reload();
 });
 
+// Ask the browser to exempt this origin's storage from eviction under storage
+// pressure. Everything offline scoring depends on lives in IndexedDB —
+// Firestore's cache AND its queue of unsent score writes, plus the auth
+// session — and iOS can silently evict all of it from an idle app, losing
+// queued scores. Best-effort: browsers may decline (the pre-round readiness
+// check re-requests from a user gesture, which improves grant odds).
+if (typeof navigator !== "undefined" && navigator.storage?.persist) {
+  void navigator.storage.persist().catch(() => {});
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>

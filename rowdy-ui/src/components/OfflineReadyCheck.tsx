@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle, Loader2, Circle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Circle, AlertTriangle } from "lucide-react";
 import { Modal } from "./Modal";
 import { warmMatchForOffline } from "../utils/offlineWarm";
 
-type StepState = "pending" | "running" | "ok" | "fail";
+type StepState = "pending" | "running" | "ok" | "warn" | "fail";
 
 interface StepInfo {
   key: string;
@@ -38,6 +38,7 @@ const STEP_DEFS = [
   { key: "auth", label: "Signed in to score" },
   { key: "online", label: "Connected right now" },
   { key: "warm", label: "Match data saved for offline" },
+  { key: "storage", label: "Scores protected on this device" },
 ] as const;
 
 const makeInitial = (): StepInfo[] =>
@@ -45,6 +46,7 @@ const makeInitial = (): StepInfo[] =>
 
 function StepIcon({ state }: { state: StepState }) {
   if (state === "ok") return <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />;
+  if (state === "warn") return <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />;
   if (state === "fail") return <XCircle className="h-5 w-5 shrink-0 text-red-600" />;
   if (state === "running") return <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />;
   return <Circle className="h-5 w-5 shrink-0 text-slate-300" />;
@@ -122,11 +124,36 @@ export function OfflineReadyCheck({
     try {
       await warmMatchForOffline({ matchId, roundId, courseId, tournamentId, playerIds, imageUrls });
       set("warm", { state: "ok", detail: "Scorecard, players & course cached on this device." });
-      finish(true);
     } catch {
       set("warm", { state: "fail", detail: "Couldn't reach the server. Check your connection and retry." });
-      finish(false);
+      return finish(false);
     }
+
+    // 4. Durable storage. Queued offline scores live in IndexedDB, which the
+    // system can evict from an idle app; ask for a persistence exemption.
+    // Re-requested here (beyond the boot-time attempt) because a user-gesture
+    // context improves grant odds. Never fails the check — browsers
+    // legitimately decline, and installed home-screen PWAs are the safest
+    // configuration regardless of the reported flag.
+    set("storage", { state: "running" });
+    let persisted = false;
+    try {
+      if (typeof navigator !== "undefined" && navigator.storage?.persist) {
+        persisted = await navigator.storage.persist();
+      }
+    } catch {
+      persisted = false;
+    }
+    if (persisted) {
+      set("storage", { state: "ok", detail: "The system won't clear saved scores on this device." });
+    } else {
+      set("storage", {
+        state: "warn",
+        detail:
+          "Scores still save offline, but the system may clear them if the app goes unused. Add the app to your Home Screen and open it daily during the tournament.",
+      });
+    }
+    finish(true);
   }, [canEdit, playerName, matchId, roundId, courseId, tournamentId, playerIds, imageUrls]);
 
   // Auto-run whenever the dialog opens. Deferred a tick so we kick off the
@@ -157,9 +184,11 @@ export function OfflineReadyCheck({
                 className={`text-sm font-medium ${
                   s.state === "fail"
                     ? "text-red-700"
-                    : s.state === "ok"
-                      ? "text-foreground"
-                      : "text-muted-foreground"
+                    : s.state === "warn"
+                      ? "text-amber-700"
+                      : s.state === "ok"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
                 }`}
               >
                 {s.label}

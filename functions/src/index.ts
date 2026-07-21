@@ -17,7 +17,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
 // Import shared modules
-import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, BetDoc, BetResult, BetStatus } from "./types.js";
+import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc, SkinsStaticCache, BetDoc, BetResult, BetStatus } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
 import { calculateSkinsStrokes } from "./ghin.js";
 import { parForPlayerHolesPlayed, parForTeamHolesPlayed } from "./helpers/parPlayed.js";
@@ -1323,75 +1323,112 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTrig
   // Fetch all matches for this round
   const matchesSnap = await db.collection("matches").where("roundId", "==", roundId).get();
   const matches = matchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
+
   if (matches.length === 0) return;
-  
-  // Fetch course data
+
+  // Computation signature over all match holes. Read the existing result doc
+  // early so an unchanged round (duplicate/replayed trigger delivery) exits
+  // before fetching the static course/tournament/player docs.
+  const computeSig = JSON.stringify(matches.map((m: any) => m.holes || {}));
+  const skinsResultRef = db.collection("rounds").doc(roundId).collection("skinsResults").doc("computed");
+  const existingSnap = await skinsResultRef.get();
+  const existing = existingSnap.exists ? (existingSnap.data() as SkinsResultDoc) : undefined;
+
+  if (existing?._computeSig === computeSig) return;
+
   const courseId = round.courseId;
   if (!courseId) return;
-  
-  const courseSnap = await db.collection("courses").doc(courseId).get();
-  if (!courseSnap.exists) return;
-  
-  const course = courseSnap.data()!;
-  const courseHoles: { number: number; par: number; hcpIndex: number }[] = course.holes || [];
-  
-  if (courseHoles.length === 0) return;
-  
-  // Fetch tournament for handicap data
+
   const tournamentId = round.tournamentId;
   if (!tournamentId) return;
-  
-  const tournamentSnap = await db.collection("tournaments").doc(tournamentId).get();
-  if (!tournamentSnap.exists) return;
-  
-  const tournament = tournamentSnap.data()!;
-  
-  // Fetch player names
+
   const playerIds = new Set<string>();
   matches.forEach((match: any) => {
     (match.teamAPlayers || []).forEach((p: any) => playerIds.add(p.playerId));
     (match.teamBPlayers || []).forEach((p: any) => playerIds.add(p.playerId));
   });
-  
-  const playerNames: Record<string, string> = {};
   const playerIdArray = Array.from(playerIds);
-  
-  // Batch fetch players (30 at a time due to Firestore limit)
-  for (let i = 0; i < playerIdArray.length; i += 30) {
-    const batch = playerIdArray.slice(i, i + 30);
-    const playersSnap = await db.collection("players").where("__name__", "in", batch).get();
-    playersSnap.docs.forEach(d => {
-      playerNames[d.id] = d.data().displayName || d.id;
+
+  // Static inputs (course layout, tournament handicaps, player names) change
+  // rarely, so they're cached on the result doc — steady-state cost per hole
+  // save is round + matches + result reads instead of ~26 extra static reads.
+  // See SkinsStaticCache in types.ts for reuse/invalidation rules.
+  const staticSig = [courseId, tournamentId, round.skinsHandicapPercent ?? 100].join("|");
+  const cachedStatic = existing?._static;
+  let skinsStatic: SkinsStaticCache;
+
+  if (
+    cachedStatic &&
+    cachedStatic.sig === staticSig &&
+    playerIdArray.every((id) => cachedStatic.playerNames[id] !== undefined)
+  ) {
+    skinsStatic = cachedStatic;
+  } else {
+    const courseSnap = await db.collection("courses").doc(courseId).get();
+    if (!courseSnap.exists) return;
+
+    const course = courseSnap.data()!;
+    const freshCourseHoles: { number: number; par: number; hcpIndex: number }[] = course.holes || [];
+
+    if (freshCourseHoles.length === 0) return;
+
+    const tournamentSnap = await db.collection("tournaments").doc(tournamentId).get();
+    if (!tournamentSnap.exists) return;
+
+    const tournament = tournamentSnap.data()!;
+
+    // Batch fetch players (30 at a time due to Firestore limit); ids with no
+    // player doc fall back to the raw id so the completeness check above stays
+    // satisfiable on later runs.
+    const playerNames: Record<string, string> = {};
+    for (let i = 0; i < playerIdArray.length; i += 30) {
+      const batch = playerIdArray.slice(i, i + 30);
+      const playersSnap = await db.collection("players").where("__name__", "in", batch).get();
+      playersSnap.docs.forEach(d => {
+        playerNames[d.id] = d.data().displayName || d.id;
+      });
+    }
+    playerIdArray.forEach((id) => {
+      if (playerNames[id] === undefined) playerNames[id] = id;
     });
+
+    skinsStatic = {
+      sig: staticSig,
+      courseHoles: freshCourseHoles,
+      coursePar: course.par ?? 72,
+      slope: course.slope ?? 113,
+      rating: course.rating ?? (course.par ?? 72),
+      handicapByPlayerA: tournament.teamA?.handicapByPlayer ?? {},
+      handicapByPlayerB: tournament.teamB?.handicapByPlayer ?? {},
+      playerNames,
+    };
   }
-  
+
+  const { courseHoles, playerNames } = skinsStatic;
+
   // Skins calculation parameters
   const handicapPercent = round.skinsHandicapPercent ?? 100;
-  const slopeRating = course.slope ?? 113;
-  const courseRating = course.rating ?? (course.par ?? 72);
-  const coursePar = course.par ?? 72;
-  
+
   // Cache skins strokes per player to avoid recomputing
   const skinsStrokesCache = new Map<string, number[]>();
-  
+
   const getSkinsStrokesForPlayer = (playerId: string, teamKey: "teamA" | "teamB"): number[] => {
     const cacheKey = `${teamKey}:${playerId}`;
-    const existing = skinsStrokesCache.get(cacheKey);
-    if (existing) return existing;
-    
-    const teamData = teamKey === "teamA" ? tournament.teamA : tournament.teamB;
-    const handicapIndex = teamData?.handicapByPlayer?.[playerId] ?? 0;
-    
+    const cachedStrokes = skinsStrokesCache.get(cacheKey);
+    if (cachedStrokes) return cachedStrokes;
+
+    const handicapByPlayer = teamKey === "teamA" ? skinsStatic.handicapByPlayerA : skinsStatic.handicapByPlayerB;
+    const handicapIndex = handicapByPlayer[playerId] ?? 0;
+
     const strokes = calculateSkinsStrokes(
       handicapIndex,
       handicapPercent,
-      slopeRating,
-      courseRating,
-      coursePar,
+      skinsStatic.slope,
+      skinsStatic.rating,
+      skinsStatic.coursePar,
       courseHoles
     );
-    
+
     skinsStrokesCache.set(cacheKey, strokes);
     return strokes;
   };
@@ -1581,19 +1618,8 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTrig
     .filter(p => p.grossSkinsWon > 0 || p.netSkinsWon > 0)
     .sort((a, b) => b.totalEarnings - a.totalEarnings);
   
-  // Create computation signature from all match holes data
-  const computeSig = JSON.stringify(matches.map((m: any) => m.holes || {}));
-  
-  // Check if we need to write (avoid redundant writes)
-  const skinsResultRef = db.collection("rounds").doc(roundId).collection("skinsResults").doc("computed");
-  const existingSnap = await skinsResultRef.get();
-  
-  if (existingSnap.exists && existingSnap.data()?._computeSig === computeSig) {
-    // No change, skip write
-    return;
-  }
-  
-  // Write pre-computed skins results
+  // Write pre-computed skins results (the computeSig no-change exit already
+  // happened before the static fetches above)
   const skinsResultDoc: SkinsResultDoc = {
     holeSkinsData,
     playerTotals,
@@ -1601,8 +1627,9 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", withTrig
     skinsNetPot,
     lastUpdated: FieldValue.serverTimestamp(),
     _computeSig: computeSig,
+    _static: skinsStatic,
   };
-  
+
   await skinsResultRef.set(skinsResultDoc);
 }));
 

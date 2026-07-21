@@ -23,8 +23,19 @@ function isNum(n: any): n is number {
   return typeof n === "number" && Number.isFinite(n);
 }
 
+// Mirrors the server's isValidGross (functions/src/scoring/matchScoring.ts +
+// constants.ts): out-of-range or non-integer values count as "hole not scored
+// yet", so the client's hole winners / close prediction can't diverge from the
+// authoritative server result on garbage data.
+const MIN_GROSS_SCORE = 1;
+const MAX_GROSS_SCORE = 30;
+
+function isValidGross(n: any): n is number {
+  return isNum(n) && Number.isInteger(n) && n >= MIN_GROSS_SCORE && n <= MAX_GROSS_SCORE;
+}
+
 function to2(arr: any[]): [number | null, number | null] {
-  return [isNum(arr?.[0]) ? arr[0] : null, isNum(arr?.[1]) ? arr[1] : null];
+  return [isValidGross(arr?.[0]) ? arr[0] : null, isValidGross(arr?.[1]) ? arr[1] : null];
 }
 
 // --- HOLE INPUT INTERFACE ---
@@ -71,14 +82,14 @@ export function decideHole(
     // Scramble (2- or 4-man): one team gross score per hole — same input shape.
     const a = input.teamAGross;
     const b = input.teamBGross;
-    if (!isNum(a) || !isNum(b)) return null;
+    if (!isValidGross(a) || !isValidGross(b)) return null;
     return a < b ? "teamA" : b < a ? "teamB" : "AS";
   }
   
   if (format === "singles") {
     const aG = input.teamAPlayerGross;
     const bG = input.teamBPlayerGross;
-    if (!isNum(aG) || !isNum(bG)) return null;
+    if (!isValidGross(aG) || !isValidGross(bG)) return null;
     const aNet = aG - clamp01(teamAPlayers?.[0]?.strokesReceived?.[holeIndex]);
     const bNet = bG - clamp01(teamBPlayers?.[0]?.strokesReceived?.[holeIndex]);
     return aNet < bNet ? "teamA" : bNet < aNet ? "teamB" : "AS";

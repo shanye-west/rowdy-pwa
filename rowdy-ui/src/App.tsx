@@ -43,7 +43,13 @@ export default function App() {
   // draft is in progress (drafting or awaiting confirm) and auto-hidden once the
   // admin finalizes. Draft reads require auth, so only subscribe when signed in.
   const { user } = useAuth();
-  const draftRoundIds = useMemo(() => (user ? rounds.map((r) => r.id) : []), [user, rounds]);
+  // A draft can only be live before its matches are seeded (finalizing seeds
+  // them) and never on a locked round — so during tournament play this holds
+  // zero permanent listeners on the most-visited screen.
+  const draftRoundIds = useMemo(
+    () => (user ? rounds.filter((r) => !r.locked && !(r.matchIds?.length)).map((r) => r.id) : []),
+    [user, rounds]
+  );
   const { drafts: pairingDrafts } = useRoundDrafts(draftRoundIds);
   const livePairing = useMemo(() => findLivePairing(rounds, pairingDrafts), [rounds, pairingDrafts]);
 

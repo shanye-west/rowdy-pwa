@@ -180,7 +180,11 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     
     setRoundLoaded(false);
     
-    const unsub = onSnapshot(
+    // Self-detaching: a locked round is static, so drop the realtime listener
+    // once the server confirms it's locked (not on a cache-only snapshot, which
+    // could pin a round that was since unlocked). Same pattern as useSkinsData
+    // and the match listener above.
+    let unsub: (() => void) | undefined = onSnapshot(
       doc(db, "rounds", roundId),
       (rSnap) => {
         if (!rSnap.exists()) {
@@ -190,14 +194,18 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         const rData = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
         setRound(rData);
         setRoundLoaded(true);
+        if (rData.locked === true && !rSnap.metadata.fromCache) {
+          unsub?.();
+          unsub = undefined;
+        }
       },
       (err) => {
         setError(`Failed to load round: ${err.message}`);
         setRoundLoaded(true);
       }
     );
-    
-    return () => unsub();
+
+    return () => unsub?.();
   }, [roundId, matchLoaded]);
 
   // 4. Fetch tournament (from context or one-time fetch, cached by ID)

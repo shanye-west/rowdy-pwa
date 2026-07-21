@@ -240,6 +240,25 @@ export interface PlayerSkinsTotal {
   totalEarnings: number;
 }
 
+/**
+ * Rarely-changing inputs to the skins computation, cached on the result doc so
+ * the per-score-save recompute doesn't re-fetch course/tournament/player docs.
+ * Reused while `sig` matches AND every match playerId is present in
+ * `playerNames`; updateRound deletes the field when courseId/skins settings
+ * change (re-saving a skins pot is the escape hatch for mid-round tournament
+ * handicap edits).
+ */
+export interface SkinsStaticCache {
+  sig: string; // [courseId, tournamentId, skinsHandicapPercent].join("|")
+  courseHoles: { number: number; par: number; hcpIndex: number }[];
+  coursePar: number;
+  slope: number;
+  rating: number;
+  handicapByPlayerA: Record<string, number>;
+  handicapByPlayerB: Record<string, number>;
+  playerNames: Record<string, string>;
+}
+
 export interface SkinsResultDoc {
   holeSkinsData: HoleSkinData[];
   playerTotals: PlayerSkinsTotal[];
@@ -247,6 +266,7 @@ export interface SkinsResultDoc {
   skinsNetPot: number;
   lastUpdated: any; // FieldValue.serverTimestamp()
   _computeSig: string; // Hash to detect changes
+  _static?: SkinsStaticCache;
 }
 
 // ============================================================================
