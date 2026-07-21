@@ -7,10 +7,15 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
-import { getPlayerShortName as getPlayerShortNameFromLookup, sortPlayersByTier } from "../utils/playerHelpers";
+import {
+  getPlayerShortName as getPlayerShortNameFromLookup,
+  getPlayerName as getPlayerNameFromLookup,
+  sortPlayersByTier,
+} from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
+import PlayerAvatar from "../components/PlayerAvatar";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { HoleByHoleTracker } from "../components/HoleByHoleTracker";
 import { RoundPageSkeleton } from "../components/Skeleton";
@@ -74,6 +79,7 @@ function RoundComponent() {
   }, [roundId]);
 
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
+  const getPlayerName = (pid: string) => getPlayerNameFromLookup(pid, players);
 
   if (loading) return (
     <Layout title="Loading..." showBack>
@@ -281,6 +287,9 @@ function RoundComponent() {
                 const teamBPlayersOrdered = sortPlayersByTier(match.teamBPlayers || [], tournament?.teamB?.rosterByTier);
                 const teamANames = teamAPlayersOrdered.map((p) => getPlayerShortName(p.playerId)).join(", ");
                 const teamBNames = teamBPlayersOrdered.map((p) => getPlayerShortName(p.playerId)).join(", ");
+                const onColored = textColor === "text-white";
+                const ringA = onColored ? "rgba(255,255,255,0.85)" : teamAColor;
+                const ringB = onColored ? "rgba(255,255,255,0.85)" : teamBColor;
 
                 return (
                   <div key={match.id} role="listitem">
@@ -295,10 +304,23 @@ function RoundComponent() {
                       >
                         <CardContent className="space-y-4 py-4">
                           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                            <div className={cn("text-left text-sm leading-tight", textColor)}>
+                            <div className={cn("space-y-1.5 text-sm leading-tight", textColor)}>
                               {teamAPlayersOrdered.map((player, index) => (
-                                <div key={index} className="font-semibold">
-                                  {getPlayerShortName(player.playerId)}
+                                <div key={index} className="flex min-w-0 items-center gap-1.5">
+                                  <span
+                                    className="shrink-0 rounded-full"
+                                    style={{ boxShadow: `0 0 0 1.5px ${ringA}` }}
+                                  >
+                                    <PlayerAvatar
+                                      name={getPlayerName(player.playerId)}
+                                      playerId={player.playerId}
+                                      color={teamAColor}
+                                      size={24}
+                                    />
+                                  </span>
+                                  <span className="min-w-0 truncate font-semibold">
+                                    {getPlayerShortName(player.playerId)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -315,10 +337,23 @@ function RoundComponent() {
                               showTeeLabel={false}
                             />
 
-                            <div className={cn("text-right text-sm leading-tight", textColor)}>
+                            <div className={cn("space-y-1.5 text-sm leading-tight", textColor)}>
                               {teamBPlayersOrdered.map((player, index) => (
-                                <div key={index} className="font-semibold">
-                                  {getPlayerShortName(player.playerId)}
+                                <div key={index} className="flex min-w-0 flex-row-reverse items-center gap-1.5">
+                                  <span
+                                    className="shrink-0 rounded-full"
+                                    style={{ boxShadow: `0 0 0 1.5px ${ringB}` }}
+                                  >
+                                    <PlayerAvatar
+                                      name={getPlayerName(player.playerId)}
+                                      playerId={player.playerId}
+                                      color={teamBColor}
+                                      size={24}
+                                    />
+                                  </span>
+                                  <span className="min-w-0 truncate font-semibold">
+                                    {getPlayerShortName(player.playerId)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
