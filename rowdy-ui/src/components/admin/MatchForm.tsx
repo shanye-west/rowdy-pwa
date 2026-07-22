@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { MatchDoc, PlayerDoc, TournamentDoc } from "../../types";
 import { tierPlayerIds } from "../../utils/roster";
-import { teeTimeToLocalInput } from "../../utils/teeTime";
+import { storedToLocalInput } from "../../utils/teeTime";
 
 export interface MatchFormPlayer {
   playerId: string;
@@ -48,7 +48,7 @@ export default function MatchForm({
 }: MatchFormProps) {
   const isEdit = !!initial;
   const [matchId, setMatchId] = useState(initial?.match.id ?? "");
-  const [teeTime, setTeeTime] = useState(initial ? teeTimeToLocalInput(initial.match.teeTime) : "");
+  const [teeTime, setTeeTime] = useState(initial ? storedToLocalInput(initial.match.teeTime) : "");
   const [teamAPlayers, setTeamAPlayers] = useState<MatchFormPlayer[]>(
     initial?.teamA.length ? initial.teamA : [{ playerId: "" }]
   );

@@ -25,7 +25,7 @@ import {
   selectPendingSettlements,
 } from "../hooks/useBets";
 import { betsApi } from "../api/bets";
-import { toDateOrNull, formatTeeTime, formatRoundType } from "../utils";
+import { teeTimeToMillis, formatTeeTime, formatRoundType } from "../utils";
 import ConfirmDialog from "../components/admin/ConfirmDialog";
 import BetMatchup, { type MatchupSide } from "../components/BetMatchup";
 import SportsbookHowTo from "../components/SportsbookHowTo";
@@ -161,8 +161,8 @@ export default function Sportsbook() {
     if (!m) return true; // unknown match -> treat as locked, hide cancel
     if (m.locked === true || m.status?.closed === true) return true;
     if ((m.status?.thru ?? 0) > 0) return true;
-    const tee = toDateOrNull(m.teeTime);
-    return tee !== null && tee.getTime() <= nowMs;
+    const teeMs = teeTimeToMillis(m.teeTime);
+    return teeMs !== null && teeMs <= nowMs;
   }, [nowMs]);
   /** A locked-in bet can still be called off until its market starts. */
   const canCancelLocked = (b: BetDoc): boolean => {
@@ -278,7 +278,7 @@ export default function Sportsbook() {
   const inPlayMatches = useMemo(() => {
     const teeMs = (b: BetDoc): number => {
       const m = b.matchId ? matchesById[b.matchId] : undefined;
-      return toDateOrNull(m?.teeTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return teeTimeToMillis(m?.teeTime) ?? Number.MAX_SAFE_INTEGER;
     };
     return activeBets
       .filter((b) => b.market === "match" || (b.market === "overUnder" && !isPlayerOuMetric(b.metric)))

@@ -12,10 +12,11 @@
  */
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
 import { settleCupFutureBet, settleOverUnderBet, settlePlayerMatchupBet } from "../scoring/betSettlement.js";
 import { notify } from "../messaging/notify.js";
+import { teeTimeToMillis } from "./teeTime.js";
 import type { BetDoc, BetMarket, BetOverUnderMetric, BetSide } from "../types.js";
 
 function db() {
@@ -89,27 +90,14 @@ function dedupe(ids: string[]): string[] {
   return [...new Set(ids)];
 }
 
-/** Normalize a teeTime field (Timestamp | {_seconds} | ISO string) to epoch ms. */
-function teeTimeMillis(tee: unknown): number | null {
-  if (!tee) return null;
-  if (tee instanceof Timestamp) return tee.toMillis();
-  if (typeof tee === "string") {
-    const ms = Date.parse(tee);
-    return Number.isNaN(ms) ? null : ms;
-  }
-  if (typeof tee === "object" && tee !== null && "_seconds" in tee) {
-    const secs = (tee as { _seconds?: unknown })._seconds;
-    if (typeof secs === "number") return secs * 1000;
-  }
-  return null;
-}
-
 /** A match has begun once any hole is scored, it has closed, or its tee time passed. */
 function matchStartedPlay(m: FirebaseFirestore.DocumentData): boolean {
   const thru = m.status?.thru ?? 0;
   if (typeof thru === "number" && thru > 0) return true;
   if (m.status?.closed === true) return true;
-  const teeMs = teeTimeMillis(m.teeTime);
+  // teeTime is a venue-local wall-clock string; teeTimeToMillis interprets it in
+  // the venue timezone so "tee time has passed" is judged correctly.
+  const teeMs = teeTimeToMillis(m.teeTime);
   return teeMs !== null && teeMs <= Date.now();
 }
 

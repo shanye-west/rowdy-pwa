@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type { FirestoreTimestampLike, MatchDoc } from "./types";
+import { EVENT_TIME_ZONE, tzOffsetMs } from "./utils/timeZone";
 
 /**
  * Determine the champion of a tournament from its confirmed point totals.
@@ -68,24 +69,81 @@ export function toDateOrNull(value: FirestoreTimestampLike | undefined): Date | 
   return null;
 }
 
+/** hours/minutes (24h) → display string, e.g. "12:06pm". */
+function formatClock(hours: number, minutes: number): string {
+  const period = hours >= 12 ? "pm" : "am";
+  let h = hours % 12;
+  h = h ? h : 12;
+  return `${h}:${String(minutes).padStart(2, "0")}${period}`;
+}
+
 /**
- * Format tee time for display, e.g. "9:10am".
- * Accepts any FirestoreTimestampLike shape; returns "" when value is missing or unparseable.
+ * Parse a "hard-set" wall-clock string ("YYYY-MM-DDTHH:MM[:SS]" or "HH:MM") into
+ * hours/minutes. Returns null for absolute-instant strings — those carry a
+ * timezone designator (trailing "Z" or numeric offset) and must NOT be read
+ * literally. Naive strings have no zone, so their digits are the wall clock.
  */
-export function formatTeeTime(timestamp: FirestoreTimestampLike | undefined): string {
+function wallClockParts(value: string): { hours: number; minutes: number } | null {
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) return null; // absolute instant
+  const m = value.match(/^(?:\d{4}-\d{2}-\d{2}T)?(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return { hours, minutes };
+}
+
+/**
+ * Format tee time for display, e.g. "12:06pm".
+ *
+ * Tee times are stored as a hard-set wall-clock string with no timezone, so the
+ * literal clock is shown verbatim — every viewer sees the same time regardless
+ * of their device's zone. Legacy absolute-instant values (old Timestamps) fall
+ * back to being rendered in the venue's timezone. Returns "" when missing or
+ * unparseable.
+ */
+export function formatTeeTime(
+  timestamp: FirestoreTimestampLike | undefined,
+  timeZone: string = EVENT_TIME_ZONE
+): string {
+  if (typeof timestamp === "string") {
+    const wc = wallClockParts(timestamp);
+    if (wc) return formatClock(wc.hours, wc.minutes);
+  }
+
+  // Legacy/absolute instant — render in the venue timezone.
   const date = toDateOrNull(timestamp);
   if (!date) return "";
 
-  let hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "pm" : "am";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
 
-  hours = hours % 12;
-  hours = hours ? hours : 12;
+  const f: Record<string, string> = {};
+  for (const p of parts) f[p.type] = p.value;
 
-  const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+  const period = (f.dayPeriod || "").toLowerCase();
+  return `${f.hour}:${f.minute}${period}`;
+}
 
-  return `${hours}:${minutesStr}${ampm}`;
+/**
+ * teeTime → epoch ms. A hard-set wall-clock string (no timezone) is interpreted
+ * in the venue timezone, so "has the tee time passed?" resolves to the same
+ * instant for every viewer. Legacy absolute values are read directly. Returns
+ * null when missing/unparseable.
+ */
+export function teeTimeToMillis(teeTime: FirestoreTimestampLike | undefined): number | null {
+  if (typeof teeTime === "string" && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(teeTime)) {
+    const m = teeTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return null;
+    const naiveUTC = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return naiveUTC - tzOffsetMs(EVENT_TIME_ZONE, new Date(naiveUTC));
+  }
+  const date = toDateOrNull(teeTime);
+  return date ? date.getTime() : null;
 }
 
 export function formatMatchStatus(

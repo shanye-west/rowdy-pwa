@@ -9,7 +9,7 @@ import MatchForm, { type MatchFormPlayer, type MatchFormValues } from "../../com
 import { useAdminTournament } from "../../contexts/AdminTournamentContext";
 import { adminApi } from "../../api/admin";
 import { getErrorMessage } from "../../api/errors";
-import { localInputToIso } from "../../utils/teeTime";
+import { localInputToStored } from "../../utils/teeTime";
 import { formToInput, inputToForm, type HoleFormState } from "../../utils/holeInputForm";
 import type { MatchDoc, RoundFormat } from "../../types";
 import { isDriveTrackingFormat, isScrambleFormat, isSinglesFormat } from "../../types";
@@ -82,7 +82,7 @@ export default function MatchAdmin() {
         matchId,
         tournamentId,
         roundId: match!.roundId,
-        ...(values.teeTime ? { teeTime: localInputToIso(values.teeTime) } : {}),
+        ...(values.teeTime ? { teeTime: localInputToStored(values.teeTime) } : {}),
         teamAPlayers: values.teamAPlayers.map((p) => ({ playerId: p.playerId, handicapIndex: p.handicapIndex })),
         teamBPlayers: values.teamBPlayers.map((p) => ({ playerId: p.playerId, handicapIndex: p.handicapIndex })),
       });

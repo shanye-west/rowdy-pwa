@@ -1,27 +1,26 @@
 import type { FirestoreTimestampLike } from "../types";
 import { toDateOrNull } from "../utils";
+import { EVENT_TIME_ZONE, isoToZonedInput } from "./timeZone";
 
 /**
- * Tee times are entered and displayed as Pacific Time. The datetime-local
- * input has no timezone, so we pin the offset when converting.
- * Note: hardcodes -08:00 (PST) like the original admin pages — known
- * follow-up for PDT events.
+ * Tee times are stored as a hard-set wall-clock string ("YYYY-MM-DDTHH:MM", the
+ * exact value the datetime-local picker produces, with no timezone). Nothing is
+ * converted, so what an admin types is what every viewer sees.
  */
 
-/** datetime-local value ("YYYY-MM-DDTHH:MM") → ISO string for the callables. */
-export function localInputToIso(value: string): string {
-  return new Date(value + "-08:00").toISOString();
+/** datetime-local value ("YYYY-MM-DDTHH:MM") → the value stored on the match. */
+export function localInputToStored(value: string): string {
+  return value;
 }
 
-/** Stored tee time → datetime-local value rendered in Pacific Time ("" if unset). */
-export function teeTimeToLocalInput(teeTime: FirestoreTimestampLike | undefined): string {
+/** Stored tee time → datetime-local value for pre-filling the admin picker. */
+export function storedToLocalInput(teeTime: FirestoreTimestampLike | undefined): string {
+  // New data is already a wall-clock string ("YYYY-MM-DDTHH:MM[:SS]").
+  if (typeof teeTime === "string" && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(teeTime)) {
+    return teeTime.slice(0, 16);
+  }
+  // Legacy absolute instant (old Timestamp/ISO): render in the venue zone.
   const date = toDateOrNull(teeTime ?? null);
   if (!date) return "";
-  const pacificDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-  const year = pacificDate.getFullYear();
-  const month = String(pacificDate.getMonth() + 1).padStart(2, "0");
-  const day = String(pacificDate.getDate()).padStart(2, "0");
-  const hours = String(pacificDate.getHours()).padStart(2, "0");
-  const minutes = String(pacificDate.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return isoToZonedInput(date, EVENT_TIME_ZONE);
 }

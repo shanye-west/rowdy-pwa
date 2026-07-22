@@ -8,8 +8,9 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { requireAdmin } from "../helpers/adminAuth.js";
+import { normalizeTeeTime } from "./teeTime.js";
 import { computeTeamsWithStrokes, type CourseForStrokes, type ResolvedPlayer } from "../helpers/strokeCalculation.js";
 import { ensureTournamentTeamColors } from "../utils/teamColors.js";
 
@@ -75,21 +76,6 @@ function resolveWithFallback(
   }));
 }
 
-/** Accepts ISO strings, serialized timestamps, or Timestamp instances. */
-function parseTeeTime(teeTime: unknown): Timestamp | null {
-  if (!teeTime) return null;
-  if (typeof teeTime === "string") {
-    const date = new Date(teeTime);
-    return isNaN(date.getTime()) ? null : Timestamp.fromDate(date);
-  }
-  if (teeTime instanceof Timestamp) return teeTime;
-  if (typeof teeTime === "object" && "_seconds" in teeTime) {
-    const t = teeTime as { _seconds: number; _nanoseconds?: number };
-    return Timestamp.fromMillis(t._seconds * 1000 + (t._nanoseconds || 0) / 1000000);
-  }
-  return null;
-}
-
 /**
  * Builds a ready-to-write match document with computed strokes, course
  * handicaps, and authorizedUids. Shared by `seedMatch` (writes the single
@@ -117,7 +103,7 @@ export async function buildSeededMatchDoc(params: {
     course
   );
 
-  const teeTimeTimestamp = parseTeeTime(teeTime);
+  const teeTimeTimestamp = normalizeTeeTime(teeTime);
 
   // Determine matchNumber: if caller provided `matchNumber` use it, otherwise
   // compute the lowest available positive integer for this round.
@@ -252,7 +238,7 @@ export const editMatch = onCall(async (request) => {
   };
 
   // Only update teeTime if provided
-  const teeTimeTimestamp = parseTeeTime(teeTime);
+  const teeTimeTimestamp = normalizeTeeTime(teeTime);
   if (teeTimeTimestamp) {
     updates.teeTime = teeTimeTimestamp;
   }

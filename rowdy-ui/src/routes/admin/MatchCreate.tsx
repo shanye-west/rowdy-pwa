@@ -6,7 +6,7 @@ import MatchForm, { type MatchFormValues } from "../../components/admin/MatchFor
 import { useAdminTournament } from "../../contexts/AdminTournamentContext";
 import { adminApi } from "../../api/admin";
 import { getErrorMessage } from "../../api/errors";
-import { localInputToIso } from "../../utils/teeTime";
+import { localInputToStored } from "../../utils/teeTime";
 import type { SeedMatchRequest } from "../../api/adminContracts";
 
 /** Create a match inside a known tournament + round — no selectors needed. */
@@ -34,7 +34,7 @@ export default function MatchCreate() {
         teamBPlayers: values.teamBPlayers.map((p) => ({ playerId: p.playerId })),
       };
       if (values.teeTime) {
-        payload.teeTime = localInputToIso(values.teeTime);
+        payload.teeTime = localInputToStored(values.teeTime);
       }
       await adminApi.seedMatch(payload);
       navigate(`/admin/t/${tournamentId}/match/${values.matchId}`, { replace: true });
