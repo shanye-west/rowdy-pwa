@@ -29,11 +29,18 @@ export async function warmMatchForOffline({
   playerIds,
   imageUrls,
 }: WarmMatchArgs): Promise<void> {
-  await getDocFromServer(doc(db, "matches", matchId));
-  if (roundId) await getDocFromServer(doc(db, "rounds", roundId));
-  if (courseId) await getDocFromServer(doc(db, "courses", courseId));
-  if (tournamentId) await getDocFromServer(doc(db, "tournaments", tournamentId));
-  await Promise.all(playerIds.map((id) => getDocFromServer(doc(db, "players", id))));
+  // These reads are independent — none of the ids is derived from another doc —
+  // so they go out together. Sequentially this was one round trip per doc, which
+  // on course LTE is the difference between a warm-up that finishes in the
+  // parking lot and one that's still running at the first tee.
+  const reads = [
+    doc(db, "matches", matchId),
+    ...(roundId ? [doc(db, "rounds", roundId)] : []),
+    ...(courseId ? [doc(db, "courses", courseId)] : []),
+    ...(tournamentId ? [doc(db, "tournaments", tournamentId)] : []),
+    ...playerIds.map((id) => doc(db, "players", id)),
+  ];
+  await Promise.all(reads.map((ref) => getDocFromServer(ref)));
   // Pull logos through the SW's image cache — best-effort, so a missing logo
   // degrades to the emoji fallback offline rather than failing the warm.
   (imageUrls ?? []).filter(Boolean).forEach((url) => {

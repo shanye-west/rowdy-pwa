@@ -25,11 +25,16 @@ export default function History() {
   const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
   const [winnersByTournament, setWinnersByTournament] = useState<Record<string, TournamentWinner>>({});
   const [selectedSeries, setSelectedSeries] = useState<TournamentSeries>("rowdyCup");
+  // A failed read used to fall through to "No past tournaments found.", which
+  // reads as fact rather than as a connection problem. Tracked separately so a
+  // dropped signal at the course says so and offers a retry.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch all non-active tournaments (one-time read - historical data doesn't change)
   useEffect(() => {
     let cancelled = false;
-    
+
     async function fetchHistory() {
       try {
         const snap = await getDocs(
@@ -47,16 +52,18 @@ export default function History() {
         const publicTournaments = docs.filter(t => t.test !== true);
         // Already sorted by query orderBy
         setTournaments(publicTournaments);
+        setLoadError(false);
       } catch (err) {
         console.error("History fetch error:", err);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    
+
     fetchHistory();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
 
   // Determine each tournament's champion from denormalized round point totals.
   // Historical data is static, so a one-time read is fine; we batch all listed
@@ -258,8 +265,23 @@ export default function History() {
           </div>
         )}
 
+        {/* Couldn't load — distinct from "there is nothing here" */}
+        {loadError && tournaments.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-state-icon">📡</div>
+            <div className="empty-state-text">Couldn't load past tournaments.</div>
+            <button
+              type="button"
+              onClick={() => { setLoading(true); setReloadKey(k => k + 1); }}
+              className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-transform active:scale-95 hover:bg-slate-800"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* No past tournaments */}
-        {availableSeries.length === 0 && (
+        {!loadError && availableSeries.length === 0 && (
           <div className="empty-state">
             <div className="empty-state-icon">📜</div>
             <div className="empty-state-text">No past tournaments found.</div>

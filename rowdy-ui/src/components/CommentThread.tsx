@@ -39,7 +39,7 @@ export interface CommentThreadProps {
 export default function CommentThread({ threadType, threadId, tournamentId, title }: CommentThreadProps) {
   const { player } = useAuth();
   const { showToast } = useToast();
-  const { comments, loading, hasMore, loadingOlder, loadOlder, canInteract, post, react, remove, canDelete } =
+  const { comments, loading, error, hasMore, loadingOlder, loadOlder, canInteract, post, react, remove, canDelete } =
     useCommentThread({
       tournamentId,
       threadType,
@@ -157,6 +157,12 @@ export default function CommentThread({ threadType, threadId, tournamentId, titl
       {loading ? (
         <div className="flex justify-center py-4">
           <div className="spinner-lg" />
+        </div>
+      ) : error && comments.length === 0 ? (
+        // A subscription failure previously rendered as "No comments yet", which
+        // invites someone to re-post a message that's actually already there.
+        <div className="py-3 text-center text-xs text-muted-foreground">
+          Couldn't load comments — check your connection.
         </div>
       ) : comments.length === 0 ? (
         <div className="py-3 text-center text-xs text-muted-foreground">No comments yet — be the first.</div>

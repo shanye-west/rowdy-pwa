@@ -119,22 +119,30 @@ export default defineConfig({
         orientation: 'portrait', // mobile-only scoring app; scorecard scrolls horizontally in portrait
         scope: '/',
         start_url: '/',
+        // Each entry must match the real pixel dimensions of the file it points
+        // at — a mismatch makes Chrome drop the icon from install promotion.
+        // The maskable variant is a *separate* export with the artwork pulled
+        // into the inner-80% safe zone and an opaque background, because
+        // Android crops adaptive icons to a circle/squircle and composites
+        // transparency onto an unpredictable color.
         icons: [
           {
             src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/pwa-maskable-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable', // Required for "Adaptive Icons" on Android
+            purpose: 'maskable', // Required for "Adaptive Icons" on Android
           },
         ],
       },

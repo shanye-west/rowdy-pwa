@@ -144,7 +144,11 @@ export default function DraftPool() {
                     </span>
                   </div>
                 )}
-                <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-muted transition-colors duration-150 ${cap ? "" : "opacity-50"}`}>
+                {/* Captains are distinguished by their team-colored avatar and the
+                    "Captain · Team" label below the name — not by dimming everyone
+                    else. A blanket opacity on non-captain rows dropped their text to
+                    ~3.4:1, which is unreadable in direct sun on a phone at the course. */}
+                <div className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-muted transition-colors duration-150 ${cap ? "bg-muted/40" : ""}`}>
                   <div className="flex min-w-0 items-center gap-3">
                     <PlayerAvatar name={name} playerId={pid} color={cap?.color} />
                     <div className="min-w-0">
