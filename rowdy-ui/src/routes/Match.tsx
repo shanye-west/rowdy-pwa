@@ -89,7 +89,7 @@ function formatFinalResult(margin: number, thru: number): string {
 
 export default function Match() {
   const { matchId } = useParams();
-  const { canEditMatch, player } = useAuth();
+  const { canEditMatch, player, user } = useAuth();
   
   // Use custom hook for all data fetching
   const {
@@ -1208,10 +1208,18 @@ export default function Match() {
           </ComponentErrorBoundary>
         )}
 
-        {/* MATCH COMMENTS */}
+        {/* MATCH COMMENTS — reading requires login (comments are gated in the
+            Firestore rules); show a prompt to logged-out visitors on this
+            otherwise-public match page rather than an empty/denied thread. */}
         {tournament?.commentsEnabled && matchId && (
           <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-muted-foreground text-sm">Comments unavailable</div>}>
-            <CommentThread threadType="match" threadId={matchId} tournamentId={tournament.id} />
+            {user ? (
+              <CommentThread threadType="match" threadId={matchId} tournamentId={tournament.id} />
+            ) : (
+              <div className="card p-4 text-center text-muted-foreground text-sm">
+                <Link to="/login" className="text-primary underline">Log in</Link> to see and join the conversation.
+              </div>
+            )}
           </ComponentErrorBoundary>
         )}
 

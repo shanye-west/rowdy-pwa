@@ -22,6 +22,8 @@ import type {
   DeleteRoundRequest,
   DeleteRoundResult,
   EditMatchRequest,
+  GetPlayerPrivateRequest,
+  GetPlayerPrivateResult,
   LinkAuthToPlayerRequest,
   LinkAuthToPlayerResult,
   RecalculateAllStatsRequest,
@@ -69,6 +71,7 @@ export const adminApi = {
   createPlayer: call<CreatePlayerRequest, AdminResult>("createPlayer"),
   updatePlayerInfo: call<UpdatePlayerInfoRequest, AdminResult>("updatePlayerInfo"),
   linkAuthToPlayer: call<LinkAuthToPlayerRequest, LinkAuthToPlayerResult>("linkAuthToPlayer"),
+  getPlayerPrivate: call<GetPlayerPrivateRequest, GetPlayerPrivateResult>("getPlayerPrivate"),
   deletePlayer: call<DeletePlayerRequest, AdminResult>("deletePlayer"),
   setPlayerAdmin: call<SetPlayerAdminRequest, AdminResult>("setPlayerAdmin"),
 

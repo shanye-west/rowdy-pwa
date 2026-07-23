@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
@@ -29,6 +29,14 @@ export default function PlayersAdmin() {
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [linkEmail, setLinkEmail] = useState("");
+  // The linked account's email, for display. Like scoutingNotes, it's PII that no
+  // longer lives on the world-readable player doc — both are fetched on select via
+  // the admin-gated getPlayerPrivate callable.
+  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [loadingPrivate, setLoadingPrivate] = useState(false);
+  // Guards against a slow private-fields fetch for a previously-selected player
+  // clobbering the fields after the admin has clicked a different player.
+  const selectRef = useRef("");
   const [confirmAdminChange, setConfirmAdminChange] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -81,10 +89,30 @@ export default function PlayersAdmin() {
     setSelectedId(id);
     setSuccess(null);
     setError(null);
+    selectRef.current = id;
     const p = players.find((x) => x.id === id);
     setEditName(p?.displayName ?? "");
-    setEditNotes(p?.scoutingNotes ?? "");
-    setLinkEmail(p?.email ?? "");
+    // Reset PII fields, then load them from the server-only private subcollection
+    // via the admin callable (they're not on the world-readable player doc).
+    setEditNotes("");
+    setLinkEmail("");
+    setSelectedEmail(null);
+    setLoadingPrivate(true);
+    adminApi
+      .getPlayerPrivate({ playerId: id })
+      .then((priv) => {
+        if (selectRef.current !== id) return; // selection moved on — ignore
+        setEditNotes(priv.scoutingNotes ?? "");
+        setLinkEmail(priv.email ?? "");
+        setSelectedEmail(priv.email);
+      })
+      .catch((err) => {
+        if (selectRef.current !== id) return;
+        setError(getErrorMessage(err, "Failed to load player details"));
+      })
+      .finally(() => {
+        if (selectRef.current === id) setLoadingPrivate(false);
+      });
   };
 
   const handleSaveInfo = (e: React.FormEvent) => {
@@ -102,8 +130,10 @@ export default function PlayersAdmin() {
   const handleLink = (e: React.FormEvent) => {
     e.preventDefault();
     runAction(async () => {
-      await adminApi.linkAuthToPlayer({ playerId: selectedId, email: linkEmail.trim() });
-      return `Linked ${linkEmail.trim()} to ${selectedId}.`;
+      const email = linkEmail.trim();
+      await adminApi.linkAuthToPlayer({ playerId: selectedId, email });
+      setSelectedEmail(email);
+      return `Linked ${email} to ${selectedId}.`;
     });
   };
 
@@ -237,7 +267,7 @@ export default function PlayersAdmin() {
               <form onSubmit={handleLink} className="space-y-2">
                 <div className="text-sm text-gray-600">
                   {selected.authUid
-                    ? `Linked to ${selected.email ?? "an account"}. Re-linking replaces the connection.`
+                    ? `Linked to ${selectedEmail ?? (loadingPrivate ? "…" : "an account")}. Re-linking replaces the connection.`
                     : "Link this player to their login account by email (they must have signed in once)."}
                 </div>
                 <div className="flex gap-3">

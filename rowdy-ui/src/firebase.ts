@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { 
@@ -23,6 +24,29 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
+
+// App Check (opt-in). Once a reCAPTCHA Enterprise provider is registered in the
+// Firebase console and VITE_APPCHECK_SITE_KEY is set at build time (the reCAPTCHA
+// Enterprise key id), this attests that requests originate from the genuine app —
+// blocking direct SDK/REST abuse (scraping, or token-farming the paid AI endpoint)
+// from non-app clients. It is a NO-OP until the key is configured, so this is safe
+// to ship ahead of the console setup and before flipping on server-side
+// enforcement (ENFORCE_APP_CHECK on the callables). Initialise it right after
+// initializeApp, before any service makes a request.
+const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined;
+if (appCheckSiteKey) {
+  // Local dev / preview: set VITE_APPCHECK_DEBUG_TOKEN to a debug token registered
+  // in the console so localhost passes attestation without a real reCAPTCHA.
+  const debugToken = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN as string | undefined;
+  if (debugToken) {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+      debugToken;
+  }
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 
 export const auth = getAuth(app);
 export const functions = getFunctions(app);

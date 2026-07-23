@@ -2167,6 +2167,7 @@ export {
   createPlayer,
   updatePlayerInfo,
   linkAuthToPlayer,
+  getPlayerPrivate,
   deletePlayer,
   setPlayerAdmin,
 } from "./callables/adminOps.js";

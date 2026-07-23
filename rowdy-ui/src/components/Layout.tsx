@@ -63,7 +63,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const { player, logout, loading: authLoading } = useAuth();
+  const { user, player, logout, loading: authLoading } = useAuth();
   const { pushOn, busy: pushBusy, pushUnsupported, toggle: togglePush } = usePushNotifications();
   const { canInstall, guideOpen, openGuide, closeGuide } = useInstallPrompt();
   // Offer "Install app" whenever the app isn't already installed and we can either
@@ -244,7 +244,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         {player.displayName}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {player.email || "Logged in"}
+                        {/* The signed-in user's own email comes from Firebase Auth,
+                            not the player doc (email is no longer stored there). */}
+                        {user?.email || "Logged in"}
                       </div>
                       {player.isAdmin && (
                         <div className="mt-2 inline-flex rounded-full bg-primary px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-primary-foreground">

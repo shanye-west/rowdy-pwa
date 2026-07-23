@@ -14,6 +14,7 @@ import { db } from "../firebase";
 import { toDateOrNull } from "../utils";
 import { rosterPlayerIds } from "../utils/roster";
 import { usePlayers } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
 import type { BetDoc, BetSettlementDoc, PlayerDoc, TournamentDoc } from "../types";
 
 /** Bet statuses a player can still act on — the only ones worth a realtime listener. */
@@ -35,6 +36,7 @@ export interface UseBetsResult {
  * head-to-head / completed views. Returns the merged set, newest first.
  */
 export function useBets(tournamentId: string | undefined): UseBetsResult {
+  const { user } = useAuth();
   const [liveBets, setLiveBets] = useState<BetDoc[]>([]);
   const [settledBets, setSettledBets] = useState<BetDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,10 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
 
   // Realtime listener over the small, actively-changing set of bets. Drops the
   // settled history and terminal noise (void/cancelled/declined) from the listener.
+  // Bets reads require auth (Firestore rules), so don't even open the listener
+  // when signed out — the route is gated by RequireAuth, this is defense in depth.
   useEffect(() => {
-    if (!tournamentId) {
+    if (!tournamentId || !user) {
       setLiveBets([]);
       setLoading(false);
       return;
@@ -66,11 +70,11 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
       }
     );
     return () => unsub();
-  }, [tournamentId]);
+  }, [tournamentId, user]);
 
   // Settled bets are terminal, so a one-time read beats a permanent listener.
   const refreshSettled = useCallback(() => {
-    if (!tournamentId) {
+    if (!tournamentId || !user) {
       setSettledBets([]);
       return;
     }
@@ -79,7 +83,7 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
     )
       .then((snap) => setSettledBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc))))
       .catch((err) => console.error("Settled bets fetch error:", err));
-  }, [tournamentId]);
+  }, [tournamentId, user]);
 
   // Track the prior live-bet id set so we can refresh settled when a bet leaves it
   // (i.e. just settled) — keeping Standings live without a permanent settled listener.
@@ -120,9 +124,10 @@ const LIVE_SETTLEMENT_STATUSES = ["pending", "confirmed"] as const;
  * ever reading the cancelled noise — backed by the (tournamentId, status) index.
  */
 export function useBetSettlements(tournamentId: string | undefined): BetSettlementDoc[] {
+  const { user } = useAuth();
   const [settlements, setSettlements] = useState<BetSettlementDoc[]>([]);
   useEffect(() => {
-    if (!tournamentId) {
+    if (!tournamentId || !user) {
       setSettlements([]);
       return;
     }
@@ -138,7 +143,7 @@ export function useBetSettlements(tournamentId: string | undefined): BetSettleme
       (err) => console.error("Bet settlements subscription error:", err)
     );
     return () => unsub();
-  }, [tournamentId]);
+  }, [tournamentId, user]);
   return settlements;
 }
 

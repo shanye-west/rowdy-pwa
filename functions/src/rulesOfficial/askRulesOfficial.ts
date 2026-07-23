@@ -229,7 +229,16 @@ async function streamCompletion(
 }
 
 export const askRulesOfficial = onCall(
-  { secrets: [XAI_API_KEY], timeoutSeconds: 120, memory: "256MiB" },
+  {
+    secrets: [XAI_API_KEY],
+    timeoutSeconds: 120,
+    memory: "256MiB",
+    // App Check enforcement on this paid (xAI) endpoint is opt-in via env, so it
+    // can be turned on ONLY after the client ships with App Check initialised —
+    // otherwise every call is rejected. Set ENFORCE_APP_CHECK=true in the
+    // functions environment and redeploy to require a valid App Check token here.
+    enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true",
+  },
   async (
     request: CallableRequest<AskRulesRequest>,
     response?: CallableResponse<{ delta: string }>

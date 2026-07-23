@@ -62,12 +62,12 @@ Editing an earlier hole can **reopen** a closed match if the math changes; facts
 
 ## Firestore collections
 
-Top-level (all **public-read**). Clients may write only three narrow things: a match's `holes` map, a player's own account-link fields (`authUid`/`email`), and their own notification read-state (`read`/`readAt`). Everything else is written by Cloud Functions via the Admin SDK, which bypasses rules.
+Most collections are **public-read**, but the group's private data is **signed-in-read**: `bets`, `betSettlements`, and `comments` (+ `comments/*/replies`) require `request.auth != null` (the /sportsbook and /chat pages are also gated client-side by `RequireAuth`). Clients may write only two narrow things: a match's `holes` map and their own notification read-state (`read`/`readAt`) — **the top-level `players` doc is server-only-write** (no client self-link). Everything else is written by Cloud Functions via the Admin SDK, which bypasses rules.
 
 | Collection | Purpose |
 |---|---|
 | `tournaments/{id}` | `active` (one at a time), `series`, `year`, `teamA`/`teamB` (`rosterByTier`, `handicapByPlayer`, captain ids, color, logo), `roundIds[]`, `draftPool`, feature flags (`openPublicEdits`, `hideDraftPool`, `commentsEnabled`, `sportsbookEnabled`, …) |
-| `players/{id}` | `displayName`, `authUid`/`email` (account link), `isAdmin`, `scoutingNotes`. Docs are keyed by **player id** (e.g. `pShane`), not auth uid. |
+| `players/{id}` | `displayName`, `authUid` (account link; query key), `isAdmin`. Docs are keyed by **player id** (e.g. `pShane`), not auth uid. **PII lives in the server-only subcollection `players/{id}/private/profile`** (`email`, `scoutingNotes`) — `allow read,write: if false`, reachable only by the Admin SDK (the `getPlayerPrivate` admin callable + the MCP relay); it is **not** on the world-readable doc. |
 | `rounds/{id}` | `tournamentId`, `day`, `format`, `courseId`, `pointsValue`, `trackDrives`, `locked`, skins pots, denormalized `pointTotals`, `matchIds[]` |
 | `matches/{id}` | `teamAPlayers`/`teamBPlayers` (`{playerId, strokesReceived[18]}`), `holes.{1..18}.input` (format-specific), computed `status`/`result`, `completed`, cache fields (`_computeSig`, `_lastComputed`) |
 | `courses/{id}` | `name`, `tees`, `par`, `holes[18]` (`number`, `par`, `hcpIndex`, `yards`) |
@@ -127,10 +127,12 @@ Top-level (all **public-read**). Clients may write only three narrow things: a m
 
 ## Security rules (`firestore.rules`)
 
-- All app collections are **public-read**, granted per-collection — there is deliberately **no `/{document=**}` wildcard** (a wildcard would override the narrower rules).
+- Most collections are **public-read**, granted per-collection — there is deliberately **no `/{document=**}` wildcard** (a wildcard would override the narrower rules). The exceptions are the group's private data — `bets`, `betSettlements`, `comments` (+ `comments/*/replies`), and `pairingDrafts` — which are **signed-in-read** (`request.auth != null`); and `players/{id}/private/**` (PII), which is **server-only** (`if false`). The `/sportsbook` and `/chat` pages are gated client-side by `RequireAuth`, and the match-page comment thread shows a login prompt when signed out.
 - Client **match writes** are restricted to the `holes` map only (`affectedKeys().hasOnly(['holes'])`), and only for a rostered player in `match.authorizedUids` — **or** anyone when the tournament has `openPublicEdits: true` (a temporary QA toggle; turn it back off). Locked matches reject writes.
-- The `players` update rule is limited to account-linking fields (`authUid`/`email`) so a player can't self-grant `isAdmin`; a `notifications` doc's owner may update only `read`/`readAt`.
+- The **top-level `players` doc is server-only-write** (`allow write: if false`) — there is no client self-link path. Account linking (writing `authUid` + the private `email`) is done only by the admin `linkAuthToPlayer` callable via the Admin SDK. (The former self-link rule let any signed-in user claim an unlinked player's `authUid` — including an unlinked admin's — which this closes.) A `notifications` doc's owner may still update only `read`/`readAt`.
 - **There is no working `isAdmin()` in rules** — player docs are keyed by player id, not auth uid, so `get(/players/$(uid))` never resolves. Admin authorization is enforced **server-side in the callables**; the `RequireAdmin` UI gate is UX only. Everything not client-writable is written by Cloud Functions via the Admin SDK (rules don't apply).
+- **App Check** (opt-in): the client initialises reCAPTCHA-Enterprise App Check when `VITE_APPCHECK_SITE_KEY` (the reCAPTCHA Enterprise key id) is set; `askRulesOfficial` enforces it when `ENFORCE_APP_CHECK=true` is set in the functions env. Both are no-ops until configured, so ship the client with App Check first, then flip on enforcement.
+- **Storage**: the app doesn't use Firebase Storage; `storage.rules` is a deny-all placeholder (defense in depth) wired via `firebase.json`.
 
 ## Don't touch lightly
 

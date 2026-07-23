@@ -216,6 +216,16 @@ export interface LinkAuthToPlayerResult extends AdminResult {
   authUid: string;
 }
 
+export interface GetPlayerPrivateRequest {
+  playerId: string;
+}
+
+/** Private per-player PII, fetched via an admin-gated callable (not on the doc). */
+export interface GetPlayerPrivateResult {
+  email: string | null;
+  scoutingNotes: string | null;
+}
+
 export interface DeletePlayerRequest {
   playerId: string;
 }

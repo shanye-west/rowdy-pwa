@@ -7,11 +7,11 @@ import {
   getAllRealPlayers,
   getActiveTournament,
   getPlayerStats,
-  getPlayerDoc,
   getFactsForPlayer,
   resolveTournament,
   resolveSeries,
 } from "../firestore.js";
+import { getScoutingNotes, getScoutingNotesByIds } from "../adminReads.js";
 import { jsonResult, errorResult, resolveOrExplain, rosterInfo } from "./util.js";
 
 export function registerPlayerTools(server: McpServer): void {
@@ -37,6 +37,9 @@ export function registerPlayerTools(server: McpServer): void {
       const matched = q
         ? players.filter((p) => (p.displayName || "").toLowerCase().includes(q))
         : players;
+      // scoutingNotes now live in the server-only private subcollection — fetch
+      // them for just the matched players in one batched Admin-SDK read.
+      const notesById = await getScoutingNotesByIds(matched.map((p) => p.id));
       const rows = matched
         .map((p) => ({
           playerId: p.id,
@@ -50,7 +53,7 @@ export function registerPlayerTools(server: McpServer): void {
                 isCaptain: roster[p.id].isCaptain || undefined,
               }
             : {}),
-          scoutingNotes: p.scoutingNotes || undefined,
+          scoutingNotes: notesById.get(p.id) || undefined,
         }))
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       return jsonResult({ count: rows.length, players: rows });
@@ -97,11 +100,10 @@ export function registerPlayerTools(server: McpServer): void {
         key = await resolveSeries(series);
       }
 
-      const [stats, doc] = await Promise.all([
+      const [stats, scoutingNotes] = await Promise.all([
         getPlayerStats(resolved.playerId, useScope, key),
-        getPlayerDoc(resolved.playerId),
+        getScoutingNotes(resolved.playerId),
       ]);
-      const scoutingNotes = doc?.scoutingNotes || undefined;
       if (!stats) {
         return jsonResult({
           playerId: resolved.playerId,

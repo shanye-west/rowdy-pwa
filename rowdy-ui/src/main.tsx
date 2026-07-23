@@ -14,6 +14,7 @@ import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 import { LayoutShell } from "./components/Layout";
 import RequireAdmin from "./components/RequireAdmin";
+import RequireAuth from "./components/RequireAuth";
 
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazyWithRecovery(() => import("./routes/Match"));
@@ -72,8 +73,8 @@ const router = createBrowserRouter(
         { path: "teams", element: <Teams /> },
         { path: "draft", element: <DraftPool /> },
         { path: "leaderboard", element: <Leaderboard /> },
-        { path: "sportsbook", element: <Sportsbook /> },
-        { path: "chat", element: <Chat /> },
+        { path: "sportsbook", element: <RequireAuth><Sportsbook /></RequireAuth> },
+        { path: "chat", element: <RequireAuth><Chat /></RequireAuth> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
         { path: "rules-official", element: <RulesOfficial /> },

@@ -685,19 +685,23 @@ export const updatePlayerInfo = onCall(async (request) => {
     throw new HttpsError("not-found", "Player not found");
   }
 
-  const update: Record<string, unknown> = {
-    displayName,
-    _adminUpdatedAt: FieldValue.serverTimestamp(),
-  };
-  // Only touch scoutingNotes when the key is present. A non-empty string is
-  // stored (trimmed); an empty string clears the field entirely.
+  await ref.set(
+    { displayName, _adminUpdatedAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+
+  // scoutingNotes is candid free-text and is NOT world-readable — it lives in the
+  // server-only players/{id}/private/profile subcollection, never on the public
+  // player doc. Only touch it when the key is present; "" clears it.
   const rawNotes = request.data?.scoutingNotes;
   if (typeof rawNotes === "string") {
     const notes = rawNotes.trim();
-    update.scoutingNotes = notes ? notes : FieldValue.delete();
+    await ref
+      .collection("private")
+      .doc("profile")
+      .set({ scoutingNotes: notes ? notes : FieldValue.delete() }, { merge: true });
   }
 
-  await ref.set(update, { merge: true });
   return { success: true, playerId };
 });
 
@@ -745,8 +749,38 @@ export const linkAuthToPlayer = onCall(async (request) => {
     );
   }
 
-  await ref.set({ authUid: authUser.uid, email, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  // authUid stays on the doc — it's the query key for authUid==uid lookups. The
+  // email, however, is PII and is kept OUT of the world-readable doc: it goes in
+  // the server-only private subcollection (used for admin display / relinking).
+  await ref.set({ authUid: authUser.uid, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await ref.collection("private").doc("profile").set({ email }, { merge: true });
   return { success: true, playerId, authUid: authUser.uid };
+});
+
+/**
+ * Read a player's private profile fields (email + scoutingNotes) for the admin
+ * UI. These live in the server-only players/{id}/private/profile subcollection
+ * (never on the world-readable player doc), so they can only be fetched through
+ * an admin-gated callable like this one.
+ *
+ * Data payload:
+ * - playerId: string
+ */
+export const getPlayerPrivate = onCall(async (request) => {
+  await requireAdmin(request, "getPlayerPrivate", { maxCalls: 60, windowSeconds: 60 });
+
+  const playerId = requireString(request.data?.playerId, "playerId");
+  const snap = await db()
+    .collection("players")
+    .doc(playerId)
+    .collection("private")
+    .doc("profile")
+    .get();
+  const data = snap.exists ? snap.data() : undefined;
+  return {
+    email: (data?.email as string | undefined) ?? null,
+    scoutingNotes: (data?.scoutingNotes as string | undefined) ?? null,
+  };
 });
 
 /**

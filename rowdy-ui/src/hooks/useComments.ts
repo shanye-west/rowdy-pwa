@@ -62,6 +62,7 @@ export interface UseCommentsResult {
  * loaded older page) won't update in real time until the thread is reopened.
  */
 export function useComments(threadId: string | undefined): UseCommentsResult {
+  const { user } = useAuth();
   const [liveDocs, setLiveDocs] = useState<CommentDoc[]>([]);
   const [olderDocs, setOlderDocs] = useState<CommentDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,11 @@ export function useComments(threadId: string | undefined): UseCommentsResult {
     olderOldestRef.current = null;
     liveOldestRef.current = null;
 
-    if (!threadId) {
+    // Comments reads require auth (Firestore rules). Match threads live on the
+    // public match page, so a logged-out visitor can mount this — don't open the
+    // listener for them (it would only hit permission-denied); the UI shows a
+    // log-in prompt instead.
+    if (!threadId || !user) {
       setLiveDocs([]);
       setLiveFull(false);
       setLoading(false);
@@ -110,7 +115,7 @@ export function useComments(threadId: string | undefined): UseCommentsResult {
       }
     );
     return () => unsub();
-  }, [threadId]);
+  }, [threadId, user]);
 
   const loadOlder = useCallback(() => {
     if (!threadId || loadingOlder || reachedEnd) return;
@@ -382,7 +387,7 @@ export function useReplyThread({
   threadId,
   parentId,
 }: UseCommentThreadArgs & { parentId: string }): UseReplyThreadResult {
-  const { player } = useAuth();
+  const { player, user } = useAuth();
   const meId = player?.id;
   const myName = player?.displayName || player?.id || "";
 
@@ -392,6 +397,14 @@ export function useReplyThread({
   const [removing, setRemoving] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
+    // Reply reads require auth too (Firestore rules) — skip the listener when
+    // signed out. In practice reply threads only expand under an already-gated
+    // parent thread, but guard defensively so no permission-denied listener runs.
+    if (!user) {
+      setServer([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const unsub = onSnapshot(
       query(collection(db, "comments", parentId, "replies"), orderBy("createdAt", "asc")),
@@ -405,7 +418,7 @@ export function useReplyThread({
       }
     );
     return () => unsub();
-  }, [parentId]);
+  }, [parentId, user]);
 
   // Latest server state for the action handlers, plus delivered-overlay pruning
   // (see useCommentThread: hiding alone would resurface a deleted reply as

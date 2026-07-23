@@ -115,10 +115,12 @@ export function isDriveTrackingFormat(format: RoundFormat | null | undefined): b
 export type PlayerDoc = {
   id: string;
   displayName?: string;
-  authUid?: string;       // Firebase Auth UID (set after account setup)
-  email?: string;         // Email for login (set after account setup)
+  authUid?: string;       // Firebase Auth UID (set after account setup); the query key for authUid==uid lookups
   isAdmin?: boolean;      // Admin access flag
-  scoutingNotes?: string; // Subjective free-text take used by AI for draft/pairing help (not shown in stats)
+  // NOTE: `email` and `scoutingNotes` are PII and NO LONGER live on this
+  // world-readable doc. They're stored in the server-only players/{id}/private
+  // subcollection and fetched (admin-only) via the getPlayerPrivate callable —
+  // see api/admin.ts + GetPlayerPrivateResult.
   // Per-category push preferences (opt-out; absent => server defaults). Saved via
   // the setNotificationPrefs callable from the Notifications settings screen.
   notificationPrefs?: NotificationPrefs;

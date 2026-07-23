@@ -11,6 +11,7 @@ import {
   resolveTournament,
   resolveSeries,
 } from "../firestore.js";
+import { getScoutingNotesByIds } from "../adminReads.js";
 import { jsonResult, errorResult } from "./util.js";
 import type { RoundDoc, TeamSide } from "../types.js";
 
@@ -123,7 +124,9 @@ export function registerTournamentTools(server: McpServer): void {
       const seriesKey = await resolveSeries(series);
       const players = await getAllRealPlayers();
       const nameById = new Map(players.map((p) => [p.id, p.displayName || p.id]));
-      const notesById = new Map(players.map((p) => [p.id, p.scoutingNotes]));
+      // scoutingNotes now live in the server-only private subcollection — batch-
+      // read them (for just the pool players) via the Admin SDK.
+      const notesById = await getScoutingNotesByIds(poolIds);
 
       const rows = await Promise.all(
         poolIds.map(async (pid) => {

@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// The app does not use Firebase Storage. This deny-all rule is defense in depth:
+// it ensures that if a Storage bucket is ever provisioned, nothing is world-
+// readable or writable by default. Grant narrower access here if/when Storage
+// is actually adopted.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
