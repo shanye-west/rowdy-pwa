@@ -162,7 +162,7 @@ npx ts-node link-auth-to-player.ts --email=player@email.com --playerId=pPlayerId
 
 Example:
 ```bash
-npx ts-node link-auth-to-player.ts --email=shanepeterson32@gmail.com --playerId=pShanePeterson
+npx ts-node link-auth-to-player.ts --email=jane.doe@example.com --playerId=pJaneDoe
 ```
 
 ### Bulk Link Auth Users to Players
