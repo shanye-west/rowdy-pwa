@@ -8,6 +8,8 @@ import BadgeGrid from "../components/player/BadgeGrid";
 import { getBadges } from "../lib/badges";
 import { usePlayerStatsBySeries } from "../hooks/usePlayerStats";
 import { usePlayers, useTournamentContext } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 import type { PlayerStatsBySeries, TournamentDoc } from "../types";
 
 const SERIES_LABELS: Record<string, string> = {
@@ -67,6 +69,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 export default function Player() {
   const { playerId } = useParams<{ playerId: string }>();
   const { tournament } = useTournamentContext();
+  const { user } = useAuth();
   const { allSeriesStats, loading } = usePlayerStatsBySeries(playerId);
 
   // Player identity (name) — resolve through the shared player cache; roster
@@ -96,7 +99,8 @@ export default function Player() {
   );
   const badges = useMemo(() => getBadges(stats), [stats]);
 
-  const name = playerDoc?.displayName || "Player";
+  const fullName = playerDoc?.displayName || "Player";
+  const name = user ? fullName : toFirstNameLastInitial(fullName);
   const accent = teamInfo?.color || "var(--brand-primary)";
 
   const wins = num(stats?.wins);

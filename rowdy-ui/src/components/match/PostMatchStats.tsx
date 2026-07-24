@@ -45,7 +45,11 @@ function shortName(fullName?: string): string {
   if (!fullName) return "";
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
-  return `${parts[0][0]}. ${parts[parts.length - 1]}`;
+  const last = parts[parts.length - 1];
+  // Already redacted to "First L." (logged-out/public view) — keep it as-is
+  // rather than re-shortening the first name to an initial ("S. W.").
+  if (/^[A-Za-z]\.$/.test(last)) return `${parts[0]} ${last}`;
+  return `${parts[0][0]}. ${last}`;
 }
 
 /** Render score with vs-par in parentheses */

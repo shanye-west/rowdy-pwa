@@ -7,6 +7,8 @@ import type { RoundRecapDoc, TournamentDoc, VsAllRecord } from "../types";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "../components/ui/card";
@@ -14,6 +16,9 @@ import { cn } from "../lib/utils";
 
 export default function RoundRecap() {
   const { roundId } = useParams<{ roundId: string }>();
+  const { user } = useAuth();
+  // Logged-out (public) viewers see "First L." instead of full last names.
+  const showName = (n: string) => (user ? n : toFirstNameLastInitial(n));
   const [recap, setRecap] = useState<RoundRecapDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +145,9 @@ export default function RoundRecap() {
 
       for (const [teamKey, members] of teamMap.entries()) {
         const firstMember = members[0];
-        const playerNames = members.map((member) => member.playerName).join(" / ");
+        const playerNames = members
+          .map((member) => (user ? member.playerName : toFirstNameLastInitial(member.playerName)))
+          .join(" / ");
         displayVsAll.push({
           ...firstMember,
           displayName: playerNames,
@@ -150,7 +157,7 @@ export default function RoundRecap() {
     } else {
       displayVsAll = recap.vsAllRecords.map((record) => ({
         ...record,
-        displayName: record.playerName,
+        displayName: user ? record.playerName : toFirstNameLastInitial(record.playerName),
       }));
     }
 
@@ -163,7 +170,7 @@ export default function RoundRecap() {
       if (winPctB !== winPctA) return winPctB - winPctA;
       return b.wins - a.wins;
     });
-  }, [recap]);
+  }, [recap, user]);
 
   if (loading) {
     return (
@@ -411,7 +418,7 @@ export default function RoundRecap() {
                                   </div>
                                   <div>
                                     <div className="text-sm font-semibold text-foreground">
-                                      {leader.playerName}
+                                      {showName(leader.playerName)}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
                                       {leader.totalGross != null ? `Gross ${leader.totalGross}` : formatPar(leader.strokesVsPar)}
@@ -622,7 +629,7 @@ export default function RoundRecap() {
                                     </div>
                                     <div>
                                       <div className="text-sm font-semibold text-foreground">
-                                        {leader.playerName}
+                                        {showName(leader.playerName)}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
                                         {leader.totalNet != null ? `Net ${leader.totalNet}` : formatPar(leader.strokesVsPar)}

@@ -4,7 +4,9 @@ import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
 import { useTournamentContext } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useAllTimeLeaderboard } from "../hooks/usePlayerStats";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 
 // Ranking metric: cumulative points, or points per match so the leaderboard
 // isn't dominated by whoever has simply played the most matches.
@@ -25,7 +27,10 @@ interface Row {
 
 export default function Leaderboard() {
   const { tournament } = useTournamentContext();
+  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<SortBy>("total");
+  // Logged-out (public) viewers see "First L." instead of full last names.
+  const showName = (n: string) => (user ? n : toFirstNameLastInitial(n));
 
   // Always the all-time Rowdy Cup series, spanning every player who has ever
   // played it (not limited to the current tournament roster).
@@ -116,7 +121,7 @@ export default function Leaderboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate font-semibold text-foreground">
-                            {names[r.playerId] || "Unknown"}
+                            {showName(names[r.playerId] || "Unknown")}
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">

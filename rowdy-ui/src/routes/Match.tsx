@@ -19,7 +19,7 @@ import {
   MIN_DRIVES_PER_ROUND,
 } from "../constants";
 
-import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup, buildTierRank } from "../utils/playerHelpers";
+import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerFirstNameLastInitial as getPlayerPublicNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup, buildTierRank } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { MatchPageSkeleton } from "../components/Skeleton";
@@ -356,8 +356,17 @@ export default function Match() {
   }, [holes, format]);
 
   // Player name helpers - memoized to prevent re-creation on every render
-  const getPlayerName = useCallback((pid?: string) => getPlayerNameFromLookup(pid, players), [players]);
-  const getPlayerShortName = useCallback((pid?: string) => getPlayerShortNameFromLookup(pid, players), [players]);
+  // Logged-out (public) viewers see "First L." on scorecards instead of full last
+  // names; logged-in players keep the fuller formats. Both wrappers are passed
+  // down to the scorecard subcomponents, so gating here covers the whole card.
+  const getPlayerName = useCallback(
+    (pid?: string) => (user ? getPlayerNameFromLookup(pid, players) : getPlayerPublicNameFromLookup(pid, players)),
+    [players, user]
+  );
+  const getPlayerShortName = useCallback(
+    (pid?: string) => (user ? getPlayerShortNameFromLookup(pid, players) : getPlayerPublicNameFromLookup(pid, players)),
+    [players, user]
+  );
   const getPlayerInitials = useCallback((pid?: string) => getPlayerInitialsFromLookup(pid, players), [players]);
 
   // For twoManBestBall: get the team's low net score for a hole

@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
+import { useAuth } from "../contexts/AuthContext";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 import { formatTeeTime, toDateOrNull } from "../utils";
 import { scoreLabel } from "../utils/scoreLabel";
 import Layout from "../components/Layout";
@@ -23,6 +25,9 @@ import { cn } from "../lib/utils";
 
 function SkinsComponent() {
   const { roundId } = useParams();
+  const { user } = useAuth();
+  // Logged-out (public) viewers see "First L." instead of full last names.
+  const showName = (n: string) => (user ? n : toFirstNameLastInitial(n));
   const {
     loading,
     error,
@@ -246,7 +251,7 @@ function SkinsComponent() {
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-foreground">
-                            {player.playerName}
+                            {showName(player.playerName)}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {playerSkins} skin{playerSkins !== 1 ? "s" : ""} - Holes{" "}
@@ -295,7 +300,7 @@ function SkinsComponent() {
                     const playerName =
                       hole.allScores.find((score) => score.playerId === winner)?.playerName ||
                       winner;
-                    winnerText = playerName;
+                    winnerText = showName(playerName);
                   } else if (tiedCount > 1) {
                     winnerText = `${tiedCount} players tied`;
                   }
@@ -426,7 +431,7 @@ function SkinsComponent() {
                                     )}
                                   >
                                     <div className="flex items-center gap-2 text-foreground">
-                                      <span className="font-medium">{score.playerName}</span>
+                                      <span className="font-medium">{showName(score.playerName)}</span>
                                       {selectedTab === "net" && score.hasStroke && (
                                         <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
                                       )}

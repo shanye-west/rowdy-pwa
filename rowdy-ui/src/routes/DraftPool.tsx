@@ -6,6 +6,8 @@ import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
 import PlayerAvatar from "../components/PlayerAvatar";
 import { useTournamentContext, usePlayers } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 
 type SortKey = "handicap" | "name";
 
@@ -18,6 +20,7 @@ type SortKey = "handicap" | "name";
  */
 export default function DraftPool() {
   const { tournament, loading: tournamentLoading } = useTournamentContext();
+  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<SortKey>("handicap");
 
   const draftPool = tournament?.draftPool;
@@ -123,7 +126,8 @@ export default function DraftPool() {
         {/* Player list */}
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           {sortedIds.map((pid, idx) => {
-            const name = players[pid]?.displayName || "Unknown";
+            const fullName = players[pid]?.displayName || "Unknown";
+            const name = user ? fullName : toFirstNameLastInitial(fullName);
             const hcp = draftPool?.[pid];
             const cap = captainMeta(pid);
             const tier = tierMap[pid];

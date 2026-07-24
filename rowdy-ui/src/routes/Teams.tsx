@@ -10,7 +10,9 @@ import PlayerAvatar from "../components/PlayerAvatar";
 import type { TierMap } from "../types";
 import { useTournamentData } from "../hooks/useTournamentData";
 import { usePlayers, useTournamentContext } from "../contexts/TournamentContext";
+import { useAuth } from "../contexts/AuthContext";
 import { rosterPlayerIds } from "../utils/roster";
+import { toFirstNameLastInitial } from "../utils/playerHelpers";
 
 // We define a local type for the aggregated tournament stats
 type TournamentStat = {
@@ -30,6 +32,7 @@ function TeamsComponent() {
   // This page only reads tournament + rounds (never matches/stats), so prefer
   // denormalized round totals to skip the all-matches subscription as well.
   const { tournament: activeTournament, loading: contextLoading } = useTournamentContext();
+  const { user } = useAuth();
   const useContextTournament = !tournamentIdParam || tournamentIdParam === activeTournament?.id;
 
   const tournamentOptions = useMemo(() =>
@@ -170,7 +173,8 @@ function TeamsComponent() {
                 {sortedPIds.map(pid => {
                   const p = players[pid];
                   const s = stats[pid];
-                  const name = p?.displayName || "Unknown";
+                  const fullName = p?.displayName || "Unknown";
+                  const name = user ? fullName : toFirstNameLastInitial(fullName);
                   const hcp = handicaps?.[pid];
                   const isCaptain = pid === captainId;
                   

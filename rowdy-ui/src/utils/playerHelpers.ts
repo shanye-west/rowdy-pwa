@@ -79,6 +79,33 @@ export function getPlayerShortName(pid: string | undefined, players: PlayerLooku
 }
 
 /**
+ * Redact a full display name to first name + last initial, e.g. "Shane West" ->
+ * "Shane W.". Used to hide full last names from logged-OUT (public) viewers.
+ * Single-word names are returned unchanged.
+ */
+export function toFirstNameLastInitial(name: string | undefined): string {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts[0];
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${firstName} ${lastInitial}.`;
+}
+
+/**
+ * Get first name + last initial for a player id, e.g. "Shane W."
+ *
+ * Used to redact player names for logged-OUT (public) viewers, who shouldn't see
+ * full last names. Logged-in players still get the fuller formats above.
+ */
+export function getPlayerFirstNameLastInitial(pid: string | undefined, players: PlayerLookup): string {
+  if (!pid) return "?";
+  const p = players[pid];
+  if (!p) return "?";
+  return toFirstNameLastInitial(p.displayName || "Unknown");
+}
+
+/**
  * Get player initials: first initial + last initial
  * @returns Initials like "SW" or fallback
  */

@@ -10,6 +10,7 @@ import { formatRoundType } from "../utils";
 import {
   getPlayerShortName as getPlayerShortNameFromLookup,
   getPlayerName as getPlayerNameFromLookup,
+  getPlayerFirstNameLastInitial as getPlayerPublicNameFromLookup,
   sortPlayersByTier,
 } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
@@ -26,7 +27,7 @@ import { cn } from "../lib/utils";
 
 function RoundComponent() {
   const { roundId } = useParams();
-  const { player } = useAuth();
+  const { user, player } = useAuth();
   const [hasRecap, setHasRecap] = useState(false);
   const [checkingRecap, setCheckingRecap] = useState(true);
   
@@ -78,8 +79,12 @@ function RoundComponent() {
     return () => { cancelled = true; };
   }, [roundId]);
 
-  const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
-  const getPlayerName = (pid: string) => getPlayerNameFromLookup(pid, players);
+  // Logged-out (public) viewers see "First L." everywhere a name would otherwise
+  // reveal a full last name; logged-in players keep the fuller formats.
+  const getPlayerShortName = (pid: string) =>
+    user ? getPlayerShortNameFromLookup(pid, players) : getPlayerPublicNameFromLookup(pid, players);
+  const getPlayerName = (pid: string) =>
+    user ? getPlayerNameFromLookup(pid, players) : getPlayerPublicNameFromLookup(pid, players);
 
   if (loading) return (
     <Layout title="Loading..." showBack>
