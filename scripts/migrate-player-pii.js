@@ -9,10 +9,10 @@
  * document-level, so keeping email/scoutingNotes on the doc exposed them to
  * anyone. After this migration those fields live in `private/profile`, which is
  * `allow read, write: if false` — reachable only by the Admin SDK (the admin
- * getPlayerPrivate callable + the shared-key MCP relay).
+ * getPlayerPrivate callable).
  *
  * Run this AFTER deploying the functions that read/write the new location
- * (updatePlayerInfo / linkAuthToPlayer / getPlayerPrivate / MCP adminReads) and
+ * (updatePlayerInfo / linkAuthToPlayer / getPlayerPrivate) and
  * BEFORE deploying the client that reads via getPlayerPrivate. Deploying the
  * private-subcollection rule can happen with the rest of the rules at any point.
  *

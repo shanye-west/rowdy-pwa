@@ -22,7 +22,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 ## Monorepo layout
 
 - **`rowdy-ui/`** — React 19 + Vite 7 + TypeScript 5.9 + Tailwind 4 frontend (the PWA).
-- **`functions/`** — Firebase Cloud Functions Gen-2 (TypeScript, Node 20). Firestore triggers + HTTPS callables for scoring, stats, betting, chat, notifications, drafts, admin ops, and a read-only MCP server.
+- **`functions/`** — Firebase Cloud Functions Gen-2 (TypeScript, Node 20). Firestore triggers + HTTPS callables for scoring, stats, betting, chat, notifications, drafts, and admin ops.
 - **`scripts/`** — Break-glass admin Node/TS scripts (seeding, exports, auth linking). Bypass callable auth/rate-limits and write straight to Firestore with a service account. See `scripts/README.md`.
 - **Root** — Firebase config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `.firebaserc`.
 
@@ -67,7 +67,7 @@ Most collections are **public-read**, but the group's private data is **signed-i
 | Collection | Purpose |
 |---|---|
 | `tournaments/{id}` | `active` (one at a time), `series`, `year`, `teamA`/`teamB` (`rosterByTier`, `handicapByPlayer`, captain ids, color, logo), `roundIds[]`, `draftPool`, feature flags (`openPublicEdits`, `hideDraftPool`, `commentsEnabled`, `sportsbookEnabled`, …) |
-| `players/{id}` | `displayName`, `authUid` (account link; query key), `isAdmin`. Docs are keyed by **player id** (e.g. `pShane`), not auth uid. **PII lives in the server-only subcollection `players/{id}/private/profile`** (`email`, `scoutingNotes`) — `allow read,write: if false`, reachable only by the Admin SDK (the `getPlayerPrivate` admin callable + the MCP relay); it is **not** on the world-readable doc. |
+| `players/{id}` | `displayName`, `authUid` (account link; query key), `isAdmin`. Docs are keyed by **player id** (e.g. `pShane`), not auth uid. **PII lives in the server-only subcollection `players/{id}/private/profile`** (`email`, `scoutingNotes`) — `allow read,write: if false`, reachable only by the Admin SDK (the `getPlayerPrivate` admin callable); it is **not** on the world-readable doc. |
 | `rounds/{id}` | `tournamentId`, `day`, `format`, `courseId`, `pointsValue`, `trackDrives`, `locked`, skins pots, denormalized `pointTotals`, `matchIds[]` |
 | `matches/{id}` | `teamAPlayers`/`teamBPlayers` (`{playerId, strokesReceived[18]}`), `holes.{1..18}.input` (format-specific), computed `status`/`result`, `completed`, cache fields (`_computeSig`, `_lastComputed`) |
 | `courses/{id}` | `name`, `tees`, `par`, `holes[18]` (`number`, `par`, `hcpIndex`, `yards`) |
@@ -114,7 +114,6 @@ Most collections are **public-read**, but the group's private data is **signed-i
   - `statsOps.ts` — `computeRoundRecap`, `recalculateAllStats`, `recalculateMatchStrokes`.
   - `courseOps.ts` — course CRUD.
   - `contracts.ts` — shared zod request/response contracts.
-- **MCP server** (`mcp/`): the `mcp` HTTPS function — a read-only Model Context Protocol endpoint (see `functions/src/mcp/README.md`). Uses the *unauthenticated* Firebase Web SDK (rules-enforced read-only), guarded by the `ROWDY_MCP_KEY` secret. Never uses the Admin SDK; physically cannot write.
 
 ## Frontend conventions (`rowdy-ui/src/`)
 
@@ -151,5 +150,4 @@ Most collections are **public-read**, but the group's private data is **signed-i
 
 - [README.md](README.md) — product overview + human/dev onboarding.
 - [SCORING-LEADERS-IMPLEMENTATION.md](SCORING-LEADERS-IMPLEMENTATION.md) — round-recap scoring-leaders feature.
-- `functions/src/mcp/README.md` — the read-only AI (MCP) endpoint.
 - `scripts/README.md` — break-glass seeding / auth-linking scripts and the player onboarding workflow.

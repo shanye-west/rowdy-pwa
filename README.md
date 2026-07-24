@@ -23,7 +23,6 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 - **Push notifications** (chat, bets, match & tournament events) with per-category preferences.
 - **Installable PWA** — offline-tolerant scoring that queues and syncs on reconnect; auto-updates after deploys.
 - **Admin console** (`/admin`) — manage tournaments, rounds, matches, players, courses, handicaps, locks, and score corrections.
-- **Read-only AI access** via a hosted [MCP server](functions/src/mcp/README.md) so players can point their own AI assistant at tournament data.
 
 ## Tech stack
 
@@ -36,7 +35,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 | Path | What's there |
 |---|---|
 | [`rowdy-ui/`](rowdy-ui/) | React + Vite frontend (the PWA) |
-| [`functions/`](functions/) | Cloud Functions — scoring, stats, betting, chat, notifications, drafts, admin, MCP |
+| [`functions/`](functions/) | Cloud Functions — scoring, stats, betting, chat, notifications, drafts, admin |
 | [`scripts/`](scripts/) | Break-glass admin scripts (seeding, exports, auth linking) — see [`scripts/README.md`](scripts/README.md) |
 | Root | `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `.firebaserc` |
 | [`AGENTS.md`](AGENTS.md) | Deep technical guide (architecture, data model, scoring contracts) |
@@ -104,5 +103,4 @@ Day-to-day setup lives in the in-app **Admin console** at `/admin` (admin accoun
 
 - **[AGENTS.md](AGENTS.md)** — architecture, Firestore collections, scoring & stats contracts, function map, conventions (the technical bible).
 - **[SCORING-LEADERS-IMPLEMENTATION.md](SCORING-LEADERS-IMPLEMENTATION.md)** — round-recap scoring-leaders feature.
-- **[functions/src/mcp/README.md](functions/src/mcp/README.md)** — the read-only AI (MCP) endpoint and how to connect a client.
 - **[scripts/README.md](scripts/README.md)** — seeding, exports, and player auth workflow.

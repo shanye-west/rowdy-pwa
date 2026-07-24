@@ -47,8 +47,8 @@ service cloud.firestore {
     }
 
     // Private per-player PII (players/{id}/private/{doc}): email + scoutingNotes.
-    // Server-only in every direction — the Admin SDK (admin callables + the
-    // shared-key MCP relay) reads/writes it, and no client path is allowed, so
+    // Server-only in every direction — the Admin SDK (admin callables, e.g. the
+    // getPlayerPrivate reader) reads/writes it, and no client path is allowed, so
     // these fields are never exposed to anonymous or ordinary signed-in readers.
     match /players/{playerId}/private/{doc} {
       allow read, write: if false;

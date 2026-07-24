@@ -2223,16 +2223,6 @@ export { postComment, deleteComment, toggleReaction } from "./callables/commentO
 export { registerPushToken, unregisterPushToken, setNotificationPrefs } from "./callables/pushOps.js";
 
 // ============================================================================
-// MCP SERVER (read-only)
-// Remote Model Context Protocol endpoint so players can point their own AI
-// (Claude.ai / ChatGPT / Claude Code) at Rowdy Cup stats. Reads via the
-// unauthenticated Web SDK (rules enforce read-only); guarded by a shared key.
-// See mcp/index.ts.
-// ============================================================================
-
-export { mcp } from "./mcp/index.js";
-
-// ============================================================================
 // RULES OFFICIAL (AI, streaming)
 // The in-app AI rules official — a streaming callable that proxies to xAI/Grok
 // with the in-round rules handbook as a cached system prompt.

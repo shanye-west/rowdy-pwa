@@ -13,7 +13,7 @@
 ## The quick map (details in AGENTS.md)
 
 - `rowdy-ui/` — React 19 + Vite 7 + TS + Tailwind 4 PWA.
-- `functions/` — Cloud Functions Gen-2 (Node 20): scoring/stats triggers, betting, chat, notifications, drafts, admin callables, and the read-only MCP server.
+- `functions/` — Cloud Functions Gen-2 (Node 20): scoring/stats triggers, betting, chat, notifications, drafts, and admin callables.
 - `scripts/` — break-glass admin scripts (write straight to prod — treat like a loaded gun).
 
 Don't touch lightly: the scoring logic (`functions/src/scoring/`, `functions/src/helpers/`), the `computeMatchOnWrite` trigger, and `firestore.rules`. See the "Don't touch lightly" and "Security rules" sections of [AGENTS.md](AGENTS.md).
