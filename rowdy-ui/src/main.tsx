@@ -77,7 +77,7 @@ const router = createBrowserRouter(
         { path: "chat", element: <RequireAuth><Chat /></RequireAuth> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
-        { path: "rules-official", element: <RulesOfficial /> },
+        { path: "rules-official", element: <RequireAdmin><RulesOfficial /></RequireAdmin> },
         { path: "settings/notifications", element: <NotificationSettings /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },
