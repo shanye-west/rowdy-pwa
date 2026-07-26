@@ -156,6 +156,11 @@ export default function Match() {
   
   // Only scramble uses team-level scoring (one score per team per hole)
   const isTeamFormat = format === "twoManScramble" || format === "fourManScramble";
+
+  // Scramble and shamble are decided on gross, so handicap strokes never apply
+  // (skins are gross/net only on singles + best ball rounds). Hide the Strokes
+  // button and its modal entirely rather than show numbers that mean nothing.
+  const showStrokesInfo = format !== "twoManScramble" && format !== "twoManShamble";
   
   // DRIVE_TRACKING: Check if drive tracking is enabled for this round (scramble or shamble)
   const trackDrives = !!round?.trackDrives && (format === "twoManScramble" || format === "fourManScramble" || format === "twoManShamble");
@@ -955,6 +960,7 @@ export default function Match() {
           roundLocked={roundLocked}
           isMatchClosed={isMatchClosed}
           onOpenStrokesInfo={() => setStrokesInfoModal(true)}
+          showStrokesInfo={showStrokesInfo}
           offlineNotReady={canEdit && !isMatchClosed && offlineWarmFailed}
           onOpenOfflinePrep={() => setShowOfflineReady(true)}
         />
@@ -1293,17 +1299,19 @@ export default function Match() {
           getPlayerName={getPlayerName}
         />
 
-        {/* STROKES INFO MODAL */}
-        <StrokesInfoModal
-          isOpen={strokesInfoModal}
-          onClose={() => setStrokesInfoModal(false)}
-          match={match}
-          tournament={tournament}
-          course={course}
-          round={round}
-          getPlayerName={getPlayerName}
-          getCourseHandicapFor={getCourseHandicapFor}
-        />
+        {/* STROKES INFO MODAL — not rendered on gross-only formats */}
+        {showStrokesInfo && (
+          <StrokesInfoModal
+            isOpen={strokesInfoModal}
+            onClose={() => setStrokesInfoModal(false)}
+            match={match}
+            tournament={tournament}
+            course={course}
+            round={round}
+            getPlayerName={getPlayerName}
+            getCourseHandicapFor={getCourseHandicapFor}
+          />
+        )}
 
         {/* PREPARE FOR OFFLINE CHECKLIST */}
         <OfflineReadyCheck

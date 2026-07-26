@@ -13,6 +13,11 @@ type MatchStatusHeaderProps = {
   isMatchClosed: boolean;
   onOpenStrokesInfo: () => void;
   /**
+   * Gross-only formats (scramble, shamble) don't use handicap strokes, so the
+   * Strokes button is hidden for them. Defaults to shown.
+   */
+  showStrokesInfo?: boolean;
+  /**
    * The silent offline-cache warm failed for this scorer, so their scorecard
    * may not load without signal. Rare by design — surfaces the prep checklist.
    */
@@ -28,6 +33,7 @@ export function MatchStatusHeader({
   roundLocked,
   isMatchClosed,
   onOpenStrokesInfo,
+  showStrokesInfo = true,
   offlineNotReady,
   onOpenOfflinePrep,
 }: MatchStatusHeaderProps) {
@@ -40,21 +46,26 @@ export function MatchStatusHeader({
           A 3-column grid (rather than absolute positioning) keeps the side items
           from overlapping the pill on narrow phones. */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        {/* Strokes Info label with tappable superscript icon (entire area is clickable) */}
-        <button
-          onClick={onOpenStrokesInfo}
-          aria-label="Open strokes info"
-          className="justify-self-start flex h-6 items-center px-2 rounded"
-        >
-          <span className="text-sm text-foreground">Strokes</span>
-          <span className="ml-1 w-4 h-4 rounded-full bg-muted text-foreground flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <circle cx="12" cy="16" r="1" />
-            </svg>
-          </span>
-        </button>
+        {/* Strokes Info label with tappable superscript icon (entire area is clickable).
+            Hidden on gross-only formats — the empty cell keeps the pill centered. */}
+        {showStrokesInfo ? (
+          <button
+            onClick={onOpenStrokesInfo}
+            aria-label="Open strokes info"
+            className="justify-self-start flex h-6 items-center px-2 rounded"
+          >
+            <span className="text-sm text-foreground">Strokes</span>
+            <span className="ml-1 w-4 h-4 rounded-full bg-muted text-foreground flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <circle cx="12" cy="16" r="1" />
+              </svg>
+            </span>
+          </button>
+        ) : (
+          <div className="justify-self-start h-6" />
+        )}
 
         <div
           className="justify-self-center inline-flex h-6 items-center whitespace-nowrap px-3 rounded-full text-xs font-medium"
