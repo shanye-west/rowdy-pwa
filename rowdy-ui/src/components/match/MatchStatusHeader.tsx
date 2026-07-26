@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { WifiOff } from "lucide-react";
 import { formatRoundType } from "../../utils";
 import { MatchStatusBadge, getMatchCardStyles } from "../MatchStatusBadge";
 import type { MatchDoc, TournamentDoc, RoundFormat } from "../../types";
@@ -11,6 +12,9 @@ type MatchStatusHeaderProps = {
   roundLocked: boolean;
   isMatchClosed: boolean;
   onOpenStrokesInfo: () => void;
+  /** Show the pre-round offline prep button (scorers on an open match only). */
+  showOfflinePrep?: boolean;
+  onOpenOfflinePrep?: () => void;
 };
 
 export function MatchStatusHeader({
@@ -21,19 +25,23 @@ export function MatchStatusHeader({
   roundLocked,
   isMatchClosed,
   onOpenStrokesInfo,
+  showOfflinePrep,
+  onOpenOfflinePrep,
 }: MatchStatusHeaderProps) {
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   return (
     <div className="space-y-3">
-      {/* Top row: centered format pill with auth status on the right */}
-      <div className="relative">
+      {/* Top row: Strokes | centered format pill | offline prep or auth status.
+          A 3-column grid (rather than absolute positioning) keeps the side items
+          from overlapping the pill on narrow phones. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {/* Strokes Info label with tappable superscript icon (entire area is clickable) */}
         <button
           onClick={onOpenStrokesInfo}
           aria-label="Open strokes info"
-          className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 rounded"
+          className="justify-self-start flex h-6 items-center px-2 rounded"
         >
           <span className="text-sm text-foreground">Strokes</span>
           <span className="ml-1 w-4 h-4 rounded-full bg-muted text-foreground flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
@@ -44,30 +52,41 @@ export function MatchStatusHeader({
             </svg>
           </span>
         </button>
-        
-        <div className="flex justify-center">
-          <div 
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-            style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
-          >
-            <span>{formatRoundType(format)}</span>
-          </div>
+
+        <div
+          className="justify-self-center inline-flex h-6 items-center whitespace-nowrap px-3 rounded-full text-xs font-medium"
+          style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
+        >
+          <span>{formatRoundType(format)}</span>
         </div>
 
-        {/* Auth status - positioned to the right, inline with pill */}
-        {editBlockReason && (editBlockReason === "historical" || (!roundLocked && !isMatchClosed)) && (
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs pr-2" style={{ color: "#94a3b8" }}>
-            {editBlockReason === "historical" && (
-              <span> View only</span>
-            )}
-            {editBlockReason === "login" && (
-              <Link to="/login" className="underline hover:text-muted-foreground">Login to edit</Link>
-            )}
-            {editBlockReason === "not-rostered" && (
-              <span>👀 Spectating</span>
-            )}
-          </div>
-        )}
+        <div className="justify-self-end">
+          {showOfflinePrep ? (
+            <button
+              type="button"
+              onClick={onOpenOfflinePrep}
+              className="inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+            >
+              <WifiOff className="h-3.5 w-3.5" />
+              Prep for offline
+            </button>
+          ) : (
+            /* Auth status - inline with the pill */
+            editBlockReason && (editBlockReason === "historical" || (!roundLocked && !isMatchClosed)) && (
+              <div className="text-xs pr-2" style={{ color: "#94a3b8" }}>
+                {editBlockReason === "historical" && (
+                  <span> View only</span>
+                )}
+                {editBlockReason === "login" && (
+                  <Link to="/login" className="underline hover:text-muted-foreground">Login to edit</Link>
+                )}
+                {editBlockReason === "not-rostered" && (
+                  <span>👀 Spectating</span>
+                )}
+              </div>
+            )
+          )}
+        </div>
       </div>
       
       {/* Main status display - uses shared MatchStatusBadge component */}

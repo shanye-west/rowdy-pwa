@@ -1,6 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { WifiOff } from "lucide-react";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -910,8 +909,8 @@ export default function Match() {
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
-        
-        {/* MATCH STATUS HEADER */}
+
+        {/* MATCH STATUS HEADER — carries the "Prep for offline" button top-right */}
         <MatchStatusHeader
           format={format}
           match={match}
@@ -920,7 +919,18 @@ export default function Match() {
           roundLocked={roundLocked}
           isMatchClosed={isMatchClosed}
           onOpenStrokesInfo={() => setStrokesInfoModal(true)}
+          showOfflinePrep={canEdit && !isMatchClosed}
+          onOpenOfflinePrep={() => setShowOfflineReady(true)}
         />
+
+        {/* Sync status — renders nothing (and costs no vertical space, via
+            empty:hidden) unless writes are in flight or just landed. The
+            app-wide offline banner lives in Layout. */}
+        {canEdit && !isMatchClosed && (
+          <div className="flex justify-end empty:hidden">
+            <SyncStatusBadge hasPendingWrites={hasPendingWrites} isOnline={isOnline} />
+          </div>
+        )}
 
         {/* Admin deep-link: jump straight to this match's admin page */}
         {player?.isAdmin && match?.tournamentId && (
@@ -947,21 +957,6 @@ export default function Match() {
             drivesNeeded={drivesNeeded}
             getPlayerShortName={getPlayerShortName}
           />
-        )}
-
-        {/* Offline sync status + pre-round readiness (offline banner is app-wide in Layout) */}
-        {canEdit && !isMatchClosed && (
-          <div className="flex items-center justify-between gap-2">
-            <SyncStatusBadge hasPendingWrites={hasPendingWrites} isOnline={isOnline} />
-            <button
-              type="button"
-              onClick={() => setShowOfflineReady(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
-            >
-              <WifiOff className="h-3.5 w-3.5" />
-              Prepare for offline
-            </button>
-          </div>
         )}
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
