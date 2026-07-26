@@ -364,7 +364,7 @@ export default function PlayerPropSheet({
                   inputMode="numeric"
                   value={amount}
                   onChange={(e) => setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                  className="w-20 bg-transparent text-center text-lg font-bold text-foreground focus:outline-none"
+                  className="input-lg w-20 bg-transparent text-center text-lg font-bold text-foreground focus:outline-none"
                 />
               </div>
               <button

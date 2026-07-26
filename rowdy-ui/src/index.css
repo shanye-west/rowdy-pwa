@@ -557,3 +557,31 @@
     }
   }
 }
+
+/* ============================================================================
+   iOS focus-zoom guard
+
+   Mobile Safari magnifies the viewport whenever a focused form control renders
+   below 16px, and in the installed PWA it never zooms back out — tap the chat
+   composer once and the whole app stays enlarged. Floor every text-entry
+   control at 16px on touch devices so the zoom never fires; pinch-to-zoom
+   stays available (no `maximum-scale` hack in the viewport meta).
+
+   Deliberately unlayered: Tailwind's utility layer (`text-sm`, `text-xs`)
+   outranks anything declared in `@layer base`, so a base rule wouldn't win.
+   ============================================================================ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Controls that are intentionally larger — already zoom-safe, keep their size. */
+  .input-lg {
+    font-size: 1.125rem; /* text-lg — stake amount fields */
+  }
+  .score-input {
+    font-size: 1.5rem; /* text-2xl */
+  }
+}
