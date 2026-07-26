@@ -1,4 +1,5 @@
 import { SCORECARD_CELL_WIDTH, SCORECARD_LABEL_WIDTH, SCORECARD_TOTAL_COL_WIDTH } from "../../constants";
+import { teeStyle } from "../../utils/teeColors";
 import type { HoleData } from "./PlayerScoreRow";
 
 type ScorecardTableHeaderProps = {
@@ -23,6 +24,22 @@ export function ScorecardTableHeader({
   const cellWidth = SCORECARD_CELL_WIDTH;
   const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
+
+  // Paint the yardage row in the tee color it was measured from ("Bronze Ross"
+  // → bronze). Null for unnamed/unrecognized tees, which keeps the muted row.
+  const tee = teeStyle(courseTees);
+  // Every cell needs the color explicitly: the sticky label and the OUT/IN/TOT
+  // cells carry their own bg-muted (they must stay opaque while the card
+  // scrolls), which would otherwise paint over a background set on the <tr>.
+  const teeCell = tee
+    ? {
+        background: tee.background,
+        // Combo tees ("Gold/Blue") show the second color as a stripe along the
+        // bottom edge — inset per cell so it reads as one line across the row.
+        ...(tee.stripe ? { boxShadow: `inset 0 -3px 0 ${tee.stripe}` } : {}),
+      }
+    : undefined;
+  const teeDivider = tee ? { borderColor: tee.border } : undefined;
 
   return (
     <thead>
@@ -123,32 +140,53 @@ export function ScorecardTableHeader({
         <td className="py-1 bg-muted"></td>
       </tr>
 
-      {/* Yardage Row */}
-      <tr className="bg-muted text-foreground text-xs border-b border-border">
-        <td className="sticky left-0 z-10 bg-muted text-left px-3 py-1 capitalize">{courseTees || 'Yards'}</td>
+      {/* Yardage Row - tinted to the tee color when the course names one */}
+      <tr
+        className={`text-xs border-b border-border ${tee ? "font-semibold" : "bg-muted text-foreground"}`}
+        style={tee ? { color: tee.text } : undefined}
+      >
+        <td
+          className={`sticky left-0 z-10 text-left px-3 py-1 capitalize ${tee ? "" : "bg-muted"}`}
+          style={teeCell}
+        >
+          {courseTees || 'Yards'}
+        </td>
         {holes.slice(0, 9).map(h => (
-          <td key={h.k} className="py-1">{h.yards || ""}</td>
+          <td key={h.k} className="py-1" style={teeCell}>{h.yards || ""}</td>
         ))}
-        <td className="py-1 bg-muted border-l-2 border-border">
+        <td
+          className={`py-1 border-l-2 ${tee ? "" : "bg-muted border-border"}`}
+          style={{ ...teeCell, ...teeDivider }}
+        >
           {holes.slice(0, 9).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
         {holes.slice(9, 18).map((h, i) => {
           const holeIdx = 9 + i;
           const isPostMatch = closingHole !== null && holeIdx > closingHole;
-          
+
           return (
-            <td 
-              key={h.k} 
-              className={`py-1 ${i === 0 ? "border-l-2 border-border" : ""} ${isPostMatch ? "bg-muted/60" : ""}`}
+            <td
+              key={h.k}
+              className={`py-1 ${i === 0 ? `border-l-2 ${tee ? "" : "border-border"}` : ""} ${isPostMatch && !tee ? "bg-muted/60" : ""}`}
+              style={{
+                ...teeCell,
+                ...(i === 0 ? teeDivider : {}),
+                // Matches the hole-number row: post-match holes fade rather
+                // than switching to a tint the tee color would cover.
+                ...(isPostMatch && tee ? { opacity: 0.7 } : {}),
+              }}
             >
               {h.yards || ""}
             </td>
           );
         })}
-        <td className="py-1 bg-muted border-l-2 border-border">
+        <td
+          className={`py-1 border-l-2 ${tee ? "" : "bg-muted border-border"}`}
+          style={{ ...teeCell, ...teeDivider }}
+        >
           {holes.slice(9, 18).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
-        <td className="py-1 bg-muted">
+        <td className={`py-1 ${tee ? "" : "bg-muted"}`} style={teeCell}>
           {holes.reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
         </td>
       </tr>
