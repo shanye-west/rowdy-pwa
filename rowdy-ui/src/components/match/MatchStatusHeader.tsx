@@ -12,8 +12,11 @@ type MatchStatusHeaderProps = {
   roundLocked: boolean;
   isMatchClosed: boolean;
   onOpenStrokesInfo: () => void;
-  /** Show the pre-round offline prep button (scorers on an open match only). */
-  showOfflinePrep?: boolean;
+  /**
+   * The silent offline-cache warm failed for this scorer, so their scorecard
+   * may not load without signal. Rare by design — surfaces the prep checklist.
+   */
+  offlineNotReady?: boolean;
   onOpenOfflinePrep?: () => void;
 };
 
@@ -25,7 +28,7 @@ export function MatchStatusHeader({
   roundLocked,
   isMatchClosed,
   onOpenStrokesInfo,
-  showOfflinePrep,
+  offlineNotReady,
   onOpenOfflinePrep,
 }: MatchStatusHeaderProps) {
   const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
@@ -61,14 +64,15 @@ export function MatchStatusHeader({
         </div>
 
         <div className="justify-self-end">
-          {showOfflinePrep ? (
+          {offlineNotReady ? (
             <button
               type="button"
               onClick={onOpenOfflinePrep}
-              className="inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+              aria-label="Not ready for offline — open the offline prep checklist"
+              className="inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border border-amber-300 bg-amber-100 px-2.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200"
             >
               <WifiOff className="h-3.5 w-3.5" />
-              Prep for offline
+              Not ready for offline
             </button>
           ) : (
             /* Auth status - inline with the pill */

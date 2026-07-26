@@ -52,6 +52,10 @@ import CommentThread from "../components/CommentThread";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
+/** Silent offline-cache warm: total tries, and the pause before the retry. */
+const WARM_ATTEMPTS = 2;
+const WARM_RETRY_MS = 5000;
+
 // --- MATCH CLOSING HELPERS ---
 
 /**
@@ -252,9 +256,13 @@ export default function Match() {
   // Silently warm Firestore's persistent cache the first time a scorer opens
   // this match while online — so if they lose signal on the course, the
   // scorecard, roster and course still load. Once per match per session, run at
-  // idle so it never competes with rendering. The manual "Prepare for offline"
-  // button remains for an explicit, visible warm.
+  // idle so it never competes with rendering.
+  //
+  // The outcome drives the "Not ready for offline" badge in the header, so a
+  // single blip must not raise it: one silent retry happens first, and only a
+  // second failure is treated as "this player is genuinely not cached."
   const warmedMatchRef = useRef<string | null>(null);
+  const [offlineWarmFailed, setOfflineWarmFailed] = useState(false);
   useEffect(() => {
     if (!match?.id || !canEdit || isMatchClosed || !isOnline) return;
     if (warmedMatchRef.current === match.id) return;
@@ -272,22 +280,50 @@ export default function Match() {
       playerIds: rosterPlayerIds,
       imageUrls: offlineImageUrls,
     };
-    const kick = () => {
-      warmMatchForOffline(args)
-        .then(() => { try { sessionStorage.setItem(sessionKey, "1"); } catch { /* ignore */ } })
-        .catch(() => { warmedMatchRef.current = null; }); // allow a later retry
+    let cancelled = false;
+    const kick = async () => {
+      for (let attempt = 0; attempt < WARM_ATTEMPTS; attempt++) {
+        try {
+          await warmMatchForOffline(args);
+          if (cancelled) return;
+          try { sessionStorage.setItem(sessionKey, "1"); } catch { /* ignore */ }
+          setOfflineWarmFailed(false);
+          return;
+        } catch {
+          if (cancelled) return;
+          if (attempt < WARM_ATTEMPTS - 1) {
+            await new Promise((r) => setTimeout(r, WARM_RETRY_MS));
+            if (cancelled) return;
+          }
+        }
+      }
+      warmedMatchRef.current = null; // allow a later retry (e.g. on reconnect)
+      setOfflineWarmFailed(true);
     };
     const w = window as Window & {
       requestIdleCallback?: (cb: () => void) => number;
       cancelIdleCallback?: (h: number) => void;
     };
     const useIdle = typeof w.requestIdleCallback === "function";
-    const id = useIdle ? w.requestIdleCallback!(kick) : window.setTimeout(kick, 1200);
+    const id = useIdle ? w.requestIdleCallback!(() => void kick()) : window.setTimeout(() => void kick(), 1200);
     return () => {
+      cancelled = true;
       if (useIdle && typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
       else window.clearTimeout(id);
     };
   }, [match?.id, canEdit, isMatchClosed, isOnline, round?.id, course?.id, tournament?.id, rosterPlayerIds, offlineImageUrls]);
+
+  // A manual checklist run warms the same data, so its verdict is authoritative:
+  // clear the badge on success, and mark the match warmed so the silent pass
+  // doesn't redo the work this session. Not memoized — OfflineReadyCheck holds
+  // this in a ref, so a fresh identity each render costs nothing.
+  const handleOfflineCheckResult = (ok: boolean) => {
+    setOfflineWarmFailed(!ok);
+    if (ok && match?.id) {
+      warmedMatchRef.current = match.id;
+      try { sessionStorage.setItem(`rowdycup:warmed:${match.id}`, "1"); } catch { /* ignore */ }
+    }
+  };
 
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo((): HoleData[] => {
@@ -910,7 +946,7 @@ export default function Match() {
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
 
-        {/* MATCH STATUS HEADER — carries the "Prep for offline" button top-right */}
+        {/* MATCH STATUS HEADER — also carries the rare "Not ready for offline" badge */}
         <MatchStatusHeader
           format={format}
           match={match}
@@ -919,7 +955,7 @@ export default function Match() {
           roundLocked={roundLocked}
           isMatchClosed={isMatchClosed}
           onOpenStrokesInfo={() => setStrokesInfoModal(true)}
-          showOfflinePrep={canEdit && !isMatchClosed}
+          offlineNotReady={canEdit && !isMatchClosed && offlineWarmFailed}
           onOpenOfflinePrep={() => setShowOfflineReady(true)}
         />
 
@@ -1281,6 +1317,7 @@ export default function Match() {
           tournamentId={tournament?.id}
           playerIds={rosterPlayerIds}
           imageUrls={offlineImageUrls}
+          onResult={handleOfflineCheckResult}
         />
       </div>
     </Layout>

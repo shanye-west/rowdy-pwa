@@ -32,6 +32,11 @@ interface OfflineReadyCheckProps {
    * never fails the check. Memoize in the parent.
    */
   imageUrls?: string[];
+  /**
+   * Fired when a run finishes, with whether the match is now cached for offline
+   * play. Lets the caller clear (or re-raise) its "Not ready for offline" state.
+   */
+  onResult?: (ok: boolean) => void;
 }
 
 const STEP_DEFS = [
@@ -73,6 +78,7 @@ export function OfflineReadyCheck({
   tournamentId,
   playerIds,
   imageUrls,
+  onResult,
 }: OfflineReadyCheckProps) {
   const [steps, setSteps] = useState<StepInfo[]>(makeInitial);
   const [running, setRunning] = useState(false);
@@ -80,6 +86,13 @@ export function OfflineReadyCheck({
   const [allOk, setAllOk] = useState(false);
   // Guards against a stale run (re-open / prop change) clobbering newer state.
   const runTokenRef = useRef(0);
+  // Held in a ref so an inline callback from the parent doesn't change `run`'s
+  // identity — the open-effect depends on `run`, and a new one every render
+  // would restart the checks endlessly.
+  const onResultRef = useRef(onResult);
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
 
   const run = useCallback(async () => {
     const token = ++runTokenRef.current;
@@ -100,6 +113,7 @@ export function OfflineReadyCheck({
       setAllOk(ok);
       setFinished(true);
       setRunning(false);
+      onResultRef.current?.(ok);
     };
 
     // 1. Allowed to score (logged in + rostered, or public edits enabled)
