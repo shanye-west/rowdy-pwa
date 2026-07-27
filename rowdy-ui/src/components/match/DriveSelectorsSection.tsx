@@ -98,11 +98,16 @@ const DriveRow = memo(function DriveRow({
     );
   };
 
+  // Faint team wash for the row. Opaque on purpose: the label cell is sticky,
+  // so a translucent background would let the drive buttons show through it as
+  // the card scrolls sideways. Row and label share one value so they can't drift.
+  const rowTint = `color-mix(in srgb, ${teamColor} 8%, hsl(var(--card)))`;
+
   return (
-    <tr style={{ backgroundColor: teamColor + "15" }}>
-      <td 
+    <tr style={{ backgroundColor: rowTint }}>
+      <td
         className="sticky left-0 z-10 text-left px-3 py-1.5 font-semibold whitespace-nowrap text-xs"
-        style={{ backgroundColor: teamColor + "15", color: teamColor }}
+        style={{ backgroundColor: rowTint, color: teamColor }}
       >
         {teamName} Drive
       </td>
