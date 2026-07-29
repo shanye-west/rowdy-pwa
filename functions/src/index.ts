@@ -1668,35 +1668,62 @@ export const computeRoundTotals = onDocumentWritten("matches/{matchId}", withTri
 
   for (const roundId of affectedRoundIds) {
     const roundRef = db.collection("rounds").doc(roundId);
-    const roundSnap = await roundRef.get();
-    if (!roundSnap.exists) continue;
-    const pv = roundSnap.data()?.pointsValue ?? 1;
+    const matchesQuery = db.collection("matches").where("roundId", "==", roundId);
 
-    const matchesSnap = await db.collection("matches").where("roundId", "==", roundId).get();
-    let teamAConfirmed = 0, teamBConfirmed = 0, teamAPending = 0, teamBPending = 0, matchCount = 0;
-    for (const d of matchesSnap.docs) {
-      const m = d.data();
-      matchCount++;
-      const w = m.result?.winner;
-      const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
-      const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
-      const isClosed = m.status?.closed === true;
-      const isStarted = (m.status?.thru ?? 0) > 0;
-      if (isClosed) {
-        teamAConfirmed += ptsA;
-        teamBConfirmed += ptsB;
-      } else if (isStarted) {
-        teamAPending += ptsA;
-        teamBPending += ptsB;
+    // TRANSACTIONAL, and it must stay that way.
+    //
+    // This was previously a bare read -> query -> write. When several matches in
+    // a round finish close together (normal at the end of a round — groups come
+    // in within minutes of each other), two invocations interleave like:
+    //
+    //   A: query matches -> sees 5 closed
+    //   B: query matches -> sees 6 closed
+    //   B: write totals for 6
+    //   A: write totals for 5      <-- clobbers B, and NOTHING re-triggers
+    //
+    // round.pointTotals is the denormalized source for the Home standings,
+    // /tournament/:id, /teams and History's champion calculation, so a lost
+    // update leaves the scoreboard permanently wrong — and it's most likely on a
+    // round's FINAL match, where no later write ever heals it.
+    //
+    // The transaction makes the read set (round doc + matches query) part of the
+    // commit's conflict check: a concurrent write to any of them aborts and
+    // retries against fresh data. Contention here is low (this trigger is gated
+    // to winner/closed/started transitions, not per-hole writes).
+    //
+    // Do NOT "optimize" this into FieldValue.increment — see the rationale above
+    // computeRoundTotals: recomputing from source is what makes it self-healing.
+    await db.runTransaction(async (tx) => {
+      const roundSnap = await tx.get(roundRef);
+      if (!roundSnap.exists) return;
+      const pv = roundSnap.data()?.pointsValue ?? 1;
+
+      const matchesSnap = await tx.get(matchesQuery);
+      let teamAConfirmed = 0, teamBConfirmed = 0, teamAPending = 0, teamBPending = 0, matchCount = 0;
+      for (const d of matchesSnap.docs) {
+        const m = d.data();
+        matchCount++;
+        const w = m.result?.winner;
+        const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
+        const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
+        const isClosed = m.status?.closed === true;
+        const isStarted = (m.status?.thru ?? 0) > 0;
+        if (isClosed) {
+          teamAConfirmed += ptsA;
+          teamBConfirmed += ptsB;
+        } else if (isStarted) {
+          teamAPending += ptsA;
+          teamBPending += ptsB;
+        }
       }
-    }
 
-    const pointTotals = { teamAConfirmed, teamBConfirmed, teamAPending, teamBPending, matchCount };
-    const sig = JSON.stringify(pointTotals);
-    // Skip write when unchanged (avoids churn from no-op transitions).
-    if (roundSnap.data()?.pointTotals?._sig === sig) continue;
+      const pointTotals = { teamAConfirmed, teamBConfirmed, teamAPending, teamBPending, matchCount };
+      const sig = JSON.stringify(pointTotals);
+      // Skip write when unchanged (avoids churn from no-op transitions).
+      if (roundSnap.data()?.pointTotals?._sig === sig) return;
 
-    await roundRef.set({ pointTotals: { ...pointTotals, _sig: sig } }, { merge: true });
+      tx.set(roundRef, { pointTotals: { ...pointTotals, _sig: sig } }, { merge: true });
+    });
   }
 }));
 
