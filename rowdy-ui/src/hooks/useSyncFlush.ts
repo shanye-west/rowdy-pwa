@@ -9,8 +9,8 @@ export type FlushState = "idle" | "syncing" | "synced";
  * writes to the server and expose a state the UI can surface app-wide:
  * "syncing" until the local write queue drains, then "synced" briefly, then
  * idle. This gives players a global "everything you entered offline is now on
- * the server" confirmation — the per-match SyncStatusBadge only covers the
- * match currently on screen.
+ * the server" confirmation. It fires only on a reconnect — never during normal
+ * online score entry, where per-save feedback is the scorecard's own indicator.
  */
 export function useSyncFlush(isOnline: boolean): FlushState {
   const [state, setState] = useState<FlushState>("idle");

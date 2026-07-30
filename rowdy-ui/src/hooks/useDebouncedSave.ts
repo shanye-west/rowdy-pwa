@@ -110,9 +110,9 @@ export function useDebouncedSave<T>(
     }
     setSaveStatus(status);
     if (status === "saved" || status === "error" || status === "queued") {
-      // Transient feedback only — the persistent sync state (e.g. the
-      // SyncStatusBadge driven by metadata.hasPendingWrites) carries the
-      // authoritative "queued vs synced" truth after this fades.
+      // Transient feedback only — it fades back to idle. Longer-lived sync
+      // truth is the app-wide offline banner / reconnect flush in Layout; the
+      // scorecard deliberately shows no persistent badge (it shifted layout).
       statusTimerRef.current = setTimeout(() => {
         if (mountedRef.current) setSaveStatus("idle");
       }, 2000);

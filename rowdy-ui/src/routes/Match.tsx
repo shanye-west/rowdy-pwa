@@ -24,7 +24,6 @@ import LastUpdated from "../components/LastUpdated";
 import { MatchPageSkeleton } from "../components/Skeleton";
 import { LoadingEscalation } from "../components/LoadingScreen";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
-import { SyncStatusBadge } from "../components/SyncStatusBadge";
 import { OfflineReadyCheck } from "../components/OfflineReadyCheck";
 import { useAuth } from "../contexts/AuthContext";
 import { 
@@ -97,7 +96,7 @@ export default function Match() {
   // Use custom hook for all data fetching
   const {
     match, round, course, tournament, players, matchFacts,
-    loading, error, hasPendingWrites,
+    loading, error,
   } = useMatchData(matchId);
 
   // Pre-round "prepare for offline" checklist dialog
@@ -965,14 +964,12 @@ export default function Match() {
           onOpenOfflinePrep={() => setShowOfflineReady(true)}
         />
 
-        {/* Sync status — renders nothing (and costs no vertical space, via
-            empty:hidden) unless writes are in flight or just landed. The
-            app-wide offline banner lives in Layout. */}
-        {canEdit && !isMatchClosed && (
-          <div className="flex justify-end empty:hidden">
-            <SyncStatusBadge hasPendingWrites={hasPendingWrites} isOnline={isOnline} />
-          </div>
-        )}
+        {/* NOTE: no sync-state badge here on purpose. It sat in normal flow
+            above the scorecard, so every save pushed the card down and popped it
+            back up ~2.5s later — a visible jitter while entering scores. The
+            absolutely-positioned SaveStatusIndicator below ("Saving…" / "Saved ✓"
+            / "Saved · will sync") carries per-save feedback without shifting
+            layout, and the app-wide offline banner lives in Layout. */}
 
         {/* Admin deep-link: jump straight to this match's admin page */}
         {player?.isAdmin && match?.tournamentId && (

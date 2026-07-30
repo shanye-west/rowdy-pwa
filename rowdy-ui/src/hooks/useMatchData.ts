@@ -18,12 +18,6 @@ export interface UseMatchDataResult {
   matchFacts: PlayerMatchFact[];
   loading: boolean;
   error: string | null;
-  /**
-   * True when the match doc has local writes not yet acknowledged by the
-   * server (i.e. queued offline / mid-sync). Sourced from Firestore snapshot
-   * metadata; only meaningful for active matches (static reads are never dirty).
-   */
-  hasPendingWrites: boolean;
 }
 
 /**
@@ -45,8 +39,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [rawLoading, setRawLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasPendingWrites, setHasPendingWrites] = useState(false);
-  
+
   const [matchLoaded, setMatchLoaded] = useState(false);
   const [roundLoaded, setRoundLoaded] = useState(false);
   const [courseLoaded, setCourseLoaded] = useState(false);
@@ -62,7 +55,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
   // Holds the last match document data we pushed to state (serialized). Lets us
-  // skip metadata-only snapshots (hasPendingWrites flips) where the document
+  // skip metadata-only snapshots (pending-write flips) where the document
   // payload is unchanged, so the scorecard doesn't re-render every sync tick.
   const lastMatchJsonRef = useRef<string | null>(null);
 
@@ -90,14 +83,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     setRound(null);
     setCourse(null);
     setMatchFacts([]);
-    setHasPendingWrites(false);
     lastMatchJsonRef.current = null;
 
     // Attach the listener directly — onSnapshot is cache-first, so the first
     // emission arrives instantly from IndexedDB (no blocking server round-trip).
-    // includeMetadataChanges lets us surface hasPendingWrites (queued writes not
-    // yet acked by the server) so the UI can confirm sync state, and lets us see
-    // the cache→server transition. For static (completed + closed) matches we
+    // includeMetadataChanges lets us see the cache→server transition (the
+    // `fromCache` check below). Metadata-only snapshots are otherwise ignored —
+    // no sync state is derived from them. For static (completed + closed) matches we
     // drop the listener once the server confirms it, so historical matches don't
     // hold an open subscription (the ~80% read win) — read cost matches the old
     // one-time fetch while still painting instantly from cache.
@@ -109,20 +101,17 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
           setMatch(null);
           lastMatchJsonRef.current = null;
           setMatchLoaded(true);
-          setHasPendingWrites(false);
           return;
         }
 
         const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
 
-        // Sync-state always tracks the latest snapshot...
-        setHasPendingWrites(mSnap.metadata.hasPendingWrites);
         setMatchLoaded(true);
 
-        // ...but only push new match state when the document payload actually
-        // changed. includeMetadataChanges fires this listener on every
-        // pending-write flip; skipping no-op data updates stops the scorecard
-        // from re-rendering ~1-2x/sec during active scoring.
+        // Only push new match state when the document payload actually changed.
+        // includeMetadataChanges fires this listener on every pending-write flip;
+        // skipping no-op data updates stops the scorecard from re-rendering
+        // ~1-2x/sec during active scoring.
         const dataJson = JSON.stringify(mSnap.data());
         if (dataJson !== lastMatchJsonRef.current) {
           lastMatchJsonRef.current = dataJson;
@@ -413,7 +402,6 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     matchFacts,
     loading,
     error,
-    hasPendingWrites,
   };
 }
 
