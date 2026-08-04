@@ -271,7 +271,7 @@ function RoundComponent() {
               className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
             >
               <ViewTransitionLink to={`/round/${round.id}/plan`}>
-                <ClipboardList className="mr-2 h-4 w-4" /> Plan pairings (private)
+                <ClipboardList className="mr-2 h-4 w-4" /> Plan pairings (only you see it)
               </ViewTransitionLink>
             </Button>
           </section>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { AlertTriangle, ClipboardList, Eraser, Hourglass, Lock, Radio, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ClipboardList, Eraser, EyeOff, Hourglass, Lock, Radio } from "lucide-react";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import { Skeleton } from "../components/Skeleton";
@@ -21,31 +21,35 @@ import { getErrorMessage } from "../api/errors";
 import { tierPlayerIds } from "../utils/roster";
 import { placedIds } from "../utils/pairingDraft";
 import {
-  cannotAddToSlot,
-  normalizePairs,
-  pairsEqual,
+  PLAN_TEAMS,
+  cannotAddToSide,
+  completeMatchupCount,
+  emptyMatchups,
+  matchupsEqual,
+  normalizeMatchups,
   planStrandWarning,
-  slotViolation,
+  sideViolation,
   unassignedIds,
 } from "../utils/pairingPlan";
 import { TIER_ORDER, tierStyle } from "../utils/tierColors";
 import { cn } from "../lib/utils";
 import PairingsMessage from "../components/pairings/PairingsMessage";
-import PlanSlotCard from "../components/pairings/PlanSlotCard";
+import PlanMatchupCard from "../components/pairings/PlanMatchupCard";
 import PlayerPickRow from "../components/pairings/PlayerPickRow";
-import type { DraftTeamKey } from "../types";
+import type { DraftTeamKey, PlannedMatchup } from "../types";
 
 /**
- * The captains' private planning board for a round (`/round/:roundId/plan`).
+ * A personal pre-draft planning board (`/round/:roundId/plan`).
  *
- * Unlike the live draft, this page needs nothing from an admin — no coin flip,
- * not even a staged draft — so a captain can sit down days early and lay out
- * how they want their own side paired. When the admin does stage the round the
- * page picks up the real availability; when the draft opens it stays available
- * as a cheat sheet next to the board.
+ * Unlike the live draft this needs nothing from an admin — no coin flip, not
+ * even a staged draft — so a captain can sit down days early and work out not
+ * just how to pair their own side, but how they think the opponent will pair
+ * theirs and which of those matchups they want.
  *
- * The plan is one team's alone: it lives in `pairingPlans/{roundId}__{team}`,
- * readable only by that team's captain and co-captain.
+ * Every captain, co-captain and admin gets their OWN board
+ * (`pairingPlans/{roundId}__{playerId}`, readable by that one person). Two
+ * co-captains can each test their own assumptions without stepping on each
+ * other, and nobody — admins included — reads anyone else's.
  */
 export default function PairingPlan() {
   const { roundId = "" } = useParams<{ roundId: string }>();
@@ -58,14 +62,11 @@ export default function PairingPlan() {
 
   const isAdmin = !!player?.isAdmin;
   const myTeam = useMemo(() => captainTeamOf(player?.id, tournament), [player?.id, tournament]);
+  // Captains plan for their own side; admins captain neither, so they just get
+  // the board with no "you" side marked.
+  const canPlan = !!player && (isAdmin || !!myTeam);
 
-  // A captain only ever has their own team's plan. An admin runs the draft for
-  // both sides, so they pick which team's plan they're working on — defaulting
-  // to their own if they happen to captain one.
-  const [adminTeam, setAdminTeam] = useState<DraftTeamKey | null>(null);
-  const viewTeam: DraftTeamKey | null = myTeam ?? (isAdmin ? adminTeam ?? "teamA" : null);
-
-  const { plan, loading: planLoading } = usePairingPlan(roundId, viewTeam);
+  const { plan, loading: planLoading } = usePairingPlan(roundId, canPlan ? player?.id : null);
 
   const meta = usePairingsMeta({
     tournament,
@@ -77,49 +78,54 @@ export default function PairingPlan() {
 
   const perSide = formatPlayersPerSide(round?.format);
 
-  // Who this team has to work with: the staged availability once an admin has
-  // set it, otherwise the whole roster (a plan is often written first).
+  // Who each side has to work with: the staged availability once an admin has
+  // set it, otherwise the full roster (plans are often written first).
   const available = useMemo(() => {
-    if (!viewTeam) return [];
-    if (draft) return draft.available?.[viewTeam] ?? [];
-    return tierPlayerIds(tournament?.[viewTeam]?.rosterByTier);
-  }, [viewTeam, draft, tournament]);
-  const availableSet = useMemo(() => new Set(available), [available]);
-  const slotCount = draft ? draft.totalMatches : Math.floor(available.length / perSide);
+    const forTeam = (team: DraftTeamKey) =>
+      draft ? draft.available?.[team] ?? [] : tierPlayerIds(tournament?.[team]?.rosterByTier);
+    return { teamA: forTeam("teamA"), teamB: forTeam("teamB") };
+  }, [draft, tournament]);
+  const availableSets = useMemo(
+    () => ({ teamA: new Set(available.teamA), teamB: new Set(available.teamB) }),
+    [available]
+  );
+  const slotCount = draft
+    ? draft.totalMatches
+    : Math.floor(Math.min(available.teamA.length, available.teamB.length) / perSide);
 
   // The tier rule needs a plain lookup, not meta's accessor.
   const tierMap = useMemo(() => {
     const m: Record<string, "A" | "B" | "C" | "D"> = {};
-    for (const pid of available) {
+    for (const pid of [...available.teamA, ...available.teamB]) {
       const t = meta.tierOf(pid);
       if (t) m[pid] = t;
     }
     return m;
   }, [available, meta]);
 
-  const [pairs, setPairs] = useState<string[][]>([]);
+  const [matchups, setMatchups] = useState<PlannedMatchup[]>([]);
   const [notes, setNotes] = useState("");
-  const [activeSlot, setActiveSlot] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeSide, setActiveSide] = useState<DraftTeamKey>("teamA");
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
   dirtyRef.current = dirty;
 
-  // Switching teams (admin only) is a different document, not an edit to this
-  // one — drop local state so the adopt effect treats it as a fresh load rather
-  // than warning about a "co-captain" change.
-  const lastRemoteKey = useRef<string | null>(null);
+  // Start on the viewer's own side once we know which it is.
+  const sideSeeded = useRef(false);
   useEffect(() => {
-    lastRemoteKey.current = null;
-    setDirty(false);
-    setActiveSlot(0);
-  }, [viewTeam]);
+    if (sideSeeded.current || !myTeam) return;
+    setActiveSide(myTeam);
+    sideSeeded.current = true;
+  }, [myTeam]);
 
-  // Adopt whatever the server has whenever it changes — that's how someone
-  // else's save shows up. If this viewer has unsaved edits we keep theirs and
-  // just warn, rather than yanking the board out from under them mid-thought.
-  const remoteKey = plan ? JSON.stringify([plan.pairs, plan.notes]) : "none";
-  const ready = !loadingData && !draftLoading && !planLoading && !!viewTeam && slotCount > 0;
+  // Adopt whatever the server has whenever it changes — that's how an edit made
+  // on another device shows up. If there are unsaved edits here we keep them and
+  // just warn, rather than yanking the board away mid-thought.
+  const remoteKey = plan ? JSON.stringify([plan.matchups, plan.notes]) : "none";
+  const lastRemoteKey = useRef<string | null>(null);
+  const ready = !loadingData && !draftLoading && !planLoading && canPlan && slotCount > 0;
   useEffect(() => {
     if (!ready) return;
     if (lastRemoteKey.current === remoteKey) return;
@@ -128,84 +134,110 @@ export default function PairingPlan() {
     if (!isFirstLoad && dirtyRef.current) {
       showToast({
         variant: "info",
-        message: "Someone else saved a change to this plan. Saving yours will replace it.",
+        message: "This plan changed on another device. Saving here will replace it.",
       });
       return;
     }
-    setPairs(normalizePairs(plan?.pairs, slotCount, perSide, availableSet));
+    setMatchups(normalizeMatchups(plan?.matchups, slotCount, perSide, availableSets));
     setNotes(plan?.notes ?? "");
     setDirty(false);
-  }, [ready, remoteKey, slotCount, perSide, availableSet, plan, showToast]);
+  }, [ready, remoteKey, slotCount, perSide, availableSets, plan, showToast]);
 
-  const unassigned = useMemo(() => unassignedIds(available, pairs), [available, pairs]);
+  const unassigned = useMemo(
+    () => ({
+      teamA: unassignedIds(available.teamA, matchups, "teamA"),
+      teamB: unassignedIds(available.teamB, matchups, "teamB"),
+    }),
+    [available, matchups]
+  );
   const violations = useMemo(
-    () => pairs.map((slot) => slotViolation(slot, perSide, tierMap)),
-    [pairs, perSide, tierMap]
+    () =>
+      matchups.map((m) => ({
+        teamA: sideViolation(m.teamA, perSide, tierMap),
+        teamB: sideViolation(m.teamB, perSide, tierMap),
+      })),
+    [matchups, perSide, tierMap]
   );
-  const strandWarning = useMemo(
-    () => planStrandWarning(pairs, available, perSide, tierMap),
-    [pairs, available, perSide, tierMap]
+  const strandWarnings = useMemo(
+    () =>
+      PLAN_TEAMS.map((team) => ({
+        team,
+        warning: planStrandWarning(matchups, available[team], team, perSide, tierMap),
+      })).filter((w) => w.warning),
+    [matchups, available, perSide, tierMap]
   );
-  const filledSlots = pairs.filter((s) => s.length === perSide).length;
-  const hasViolation = violations.some(Boolean);
-  const savedPairs = useMemo(
-    () => normalizePairs(plan?.pairs, slotCount, perSide, availableSet),
-    [plan, slotCount, perSide, availableSet]
+  const setCount = completeMatchupCount(matchups, perSide);
+  const hasViolation = violations.some((v) => v.teamA || v.teamB);
+  const savedMatchups = useMemo(
+    () => normalizeMatchups(plan?.matchups, slotCount, perSide, availableSets),
+    [plan, slotCount, perSide, availableSets]
   );
-  const changed = dirty && (!pairsEqual(pairs, savedPairs) || notes !== (plan?.notes ?? ""));
+  const changed =
+    dirty && (!matchupsEqual(matchups, savedMatchups) || notes !== (plan?.notes ?? ""));
 
-  // Players already taken in the live draft — the plan for them is moot.
+  // Players already taken in the live draft — planning them is moot.
   const alreadyDrafted = useMemo(() => {
-    if (!draft || !viewTeam || draft.phase === "staging") return new Set<string>();
-    return placedIds(draft.matches, viewTeam);
-  }, [draft, viewTeam]);
+    if (!draft || draft.phase === "staging") return { teamA: new Set<string>(), teamB: new Set<string>() };
+    return { teamA: placedIds(draft.matches, "teamA"), teamB: placedIds(draft.matches, "teamB") };
+  }, [draft]);
 
-  const firstOpenSlot = useCallback(
-    (from = 0) => {
-      for (let i = from; i < pairs.length; i++) if (pairs[i].length < perSide) return i;
-      for (let i = 0; i < from; i++) if (pairs[i].length < perSide) return i;
+  /** Next matchup whose `team` side has room, searching forward then wrapping. */
+  const firstOpen = useCallback(
+    (team: DraftTeamKey, from = 0) => {
+      for (let i = from; i < matchups.length; i++) if (matchups[i][team].length < perSide) return i;
+      for (let i = 0; i < from; i++) if (matchups[i][team].length < perSide) return i;
       return null;
     },
-    [pairs, perSide]
+    [matchups, perSide]
   );
 
-  // The slot a pool tap actually lands in: the active one while it has room,
-  // otherwise the next open one. Derived once so the pool's disabled states are
-  // checked against the same slot `addPlayer` will fill.
+  // Where a pool tap lands: the active matchup while its side has room, else the
+  // next one that does. Derived once so the pool's disabled states are checked
+  // against the same side `addPlayer` will fill.
   const targetIndex =
-    pairs[activeSlot] && pairs[activeSlot].length < perSide ? activeSlot : firstOpenSlot();
+    matchups[activeIndex] && matchups[activeIndex][activeSide].length < perSide
+      ? activeIndex
+      : firstOpen(activeSide);
 
   const addPlayer = (pid: string) => {
+    if (targetIndex == null) return;
     const target = targetIndex;
-    if (target == null) return;
-    setPairs((prev) => prev.map((slot, i) => (i === target ? [...slot, pid] : slot)));
+    setMatchups((prev) =>
+      prev.map((m, i) => (i === target ? { ...m, [activeSide]: [...m[activeSide], pid] } : m))
+    );
     setDirty(true);
-    // Jump to the next slot with room once this one fills up.
-    if (pairs[target].length + 1 >= perSide) {
-      const next = firstOpenSlot(target + 1);
-      if (next != null && next !== target) setActiveSlot(next);
+    if (matchups[target][activeSide].length + 1 >= perSide) {
+      const next = firstOpen(activeSide, target + 1);
+      if (next != null && next !== target) setActiveIndex(next);
     } else {
-      setActiveSlot(target);
+      setActiveIndex(target);
     }
   };
 
-  const removePlayer = (slotIndex: number, pid: string) => {
-    setPairs((prev) => prev.map((slot, i) => (i === slotIndex ? slot.filter((x) => x !== pid) : slot)));
-    setActiveSlot(slotIndex);
+  const removePlayer = (index: number, team: DraftTeamKey, pid: string) => {
+    setMatchups((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, [team]: m[team].filter((x) => x !== pid) } : m))
+    );
+    setActiveIndex(index);
+    setActiveSide(team);
     setDirty(true);
   };
 
+  const activateSide = (index: number, team: DraftTeamKey) => {
+    setActiveIndex(index);
+    setActiveSide(team);
+  };
+
   const clearAll = () => {
-    setPairs((prev) => prev.map(() => []));
-    setActiveSlot(0);
+    setMatchups(emptyMatchups(slotCount));
+    setActiveIndex(0);
     setDirty(true);
   };
 
   const save = async () => {
-    if (!viewTeam) return;
     setBusy(true);
     try {
-      await draftApi.savePairingPlan({ roundId, team: viewTeam, pairs, notes });
+      await draftApi.savePairingPlan({ roundId, matchups, notes });
       setDirty(false);
       showToast({ variant: "success", message: "Plan saved" });
     } catch (e) {
@@ -215,10 +247,10 @@ export default function PairingPlan() {
     }
   };
 
-  // Pool grouped by tier, A→D, so the scarce players read first.
+  // The active side's remaining players, grouped by tier (A→D, scarce first).
   const poolGroups = useMemo(() => {
     const byTier = new Map<string, string[]>();
-    for (const pid of unassigned) {
+    for (const pid of unassigned[activeSide]) {
       const t = meta.tierOf(pid) ?? "—";
       if (!byTier.has(t)) byTier.set(t, []);
       byTier.get(t)!.push(pid);
@@ -227,7 +259,7 @@ export default function PairingPlan() {
     for (const t of TIER_ORDER) if (byTier.has(t)) ordered.push({ tier: t, ids: byTier.get(t)! });
     if (byTier.has("—")) ordered.push({ tier: "—", ids: byTier.get("—")! });
     return ordered;
-  }, [unassigned, meta]);
+  }, [unassigned, activeSide, meta]);
 
   const title = `Pairing plan${round?.day ? ` — Day ${round.day}` : ""}`;
 
@@ -238,7 +270,7 @@ export default function PairingPlan() {
         <div className="mx-auto max-w-2xl space-y-2 p-4">
           <Skeleton height={72} rounded="lg" className="rounded-2xl" />
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} height={64} rounded="lg" className="rounded-xl" />
+            <Skeleton key={i} height={72} rounded="lg" className="rounded-xl" />
           ))}
         </div>
       </Layout>
@@ -255,14 +287,12 @@ export default function PairingPlan() {
     );
   }
 
-  // Captains get their own team's plan; admins run the draft, so they get both.
-  // Everyone else is out — a plan the field can read is worthless.
-  if (!viewTeam) {
+  if (!canPlan) {
     return (
       <Layout title="Pairing plan" showBack>
         <PairingsMessage icon={<Lock size={24} />} title="Captains & admins only">
-          A pairing plan is private to the team that wrote it — its captain, co-captain, and the
-          tournament admins. Your matchups show up on the round page once the draft is done.
+          Planning boards belong to the people setting the pairings. Your matchups show up on the round
+          page once the draft is done.
         </PairingsMessage>
       </Layout>
     );
@@ -279,75 +309,39 @@ export default function PairingPlan() {
     );
   }
 
-  const teamColor = meta.teamColor(viewTeam);
-  const phase = draft?.phase;
-
-  // Admins work both sides, so they get a switcher. Rendered above the "no
-  // roster" bail-out below, or an admin could get stuck on an empty team.
-  const teamSwitcher = isAdmin ? (
-    <div className="grid grid-cols-2 gap-2">
-      {(["teamA", "teamB"] as DraftTeamKey[]).map((team) => {
-        const on = viewTeam === team;
-        const color = meta.teamColor(team);
-        return (
-          <button
-            key={team}
-            type="button"
-            onClick={() => setAdminTeam(team)}
-            aria-pressed={on}
-            className={cn(
-              "rounded-xl border px-3 py-2.5 text-sm font-bold transition-all duration-150",
-              on ? "border-transparent text-white" : "border-border text-muted-foreground hover:bg-muted"
-            )}
-            style={on ? { background: color } : undefined}
-          >
-            {meta.teamName(team)}
-          </button>
-        );
-      })}
-    </div>
-  ) : null;
-
   if (slotCount === 0) {
     return (
       <Layout title={title} showBack>
-        <div className="mx-auto max-w-2xl space-y-4 p-4">
-          {teamSwitcher}
-          <PairingsMessage icon={<Hourglass size={24} />} title="No roster to plan with">
-            {meta.teamName(viewTeam)} doesn't have enough rostered players for a {perSide}-player matchup
-            yet.
-          </PairingsMessage>
-        </div>
+        <PairingsMessage icon={<Hourglass size={24} />} title="No rosters to plan with">
+          Both teams need enough rostered players for a {perSide}-player matchup before there's a board to
+          build.
+        </PairingsMessage>
       </Layout>
     );
   }
 
+  const phase = draft?.phase;
+  const activeColor = meta.teamColor(activeSide);
+
   return (
     <Layout title={title} showBack>
       <div className="mx-auto max-w-2xl space-y-4 p-4">
-        {/* Status: whose plan this is, what stage the round is at, what that means. */}
+        {/* Status: whose board this is, and what stage the round is at. */}
         <div className="card space-y-3 p-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={17} className="shrink-0" style={{ color: teamColor }} />
-            <span className="text-sm font-bold" style={{ color: teamColor }}>
-              {meta.teamName(viewTeam)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {myTeam === viewTeam ? "· private to your captains" : "· captains & admins only"}
-            </span>
+            <EyeOff size={16} className="shrink-0 text-muted-foreground" />
+            <span className="text-sm font-bold text-foreground">Your board</span>
+            <span className="text-xs text-muted-foreground">· only you can see this</span>
           </div>
-
-          {teamSwitcher}
-          {isAdmin && !myTeam && (
-            <p className="text-xs text-muted-foreground">
-              You're editing this team's own plan as an admin — their captains see the same board.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Pair both teams — yours, and how you think they'll pair theirs — then line up the matchups you
+            want. Every captain and admin keeps their own board; nobody sees yours.
+          </p>
 
           {!draft && (
             <p className="text-sm text-muted-foreground">
-              Availability isn't set for this round yet, so you're planning against your full roster. When
-              an admin locks in who's playing, this board updates and anyone benched drops out.
+              Availability isn't set for this round yet, so you're working from the full rosters. When an
+              admin locks in who's playing, this board updates and anyone benched drops out.
             </p>
           )}
           {phase === "staging" && (
@@ -359,7 +353,7 @@ export default function PairingPlan() {
           {(phase === "drafting" || phase === "review") && (
             <div className="space-y-2">
               <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                <Radio size={15} className="shrink-0" /> The draft is live — this is just your cheat sheet now.
+                <Radio size={15} className="shrink-0" /> The draft is live — this is your cheat sheet now.
               </p>
               <ViewTransitionLink
                 to={`/round/${roundId}/pairings`}
@@ -371,7 +365,7 @@ export default function PairingPlan() {
           )}
           {phase === "finalized" && (
             <p className="text-sm text-muted-foreground">
-              Pairings are locked in for this round — the plan below is kept for the record.
+              Pairings are locked in for this round — your board is kept for the record.
             </p>
           )}
         </div>
@@ -382,44 +376,82 @@ export default function PairingPlan() {
             <button
               type="button"
               onClick={clearAll}
-              disabled={filledSlots === 0 && unassigned.length === available.length}
+              disabled={setCount === 0 && matchups.every((m) => !m.teamA.length && !m.teamB.length)}
               className="btn-ghost inline-flex items-center gap-1 text-xs text-muted-foreground disabled:opacity-40"
             >
               <Eraser size={13} /> Clear
             </button>
           }
         >
-          Your pairings · {filledSlots}/{slotCount}
+          Matchups · {setCount}/{slotCount} set
         </SectionLabel>
 
         <div className="space-y-2">
-          {pairs.map((slot, i) => (
-            <PlanSlotCard
+          {matchups.map((m, i) => (
+            <PlanMatchupCard
               key={i}
               index={i}
-              slot={slot}
+              matchup={m}
               perSide={perSide}
-              team={viewTeam}
               meta={meta}
-              active={i === activeSlot}
-              violation={violations[i]}
-              onActivate={() => setActiveSlot(i)}
-              onRemove={(pid) => removePlayer(i, pid)}
+              myTeam={myTeam}
+              activeSide={i === activeIndex ? activeSide : null}
+              violations={violations[i]}
+              onActivate={(team) => activateSide(i, team)}
+              onRemove={(team, pid) => removePlayer(i, team, pid)}
             />
           ))}
         </div>
 
-        {strandWarning && (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {strandWarning}
+        {strandWarnings.map(({ team, warning }) => (
+          <div
+            key={team}
+            className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
+          >
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              {meta.teamName(team)}: {warning}
+            </span>
           </div>
+        ))}
+
+        {/* The pool, for whichever side is being filled */}
+        <SectionLabel>Add to matchup {(targetIndex ?? activeIndex) + 1}</SectionLabel>
+        <div className="grid grid-cols-2 gap-2">
+          {PLAN_TEAMS.map((team) => {
+            const on = activeSide === team;
+            const color = meta.teamColor(team);
+            return (
+              <button
+                key={team}
+                type="button"
+                onClick={() => setActiveSide(team)}
+                aria-pressed={on}
+                className={cn(
+                  "rounded-xl border px-3 py-2.5 text-sm font-bold transition-all duration-150",
+                  on ? "border-transparent text-white" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+                style={on ? { background: color } : undefined}
+              >
+                {meta.teamName(team)}
+                <span className={cn("ml-1.5 text-xs font-semibold", on ? "opacity-80" : "opacity-70")}>
+                  {unassigned[team].length} left
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {myTeam && (
+          <p className="px-1 text-xs text-muted-foreground">
+            {activeSide === myTeam
+              ? "Your side — who you'd put together."
+              : "Their side — your guess at how they'll pair up."}
+          </p>
         )}
 
-        {/* The pool */}
-        <SectionLabel>Still to place · {unassigned.length}</SectionLabel>
-        {unassigned.length === 0 ? (
+        {unassigned[activeSide].length === 0 ? (
           <p className="px-1 text-sm text-muted-foreground">
-            Everyone's placed. {perSide === 2 && "No two A-tier and no two D-tier are paired together."}
+            Every {meta.teamName(activeSide)} player is placed.
           </p>
         ) : (
           <div className="space-y-3">
@@ -433,15 +465,17 @@ export default function PairingPlan() {
                 </div>
                 {ids.map((pid) => {
                   let disabledReason: string | undefined;
-                  if (alreadyDrafted.has(pid)) disabledReason = "Already picked in the live draft";
-                  else if (targetIndex == null) disabledReason = "Every matchup is full";
-                  else disabledReason = cannotAddToSlot(pairs[targetIndex], pid, perSide, tierMap) ?? undefined;
+                  if (alreadyDrafted[activeSide].has(pid)) disabledReason = "Already picked in the live draft";
+                  else if (targetIndex == null) disabledReason = "Every matchup is full on this side";
+                  else
+                    disabledReason =
+                      cannotAddToSide(matchups[targetIndex][activeSide], pid, perSide, tierMap) ?? undefined;
                   return (
                     <PlayerPickRow
                       key={pid}
                       pid={pid}
                       meta={meta}
-                      teamColor={teamColor}
+                      teamColor={activeColor}
                       selected={false}
                       disabled={!!disabledReason}
                       disabledReason={disabledReason}
@@ -464,7 +498,7 @@ export default function PairingPlan() {
           }}
           rows={4}
           maxLength={4000}
-          placeholder="Who to hold back, who you want to see their A-tier, anything you want your co-captain to know…"
+          placeholder="Who to hold back, which of their pairs you want to draw, anything you want to remember at the tee…"
           className="w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
 
@@ -480,9 +514,6 @@ export default function PairingPlan() {
             ) : plan ? (
               <span className="inline-flex items-center gap-1">
                 <ClipboardList size={12} /> Saved
-                {plan.updatedBy && plan.updatedBy !== player?.id
-                  ? ` by ${meta.nameOf(plan.updatedBy)}`
-                  : ""}
               </span>
             ) : (
               "Not saved yet"

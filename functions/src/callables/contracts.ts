@@ -315,13 +315,21 @@ export interface FinalizePairingDraftResult extends AdminResult {
   matchIds: string[];
 }
 
+/** One planned matchup: your side vs. who you think you'll be facing. */
+export interface PlannedMatchup {
+  teamA: string[];
+  teamB: string[];
+}
+
 export interface SavePairingPlanRequest {
   roundId: string;
-  /** The team whose plan this is; the caller must captain it (admins get no bypass). */
-  team: DraftTeam;
-  /** One entry per planned matchup slot, each holding 0..playersPerSide ids. */
-  pairs: string[][];
-  /** Free-text strategy notes shared with the co-captain. */
+  /**
+   * The whole board, one entry per matchup, each side holding
+   * 0..playersPerSide ids. Saved to the CALLER's own plan — ownership comes
+   * from auth, never from the request.
+   */
+  matchups: PlannedMatchup[];
+  /** Free-text strategy notes, private to the plan's owner. */
   notes?: string;
 }
 

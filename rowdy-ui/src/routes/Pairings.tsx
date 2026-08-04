@@ -201,14 +201,14 @@ export default function Pairings() {
 
   const title = `Pairings — Day ${round?.day ?? ""}`.trim();
 
-  // Shortcut to this captain's own private plan. Shown wherever a captain is
-  // waiting rather than picking — that's exactly when it's useful.
+  // Shortcut to the viewer's own planning board. Shown wherever they're waiting
+  // rather than picking — that's exactly when it's useful.
   const planLink = (
     <ViewTransitionLink
       to={`/round/${roundId}/plan`}
       className="btn btn-secondary inline-flex w-full items-center justify-center gap-2 text-center"
     >
-      <ClipboardList size={16} /> Open your pairing plan
+      <ClipboardList size={16} /> Open your planning board
     </ViewTransitionLink>
   );
 

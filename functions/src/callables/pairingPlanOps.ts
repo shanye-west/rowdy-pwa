@@ -1,19 +1,21 @@
 /**
- * Callable for a team's pre-draft pairing plan (`pairingPlans/{roundId}__{team}`).
+ * Callable for a personal pre-draft pairing plan
+ * (`pairingPlans/{roundId}__{ownerPlayerId}`).
  *
- * A plan is one team's scratchpad: how that captain intends to pair their own
- * side, written down before the draft opens. It is deliberately NOT part of the
- * `pairingDrafts` doc — that one is readable by every signed-in user so the
- * /pairings-tv board works, and a plan the whole field can read is worthless.
+ * A plan is ONE PERSON's mock draft board for a round: how they'd pair their own
+ * side, how they think the opponent will pair theirs, and which of those they
+ * want to see face each other. Each captain, co-captain and admin gets their own
+ * doc so they can each test their own assumptions — nobody reads anyone else's,
+ * admins included. That's why the doc is keyed by player id rather than team,
+ * and why `authorizedUids` holds exactly one uid.
  *
- * Access is that team's captain + co-captain, plus tournament admins (who run
- * the draft and are trusted with both sides' plans). Everyone else is shut out
- * by the `authorizedUids` rule; writes come through here.
+ * Deliberately NOT part of the `pairingDrafts` doc, which is readable by every
+ * signed-in user so the /pairings-tv board works.
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { requireCaptainOrAdmin, planReaderUids } from "../helpers/captainAuth.js";
+import { requirePlanner } from "../helpers/captainAuth.js";
 import { assertPairTiersAllowed, draftPlayersPerSide, DraftError, type DraftTeam } from "../helpers/pairingDraft.js";
 import type { RoundFormat } from "../types.js";
 
@@ -22,30 +24,42 @@ function db() {
 }
 
 const TIERS = ["A", "B", "C", "D"] as const;
-/** Generous ceilings — a real round is ~6 pairs; these only stop abuse. */
-const MAX_PAIRS = 24;
+const TEAMS: DraftTeam[] = ["teamA", "teamB"];
+/** Generous ceilings — a real round is ~6 matchups; these only stop abuse. */
+const MAX_MATCHUPS = 24;
 const MAX_NOTES = 4000;
 
-function isTeam(v: unknown): v is DraftTeam {
-  return v === "teamA" || v === "teamB";
+/** Deterministic plan doc id: one plan per round per person. */
+export function planDocId(roundId: string, ownerPlayerId: string): string {
+  return `${roundId}__${ownerPlayerId}`;
 }
 
-/** Deterministic plan doc id: one plan per round per team. */
-export function planDocId(roundId: string, team: DraftTeam): string {
-  return `${roundId}__${team}`;
+/** Flatten a team's rosterByTier into an id set + a playerId → tier lookup. */
+function rosterAndTiers(rosterByTier: Record<string, string[]> | undefined): {
+  roster: Set<string>;
+  tiers: Record<string, string>;
+} {
+  const roster = new Set<string>();
+  const tiers: Record<string, string> = {};
+  for (const tier of TIERS) {
+    for (const pid of rosterByTier?.[tier] ?? []) {
+      roster.add(pid);
+      tiers[pid] = tier;
+    }
+  }
+  return { roster, tiers };
 }
 
 /**
- * Captain/co-captain of `team`, or any admin: save that team's pairing plan for
- * a round. Overwrites the team's single plan doc, so two people editing at once
- * is last-write-wins; the UI warns when someone else has saved.
+ * Captain, co-captain or admin: save YOUR OWN pairing plan for a round. The
+ * owner is taken from the caller's auth, never from the request, so there's no
+ * way to write (or overwrite) somebody else's plan.
  */
 export const savePairingPlan = onCall(async (request) => {
-  const { roundId, team, pairs, notes } = request.data || {};
+  const { roundId, matchups, notes } = request.data || {};
   if (!roundId || typeof roundId !== "string") throw new HttpsError("invalid-argument", "Missing roundId");
-  if (!isTeam(team)) throw new HttpsError("invalid-argument", "team must be 'teamA' or 'teamB'");
-  if (!Array.isArray(pairs)) throw new HttpsError("invalid-argument", "pairs must be an array");
-  if (pairs.length > MAX_PAIRS) throw new HttpsError("invalid-argument", "Too many pairs");
+  if (!Array.isArray(matchups)) throw new HttpsError("invalid-argument", "matchups must be an array");
+  if (matchups.length > MAX_MATCHUPS) throw new HttpsError("invalid-argument", "Too many matchups");
   if (notes != null && typeof notes !== "string") throw new HttpsError("invalid-argument", "notes must be a string");
   if (typeof notes === "string" && notes.length > MAX_NOTES) {
     throw new HttpsError("invalid-argument", "Notes are too long");
@@ -59,75 +73,80 @@ export const savePairingPlan = onCall(async (request) => {
   if (!tournamentId) throw new HttpsError("failed-precondition", "Round is missing tournamentId");
   if (!format) throw new HttpsError("failed-precondition", "Round has no format set");
 
-  const { playerId } = await requireCaptainOrAdmin(
+  const { uid, playerId } = await requirePlanner(
     request,
     "savePairingPlan",
     { maxCalls: 60, windowSeconds: 60 },
-    tournamentId,
-    team
+    tournamentId
   );
 
   const tSnap = await db().collection("tournaments").doc(tournamentId).get();
   if (!tSnap.exists) throw new HttpsError("not-found", "Tournament not found");
   const t = tSnap.data()!;
 
-  // Validate against the team's ROSTER, not the round's available list: a plan
-  // is often written before availability is staged, and a benched player in a
+  // Validate against each team's ROSTER, not the round's available list: plans
+  // are often written before availability is staged, and a benched player in a
   // saved plan is a UI warning, not a reason to reject the save.
-  const roster = new Set<string>();
-  const tierByPlayer: Record<string, string> = {};
-  const rosterByTier = (t[team]?.rosterByTier || {}) as Record<string, string[]>;
-  for (const tier of TIERS) {
-    for (const pid of rosterByTier[tier] ?? []) {
-      roster.add(pid);
-      tierByPlayer[pid] = tier;
-    }
-  }
+  const sides = {
+    teamA: rosterAndTiers(t.teamA?.rosterByTier),
+    teamB: rosterAndTiers(t.teamB?.rosterByTier),
+  };
 
   const playersPerSide = draftPlayersPerSide(format);
-  const seen = new Set<string>();
-  const cleanPairs: string[][] = [];
-  for (const pair of pairs) {
-    if (!Array.isArray(pair)) throw new HttpsError("invalid-argument", "Each pair must be an array of player ids");
-    if (pair.length > playersPerSide) {
-      throw new HttpsError("invalid-argument", `A pairing holds at most ${playersPerSide} player(s)`);
+  const seen: Record<DraftTeam, Set<string>> = { teamA: new Set(), teamB: new Set() };
+  const clean: { teamA: string[]; teamB: string[] }[] = [];
+
+  for (const matchup of matchups) {
+    if (!matchup || typeof matchup !== "object") {
+      throw new HttpsError("invalid-argument", "Each matchup must be an object");
     }
-    const ids = pair.map(String);
-    for (const pid of ids) {
-      if (!roster.has(pid)) throw new HttpsError("invalid-argument", `Player ${pid} is not on this team's roster`);
-      if (seen.has(pid)) throw new HttpsError("invalid-argument", "A player can only appear in one pairing");
-      seen.add(pid);
-    }
-    // Same A/A + D/D rule the live draft enforces — only once a pair is full,
-    // so a half-filled slot can still be saved mid-thought.
-    if (ids.length === playersPerSide) {
-      try {
-        assertPairTiersAllowed(ids, tierByPlayer);
-      } catch (e) {
-        if (e instanceof DraftError) throw new HttpsError("failed-precondition", e.message);
-        throw e;
+    const cleanMatchup: { teamA: string[]; teamB: string[] } = { teamA: [], teamB: [] };
+    for (const team of TEAMS) {
+      const raw = (matchup as Record<string, unknown>)[team];
+      if (raw != null && !Array.isArray(raw)) {
+        throw new HttpsError("invalid-argument", `matchup.${team} must be an array of player ids`);
       }
+      const ids = ((raw as unknown[]) ?? []).map(String);
+      if (ids.length > playersPerSide) {
+        throw new HttpsError("invalid-argument", `A side holds at most ${playersPerSide} player(s)`);
+      }
+      for (const pid of ids) {
+        if (!sides[team].roster.has(pid)) {
+          throw new HttpsError("invalid-argument", `Player ${pid} is not on that team's roster`);
+        }
+        if (seen[team].has(pid)) {
+          throw new HttpsError("invalid-argument", "A player can only appear in one matchup");
+        }
+        seen[team].add(pid);
+      }
+      // Same A/A + D/D rule the live draft enforces, applied to each side —
+      // only once a side is full, so a half-filled slot still saves mid-thought.
+      if (ids.length === playersPerSide) {
+        try {
+          assertPairTiersAllowed(ids, sides[team].tiers);
+        } catch (e) {
+          if (e instanceof DraftError) throw new HttpsError("failed-precondition", e.message);
+          throw e;
+        }
+      }
+      cleanMatchup[team] = ids;
     }
-    cleanPairs.push(ids);
+    clean.push(cleanMatchup);
   }
 
-  // Re-derived on every save, so adding a co-captain or an admin grants access
-  // to plans that already exist the next time one is saved.
-  const authorizedUids = await planReaderUids(t, team);
-
-  // Full overwrite: the plan is a single small doc the captain re-saves as a
-  // whole, so there's nothing to merge and no history to preserve.
+  // Full overwrite: a plan is one small doc its owner re-saves as a whole.
+  // `authorizedUids` is the owner alone — that's what makes it unreadable by
+  // the other captains AND by admins.
   await db()
     .collection("pairingPlans")
-    .doc(planDocId(roundId, team))
+    .doc(planDocId(roundId, playerId))
     .set({
       roundId,
       tournamentId,
-      team,
-      pairs: cleanPairs,
+      ownerPlayerId: playerId,
+      matchups: clean,
       notes: typeof notes === "string" ? notes : "",
-      authorizedUids,
-      updatedBy: playerId,
+      authorizedUids: [uid],
       updatedAt: FieldValue.serverTimestamp(),
     });
 

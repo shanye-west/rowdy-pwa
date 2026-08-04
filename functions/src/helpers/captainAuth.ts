@@ -68,34 +68,63 @@ export async function requireCaptainOrAdmin(
  * Strict variant of {@link requireCaptainOrAdmin}: the caller must actually be
  * the captain or co-captain of `team` — being an admin is NOT enough.
 /**
- * Auth uids allowed to read a team's pairing plan: that team's captain and
- * co-captain, plus every admin (admins run the draft, so they get both sides').
- * Players with no login are skipped. Stamped into the plan doc's
- * `authorizedUids`, which is what the security rule checks.
+ * Verifies the caller may keep a personal pairing plan for a tournament: any
+ * admin, or the captain/co-captain of EITHER team (a plan covers both sides,
+ * since half of planning is guessing what the opponent will do).
+ *
+ * Unlike {@link requireCaptainOrAdmin} this takes no `team` — it answers "may
+ * you plan at all", not "may you act for this side". Ownership is handled by the
+ * caller: the plan doc is keyed by the returned `playerId`, so nobody can write
+ * anyone else's.
+ *
+ * @returns the caller's auth uid and matching player id
  */
-export async function planReaderUids(
-  tournament: FirebaseFirestore.DocumentData,
-  team: TeamKey
-): Promise<string[]> {
+export async function requirePlanner(
+  request: CallableRequest,
+  functionName: string,
+  limits: RateLimitConfig,
+  tournamentId: string
+): Promise<{ uid: string; playerId: string }> {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  const rateLimit = checkRateLimit(uid, functionName, limits);
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
+  }
+
   const db = getFirestore();
-  const uids = new Set<string>();
-
-  const captainIds = [tournament[team]?.captainId, tournament[team]?.coCaptainId].filter(
-    Boolean
-  ) as string[];
-  if (captainIds.length > 0) {
-    const snaps = await db.getAll(...captainIds.map((pid) => db.collection("players").doc(pid)));
-    for (const snap of snaps) {
-      const authUid = snap.data()?.authUid;
-      if (authUid) uids.add(authUid);
-    }
+  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty) {
+    throw new HttpsError("permission-denied", "No player linked to this account");
+  }
+  const playerDoc = playerSnap.docs[0];
+  const playerId = playerDoc.id;
+  if (playerDoc.data().isAdmin) {
+    return { uid, playerId };
   }
 
-  const adminSnap = await db.collection("players").where("isAdmin", "==", true).get();
-  for (const doc of adminSnap.docs) {
-    const authUid = doc.data()?.authUid;
-    if (authUid) uids.add(authUid);
+  const tournamentSnap = await db.collection("tournaments").doc(tournamentId).get();
+  if (!tournamentSnap.exists) {
+    throw new HttpsError("not-found", "Tournament not found");
+  }
+  const t = tournamentSnap.data();
+  const captains = new Set(
+    [
+      t?.teamA?.captainId,
+      t?.teamA?.coCaptainId,
+      t?.teamB?.captainId,
+      t?.teamB?.coCaptainId,
+    ].filter(Boolean) as string[]
+  );
+  if (!captains.has(playerId)) {
+    throw new HttpsError("permission-denied", "Captain or admin access required");
   }
 
-  return [...uids];
+  return { uid, playerId };
 }

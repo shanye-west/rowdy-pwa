@@ -331,21 +331,28 @@ export type PairingDraftDoc = {
   updatedAt?: FirestoreTimestampLike;
 };
 
+/** One planned matchup on a personal plan: both sides of a hypothetical match. */
+export type PlannedMatchup = {
+  teamA: string[];
+  teamB: string[];
+};
+
 /**
- * One team's private pre-draft pairing plan (`pairingPlans/{roundId}__{team}`).
- * Readable only by that team's captain + co-captain (rules gate on
- * `authorizedUids`); written through the savePairingPlan callable.
+ * One PERSON's private pre-draft mock board
+ * (`pairingPlans/{roundId}__{ownerPlayerId}`): how they'd pair their own side,
+ * how they think the opponent will pair theirs, and who they want facing whom.
+ *
+ * Each captain, co-captain and admin has their own — `authorizedUids` holds
+ * exactly the owner's uid, so no one else can read it, admins included.
  */
 export type PairingPlanDoc = {
   roundId: string;
   tournamentId: string;
-  team: DraftTeamKey;
-  /** One entry per planned matchup slot; each holds 0..playersPerSide ids. */
-  pairs: string[][];
+  ownerPlayerId: string;
+  /** One entry per matchup; each side holds 0..playersPerSide ids. */
+  matchups: PlannedMatchup[];
   notes: string;
   authorizedUids: string[];
-  /** playerId of whoever last saved (captain or co-captain). */
-  updatedBy: string;
   updatedAt?: FirestoreTimestampLike;
 };
 
