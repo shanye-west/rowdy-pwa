@@ -69,8 +69,10 @@ export async function requireCaptainOrAdmin(
  * the captain or co-captain of `team` — being an admin is NOT enough.
 /**
  * Verifies the caller may keep a personal pairing plan for a tournament: any
- * admin, or the captain/co-captain of EITHER team (a plan covers both sides,
- * since half of planning is guessing what the opponent will do).
+ * admin, the captain/co-captain of EITHER team (a plan covers both sides, since
+ * half of planning is guessing what the opponent will do), or any player named
+ * in the tournament's `planAccessPlayerIds` — the hand-picked list for people
+ * who help plan without holding a formal role.
  *
  * Unlike {@link requireCaptainOrAdmin} this takes no `team` — it answers "may
  * you plan at all", not "may you act for this side". Ownership is handled by the
@@ -114,16 +116,17 @@ export async function requirePlanner(
     throw new HttpsError("not-found", "Tournament not found");
   }
   const t = tournamentSnap.data();
-  const captains = new Set(
+  const allowed = new Set(
     [
       t?.teamA?.captainId,
       t?.teamA?.coCaptainId,
       t?.teamB?.captainId,
       t?.teamB?.coCaptainId,
+      ...((t?.planAccessPlayerIds as string[] | undefined) ?? []),
     ].filter(Boolean) as string[]
   );
-  if (!captains.has(playerId)) {
-    throw new HttpsError("permission-denied", "Captain or admin access required");
+  if (!allowed.has(playerId)) {
+    throw new HttpsError("permission-denied", "You don't have access to pairing planning");
   }
 
   return { uid, playerId };

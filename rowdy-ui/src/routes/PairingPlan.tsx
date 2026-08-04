@@ -11,8 +11,10 @@ import { useRosterPlayers } from "../hooks/admin/useRosterPlayers";
 import { usePairingDraft } from "../hooks/usePairingDraft";
 import { usePairingPlan } from "../hooks/usePairingPlan";
 import {
+  canPlanPairings,
   captainTeamOf,
   formatPlayersPerSide,
+  rosterTeamOf,
   usePairingsMeta,
   useRoundPairingData,
 } from "../hooks/usePairingsData";
@@ -60,11 +62,14 @@ export default function PairingPlan() {
   const { draft, loading: draftLoading } = usePairingDraft(roundId);
   const { players } = useRosterPlayers(tournament);
 
-  const isAdmin = !!player?.isAdmin;
-  const myTeam = useMemo(() => captainTeamOf(player?.id, tournament), [player?.id, tournament]);
-  // Captains plan for their own side; admins captain neither, so they just get
-  // the board with no "you" side marked.
-  const canPlan = !!player && (isAdmin || !!myTeam);
+  // "Your side" is the team you captain, or failing that the team you play for —
+  // so an invited planner who's a rostered player still sees their own side
+  // marked. An admin on neither roster gets no "you" side, which is correct.
+  const myTeam = useMemo(
+    () => captainTeamOf(player?.id, tournament) ?? rosterTeamOf(player?.id, tournament),
+    [player?.id, tournament]
+  );
+  const canPlan = useMemo(() => canPlanPairings(player, tournament), [player, tournament]);
 
   const { plan, loading: planLoading } = usePairingPlan(roundId, canPlan ? player?.id : null);
 
@@ -290,9 +295,9 @@ export default function PairingPlan() {
   if (!canPlan) {
     return (
       <Layout title="Pairing plan" showBack>
-        <PairingsMessage icon={<Lock size={24} />} title="Captains & admins only">
-          Planning boards belong to the people setting the pairings. Your matchups show up on the round
-          page once the draft is done.
+        <PairingsMessage icon={<Lock size={24} />} title="Not available to you">
+          Planning boards go to the captains, the admins, and anyone they've brought in to help. Your
+          matchups show up on the round page once the draft is done.
         </PairingsMessage>
       </Layout>
     );
@@ -335,7 +340,7 @@ export default function PairingPlan() {
           </div>
           <p className="text-sm text-muted-foreground">
             Pair both teams — yours, and how you think they'll pair theirs — then line up the matchups you
-            want. Every captain and admin keeps their own board; nobody sees yours.
+            want. Everyone planning keeps their own board; nobody sees yours.
           </p>
 
           {!draft && (

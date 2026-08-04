@@ -48,6 +48,9 @@ export interface TournamentUpdates {
   // true: the "Rules Official" menu link opens the in-app Grok chat; false/absent
   // links out to the free NotebookLM notebook instead.
   rulesOfficialUseGrok?: boolean;
+  // Extra players (beyond captains, co-captains and admins) allowed a personal
+  // pairing-planning board. null/[] clears the list.
+  planAccessPlayerIds?: string[] | null;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }

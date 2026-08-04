@@ -79,6 +79,9 @@ export default function TournamentSettingsForm({
   );
   const [teamA, setTeamA] = useState<TeamFormState>(teamToForm(tournament.teamA));
   const [teamB, setTeamB] = useState<TeamFormState>(teamToForm(tournament.teamB));
+  // Extra planners: players who get a personal pairing-planning board without
+  // being a captain or admin (those two always have one).
+  const [planAccessIds, setPlanAccessIds] = useState<string[]>(tournament.planAccessPlayerIds ?? []);
   const [error, setError] = useState<string | null>(null);
 
   // Operational: settle the tournament-long player-futures markets.
@@ -167,6 +170,7 @@ export default function TournamentSettingsForm({
         test,
         tiebreakerWinner: tiebreakerWinner === "" ? null : tiebreakerWinner,
         totalPointsAvailable: totalPoints,
+        planAccessPlayerIds: planAccessIds.length > 0 ? planAccessIds : null,
         teamA: buildTeam(teamA),
         teamB: buildTeam(teamB),
       });
@@ -393,6 +397,44 @@ export default function TournamentSettingsForm({
           Set only when regulation ended tied and a tiebreaker decided the Cup. Shows a champions
           banner on the home and tournament pages.
         </p>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+        <div className="text-sm font-semibold">Pairing-plan access</div>
+        <p className="text-xs text-gray-500">
+          Captains, co-captains and admins always get a personal planning board. Tick anyone else who
+          should get one — each person's board is private to them.
+        </p>
+        {allPlayers.length === 0 ? (
+          <p className="text-xs text-gray-500">No players loaded.</p>
+        ) : (
+          <div className="max-h-56 overflow-y-auto rounded-md border border-gray-100 p-2">
+            <div className="grid grid-cols-2 gap-1">
+              {[...allPlayers]
+                .sort((a, b) => (a.displayName ?? a.id).localeCompare(b.displayName ?? b.id))
+                .map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={planAccessIds.includes(p.id)}
+                      onChange={(e) =>
+                        setPlanAccessIds((prev) =>
+                          e.target.checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
+                        )
+                      }
+                    />
+                    <span className="truncate">{p.displayName ?? p.id}</span>
+                  </label>
+                ))}
+            </div>
+          </div>
+        )}
+        {planAccessIds.length > 0 && (
+          <p className="text-xs text-gray-700">
+            {planAccessIds.length} extra planner{planAccessIds.length === 1 ? "" : "s"}:{" "}
+            {planAccessIds.map((id) => playerNameById[id] ?? id).join(", ")}
+          </p>
+        )}
       </div>
 
       {renderTeamSection("teamA", teamA, "Team A")}

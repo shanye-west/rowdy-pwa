@@ -10,7 +10,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { getErrorMessage } from "../api/errors";
 import { calculateCourseHandicap } from "../utils/ghin";
-import { playerTierLookup, type Tier } from "../utils/roster";
+import { playerTierLookup, tierPlayerIds, type Tier } from "../utils/roster";
 import { isScrambleFormat, isShambleFormat } from "../types";
 import type { PairingsMeta } from "../components/pairings/types";
 import type {
@@ -157,4 +157,34 @@ export function captainTeamOf(
   if (inTeam("teamA")) return "teamA";
   if (inTeam("teamB")) return "teamB";
   return null;
+}
+
+/** Which team's roster a player is on, captain or not. Null if neither. */
+export function rosterTeamOf(
+  playerId: string | null | undefined,
+  tournament: TournamentDoc | null
+): DraftTeamKey | null {
+  if (!playerId || !tournament) return null;
+  if (tierPlayerIds(tournament.teamA?.rosterByTier).includes(playerId)) return "teamA";
+  if (tierPlayerIds(tournament.teamB?.rosterByTier).includes(playerId)) return "teamB";
+  return null;
+}
+
+/**
+ * May this player keep a personal pairing-planning board? Admins and any
+ * captain/co-captain always can; beyond that it's the hand-picked
+ * `planAccessPlayerIds` list on the tournament, for people who help plan
+ * without holding a formal role.
+ *
+ * Mirrors `requirePlanner` server-side — this only decides what the UI offers;
+ * the callable and the plan doc's own rules are what actually enforce it.
+ */
+export function canPlanPairings(
+  player: { id: string; isAdmin?: boolean } | null | undefined,
+  tournament: TournamentDoc | null
+): boolean {
+  if (!player || !tournament) return false;
+  if (player.isAdmin) return true;
+  if (captainTeamOf(player.id, tournament)) return true;
+  return (tournament.planAccessPlayerIds ?? []).includes(player.id);
 }

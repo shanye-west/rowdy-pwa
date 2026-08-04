@@ -51,6 +51,9 @@ export interface TournamentUpdates {
   // Total points contested across the whole tournament (drives the score-tracker
   // bar + points-to-win). null clears it, reverting to the sum of created matches.
   totalPointsAvailable?: number | null;
+  // Extra players (beyond captains, co-captains and admins) allowed a personal
+  // pairing-planning board. null/[] clears the list.
+  planAccessPlayerIds?: string[] | null;
   teamA?: TeamUpdates;
   teamB?: TeamUpdates;
 }

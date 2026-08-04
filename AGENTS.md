@@ -111,7 +111,7 @@ Most collections are **public-read**, but the group's private data is **signed-i
   - `betsOps.ts` / `settlementOps.ts` — `createBetOffer`, `createBetChallenge`, `acceptBet`, `declineBet`, `cancelBet`, `record/confirm/cancelSettlement`, `settlePlayerFutures`, `settleCupFutures`.
   - `commentOps.ts` — `postComment`, `deleteComment`, `toggleReaction`.
   - `draftOps.ts` — `createPairingDraft`, `startPairingDraft`, `submitDraftPick`, `undoDraftPick`, `resetPairingDraft`, `finalizePairingDraft`. `createPairingDraft` without `firstPickTeam` opens the round in `staging` (availability locked in, no coin flip yet, captains can plan); `startPairingDraft` records the flip and begins picking.
-  - `pairingPlanOps.ts` — `savePairingPlan` (any captain/co-captain or admin, gated by `requirePlanner`). Saves the caller's OWN board only: the doc id is keyed by the player id derived from auth, and `authorizedUids` holds just that person's uid, so no one reads anyone else's plan — admins included.
+  - `pairingPlanOps.ts` — `savePairingPlan`, gated by `requirePlanner`: any admin, any captain/co-captain, **or any player listed in `tournament.planAccessPlayerIds`** (the hand-picked list of extra planners, managed from the admin tournament-settings form). Saves the caller's OWN board only: the doc id is keyed by the player id derived from auth, and `authorizedUids` holds just that person's uid, so no one reads anyone else's plan — admins included.
   - `pushOps.ts` — `registerPushToken`, `setNotificationPrefs`.
   - `statsOps.ts` — `computeRoundRecap`, `recalculateAllStats`, `recalculateMatchStrokes`.
   - `courseOps.ts` — course CRUD.

@@ -6,6 +6,7 @@ import { AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoundData } from "../hooks/useRoundData";
+import { canPlanPairings as canPlanPairingsFor } from "../hooks/usePairingsData";
 import { formatRoundType } from "../utils";
 import {
   getPlayerShortName as getPlayerShortNameFromLookup,
@@ -152,10 +153,12 @@ function RoundComponent() {
     tournament?.teamB?.captainId,
     tournament?.teamB?.coCaptainId,
   ].filter(Boolean) as string[];
-  // The same roles also get the planning board — captains for their own team,
-  // admins for either — and unlike the draft it needs no draft doc to exist.
   const canSeePairings =
     !!player && (!!player.isAdmin || captainIds.includes(player.id)) && matches.length === 0;
+  // Planning is a wider audience than the draft: captains and admins, plus any
+  // player the admin has invited via tournament.planAccessPlayerIds. It also
+  // needs no draft doc to exist — that's the point of it.
+  const canPlanPairings = canPlanPairingsFor(player, tournament ?? null) && matches.length === 0;
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
@@ -254,26 +257,30 @@ function RoundComponent() {
           </Card>
         </section>
 
-        {canSeePairings && (
+        {(canSeePairings || canPlanPairings) && (
           <section className="space-y-2">
-            <Button
-              asChild
-              variant="outline"
-              className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
-            >
-              <ViewTransitionLink to={`/round/${round.id}/pairings`}>
-                <ListChecks className="mr-2 h-4 w-4" /> Set pairings (captains' draft)
-              </ViewTransitionLink>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
-            >
-              <ViewTransitionLink to={`/round/${round.id}/plan`}>
-                <ClipboardList className="mr-2 h-4 w-4" /> Plan pairings (only you see it)
-              </ViewTransitionLink>
-            </Button>
+            {canSeePairings && (
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
+              >
+                <ViewTransitionLink to={`/round/${round.id}/pairings`}>
+                  <ListChecks className="mr-2 h-4 w-4" /> Set pairings (captains' draft)
+                </ViewTransitionLink>
+              </Button>
+            )}
+            {canPlanPairings && (
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-xl bg-card/90 shadow-sm hover:bg-muted"
+              >
+                <ViewTransitionLink to={`/round/${round.id}/plan`}>
+                  <ClipboardList className="mr-2 h-4 w-4" /> Plan pairings (only you see it)
+                </ViewTransitionLink>
+              </Button>
+            )}
           </section>
         )}
 

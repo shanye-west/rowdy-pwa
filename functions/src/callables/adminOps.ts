@@ -112,6 +112,7 @@ function sanitizeTeamUpdates(team: Record<string, unknown>, label: string): Reco
  *     rulesOfficialUseGrok?,  // true: menu "Rules Official" → in-app Grok chat; false/absent → NotebookLM link
  *     tiebreakerWinner?: "teamA" | "teamB" | null,  // null clears it
  *     totalPointsAvailable?: number | null,  // manual tournament point total; null reverts to auto-sum of created matches
+ *     planAccessPlayerIds?: string[] | null,  // extra players allowed a pairing-planning board; null clears
  *     teamA?: { name?, color?, logo?, captainId?, coCaptainId?, rosterByTier?, handicapByPlayer? },
  *     teamB?: { ...same }
  *   }
@@ -181,6 +182,19 @@ export const updateTournament = onCall(async (request) => {
           throw new HttpsError("invalid-argument", "updates.totalPointsAvailable must be a positive number or null");
         }
         break;
+      case "planAccessPlayerIds": {
+        // Extra planners: players who aren't captains or admins but still get a
+        // personal pairing-planning board. null/[] clears the list.
+        if (value === null) {
+          toMerge.planAccessPlayerIds = FieldValue.delete();
+          break;
+        }
+        if (!Array.isArray(value) || value.some((id) => typeof id !== "string" || !id.trim())) {
+          throw new HttpsError("invalid-argument", "updates.planAccessPlayerIds must be an array of player ids");
+        }
+        toMerge.planAccessPlayerIds = [...new Set(value.map((id) => (id as string).trim()))];
+        break;
+      }
       case "teamA":
       case "teamB":
         if (typeof value !== "object" || value === null) {

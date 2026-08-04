@@ -192,6 +192,9 @@ export type TournamentDoc = {
   // so real API usage is reserved for legitimate in-round questions. When false
   // or absent (the default), it links out to the free NotebookLM notebook.
   rulesOfficialUseGrok?: boolean;
+  // Players who get a personal pairing-planning board without being a captain,
+  // co-captain or admin — the hand-picked list of people who help plan.
+  planAccessPlayerIds?: string[];
 };
 
 // NEW: Hole definition (static data)
