@@ -25,21 +25,44 @@ export interface BetMatchupProps {
   amount: number;
   /** Optional strip below the head-to-head row — e.g. live match status. */
   footer?: ReactNode;
+  /**
+   * Drop the tile's own border/rounding because a parent already supplies the
+   * box. Without this, a matchup rendered inside a Card draws a second outline
+   * around the first — a card inside a card.
+   */
+  bare?: boolean;
+  /**
+   * The viewer has money on this bet. Marks it in the stake column — which
+   * already has a label line — rather than costing the card a whole extra row
+   * for one word. Used on the field-wide In Play board to pick your own bets
+   * out of everyone else's.
+   */
+  mine?: boolean;
 }
 
-export default function BetMatchup({ teamA, teamB, amount, footer }: BetMatchupProps) {
+export default function BetMatchup({ teamA, teamB, amount, footer, bare, mine }: BetMatchupProps) {
   return (
-    <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+    <div className={bare ? "" : "overflow-hidden rounded-lg ring-1 ring-border"}>
       <div className="flex items-stretch">
         <SideCell side={teamA} align="left" />
-        <div className="flex shrink-0 flex-col items-center justify-center bg-muted px-2.5 py-2">
-          <span className="text-[0.55rem] font-bold uppercase tracking-wide text-muted-foreground">Bet</span>
+        <div
+          className={`flex shrink-0 flex-col items-center justify-center px-2.5 py-2 ${
+            mine ? "bg-emerald-50" : "bg-muted"
+          }`}
+        >
+          <span
+            className={`text-[0.6rem] font-bold uppercase tracking-wide ${
+              mine ? "text-emerald-700" : "text-muted-foreground"
+            }`}
+          >
+            {mine ? "Yours" : "Bet"}
+          </span>
           <span className="text-sm font-bold tabular-nums text-foreground">${amount}</span>
         </div>
         <SideCell side={teamB} align="right" />
       </div>
       {footer && (
-        <div className="border-t border-border bg-muted/60 px-3 py-1.5 text-[0.7rem] font-semibold">
+        <div className="border-t border-border/60 bg-muted/60 px-3 py-1.5 text-xs font-semibold">
           {footer}
         </div>
       )}

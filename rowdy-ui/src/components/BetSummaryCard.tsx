@@ -34,11 +34,11 @@ function BetSummaryCard({ net, wins, losses, pushes, owedToYou, youOwe }: BetSum
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-white/10 p-3">
-          <div className="text-[0.55rem] font-semibold uppercase tracking-wide text-white/50">Owed to you</div>
+          <div className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">Owed to you</div>
           <div className="text-lg font-bold tabular-nums text-emerald-400">${owedToYou}</div>
         </div>
         <div className="rounded-xl bg-white/10 p-3">
-          <div className="text-[0.55rem] font-semibold uppercase tracking-wide text-white/50">You owe</div>
+          <div className="text-[0.6rem] font-semibold uppercase tracking-wide text-white/50">You owe</div>
           <div className="text-lg font-bold tabular-nums text-red-400">${youOwe}</div>
         </div>
       </div>
