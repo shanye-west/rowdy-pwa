@@ -264,8 +264,12 @@ export interface CreatePairingDraftRequest {
   /** Player ids available this round, per team (each list belongs to that team's roster). */
   availableTeamA: string[];
   availableTeamB: string[];
-  /** Coin-flip outcome: which team nominates match 1. */
-  firstPickTeam: DraftTeam;
+  /**
+   * Coin-flip outcome: which team nominates match 1. Omit to create the draft
+   * in `staging` — availability locked in, coin flip recorded later via
+   * `startPairingDraft`, so captains can plan against the real rosters first.
+   */
+  firstPickTeam?: DraftTeam | null;
   /** Overwrite an existing (non-finalized) draft for this round. */
   reset?: boolean;
 }
@@ -273,6 +277,13 @@ export interface CreatePairingDraftRequest {
 export interface CreatePairingDraftResult extends AdminResult {
   roundId: string;
   totalMatches: number;
+  phase: "staging" | "drafting";
+}
+
+export interface StartPairingDraftRequest {
+  roundId: string;
+  /** Coin-flip outcome: which team nominates match 1. */
+  firstPickTeam: DraftTeam;
 }
 
 export interface SubmitDraftPickRequest {
@@ -302,6 +313,16 @@ export interface FinalizePairingDraftRequest {
 export interface FinalizePairingDraftResult extends AdminResult {
   roundId: string;
   matchIds: string[];
+}
+
+export interface SavePairingPlanRequest {
+  roundId: string;
+  /** The team whose plan this is; the caller must captain it (admins get no bypass). */
+  team: DraftTeam;
+  /** One entry per planned matchup slot, each holding 0..playersPerSide ids. */
+  pairs: string[][];
+  /** Free-text strategy notes shared with the co-captain. */
+  notes?: string;
 }
 
 // ============================================================================

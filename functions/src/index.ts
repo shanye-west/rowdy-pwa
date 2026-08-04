@@ -2208,11 +2208,15 @@ export { upsertCourse, deleteCourse } from "./callables/courseOps.js";
 
 export {
   createPairingDraft,
+  startPairingDraft,
   submitDraftPick,
   undoDraftPick,
   resetPairingDraft,
   finalizePairingDraft,
 } from "./callables/draftOps.js";
+
+// Captains' private per-team pairing plans (pairingPlans/{roundId}__{team}).
+export { savePairingPlan } from "./callables/pairingPlanOps.js";
 
 // ============================================================================
 // SPORTSBOOK CALLABLES

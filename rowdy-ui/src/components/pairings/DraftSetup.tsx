@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Dices, Check, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Check, CheckCircle2, AlertTriangle, ClipboardList } from "lucide-react";
 import PlayerAvatar from "../PlayerAvatar";
+import TeamFlipPicker from "./TeamFlipPicker";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { tierStyle } from "../../utils/tierColors";
@@ -104,13 +104,20 @@ export interface DraftSetupProps {
   firstPick: DraftTeamKey;
   setFirstPick: (t: DraftTeamKey) => void;
   busy: boolean;
+  /** Lock availability in without a coin flip so captains can plan (staging). */
+  onStage: () => void;
+  /** Coin flip is known — open the draft for picking right now. */
   onStart: () => void;
 }
 
 /**
- * Admin pre-draft setup: bench any players sitting out, record the coin-flip
- * winner (who nominates match 1), and start the draft once both sides are
- * balanced.
+ * Admin pre-draft setup: bench anyone sitting out, then take one of two paths.
+ *
+ * Staging is the normal one — availability is knowable days ahead, the coin flip
+ * isn't, and captains can't plan against a roster they can't see. Staging locks
+ * in who's playing and opens the captains' plan pages; the flip is recorded
+ * later. The second path is for when you're already at the tee and want to run
+ * the whole thing now.
  */
 export default function DraftSetup({
   tournament,
@@ -123,69 +130,24 @@ export default function DraftSetup({
   firstPick,
   setFirstPick,
   busy,
+  onStage,
   onStart,
 }: DraftSetupProps) {
-  const [flashed, setFlashed] = useState<DraftTeamKey | null>(null);
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
-
   const countA = availA.size;
   const countB = availB.size;
   const balanced = countA === countB && countA > 0 && countA % perSide === 0;
   const totalMatches = balanced ? countA / perSide : 0;
 
-  const flipCoin = () => {
-    const winner: DraftTeamKey = Math.random() < 0.5 ? "teamA" : "teamB";
-    setFirstPick(winner);
-    setFlashed(winner);
-    navigator.vibrate?.(20);
-    if (flashTimer.current) clearTimeout(flashTimer.current);
-    flashTimer.current = setTimeout(() => setFlashed(null), 800);
-  };
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Bench anyone sitting out, record the coin-flip winner (they nominate match 1), then start the
-        draft.{perSide === 2 && " Pairs can't be two A-tier or two D-tier players."}
+        Bench anyone sitting out, then open the round for planning — captains can build their pairings
+        while you wait on the coin flip.
+        {perSide === 2 && " Pairs can't be two A-tier or two D-tier players."}
       </p>
 
       <TeamAvailabilityPicker team="teamA" sel={availA} setSel={setAvailA} tournament={tournament} meta={meta} />
       <TeamAvailabilityPicker team="teamB" sel={availB} setSel={setAvailB} tournament={tournament} meta={meta} />
-
-      {/* Coin flip */}
-      <div className="card p-4 space-y-3">
-        <div className="font-semibold text-foreground">Who nominates first?</div>
-        <div className="grid grid-cols-2 gap-2">
-          {(["teamA", "teamB"] as DraftTeamKey[]).map((team) => {
-            const on = firstPick === team;
-            const color = meta.teamColor(team);
-            return (
-              <button
-                key={team}
-                type="button"
-                onClick={() => setFirstPick(team)}
-                aria-pressed={on}
-                className={cn(
-                  "rounded-xl border px-3 py-3 text-sm font-bold transition-all duration-200",
-                  flashed === team && "animate-soft-pulse",
-                  on ? "border-transparent text-white" : "border-border text-muted-foreground hover:bg-muted"
-                )}
-                style={on ? { background: color } : undefined}
-              >
-                {meta.teamName(team)}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={flipCoin}
-          className="btn-ghost mx-auto inline-flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
-          <Dices size={16} className={cn(flashed && "motion-safe:animate-spin")} /> Flip a coin
-        </button>
-      </div>
 
       {/* Balance status */}
       <div
@@ -208,8 +170,33 @@ export default function DraftSetup({
         </span>
       </div>
 
-      <button className="btn btn-primary w-full" disabled={!balanced || busy} onClick={onStart}>
-        {busy ? "Starting…" : balanced ? `Start draft · ${totalMatches} matchups` : "Start draft"}
+      <div className="space-y-1.5">
+        <button
+          className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
+          disabled={!balanced || busy}
+          onClick={onStage}
+        >
+          <ClipboardList size={16} />
+          {busy ? "Working…" : balanced ? `Open for planning · ${totalMatches} matchups` : "Open for planning"}
+        </button>
+        <p className="px-1 text-xs text-muted-foreground">
+          Locks in who's playing and lets both captains start planning. Nobody picks until you record the
+          coin flip.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          or draft now
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <TeamFlipPicker meta={meta} value={firstPick} onChange={setFirstPick} />
+
+      <button className="btn btn-secondary w-full" disabled={!balanced || busy} onClick={onStart}>
+        {busy ? "Starting…" : balanced ? `Start draft now · ${totalMatches} matchups` : "Start draft now"}
       </button>
     </div>
   );

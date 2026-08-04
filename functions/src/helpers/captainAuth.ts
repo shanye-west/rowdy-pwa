@@ -1,6 +1,7 @@
 /**
- * Auth guard for the pairings draft: allows a tournament admin OR the
- * captain/co-captain of the team the caller is acting for.
+ * Auth guard for the pairings draft and plans: `requireCaptainOrAdmin` allows a
+ * tournament admin OR the captain/co-captain of the team the caller is acting
+ * for.
  *
  * Like admin status, captain status lives on data keyed by player id (the
  * tournament's `teamX.captainId` / `coCaptainId`), so security rules can't
@@ -61,4 +62,40 @@ export async function requireCaptainOrAdmin(
   }
 
   return { uid, playerId, isAdmin: false };
+}
+
+/**
+ * Strict variant of {@link requireCaptainOrAdmin}: the caller must actually be
+ * the captain or co-captain of `team` — being an admin is NOT enough.
+/**
+ * Auth uids allowed to read a team's pairing plan: that team's captain and
+ * co-captain, plus every admin (admins run the draft, so they get both sides').
+ * Players with no login are skipped. Stamped into the plan doc's
+ * `authorizedUids`, which is what the security rule checks.
+ */
+export async function planReaderUids(
+  tournament: FirebaseFirestore.DocumentData,
+  team: TeamKey
+): Promise<string[]> {
+  const db = getFirestore();
+  const uids = new Set<string>();
+
+  const captainIds = [tournament[team]?.captainId, tournament[team]?.coCaptainId].filter(
+    Boolean
+  ) as string[];
+  if (captainIds.length > 0) {
+    const snaps = await db.getAll(...captainIds.map((pid) => db.collection("players").doc(pid)));
+    for (const snap of snaps) {
+      const authUid = snap.data()?.authUid;
+      if (authUid) uids.add(authUid);
+    }
+  }
+
+  const adminSnap = await db.collection("players").where("isAdmin", "==", true).get();
+  for (const doc of adminSnap.docs) {
+    const authUid = doc.data()?.authUid;
+    if (authUid) uids.add(authUid);
+  }
+
+  return [...uids];
 }

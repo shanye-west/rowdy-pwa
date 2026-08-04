@@ -304,6 +304,14 @@ export type DraftTurn = {
   team: DraftTeamKey;
 };
 
+/**
+ * `staging` = availability is locked in but the coin flip hasn't happened, so
+ * `firstPickTeam` is null, `matches` is empty and `turn` is null. Captains use
+ * that window to build their plan (see PairingPlanDoc); an admin then records
+ * the flip and the draft moves to `drafting`.
+ */
+export type DraftPhase = "staging" | "drafting" | "review" | "finalized";
+
 export type PairingDraftDoc = {
   roundId: string;
   tournamentId: string;
@@ -311,8 +319,8 @@ export type PairingDraftDoc = {
   playersPerSide: number;
   totalMatches: number;
   available: { teamA: string[]; teamB: string[] };
-  firstPickTeam: DraftTeamKey;
-  phase: "drafting" | "review" | "finalized";
+  firstPickTeam: DraftTeamKey | null;
+  phase: DraftPhase;
   matches: DraftMatch[];
   turn: DraftTurn | null;
   tierByPlayer: Record<string, "A" | "B" | "C" | "D">;
@@ -320,6 +328,24 @@ export type PairingDraftDoc = {
   createdBy: string;
   finalizedMatchIds?: string[];
   createdAt?: FirestoreTimestampLike;
+  updatedAt?: FirestoreTimestampLike;
+};
+
+/**
+ * One team's private pre-draft pairing plan (`pairingPlans/{roundId}__{team}`).
+ * Readable only by that team's captain + co-captain (rules gate on
+ * `authorizedUids`); written through the savePairingPlan callable.
+ */
+export type PairingPlanDoc = {
+  roundId: string;
+  tournamentId: string;
+  team: DraftTeamKey;
+  /** One entry per planned matchup slot; each holds 0..playersPerSide ids. */
+  pairs: string[][];
+  notes: string;
+  authorizedUids: string[];
+  /** playerId of whoever last saved (captain or co-captain). */
+  updatedBy: string;
   updatedAt?: FirestoreTimestampLike;
 };
 

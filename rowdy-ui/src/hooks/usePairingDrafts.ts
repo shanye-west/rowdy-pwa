@@ -59,13 +59,16 @@ export interface LivePairing {
  * drafting round over a review one, and the latest round on ties. `rounds` must
  * be sorted by day so `number` lines up with the displayed "Round N". Returns
  * null once the admin finalizes, so callers auto-hide any "live" affordance.
+ *
+ * A `staging` draft doesn't count: availability is set but nobody's picking, so
+ * announcing it as live would send the whole group to an empty board.
  */
 export function findLivePairing(rounds: RoundDoc[], drafts: Record<string, PairingDraftDoc>): LivePairing | null {
   const rank = (d: PairingDraftDoc) => (d.phase === "drafting" ? 0 : 1); // drafting beats review
   let bestIdx = -1;
   rounds.forEach((r, idx) => {
     const d = drafts[r.id];
-    if (!d || d.phase === "finalized") return;
+    if (!d || d.phase === "finalized" || d.phase === "staging") return;
     if (bestIdx === -1) {
       bestIdx = idx;
       return;

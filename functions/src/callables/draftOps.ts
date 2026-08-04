@@ -62,7 +62,13 @@ function toHttpsError(e: unknown): HttpsError {
  * Admin: create (or reset) the draft for a round. Reads the round's format and
  * course, validates the available rosters, computes the tier lookup and the
  * read-gating authorizedUids (captains + co-captains + admins), and writes the
- * draft in `drafting` phase with the snake turn initialized.
+ * draft.
+ *
+ * `firstPickTeam` is the coin flip, which isn't known until everyone's at the
+ * tee — so it's optional. Omit it and the draft is created in `staging`: the
+ * available/benched lists are locked in (which is what captains need to plan
+ * against) with no matches and no turn until `startPairingDraft` records the
+ * flip. Pass it and the draft opens straight into `drafting` as before.
  */
 export const createPairingDraft = onCall(async (request) => {
   const { playerId } = await requireAdmin(request, "createPairingDraft", { maxCalls: 20, windowSeconds: 60 });
@@ -74,7 +80,8 @@ export const createPairingDraft = onCall(async (request) => {
   if (!Array.isArray(availableTeamA) || !Array.isArray(availableTeamB)) {
     throw new HttpsError("invalid-argument", "availableTeamA and availableTeamB must be arrays");
   }
-  if (!isTeam(firstPickTeam)) {
+  const staged = firstPickTeam == null;
+  if (!staged && !isTeam(firstPickTeam)) {
     throw new HttpsError("invalid-argument", "firstPickTeam must be 'teamA' or 'teamB'");
   }
 
@@ -170,10 +177,12 @@ export const createPairingDraft = onCall(async (request) => {
     playersPerSide,
     totalMatches,
     available: { teamA: teamAIds, teamB: teamBIds },
-    firstPickTeam,
-    phase: "drafting" as const,
-    matches: buildInitialMatches(totalMatches, firstPickTeam),
-    turn: initialTurn(firstPickTeam),
+    // Staged drafts carry no coin flip, so there's nothing to build the match
+    // slots or the opening turn from yet — startPairingDraft fills all three in.
+    firstPickTeam: staged ? null : (firstPickTeam as DraftTeam),
+    phase: staged ? ("staging" as const) : ("drafting" as const),
+    matches: staged ? [] : buildInitialMatches(totalMatches, firstPickTeam as DraftTeam),
+    turn: staged ? null : initialTurn(firstPickTeam as DraftTeam),
     tierByPlayer,
     authorizedUids: [...authorizedUids],
     createdBy: playerId,
@@ -182,7 +191,45 @@ export const createPairingDraft = onCall(async (request) => {
   };
 
   await draftRef.set(doc);
-  return { success: true, roundId, totalMatches };
+  return { success: true, roundId, totalMatches, phase: doc.phase };
+});
+
+/**
+ * Admin: record the coin flip and open a staged draft for picking. This is the
+ * step that used to be baked into createPairingDraft — split out so the round
+ * can be staged (and planned against) days before anyone knows who picks first.
+ */
+export const startPairingDraft = onCall(async (request) => {
+  await requireAdmin(request, "startPairingDraft", { maxCalls: 20, windowSeconds: 60 });
+  const { roundId, firstPickTeam } = request.data || {};
+  if (!roundId || typeof roundId !== "string") throw new HttpsError("invalid-argument", "Missing roundId");
+  if (!isTeam(firstPickTeam)) {
+    throw new HttpsError("invalid-argument", "firstPickTeam must be 'teamA' or 'teamB'");
+  }
+
+  const draftRef = db().collection("pairingDrafts").doc(roundId);
+
+  try {
+    await db().runTransaction(async (tx) => {
+      const fresh = await tx.get(draftRef);
+      if (!fresh.exists) throw new DraftError("not-found", "Draft not found");
+      const state = fresh.data() as unknown as DraftState;
+      if (state.phase !== "staging") {
+        throw new DraftError("already-started", "This draft has already started. Reset it to start over.");
+      }
+      tx.update(draftRef, {
+        firstPickTeam,
+        phase: "drafting",
+        matches: buildInitialMatches(state.totalMatches, firstPickTeam),
+        turn: initialTurn(firstPickTeam),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+  } catch (e) {
+    throw toHttpsError(e);
+  }
+
+  return { success: true };
 });
 
 /**
@@ -241,6 +288,8 @@ export const undoDraftPick = onCall(async (request) => {
       if (!fresh.exists) throw new DraftError("not-found", "Draft not found");
       const state = fresh.data() as unknown as DraftState;
       if (state.phase === "finalized") throw new DraftError("finalized", "This draft is already finalized");
+      // A staged draft has no coin flip yet, so there's no snake order to rewind.
+      if (state.phase === "staging") throw new DraftError("not-started", "This draft hasn't started yet");
 
       const last = lastPlacement(state);
       if (!last) throw new DraftError("nothing-to-undo", "There is no pick to undo");

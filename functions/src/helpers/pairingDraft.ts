@@ -12,7 +12,13 @@
 import type { RoundFormat } from "../types.js";
 
 export type DraftTeam = "teamA" | "teamB";
-export type DraftPhase = "drafting" | "review" | "finalized";
+/**
+ * `staging` is the pre-coin-flip phase: availability is locked in (so captains
+ * can plan against the real rosters) but nobody knows who nominates first yet,
+ * so there are no matches and no turn. `startPairingDraft` flips it to
+ * `drafting`. The state machine below only ever runs on drafting/review states.
+ */
+export type DraftPhase = "staging" | "drafting" | "review" | "finalized";
 export type DraftTier = "A" | "B" | "C" | "D";
 
 export interface DraftMatch {
@@ -28,7 +34,11 @@ export interface DraftTurn {
   team: DraftTeam;
 }
 
-/** The slice of the draft doc the state machine reads and rewrites. */
+/**
+ * The slice of the draft doc the state machine reads and rewrites. Only valid
+ * for a *started* draft — a `staging` doc has `firstPickTeam: null` and no
+ * matches, so callables must reject that phase before handing state in here.
+ */
 export interface DraftState {
   playersPerSide: number;
   totalMatches: number;

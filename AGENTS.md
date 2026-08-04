@@ -76,7 +76,8 @@ Most collections are **public-read**, but the group's private data is **signed-i
 | `roundRecaps/{roundId}` | Scoring leaders, per-hole averages, vs-all records (see `SCORING-LEADERS-IMPLEMENTATION.md`) |
 | `bets`, `betSettlements` | Peer-to-peer sportsbook wagers + settle-up ledger |
 | `comments/{id}` (+ `replies/`) | Match-thread & sportsbook trash-talk, emoji reactions, one-level replies |
-| `pairingDrafts/{id}` | Live captains' snake-draft state |
+| `pairingDrafts/{id}` | Live captains' snake-draft state (phases: `staging` → `drafting` → `review` → `finalized`) |
+| `pairingPlans/{roundId}__{team}` | One team's private pre-draft pairing plan — that team's captains + admins only |
 | `notifications`, `pushTokens` | In-app notification feed + FCM web-push tokens |
 | `matchNotifyState`, `tournamentNotifyState` | Idempotency guards for push notifications |
 | `rounds/{id}/skinsResults/computed` | Computed skins pots/winners (subcollection) |
@@ -109,7 +110,8 @@ Most collections are **public-read**, but the group's private data is **signed-i
   - `matchOps.ts` — `editMatch`, `deleteMatch`, `setMatchLock`, `seedMatch`.
   - `betsOps.ts` / `settlementOps.ts` — `createBetOffer`, `createBetChallenge`, `acceptBet`, `declineBet`, `cancelBet`, `record/confirm/cancelSettlement`, `settlePlayerFutures`, `settleCupFutures`.
   - `commentOps.ts` — `postComment`, `deleteComment`, `toggleReaction`.
-  - `draftOps.ts` — `createPairingDraft`, `submitDraftPick`, `undoDraftPick`, `resetPairingDraft`, `finalizePairingDraft`.
+  - `draftOps.ts` — `createPairingDraft`, `startPairingDraft`, `submitDraftPick`, `undoDraftPick`, `resetPairingDraft`, `finalizePairingDraft`. `createPairingDraft` without `firstPickTeam` opens the round in `staging` (availability locked in, no coin flip yet, captains can plan); `startPairingDraft` records the flip and begins picking.
+  - `pairingPlanOps.ts` — `savePairingPlan` (captain/co-captain of that team, or any admin). Read access is stamped into the doc's `authorizedUids` by `planReaderUids` — that team's captains plus every admin — and re-derived on each save, so a newly added admin or co-captain gets access the next time the plan is saved.
   - `pushOps.ts` — `registerPushToken`, `setNotificationPrefs`.
   - `statsOps.ts` — `computeRoundRecap`, `recalculateAllStats`, `recalculateMatchStrokes`.
   - `courseOps.ts` — course CRUD.
@@ -127,6 +129,7 @@ Most collections are **public-read**, but the group's private data is **signed-i
 ## Security rules (`firestore.rules`)
 
 - Most collections are **public-read**, granted per-collection — there is deliberately **no `/{document=**}` wildcard** (a wildcard would override the narrower rules). The exceptions are the group's private data — `bets`, `betSettlements`, `comments` (+ `comments/*/replies`), and `pairingDrafts` — which are **signed-in-read** (`request.auth != null`); and `players/{id}/private/**` (PII), which is **server-only** (`if false`). The `/sportsbook` and `/chat` pages are gated client-side by `RequireAuth`, and the match-page comment thread shows a login prompt when signed out.
+- `pairingPlans/{planId}` is the one collection gated **per-document**: `request.auth.uid in resource.data.authorizedUids`, which the server stamps with that team's captain + co-captain plus every admin. Note the rule reads `resource.data`, so a *missing* plan also returns `permission-denied` — clients that already know the viewer may open the plan must read that as "no plan saved yet" (see `usePairingPlan`).
 - Client **match writes** are restricted to the `holes` map only (`affectedKeys().hasOnly(['holes'])`), and only for a rostered player in `match.authorizedUids` — **or** anyone when the tournament has `openPublicEdits: true` (a temporary QA toggle; turn it back off). Locked matches reject writes.
 - The **top-level `players` doc is server-only-write** (`allow write: if false`) — there is no client self-link path. Account linking (writing `authUid` + the private `email`) is done only by the admin `linkAuthToPlayer` callable via the Admin SDK. (The former self-link rule let any signed-in user claim an unlinked player's `authUid` — including an unlinked admin's — which this closes.) A `notifications` doc's owner may still update only `read`/`readAt`.
 - **There is no working `isAdmin()` in rules** — player docs are keyed by player id, not auth uid, so `get(/players/$(uid))` never resolves. Admin authorization is enforced **server-side in the callables**; the `RequireAdmin` UI gate is UX only. Everything not client-writable is written by Cloud Functions via the Admin SDK (rules don't apply).

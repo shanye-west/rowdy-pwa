@@ -13,6 +13,8 @@ import type {
   FinalizePairingDraftRequest,
   FinalizePairingDraftResult,
   ResetPairingDraftRequest,
+  SavePairingPlanRequest,
+  StartPairingDraftRequest,
   SubmitDraftPickRequest,
   UndoDraftPickRequest,
 } from "./adminContracts";
@@ -24,8 +26,11 @@ function call<Req, Res>(name: string) {
 
 export const draftApi = {
   createPairingDraft: call<CreatePairingDraftRequest, CreatePairingDraftResult>("createPairingDraft"),
+  startPairingDraft: call<StartPairingDraftRequest, AdminResult>("startPairingDraft"),
   submitDraftPick: call<SubmitDraftPickRequest, AdminResult>("submitDraftPick"),
   undoDraftPick: call<UndoDraftPickRequest, AdminResult>("undoDraftPick"),
   resetPairingDraft: call<ResetPairingDraftRequest, AdminResult>("resetPairingDraft"),
   finalizePairingDraft: call<FinalizePairingDraftRequest, FinalizePairingDraftResult>("finalizePairingDraft"),
+  /** Captains only (no admin bypass) — saves that team's private pairing plan. */
+  savePairingPlan: call<SavePairingPlanRequest, AdminResult>("savePairingPlan"),
 };

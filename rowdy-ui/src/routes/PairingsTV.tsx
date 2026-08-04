@@ -47,6 +47,9 @@ const PHASE_PRIORITY: Record<PairingDraftDoc["phase"], number> = {
   drafting: 0,
   review: 1,
   finalized: 2,
+  // A staged round has no board to show yet, so it never wins auto-detect over
+  // a round that does — you can still reach it by typing its round number.
+  staging: 3,
 };
 
 // ---------------------------------------------------------------------------
@@ -270,7 +273,7 @@ function RoundSwitcher({
       {rounds.map((r, i) => {
         const d = drafts[r.id];
         const isActive = r.id === currentRoundId;
-        const dot = !d
+        const dot = !d || d.phase === "staging"
           ? "bg-slate-300"
           : d.phase === "drafting"
             ? "bg-amber-500"
@@ -465,6 +468,17 @@ export default function PairingsTV() {
       <FullScreenNote title="Waiting for the draft" footer={switcher}>
         {label} for {tournament.name} {round ? "haven't" : "hasn't"} opened yet. This board updates automatically the
         moment {round ? "they do" : "it does"}.
+      </FullScreenNote>
+    );
+  }
+  // Staged: who's playing is set, but there's no coin flip yet and so no match
+  // slots to draw. Say so rather than rendering an empty board.
+  if (draft.phase === "staging") {
+    return (
+      <FullScreenNote title="Waiting on the coin flip" footer={switcher}>
+        Round {rounds.findIndex((r) => r.id === round.id) + 1} is set — {draft.totalMatches} matchup
+        {draft.totalMatches === 1 ? "" : "s"}, captains are planning. Picking starts the moment the flip is
+        recorded, and this board follows along.
       </FullScreenNote>
     );
   }

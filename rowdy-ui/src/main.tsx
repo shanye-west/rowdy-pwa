@@ -20,6 +20,7 @@ import RequireAuth from "./components/RequireAuth";
 const Match = lazyWithRecovery(() => import("./routes/Match"));
 const Round = lazyWithRecovery(() => import("./routes/Round"));
 const Pairings = lazyWithRecovery(() => import("./routes/Pairings"));
+const PairingPlan = lazyWithRecovery(() => import("./routes/PairingPlan"));
 const PairingsTV = lazyWithRecovery(() => import("./routes/PairingsTV"));
 const Skins = lazyWithRecovery(() => import("./routes/Skins"));
 const RoundRecap = lazyWithRecovery(() => import("./routes/RoundRecap"));
@@ -67,6 +68,9 @@ const router = createBrowserRouter(
         { index: true, element: <App /> },
         { path: "round/:roundId", element: <Round /> },
         { path: "round/:roundId/pairings", element: <Pairings /> },
+        // Captains' private planning board — usable before a draft exists, so
+        // it's deliberately NOT gated on one (the page checks captaincy itself).
+        { path: "round/:roundId/plan", element: <RequireAuth><PairingPlan /></RequireAuth> },
         { path: "round/:roundId/skins", element: <Skins /> },
         { path: "round/:roundId/recap", element: <RoundRecap /> },
         { path: "match/:matchId", element: <Match /> },

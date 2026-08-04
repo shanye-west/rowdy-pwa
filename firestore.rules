@@ -220,5 +220,18 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false;
     }
+
+    // Captains' private pairing plans (pairingPlans/{roundId}__{team}): one
+    // team's own pre-draft scratchpad. The opposite of pairingDrafts above —
+    // a plan the other side can read is worthless, so reads are limited to the
+    // captain/co-captain uids the server stamped into authorizedUids (a
+    // tournament admin gets in only if they hold one of those roles). Writes go
+    // through the savePairingPlan callable via the Admin SDK.
+    match /pairingPlans/{planId} {
+      allow read: if request.auth != null
+                  && resource.data.keys().hasAny(['authorizedUids'])
+                  && request.auth.uid in resource.data.authorizedUids;
+      allow write: if false;
+    }
   }
 }

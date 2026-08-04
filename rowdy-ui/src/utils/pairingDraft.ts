@@ -27,6 +27,8 @@ export function respondingTeam(firstPickTeam: DraftTeamKey, matchIndex: number):
  * to whoever made the last pick (or an admin).
  */
 export function lastPlacementTeam(draft: PairingDraftDoc): DraftTeamKey | null {
+  // Staged (pre-coin-flip): no snake order exists yet, so nothing to undo.
+  if (!draft.firstPickTeam) return null;
   if (draft.phase === "review" || !draft.turn) {
     return respondingTeam(draft.firstPickTeam, draft.totalMatches - 1);
   }

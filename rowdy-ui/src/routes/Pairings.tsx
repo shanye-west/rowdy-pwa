@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { Lock, Hourglass, Trophy, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { db } from "../firebase";
+import { Lock, Hourglass, Trophy, AlertTriangle, CheckCircle2, ClipboardList, Dices } from "lucide-react";
 import Layout from "../components/Layout";
 import { Modal, ModalActions } from "../components/Modal";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
@@ -11,28 +9,24 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import { useRosterPlayers } from "../hooks/admin/useRosterPlayers";
 import { usePairingDraft } from "../hooks/usePairingDraft";
+import {
+  captainTeamOf,
+  formatPlayersPerSide,
+  usePairingsMeta,
+  useRoundPairingData,
+} from "../hooks/usePairingsData";
 import { draftApi } from "../api/draft";
 import { getErrorMessage } from "../api/errors";
-import { calculateCourseHandicap } from "../utils/ghin";
-import { playerTierLookup, tierPlayerIds, type Tier } from "../utils/roster";
-import { isScrambleFormat, isShambleFormat } from "../types";
+import { tierPlayerIds } from "../utils/roster";
 import { lastPlacementTeam, otherTeam } from "../utils/pairingDraft";
 import DraftSetup from "../components/pairings/DraftSetup";
 import DraftBoard from "../components/pairings/DraftBoard";
+import TeamFlipPicker from "../components/pairings/TeamFlipPicker";
 import TurnHeader from "../components/pairings/TurnHeader";
 import PickPanel from "../components/pairings/PickPanel";
 import WaitingPanel from "../components/pairings/WaitingPanel";
 import PairingsMessage from "../components/pairings/PairingsMessage";
-import type { PairingsMeta } from "../components/pairings/types";
-import type { CourseDoc, DraftTeamKey, RoundDoc, RoundFormat, TournamentDoc } from "../types";
-
-function formatPlayersPerSide(format: RoundFormat | null | undefined): number {
-  if (format === "singles") return 1;
-  if (format === "fourManScramble") return 4;
-  return 2;
-}
-
-const TEAM_FALLBACK: Record<DraftTeamKey, string> = { teamA: "Team A", teamB: "Team B" };
+import type { DraftTeamKey } from "../types";
 
 /** A board-shaped skeleton shown while the round/draft loads. */
 function BoardSkeleton() {
@@ -51,11 +45,7 @@ export default function Pairings() {
   const { player } = useAuth();
 
   // Supporting data (all public-read): the round, its tournament, and course.
-  const [round, setRound] = useState<RoundDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
-  const [course, setCourse] = useState<CourseDoc | null>(null);
-  const [loadingData, setLoadingData] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { round, tournament, course, loading: loadingData, error: loadError } = useRoundPairingData(roundId);
 
   // The live, captain/admin-gated draft doc.
   const { draft, loading: draftLoading, denied, error } = usePairingDraft(roundId);
@@ -71,44 +61,29 @@ export default function Pairings() {
   const [availB, setAvailB] = useState<Set<string>>(new Set());
   const [firstPick, setFirstPick] = useState<DraftTeamKey>("teamA");
 
-  useEffect(() => {
-    if (!roundId) return;
-    let cancelled = false;
-    (async () => {
-      setLoadingData(true);
-      setLoadError(null);
-      try {
-        const rSnap = await getDoc(doc(db, "rounds", roundId));
-        if (!rSnap.exists()) {
-          if (!cancelled) setLoadError("Round not found");
-          return;
-        }
-        const r = { id: rSnap.id, ...rSnap.data() } as RoundDoc;
-        const [tSnap, cSnap] = await Promise.all([
-          r.tournamentId ? getDoc(doc(db, "tournaments", r.tournamentId)) : Promise.resolve(null),
-          r.courseId ? getDoc(doc(db, "courses", r.courseId)) : Promise.resolve(null),
-        ]);
-        if (cancelled) return;
-        setRound(r);
-        setTournament(tSnap?.exists() ? ({ id: tSnap.id, ...tSnap.data() } as TournamentDoc) : null);
-        setCourse(cSnap?.exists() ? ({ id: cSnap.id, ...cSnap.data() } as CourseDoc) : null);
-      } catch (e) {
-        if (!cancelled) setLoadError(getErrorMessage(e, "Failed to load round"));
-      } finally {
-        if (!cancelled) setLoadingData(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [roundId]);
-
-  // Default every rostered player to "available" once the tournament loads.
+  // Seed the setup form: from the draft's own lists when there is one (so
+  // "change who's playing" on a staged round reopens with that benching intact,
+  // not everyone re-checked), otherwise every rostered player is available.
+  // Keyed on the lists themselves so unrelated draft updates — every pick, say —
+  // don't churn this state.
+  const availSeeded = useRef(false);
+  const draftAvailKey = draft
+    ? `${(draft.available?.teamA ?? []).join(",")}|${(draft.available?.teamB ?? []).join(",")}`
+    : null;
   useEffect(() => {
     if (!tournament) return;
+    if (draftAvailKey != null) {
+      const [a, b] = draftAvailKey.split("|");
+      setAvailA(new Set(a ? a.split(",") : []));
+      setAvailB(new Set(b ? b.split(",") : []));
+      availSeeded.current = true;
+      return;
+    }
+    if (availSeeded.current) return; // a reset just cleared the draft — keep the form
     setAvailA(new Set(tierPlayerIds(tournament.teamA?.rosterByTier)));
     setAvailB(new Set(tierPlayerIds(tournament.teamB?.rosterByTier)));
-  }, [tournament]);
+    availSeeded.current = true;
+  }, [tournament, draftAvailKey]);
 
   // Clear the in-progress selection whenever the turn changes.
   const turnKey = draft?.turn ? `${draft.turn.matchIndex}-${draft.turn.awaiting}-${draft.turn.team}` : draft?.phase;
@@ -136,60 +111,17 @@ export default function Pairings() {
 
   // ---- Derived lookups ----
   const isAdmin = !!player?.isAdmin;
-  const myTeam: DraftTeamKey | null = useMemo(() => {
-    if (!player || !tournament) return null;
-    const inTeam = (team: DraftTeamKey) =>
-      [tournament[team]?.captainId, tournament[team]?.coCaptainId].filter(Boolean).includes(player.id);
-    if (inTeam("teamA")) return "teamA";
-    if (inTeam("teamB")) return "teamB";
-    return null;
-  }, [player, tournament]);
+  const myTeam = useMemo(() => captainTeamOf(player?.id, tournament), [player?.id, tournament]);
   const canAct = (team: DraftTeamKey) => isAdmin || myTeam === team;
 
-  const handicapByPlayer = useMemo(
-    () => ({ ...(tournament?.teamA?.handicapByPlayer || {}), ...(tournament?.teamB?.handicapByPlayer || {}) }),
-    [tournament]
-  );
-  const courseParams = useMemo(() => {
-    if (!course) return null;
-    return {
-      slope: course.slope ?? 113,
-      rating: typeof course.rating === "number" ? course.rating : course.par ?? 72,
-      par: course.par ?? 72,
-    };
-  }, [course]);
-
-  const tierLookup = useMemo(
-    () => draft?.tierByPlayer ?? playerTierLookup(tournament),
-    [draft, tournament]
-  );
-  const nameMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const p of players) m.set(p.id, p.displayName || p.id);
-    return m;
-  }, [players]);
-
-  const teamName = (team: DraftTeamKey) => tournament?.[team]?.name || TEAM_FALLBACK[team];
-  const teamColor = (team: DraftTeamKey) =>
-    tournament?.[team]?.color || (team === "teamA" ? "var(--team-a-default)" : "var(--team-b-default)");
-  const grossOnly = isScrambleFormat(round?.format) || isShambleFormat(round?.format);
-
   // Shared view-model passed to the draft sub-components.
-  const meta: PairingsMeta = {
+  const meta = usePairingsMeta({
+    tournament,
+    course,
     players,
-    nameOf: (pid) => nameMap.get(pid) ?? pid,
-    chOf: (pid) => {
-      if (!courseParams) return null;
-      const hi = handicapByPlayer[pid];
-      if (typeof hi !== "number") return null;
-      return Math.round(calculateCourseHandicap(hi, courseParams.slope, courseParams.rating, courseParams.par));
-    },
-    tierOf: (pid) => tierLookup[pid] as Tier | undefined,
-    teamName,
-    teamColor,
-    teamLogo: (team) => tournament?.[team]?.logo,
-    grossOnly,
-  };
+    format: round?.format,
+    tierByPlayer: draft?.tierByPlayer ?? null,
+  });
 
   // ---- Actions ----
   const run = async (fn: () => Promise<unknown>, fallback: string) => {
@@ -269,6 +201,17 @@ export default function Pairings() {
 
   const title = `Pairings — Day ${round?.day ?? ""}`.trim();
 
+  // Shortcut to this captain's own private plan. Shown wherever a captain is
+  // waiting rather than picking — that's exactly when it's useful.
+  const planLink = (
+    <ViewTransitionLink
+      to={`/round/${roundId}/plan`}
+      className="btn btn-secondary inline-flex w-full items-center justify-center gap-2 text-center"
+    >
+      <ClipboardList size={16} /> Open your pairing plan
+    </ViewTransitionLink>
+  );
+
   // ===========================================================================
   // No draft yet
   // ===========================================================================
@@ -276,8 +219,13 @@ export default function Pairings() {
     if (!isAdmin) {
       return (
         <Layout title={title} showBack>
-          <PairingsMessage icon={<Hourglass size={24} />} title="Draft hasn't started">
-            An admin will open the captains' draft before the round. Check back shortly.
+          <PairingsMessage
+            icon={<Hourglass size={24} />}
+            title="Draft hasn't started"
+            action={myTeam || isAdmin ? planLink : undefined}
+          >
+            An admin will open the captains' draft before the round. You can start planning your side in
+            the meantime.
           </PairingsMessage>
         </Layout>
       );
@@ -315,6 +263,16 @@ export default function Pairings() {
               firstPick={firstPick}
               setFirstPick={setFirstPick}
               busy={busy}
+              onStage={() =>
+                run(async () => {
+                  await draftApi.createPairingDraft({
+                    roundId,
+                    availableTeamA: [...availA],
+                    availableTeamB: [...availB],
+                  });
+                  showToast({ variant: "success", message: "Captains can start planning" });
+                }, "Failed to open the round")
+              }
               onStart={() =>
                 run(
                   () =>
@@ -330,6 +288,58 @@ export default function Pairings() {
             />
           )}
         </div>
+      </Layout>
+    );
+  }
+
+  // ===========================================================================
+  // Staging — availability locked in, coin flip still to come
+  // ===========================================================================
+  if (draft.phase === "staging") {
+    return (
+      <Layout title={title} showBack>
+        <div className="mx-auto max-w-2xl space-y-4 p-4">
+          <div className="flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">
+            <ClipboardList size={18} className="mt-0.5 shrink-0" />
+            <span>
+              Who's playing is locked in — {draft.totalMatches} matchup
+              {draft.totalMatches === 1 ? "" : "s"}. Captains can plan now; picking starts once the coin
+              flip is recorded.
+            </span>
+          </div>
+
+          {(myTeam || isAdmin) && planLink}
+
+          {isAdmin ? (
+            <>
+              <TeamFlipPicker meta={meta} value={firstPick} onChange={setFirstPick} />
+              <button
+                className="btn btn-primary inline-flex w-full items-center justify-center gap-2"
+                disabled={busy}
+                onClick={() =>
+                  run(
+                    () => draftApi.startPairingDraft({ roundId, firstPickTeam: firstPick }),
+                    "Failed to start the draft"
+                  )
+                }
+              >
+                <Dices size={16} /> {busy ? "Starting…" : `${meta.teamName(firstPick)} picks first — start draft`}
+              </button>
+              <button
+                className="btn btn-secondary w-full"
+                disabled={busy}
+                onClick={() => setConfirmAction("reset")}
+              >
+                Change who's playing
+              </button>
+            </>
+          ) : (
+            <PairingsMessage icon={<Hourglass size={24} />} title="Waiting on the coin flip">
+              An admin records who nominates first, and the board goes live here.
+            </PairingsMessage>
+          )}
+        </div>
+        {renderConfirmModal()}
       </Layout>
     );
   }
@@ -425,14 +435,18 @@ export default function Pairings() {
             onUndo={doUndo}
           />
         ) : (
-          <WaitingPanel
-            teamName={meta.teamName(actingTeam)}
-            teamColor={meta.teamColor(actingTeam)}
-            isResponse={isResponse}
-            canUndo={canUndo}
-            busy={busy}
-            onUndo={doUndo}
-          />
+          <>
+            <WaitingPanel
+              teamName={meta.teamName(actingTeam)}
+              teamColor={meta.teamColor(actingTeam)}
+              isResponse={isResponse}
+              canUndo={canUndo}
+              busy={busy}
+              onUndo={doUndo}
+            />
+            {/* Waiting on the other captain is exactly when you want your plan. */}
+            {(myTeam || isAdmin) && planLink}
+          </>
         )}
       </div>
     </Layout>
@@ -444,19 +458,24 @@ export default function Pairings() {
   function renderConfirmModal() {
     const open = confirmAction !== null;
     const isFinalize = confirmAction === "finalize";
+    // Resetting a staged draft only reopens the availability step — nothing has
+    // been picked yet, and captains' plans live in their own docs either way.
+    const isStaged = draft?.phase === "staging";
     return (
       <Modal
         isOpen={open}
         onClose={() => setConfirmAction(null)}
-        title={isFinalize ? "Create matches?" : "Reset draft?"}
+        title={isFinalize ? "Create matches?" : isStaged ? "Change who's playing?" : "Reset draft?"}
       >
         <p className="mb-5 text-center text-sm text-muted-foreground">
           {isFinalize
             ? `This locks the pairings and creates ${draft?.totalMatches ?? ""} matches for the round.`
-            : "This discards the current pairings and returns to setup."}
+            : isStaged
+              ? "This reopens the availability step. Captains' saved plans are kept."
+              : "This discards the current pairings and returns to setup. Captains' saved plans are kept."}
         </p>
         <ModalActions
-          primaryLabel={isFinalize ? "Create matches" : "Reset draft"}
+          primaryLabel={isFinalize ? "Create matches" : isStaged ? "Change availability" : "Reset draft"}
           primaryClass={isFinalize ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
           onPrimary={() => {
             const action = confirmAction;
