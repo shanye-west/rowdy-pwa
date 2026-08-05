@@ -133,6 +133,61 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ------------------------------------------------------------------
+    // SIDE EVENTS — the optional, non-scoring 9-hole game (3-man scramble).
+    // Deliberately NOT modelled as rounds/matches: every scoring, stats,
+    // skins and betting trigger fires on `matches/{matchId}`, so staying out
+    // of that collection is what guarantees this game awards no Cup points
+    // and generates no player stats.
+    // ------------------------------------------------------------------
+
+    // Side event config (name, course, nine, payouts, lock): public read,
+    // server-only write via the sideEventOps callables.
+    match /sideEvents/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Side event teams. This is the SECOND client-writable collection (after
+    // `matches`) and follows exactly the same shape: a rostered member may
+    // update the `holes` map and nothing else. It is a top-level collection
+    // rather than a `sideEvents` subcollection specifically so this write path
+    // exists — score entry has to be a direct client write for Firestore's
+    // offline queue to carry it, the same way the match scorecard works.
+    match /sideEventTeams/{teamId} {
+      // The team's own players, resolved server-side into auth uids by
+      // saveSideEventTeam (mirrors match.authorizedUids).
+      function isTeamMember() {
+        return request.auth != null
+          && request.auth.uid in resource.data.get('authorizedUids', []);
+      }
+
+      // Field-level guard: only the `holes` map may change.
+      function onlyHolesChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['holes']);
+      }
+
+      // Shape guard: `holes` stays a map and a write may never DROP an existing
+      // hole key. affectedKeys() can't distinguish a surgical `holes.12.gross`
+      // update from a full-map replacement, so without this one client could
+      // wipe every other hole already entered. Score VALUES are validated
+      // client-side and by the admin fix-up callable; the rule only protects
+      // the shape.
+      function holesShapeValid() {
+        return request.resource.data.holes is map
+          && request.resource.data.holes.keys().hasAll(resource.data.get('holes', {}).keys());
+      }
+
+      allow read: if true;
+      // `locked` is denormalized onto each team doc by updateSideEvent so this
+      // check needs no cross-document get() on every score save.
+      allow update: if isTeamMember()
+        && onlyHolesChanged()
+        && holesShapeValid()
+        && resource.data.get('locked', false) != true;
+      allow create, delete: if false;
+    }
+
     // Courses: public read, server-only write
     match /courses/{courseId} {
       allow read: if true;

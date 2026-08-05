@@ -2202,6 +2202,20 @@ export {
 export { upsertCourse, deleteCourse } from "./callables/courseOps.js";
 
 // ============================================================================
+// SIDE EVENT CALLABLES
+// The optional, non-scoring 9-hole game (3-man scramble). Lives in its own
+// collections so no scoring/stats trigger can ever see it.
+// ============================================================================
+
+export {
+  createSideEvent,
+  updateSideEvent,
+  deleteSideEvent,
+  saveSideEventTeam,
+  deleteSideEventTeam,
+} from "./callables/sideEventOps.js";
+
+// ============================================================================
 // PAIRINGS DRAFT CALLABLES
 // Live snake-draft for round pairings (pairingDrafts/{roundId}).
 // ============================================================================

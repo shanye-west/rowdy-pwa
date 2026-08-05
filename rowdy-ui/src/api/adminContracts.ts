@@ -6,7 +6,15 @@
  * projects, so types are duplicated rather than shared).
  */
 
-import type { RoundFormat, TierMap, BetMarket, BetOverUnderMetric, BetSide } from "../types";
+import type {
+  RoundFormat,
+  TierMap,
+  BetMarket,
+  BetOverUnderMetric,
+  BetSide,
+  SideEventNine,
+  SideEventPayout,
+} from "../types";
 
 /** Default success payload returned by most admin callables. */
 export interface AdminResult {
@@ -124,6 +132,60 @@ export interface DeleteRoundRequest {
 export interface DeleteRoundResult extends AdminResult {
   roundId: string;
   matchesDeleted: number;
+}
+
+// ============================================================================
+// SIDE EVENT
+// The optional, non-scoring 9-hole game (3-man scramble). Separate collections
+// from rounds/matches on purpose — see functions/src/callables/sideEventOps.ts.
+// ============================================================================
+
+export interface SideEventUpdates {
+  name?: string;
+  courseId?: string | null;
+  nine?: SideEventNine;
+  payouts?: SideEventPayout[];
+  locked?: boolean;
+  hidden?: boolean;
+}
+
+export interface CreateSideEventRequest extends SideEventUpdates {
+  tournamentId: string;
+}
+
+export interface CreateSideEventResult extends AdminResult {
+  sideEventId: string;
+}
+
+export interface UpdateSideEventRequest {
+  sideEventId: string;
+  updates: SideEventUpdates;
+}
+
+export interface DeleteSideEventRequest {
+  sideEventId: string;
+}
+
+export interface DeleteSideEventResult extends AdminResult {
+  teamsDeleted: number;
+}
+
+export interface SaveSideEventTeamRequest {
+  sideEventId: string;
+  /** Omit to create a new team. */
+  teamId?: string;
+  playerIds: string[];
+  /** Admin score fix; keyed by real course hole number. */
+  holes?: Record<string, { gross: number | null }>;
+}
+
+export interface SaveSideEventTeamResult extends AdminResult {
+  teamId: string;
+}
+
+export interface DeleteSideEventTeamRequest {
+  sideEventId: string;
+  teamId: string;
 }
 
 // ============================================================================

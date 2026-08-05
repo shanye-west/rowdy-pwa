@@ -81,6 +81,8 @@ Most collections are **public-read**, but the group's private data is **signed-i
 | `notifications`, `pushTokens` | In-app notification feed + FCM web-push tokens |
 | `matchNotifyState`, `tournamentNotifyState` | Idempotency guards for push notifications |
 | `rounds/{id}/skinsResults/computed` | Computed skins pots/winners (subcollection) |
+| `sideEvents/{id}` | An optional, for-fun game (the 3-man scramble): `name`, `courseId`, `nine` (`front`/`back`), `payouts[]`, `locked`, `hidden`. **Awards no Cup points and records no stats** |
+| `sideEventTeams/{id}` | One free-form team in a side event: `sideEventId`, `teamNumber`, `playerIds[]` (any mix of rosters), `authorizedUids[]`, `locked`, `holes.{N}.gross` |
 
 ## Match formats & scoring
 
@@ -94,10 +96,23 @@ Most collections are **public-read**, but the group's private data is **signed-i
 | `twoManScramble` | `teamAGross`, `teamBGross` + `teamADrive`/`teamBDrive` | team gross vs team gross |
 
 - **`fourManScramble` is historical-only.** It exists in the scoring/UI paths solely to render past-tournament data. **Do not** offer it for new rounds or add it to current-format docs/selection UI.
+- **Side events are not a `RoundFormat`.** The optional 9-hole games (the 3-man scramble) are stroke play between free-form teams, award no points and record no stats, so they live in their own `sideEvents`/`sideEventTeams` collections — see "Side events" below. Don't add one as a round format.
 - **Handicaps**: `strokesReceived` is an 18-element array of 0/1 (course handicaps capped at 18 → never >1 stroke/hole). Applies to **singles** and **twoManBestBall** only.
 - **Drive tracking**: shamble & scramble record which player's drive was used per hole (`trackDrives` on the round).
 - **Match status/result**: win = full `pointsValue`, halve (AS) = half, loss = 0. Early closure when lead > holes remaining (`closed`); `dormie` when lead == holes remaining; tied through 18 → AS.
 - Use the type guards in `rowdy-ui/src/types.ts` (`isSinglesFormat`, `isFourPlayerFormat`, `isDriveTrackingFormat`, …) rather than string comparisons. Hole shapes: `SinglesHoleInput`, `BestBallHoleInput`, `ShambleHoleInput`, `ScrambleHoleInput`; narrow the loose `HoleInputLoose` when the format is known. Normalize timestamps with `toDateOrNull()` and the `FirestoreTimestampLike` alias.
+
+## Side events (the optional 9-hole games)
+
+A **side event** is a for-fun game played alongside the Cup — currently a 9-hole 3-man scramble one afternoon. It is *not* part of the tournament:
+
+- **No Cup points, no stats.** This is structural, not a flag: every scoring, stats, skins, betting and notification trigger fires on `matches/{matchId}` or `playerMatchFacts/{factId}`, and a side event never writes those collections. Nothing in `functions/src/scoring/`, `computeMatchOnWrite`, `updateMatchFacts` or `computeRoundTotals` knows side events exist — **keep it that way**.
+- **Teams are free-form.** A player from either roster can be on any team, which the `teamAPlayers`/`teamBPlayers` match document cannot express.
+- **Not on the tournament home page.** `App.tsx`/`Tournament.tsx` list `rounds` only. The hamburger menu is the sole entry point, driven by the denormalized `tournament.sideEvents[]` (`{ id, name, hidden }`) that the callables maintain, so the link costs no extra reads. `hidden` drops the link while keeping the data.
+- **Stroke play, gross, admin-configurable payouts.** The page shows a top-3 podium + full standings instead of a points total. `payouts[]` is a variable-length list of `{ place, amount }`, editable at any time from the admin form; tied teams pool the places they cover and split evenly.
+- Ranking is by strokes-vs-par over holes played (`thru` is displayed), which is the honest live order and collapses to raw total once everyone finishes.
+
+Where it lives: `functions/src/callables/sideEventOps.ts`; `rowdy-ui/src/utils/sideEventScoring.ts` (pure, unit-tested ranking + payout split), `hooks/useSideEvent.ts`, `routes/SideEvent.tsx` (`/side-event/:id`), `routes/SideEventScorecard.tsx` (`/side-event/:id/team/:teamId`), `routes/admin/SideEventAdmin.tsx` + `components/admin/SideEventForm.tsx`. The leaderboard is computed entirely client-side — there is no side-event Cloud Function trigger.
 
 ## Cloud Functions map (`functions/src/`)
 
@@ -114,6 +129,7 @@ Most collections are **public-read**, but the group's private data is **signed-i
   - `pairingPlanOps.ts` — `savePairingPlan`, gated by `requirePlanner`: any admin, any captain/co-captain, **or any player listed in `tournament.planAccessPlayerIds`** (the hand-picked list of extra planners, managed from the admin tournament-settings form). Saves the caller's OWN board only: the doc id is keyed by the player id derived from auth, and `authorizedUids` holds just that person's uid, so no one reads anyone else's plan — admins included.
   - `pushOps.ts` — `registerPushToken`, `setNotificationPrefs`.
   - `statsOps.ts` — `computeRoundRecap`, `recalculateAllStats`, `recalculateMatchStrokes`.
+  - `sideEventOps.ts` — `createSideEvent`, `updateSideEvent`, `deleteSideEvent`, `saveSideEventTeam`, `deleteSideEventTeam` (see "Side events"). `updateSideEvent` fans `locked` out to the team docs (the rule checks the team's own copy, so no cross-doc `get()` per score save) and keeps `tournament.sideEvents[]` in sync. `saveSideEventTeam` also takes an optional `holes` map — the admin score-override path.
   - `courseOps.ts` — course CRUD.
   - `contracts.ts` — shared zod request/response contracts.
 
@@ -131,6 +147,7 @@ Most collections are **public-read**, but the group's private data is **signed-i
 - Most collections are **public-read**, granted per-collection — there is deliberately **no `/{document=**}` wildcard** (a wildcard would override the narrower rules). The exceptions are the group's private data — `bets`, `betSettlements`, `comments` (+ `comments/*/replies`), and `pairingDrafts` — which are **signed-in-read** (`request.auth != null`); and `players/{id}/private/**` (PII), which is **server-only** (`if false`). The `/sportsbook` and `/chat` pages are gated client-side by `RequireAuth`, and the match-page comment thread shows a login prompt when signed out.
 - `pairingPlans/{planId}` is the one collection gated **per-document**: `request.auth.uid in resource.data.authorizedUids`, which the server stamps with the owner's uid alone. Note the rule reads `resource.data`, so a *missing* plan also returns `permission-denied` — for your own plan that just means "nothing saved yet" (see `usePairingPlan`).
 - Client **match writes** are restricted to the `holes` map only (`affectedKeys().hasOnly(['holes'])`), and only for a rostered player in `match.authorizedUids` — **or** anyone when the tournament has `openPublicEdits: true` (a temporary QA toggle; turn it back off). Locked matches reject writes.
+- `sideEventTeams` is the **second (and only other) client-writable collection**, with the same shape: a member of that team (`authorizedUids`) may change `holes` and nothing else, and only while unlocked. It is a top-level collection rather than a `sideEvents` subcollection precisely because `rounds/{id}/{document=**}` is server-write-only and score entry needs a direct client write for the offline queue to carry it. Both rules also assert `holes.keys().hasAll(existing keys)` — a write may never *drop* a hole, which is what stops one scorer clobbering another's entries. **Consequently, clearing a score writes `gross: null`; it never deletes the key.** `sideEvents` itself is public-read/server-write.
 - The **top-level `players` doc is server-only-write** (`allow write: if false`) — there is no client self-link path. Account linking (writing `authUid` + the private `email`) is done only by the admin `linkAuthToPlayer` callable via the Admin SDK. (The former self-link rule let any signed-in user claim an unlinked player's `authUid` — including an unlinked admin's — which this closes.) A `notifications` doc's owner may still update only `read`/`readAt`.
 - **There is no working `isAdmin()` in rules** — player docs are keyed by player id, not auth uid, so `get(/players/$(uid))` never resolves. Admin authorization is enforced **server-side in the callables**; the `RequireAdmin` UI gate is UX only. Everything not client-writable is written by Cloud Functions via the Admin SDK (rules don't apply).
 - **App Check**: the client initialises reCAPTCHA-Enterprise App Check when `VITE_APPCHECK_SITE_KEY` (the reCAPTCHA Enterprise key id) is set (no-op without it). `askRulesOfficial` has `enforceAppCheck: true` — it rejects calls without a valid App Check token. That endpoint is also **admin-only** (`requireAdmin`) during the Grok rollout, so the enforcement only affects admins (whose app already ships App Check).

@@ -195,6 +195,11 @@ export type TournamentDoc = {
   // Players who get a personal pairing-planning board without being a captain,
   // co-captain or admin — the hand-picked list of people who help plan.
   planAccessPlayerIds?: string[];
+  // Denormalized index of this tournament's side events (the optional, for-fun
+  // 9-hole games — see SideEventDoc). Maintained server-side by the sideEventOps
+  // callables so the hamburger menu can link them without a second listener on
+  // every page. `hidden` drops the link while keeping the data.
+  sideEvents?: { id: string; name: string; hidden?: boolean }[];
 };
 
 // NEW: Hole definition (static data)
@@ -255,6 +260,66 @@ export type CourseDoc = {
   rating?: number; // Course rating (e.g., 70.5)
   slope?: number; // Slope rating (e.g., 121)
   holes: HoleInfo[];
+};
+
+// ============================================================================
+// SIDE EVENTS
+// The optional, for-fun 9-hole game (currently the 3-man scramble) that runs
+// alongside the Cup. It awards NO tournament points and generates NO stats,
+// and its teams are free-form — a player from either roster can be on any team.
+//
+// This is enforced structurally, not by a flag: side events live in their own
+// collections, and every scoring/stats/skins/betting trigger fires on
+// `matches/{matchId}` or `playerMatchFacts/{factId}`. Do not model these as
+// rounds or matches.
+// ============================================================================
+
+/** Which nine of an 18-hole course a side event plays. */
+export type SideEventNine = "front" | "back";
+
+/** One paid finishing position. `place` is 1-based; ties split the pooled cash. */
+export type SideEventPayout = {
+  place: number;
+  amount: number;
+};
+
+/** sideEvents/{eventId} — public read, server-only write. */
+export type SideEventDoc = {
+  id: string;
+  tournamentId: string;
+  name: string;
+  courseId?: string | null;
+  nine: SideEventNine;
+  payouts?: SideEventPayout[];
+  locked?: boolean;
+  /** Hides the hamburger-menu link without deleting the event. */
+  hidden?: boolean;
+};
+
+/**
+ * sideEventTeams/{teamId} — top-level, NOT a subcollection.
+ *
+ * Score entry is a direct client write to `holes` (see firestore.rules), which
+ * is what lets Firestore's offline queue carry scores exactly as it does on the
+ * match scorecard. `authorizedUids` and `locked` are denormalized here so the
+ * rule needs no cross-document read on every save.
+ */
+export type SideEventTeamDoc = {
+  id: string;
+  sideEventId: string;
+  tournamentId?: string;
+  teamNumber: number;
+  playerIds: string[];
+  authorizedUids?: string[];
+  locked?: boolean;
+  /**
+   * Keyed by REAL course hole number ("1".."9" or "10".."18").
+   *
+   * A cleared hole keeps its key with `gross: null` rather than being deleted —
+   * the security rule forbids dropping hole keys, which is what stops one
+   * scorer's write wiping another's. Anything non-numeric reads as "not scored".
+   */
+  holes?: Record<string, { gross: number | null } | undefined>;
 };
 
 export type MatchDoc = {

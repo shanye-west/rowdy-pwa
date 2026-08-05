@@ -201,6 +201,64 @@ export interface MatchData {
 }
 
 // ============================================================================
+// SIDE EVENTS
+// A fun, optional 9-hole game (e.g. the 3-man scramble) that is deliberately
+// NOT part of the Cup: no tournament points, no playerMatchFacts, no stats, and
+// teams are free-form (a player from either roster can be on any team).
+//
+// It lives in its own collections precisely so none of the scoring machinery
+// (all of which triggers on `matches/{matchId}` / `playerMatchFacts/{factId}`)
+// can ever see it. Do NOT model these as rounds/matches.
+// ============================================================================
+
+/** Which nine of an 18-hole course a side event plays. */
+export type SideEventNine = "front" | "back";
+
+/** One paid finishing position. `place` is 1-based; ties split the pooled cash. */
+export interface SideEventPayout {
+  place: number;
+  amount: number;
+}
+
+/** sideEvents/{eventId} — server-write only. */
+export interface SideEventDoc {
+  id: string;
+  tournamentId: string;
+  name: string;                    // e.g. "3-Man Scramble"
+  courseId: string | null;
+  nine: SideEventNine;
+  payouts: SideEventPayout[];      // variable length — admin-editable at any time
+  locked?: boolean;                // freezes score entry (fanned out to team docs)
+  hidden?: boolean;                // hide the menu link without deleting the data
+}
+
+/**
+ * sideEventTeams/{teamId} — top-level, NOT a subcollection of sideEvents.
+ *
+ * `rounds/{id}/{document=**}` is server-write-only, and score entry needs a
+ * direct client write so Firestore's offline queue works the same way it does
+ * on the match scorecard. `authorizedUids` + `locked` are denormalized here so
+ * the security rule needs no cross-document get().
+ */
+export interface SideEventTeamDoc {
+  id: string;
+  sideEventId: string;
+  tournamentId: string;
+  teamNumber: number;
+  playerIds: string[];             // 2-4 players, any mix of rosters
+  authorizedUids: string[];
+  locked?: boolean;
+  /**
+   * Keyed by REAL course hole number ("1".."9" or "10".."18").
+   *
+   * A cleared hole keeps its key with `gross: null` rather than being deleted —
+   * the security rule forbids dropping hole keys (that guard is what stops one
+   * scorer's write wiping another's). Non-numeric reads as "not scored".
+   */
+  holes: Record<string, { gross: number | null }>;
+}
+
+// ============================================================================
 // SKINS TYPES
 // Pre-computed skins results stored in rounds/{roundId}/skinsResults/computed
 // ============================================================================

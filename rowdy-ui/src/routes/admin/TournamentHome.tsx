@@ -13,6 +13,9 @@ import { getErrorMessage } from "../../api/errors";
  */
 export default function TournamentHome() {
   const { tournamentId, tournament, rounds, loading, error: ctxError, refreshRounds } = useAdminTournament();
+  // Denormalized on the tournament doc by the sideEventOps callables, so this
+  // needs no extra query (the tournament subscription already has it).
+  const sideEvents = tournament?.sideEvents ?? [];
   const [busyRoundId, setBusyRoundId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -94,6 +97,34 @@ export default function TournamentHome() {
             className="inline-block mt-4 text-sm text-blue-600 hover:underline"
           >
             + Create new round
+          </Link>
+        </AdminSection>
+
+        <AdminSection
+          title="Side Events"
+          description="Optional, for-fun games like the 3-man scramble. They award no Cup points and record no stats, never show on the tournament home page, and reach players through the hamburger menu only."
+        >
+          <div className="space-y-2">
+            {sideEvents.map((e) => (
+              <Link
+                key={e.id}
+                to={`/admin/t/${tournamentId}/side-event/${e.id}`}
+                className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-semibold">
+                  {e.name} {e.hidden ? "· hidden" : ""}
+                </div>
+                <div className="text-xs text-gray-500 font-mono">{e.id}</div>
+              </Link>
+            ))}
+            {sideEvents.length === 0 && <div className="text-sm text-gray-500">No side events yet.</div>}
+          </div>
+
+          <Link
+            to={`/admin/t/${tournamentId}/side-event/new`}
+            className="inline-block mt-4 text-sm text-blue-600 hover:underline"
+          >
+            + Create side event
           </Link>
         </AdminSection>
 

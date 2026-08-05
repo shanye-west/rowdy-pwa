@@ -16,6 +16,7 @@ import {
   Settings,
   Loader2,
   BookOpen,
+  Flag,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import LoadingScreen from "./LoadingScreen";
@@ -74,6 +75,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
     ? Object.keys(tournamentCtx.tournament.draftPool).length
     : 0;
   const showDraftPool = draftPoolCount > 0 && !tournamentCtx?.tournament?.hideDraftPool;
+  // Side events (the optional, for-fun 9-hole games) are deliberately kept off
+  // the tournament home page — the menu is their only entry point. The list is
+  // denormalized onto the tournament doc by the sideEventOps callables, so this
+  // costs no extra reads on any page.
+  const sideEvents = (tournamentCtx?.tournament?.sideEvents ?? []).filter((e) => e && !e.hidden);
   // When true, the Rules Official menu link opens the in-app Grok chat; otherwise
   // it links out to the free NotebookLM notebook (see RULES_NOTEBOOKLM_URL).
   // The in-app Grok is gated to ADMINS ONLY for now (rollout/testing) — everyone
@@ -271,6 +277,20 @@ export function LayoutShell({ children }: LayoutShellProps) {
                         </ViewTransitionLink>
                       </Button>
                     )}
+
+                    {sideEvents.map((e) => (
+                      <Button
+                        key={e.id}
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start gap-2 text-foreground hover:bg-muted"
+                      >
+                        <ViewTransitionLink to={`/side-event/${e.id}`} onClick={closeMenu}>
+                          <Flag className="h-4 w-4 text-muted-foreground" />
+                          {e.name}
+                        </ViewTransitionLink>
+                      </Button>
+                    ))}
 
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-foreground hover:bg-muted">
                       <ViewTransitionLink to="/leaderboard" onClick={closeMenu}>

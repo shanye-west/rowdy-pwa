@@ -22,6 +22,8 @@ const Round = lazyWithRecovery(() => import("./routes/Round"));
 const Pairings = lazyWithRecovery(() => import("./routes/Pairings"));
 const PairingPlan = lazyWithRecovery(() => import("./routes/PairingPlan"));
 const PairingsTV = lazyWithRecovery(() => import("./routes/PairingsTV"));
+const SideEvent = lazyWithRecovery(() => import("./routes/SideEvent"));
+const SideEventScorecard = lazyWithRecovery(() => import("./routes/SideEventScorecard"));
 const Skins = lazyWithRecovery(() => import("./routes/Skins"));
 const RoundRecap = lazyWithRecovery(() => import("./routes/RoundRecap"));
 const Teams = lazyWithRecovery(() => import("./routes/Teams"));
@@ -40,6 +42,7 @@ const AdminTournamentLayout = lazyWithRecovery(() => import("./routes/admin/Admi
 const TournamentHome = lazyWithRecovery(() => import("./routes/admin/TournamentHome"));
 const TournamentSettings = lazyWithRecovery(() => import("./routes/admin/TournamentSettings"));
 const RoundAdmin = lazyWithRecovery(() => import("./routes/admin/RoundAdmin"));
+const SideEventAdmin = lazyWithRecovery(() => import("./routes/admin/SideEventAdmin"));
 const MatchCreate = lazyWithRecovery(() => import("./routes/admin/MatchCreate"));
 const MatchAdmin = lazyWithRecovery(() => import("./routes/admin/MatchAdmin"));
 const PlayersAdmin = lazyWithRecovery(() => import("./routes/admin/PlayersAdmin"));
@@ -74,6 +77,11 @@ const router = createBrowserRouter(
         { path: "round/:roundId/skins", element: <Skins /> },
         { path: "round/:roundId/recap", element: <RoundRecap /> },
         { path: "match/:matchId", element: <Match /> },
+        // Side events — the optional, for-fun 9-hole games (3-man scramble).
+        // Deliberately NOT under /round: they award no Cup points and are
+        // reached only from the hamburger menu, never the tournament home page.
+        { path: "side-event/:sideEventId", element: <SideEvent /> },
+        { path: "side-event/:sideEventId/team/:teamId", element: <SideEventScorecard /> },
         { path: "teams", element: <Teams /> },
         { path: "draft", element: <DraftPool /> },
         { path: "leaderboard", element: <Leaderboard /> },
@@ -94,6 +102,7 @@ const router = createBrowserRouter(
             { path: "settings", element: <TournamentSettings /> },
             { path: "round/:roundId", element: <RoundAdmin /> },
             { path: "round/:roundId/match/new", element: <MatchCreate /> },
+            { path: "side-event/:sideEventId", element: <SideEventAdmin /> },
             { path: "match/:matchId", element: <MatchAdmin /> },
           ],
         },

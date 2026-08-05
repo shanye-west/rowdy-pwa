@@ -15,6 +15,10 @@ const PREFETCHERS: Array<[RegExp, () => Promise<unknown>]> = [
   [/^\/round\/[^/]+\/skins/, () => import("../routes/Skins")],
   [/^\/round\/[^/]+\/recap/, () => import("../routes/RoundRecap")],
   [/^\/round\//, () => import("../routes/Round")],
+  // Order matters: the team scorecard must be tested before the bare
+  // /side-event/ catch-all below it, same as the /round sub-routes above.
+  [/^\/side-event\/[^/]+\/team\//, () => import("../routes/SideEventScorecard")],
+  [/^\/side-event\//, () => import("../routes/SideEvent")],
   [/^\/teams/, () => import("../routes/Teams")],
   [/^\/draft/, () => import("../routes/DraftPool")],
   [/^\/leaderboard/, () => import("../routes/Leaderboard")],
