@@ -82,11 +82,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const sideEvents = (tournamentCtx?.tournament?.sideEvents ?? []).filter((e) => e && !e.hidden);
   // When true, the Rules Official menu link opens the in-app Grok chat; otherwise
   // it links out to the free NotebookLM notebook (see RULES_NOTEBOOKLM_URL).
-  // The in-app Grok is gated to ADMINS ONLY for now (rollout/testing) — everyone
-  // else keeps the free NotebookLM link even when the tournament flag is on. This
-  // mirrors the server-side requireAdmin gate on the askRulesOfficial callable.
-  const rulesUseGrok =
-    !!tournamentCtx?.tournament?.rulesOfficialUseGrok && !!player?.isAdmin;
+  // Open to every roster player when the tournament flag is on. Gating on `player`
+  // (signed in AND linked to a roster player) rather than just `user` mirrors the
+  // server-side requirePlayer gate on the askRulesOfficial callable — so anyone who
+  // sees this link can actually use it, and signed-out/unlinked visitors fall back
+  // to the free NotebookLM notebook instead of hitting a dead end.
+  const rulesUseGrok = !!tournamentCtx?.tournament?.rulesOfficialUseGrok && !!player;
   const { isOnline } = useOnlineStatusWithHistory();
   // Global write-queue drain state, surfaced as a reconnect banner below.
   const flushState = useSyncFlush(isOnline);

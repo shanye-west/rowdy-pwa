@@ -24,7 +24,7 @@ import { onCall, HttpsError, type CallableRequest, type CallableResponse } from 
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { randomUUID } from "node:crypto";
-import { requireAdmin } from "../helpers/adminAuth.js";
+import { requirePlayer } from "../helpers/adminAuth.js";
 import { RULES_HANDBOOK } from "./handbook.js";
 
 const XAI_API_KEY = defineSecret("XAI_API_KEY");
@@ -234,20 +234,22 @@ export const askRulesOfficial = onCall(
     timeoutSeconds: 120,
     memory: "256MiB",
     // App Check is ENFORCED on this paid (xAI) endpoint — requests without a valid
-    // App Check token are rejected before the handler runs. Safe because the only
-    // callers are admins (see requireAdmin below) whose app already ships App Check.
+    // App Check token are rejected before the handler runs. Callers are roster
+    // players (see requirePlayer below) using the app, which ships App Check.
     enforceAppCheck: true,
   },
   async (
     request: CallableRequest<AskRulesRequest>,
     response?: CallableResponse<{ delta: string }>
   ): Promise<AskRulesResult> => {
-    // ADMINS ONLY for now (Grok rollout is gated to admins while we test); this is
-    // the real boundary — the menu link / route are also admin-gated client-side.
-    // Rate-limited to keep token spend bounded; the limiter is an in-memory
-    // per-instance Map (rateLimit.ts) — a soft cap — while MAX_OUTPUT_TOKENS is
-    // what actually bounds per-call cost.
-    await requireAdmin(request, "askRulesOfficial", { maxCalls: 30, windowSeconds: 300 });
+    // Open to any ROSTER PLAYER (signed in and linked to a player doc) — the Grok
+    // rollout is no longer admin-gated. This is the real boundary; the menu link
+    // mirrors it client-side. Requiring a linked player (not merely a signed-in
+    // Google account) is deliberate on a paid endpoint: it keeps spend to actual
+    // tournament participants. Rate-limited to keep token spend bounded; the
+    // limiter is an in-memory per-instance Map (rateLimit.ts) — a soft cap —
+    // while MAX_OUTPUT_TOKENS is what actually bounds per-call cost.
+    await requirePlayer(request, "askRulesOfficial", { maxCalls: 30, windowSeconds: 300 });
 
     const apiKey = XAI_API_KEY.value();
     if (!apiKey) {
