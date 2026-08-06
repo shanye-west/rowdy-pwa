@@ -380,6 +380,16 @@ export type DraftTurn = {
  */
 export type DraftPhase = "staging" | "drafting" | "review" | "finalized";
 
+/**
+ * Who can watch the draft happen.
+ *
+ * `live` — any signed-in player, so the /pairings-tv board can be up on a screen
+ * for the whole group. `private` — only the captains/co-captains/admins in
+ * `authorizedUids`, for rounds whose pairings are picked out of sight and
+ * revealed afterwards. Enforced by the security rules on `pairingDrafts`.
+ */
+export type DraftVisibility = "live" | "private";
+
 export type PairingDraftDoc = {
   roundId: string;
   tournamentId: string;
@@ -389,6 +399,8 @@ export type PairingDraftDoc = {
   available: { teamA: string[]; teamB: string[] };
   firstPickTeam: DraftTeamKey | null;
   phase: DraftPhase;
+  /** Absent on drafts created before visibility existed — treat that as "live". */
+  visibility?: DraftVisibility;
   matches: DraftMatch[];
   turn: DraftTurn | null;
   tierByPlayer: Record<string, "A" | "B" | "C" | "D">;

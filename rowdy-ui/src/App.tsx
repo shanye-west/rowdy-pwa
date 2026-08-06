@@ -4,6 +4,7 @@ import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import { useAuth } from "./contexts/AuthContext";
 import { useRoundDrafts, findLivePairing } from "./hooks/usePairingDrafts";
+import { isDraftPrivate } from "./utils/pairingDraft";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
@@ -210,7 +211,13 @@ export default function App() {
                       <div className="text-sm font-bold text-red-700">
                         R{livePairing.number} Pairings Selection Live
                       </div>
-                      <div className="text-xs text-red-600/80">Captains are picking matchups now — tap to watch</div>
+                      {/* A private draft only reaches captains and admins in the
+                          first place — say so, so nobody shares the link around. */}
+                      <div className="text-xs text-red-600/80">
+                        {isDraftPrivate(livePairing.draft)
+                          ? "Private draft — captains & admins only"
+                          : "Captains are picking matchups now — tap to watch"}
+                      </div>
                     </div>
                     <ArrowRight className="h-4 w-4 text-red-600" />
                   </CardContent>

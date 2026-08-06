@@ -14,6 +14,7 @@ import type {
   FinalizePairingDraftResult,
   ResetPairingDraftRequest,
   SavePairingPlanRequest,
+  SetPairingDraftVisibilityRequest,
   StartPairingDraftRequest,
   SubmitDraftPickRequest,
   UndoDraftPickRequest,
@@ -30,6 +31,8 @@ export const draftApi = {
   submitDraftPick: call<SubmitDraftPickRequest, AdminResult>("submitDraftPick"),
   undoDraftPick: call<UndoDraftPickRequest, AdminResult>("undoDraftPick"),
   resetPairingDraft: call<ResetPairingDraftRequest, AdminResult>("resetPairingDraft"),
+  /** Publish the board to the whole field, or hide it again (admin only). */
+  setPairingDraftVisibility: call<SetPairingDraftVisibilityRequest, AdminResult>("setPairingDraftVisibility"),
   finalizePairingDraft: call<FinalizePairingDraftRequest, FinalizePairingDraftResult>("finalizePairingDraft"),
   /** Captains only (no admin bypass) — saves that team's private pairing plan. */
   savePairingPlan: call<SavePairingPlanRequest, AdminResult>("savePairingPlan"),

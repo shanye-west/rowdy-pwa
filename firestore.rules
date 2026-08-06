@@ -265,14 +265,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Pairings draft: readable by any signed-in user so the live board — the
-    // full-screen /pairings-tv broadcast in particular — is viewable by all
-    // players (it's screen-shared during the draft anyway). The in-app captains'
-    // draft page still gates its editing UI to captains/admins client-side.
+    // Pairings draft. Each draft carries a `visibility` set by an admin:
+    //
+    //   live (default)  any signed-in user can follow along, which is what makes
+    //                   the full-screen /pairings-tv broadcast watchable by the
+    //                   whole field while the picks happen.
+    //   private         only the captains/co-captains/admins the server stamped
+    //                   into authorizedUids can read it, so a round can be
+    //                   drafted out of sight and revealed later by an admin
+    //                   flipping it back to live. This has to be enforced here —
+    //                   hiding the UI alone would leave the picks readable.
+    //
+    // Drafts written before `visibility` existed have no such field, so a missing
+    // value means live (unchanged behaviour). `resource == null` keeps a read of
+    // a round that has no draft yet resolving to "empty" rather than denied.
     // Writes only ever happen through the admin-gated draftOps callables via the
     // Admin SDK, which bypasses these rules.
     match /pairingDrafts/{roundId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+                  && (resource == null
+                      || resource.data.get('visibility', 'live') != 'private'
+                      || resource.data.get('authorizedUids', []).hasAny([request.auth.uid]));
       allow write: if false;
     }
 

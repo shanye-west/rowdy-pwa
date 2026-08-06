@@ -2227,6 +2227,7 @@ export {
   undoDraftPick,
   resetPairingDraft,
   finalizePairingDraft,
+  setPairingDraftVisibility,
 } from "./callables/draftOps.js";
 
 // Captains' private per-team pairing plans (pairingPlans/{roundId}__{team}).

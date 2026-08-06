@@ -387,6 +387,9 @@ export interface ComputeRoundRecapResult {
 
 export type DraftTeam = "teamA" | "teamB";
 
+/** Who can watch the draft happen. See DraftVisibility in types.ts. */
+export type DraftVisibility = "live" | "private";
+
 export interface CreatePairingDraftRequest {
   roundId: string;
   /** Player ids available this round, per team (each list belongs to that team's roster). */
@@ -398,6 +401,8 @@ export interface CreatePairingDraftRequest {
    * `startPairingDraft`, so captains can plan against the real rosters first.
    */
   firstPickTeam?: DraftTeam | null;
+  /** Who can watch. Defaults to `live` (the historical behaviour). */
+  visibility?: DraftVisibility;
   /** Overwrite an existing (non-finalized) draft for this round. */
   reset?: boolean;
 }
@@ -406,6 +411,7 @@ export interface CreatePairingDraftResult extends AdminResult {
   roundId: string;
   totalMatches: number;
   phase: "staging" | "drafting";
+  visibility: DraftVisibility;
 }
 
 export interface StartPairingDraftRequest {
@@ -430,6 +436,12 @@ export interface UndoDraftPickRequest {
 
 export interface ResetPairingDraftRequest {
   roundId: string;
+}
+
+export interface SetPairingDraftVisibilityRequest {
+  roundId: string;
+  /** `live` publishes the board to every signed-in player; `private` hides it again. */
+  visibility: DraftVisibility;
 }
 
 export interface FinalizePairingDraftRequest {

@@ -1,11 +1,12 @@
 import { Check, CheckCircle2, AlertTriangle, ClipboardList } from "lucide-react";
 import PlayerAvatar from "../PlayerAvatar";
 import TeamFlipPicker from "./TeamFlipPicker";
+import { VisibilityPicker } from "./VisibilityControl";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { tierStyle } from "../../utils/tierColors";
 import { tierPlayerIds } from "../../utils/roster";
-import type { DraftTeamKey, TournamentDoc } from "../../types";
+import type { DraftTeamKey, DraftVisibility, TournamentDoc } from "../../types";
 import type { PairingsMeta } from "./types";
 
 /** One team's roster as available/benched toggles. Hoisted to module scope so
@@ -103,6 +104,9 @@ export interface DraftSetupProps {
   setAvailB: (s: Set<string>) => void;
   firstPick: DraftTeamKey;
   setFirstPick: (t: DraftTeamKey) => void;
+  /** Whether the field can watch this draft, or only captains/admins can. */
+  visibility: DraftVisibility;
+  setVisibility: (v: DraftVisibility) => void;
   busy: boolean;
   /** Lock availability in without a coin flip so captains can plan (staging). */
   onStage: () => void;
@@ -118,6 +122,9 @@ export interface DraftSetupProps {
  * in who's playing and opens the captains' plan pages; the flip is recorded
  * later. The second path is for when you're already at the tee and want to run
  * the whole thing now.
+ *
+ * Either path also picks who gets to watch — a round shown live on the board, or
+ * one the captains settle privately and reveal after.
  */
 export default function DraftSetup({
   tournament,
@@ -129,6 +136,8 @@ export default function DraftSetup({
   setAvailB,
   firstPick,
   setFirstPick,
+  visibility,
+  setVisibility,
   busy,
   onStage,
   onStart,
@@ -169,6 +178,8 @@ export default function DraftSetup({
             : `Both teams need the same number of players, divisible by ${perSide}. Currently ${countA} v ${countB}.`}
         </span>
       </div>
+
+      <VisibilityPicker value={visibility} onChange={setVisibility} disabled={busy} />
 
       <div className="space-y-1.5">
         <button

@@ -51,6 +51,13 @@ function isTeam(v: unknown): v is DraftTeam {
   return v === "teamA" || v === "teamB";
 }
 
+/** Who may read the draft doc while it's in progress. See DraftVisibility. */
+type DraftVisibility = "live" | "private";
+
+function isVisibility(v: unknown): v is DraftVisibility {
+  return v === "live" || v === "private";
+}
+
 /** Map a thrown DraftError to a user-facing HttpsError; pass others through. */
 function toHttpsError(e: unknown): HttpsError {
   if (e instanceof HttpsError) return e;
@@ -69,11 +76,15 @@ function toHttpsError(e: unknown): HttpsError {
  * available/benched lists are locked in (which is what captains need to plan
  * against) with no matches and no turn until `startPairingDraft` records the
  * flip. Pass it and the draft opens straight into `drafting` as before.
+ *
+ * `visibility` decides whether the field can watch the picks land (`live`, the
+ * default) or only the captains/admins in `authorizedUids` can (`private`,
+ * revealed later via setPairingDraftVisibility).
  */
 export const createPairingDraft = onCall(async (request) => {
   const { playerId } = await requireAdmin(request, "createPairingDraft", { maxCalls: 20, windowSeconds: 60 });
 
-  const { roundId, availableTeamA, availableTeamB, firstPickTeam, reset } = request.data || {};
+  const { roundId, availableTeamA, availableTeamB, firstPickTeam, visibility, reset } = request.data || {};
   if (!roundId || typeof roundId !== "string") {
     throw new HttpsError("invalid-argument", "Missing roundId");
   }
@@ -84,6 +95,10 @@ export const createPairingDraft = onCall(async (request) => {
   if (!staged && !isTeam(firstPickTeam)) {
     throw new HttpsError("invalid-argument", "firstPickTeam must be 'teamA' or 'teamB'");
   }
+  if (visibility != null && !isVisibility(visibility)) {
+    throw new HttpsError("invalid-argument", "visibility must be 'live' or 'private'");
+  }
+  const draftVisibility: DraftVisibility = visibility ?? "live";
 
   const roundSnap = await db().collection("rounds").doc(roundId).get();
   if (!roundSnap.exists) throw new HttpsError("not-found", "Round not found");
@@ -150,7 +165,9 @@ export const createPairingDraft = onCall(async (request) => {
     throw new HttpsError("already-exists", "A draft already exists for this round. Reset it to start over.");
   }
 
-  // Read-gating: only captains/co-captains and admins may load the draft doc.
+  // The read set for a `private` draft: captains/co-captains + admins. A `live`
+  // draft is readable by any signed-in player, so this only bites when the
+  // admin hides the board (now or later, via setPairingDraftVisibility).
   const captainIds = [t.teamA?.captainId, t.teamA?.coCaptainId, t.teamB?.captainId, t.teamB?.coCaptainId].filter(
     Boolean
   ) as string[];
@@ -181,6 +198,7 @@ export const createPairingDraft = onCall(async (request) => {
     // slots or the opening turn from yet — startPairingDraft fills all three in.
     firstPickTeam: staged ? null : (firstPickTeam as DraftTeam),
     phase: staged ? ("staging" as const) : ("drafting" as const),
+    visibility: draftVisibility,
     matches: staged ? [] : buildInitialMatches(totalMatches, firstPickTeam as DraftTeam),
     turn: staged ? null : initialTurn(firstPickTeam as DraftTeam),
     tierByPlayer,
@@ -191,7 +209,33 @@ export const createPairingDraft = onCall(async (request) => {
   };
 
   await draftRef.set(doc);
-  return { success: true, roundId, totalMatches, phase: doc.phase };
+  return { success: true, roundId, totalMatches, phase: doc.phase, visibility: draftVisibility };
+});
+
+/**
+ * Admin: publish or hide a round's draft board.
+ *
+ * Some rounds are drafted on a shared screen with everyone watching; others are
+ * picked privately by the captains and revealed as a finished board. This is the
+ * switch between the two, and it can be flipped at any point in the draft's
+ * life — including after finalizing, which is the "reveal" moment for a draft
+ * that was run in private. The rules read `visibility` off the doc, so hiding a
+ * board actually cuts non-captains off from the data, not just from the UI.
+ */
+export const setPairingDraftVisibility = onCall(async (request) => {
+  await requireAdmin(request, "setPairingDraftVisibility", { maxCalls: 30, windowSeconds: 60 });
+  const { roundId, visibility } = request.data || {};
+  if (!roundId || typeof roundId !== "string") throw new HttpsError("invalid-argument", "Missing roundId");
+  if (!isVisibility(visibility)) {
+    throw new HttpsError("invalid-argument", "visibility must be 'live' or 'private'");
+  }
+
+  const draftRef = db().collection("pairingDrafts").doc(roundId);
+  const snap = await draftRef.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Draft not found");
+
+  await draftRef.update({ visibility, updatedAt: FieldValue.serverTimestamp() });
+  return { success: true, visibility };
 });
 
 /**

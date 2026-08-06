@@ -5,10 +5,24 @@
  * break the A/A or D/D rule — so we can disable invalid picks before calling.
  */
 
-import type { DraftMatch, DraftTeamKey, PairingDraftDoc } from "../types";
+import type { DraftMatch, DraftTeamKey, DraftVisibility, PairingDraftDoc } from "../types";
 
 export function otherTeam(team: DraftTeamKey): DraftTeamKey {
   return team === "teamA" ? "teamB" : "teamA";
+}
+
+/**
+ * A draft's visibility, defaulting drafts written before the field existed to
+ * `live` — which is how they've always behaved. Use this rather than reading
+ * `draft.visibility` directly so old and new drafts read the same.
+ */
+export function draftVisibility(draft: Pick<PairingDraftDoc, "visibility"> | null | undefined): DraftVisibility {
+  return draft?.visibility === "private" ? "private" : "live";
+}
+
+/** True when only captains/co-captains and admins can see this draft. */
+export function isDraftPrivate(draft: Pick<PairingDraftDoc, "visibility"> | null | undefined): boolean {
+  return draftVisibility(draft) === "private";
 }
 
 /** Which team nominates match `i` (0-based): alternates each match. */

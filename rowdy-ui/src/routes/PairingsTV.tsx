@@ -13,14 +13,15 @@
  *
  * It auto-detects the round currently being drafted for the active tournament
  * (preferring an in-progress draft, then one awaiting confirmation, then the
- * most recently finalized), so there's no round id to remember. Reads of the
- * draft doc are gated by the security rules to captains/admins, so whoever is
- * screen-sharing must be signed in as one (admins always are authorized).
+ * most recently finalized), so there's no round id to remember. Any signed-in
+ * player can watch a `live` draft; a `private` one is readable only by its
+ * captains and admins, and the board says so and waits — it fills itself in when
+ * an admin shares it, without a reload.
  */
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { cn } from "../lib/utils";
@@ -31,7 +32,7 @@ import PlayerAvatar from "../components/PlayerAvatar";
 import OfflineImage from "../components/OfflineImage";
 import { tierStyle } from "../utils/tierColors";
 import { calculateCourseHandicap } from "../utils/ghin";
-import { remainingPlayerIds } from "../utils/pairingDraft";
+import { isDraftPrivate, remainingPlayerIds } from "../utils/pairingDraft";
 import { formatRoundType } from "../utils";
 import { isScrambleFormat, isShambleFormat } from "../types";
 import type { CourseDoc, DraftTeamKey, PairingDraftDoc, RoundDoc } from "../types";
@@ -261,10 +262,12 @@ function AvailablePanel({ team, ids, meta, onClock }: { team: DraftTeamKey; ids:
 function RoundSwitcher({
   rounds,
   drafts,
+  hiddenIds,
   currentRoundId,
 }: {
   rounds: RoundDoc[];
   drafts: Record<string, PairingDraftDoc>;
+  hiddenIds: Set<string>;
   currentRoundId: string | null;
 }) {
   if (rounds.length <= 1) return null;
@@ -291,7 +294,14 @@ function RoundSwitcher({
                 : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             )}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />R{i + 1}
+            {/* A padlock rather than a status dot: this round is being drafted
+                privately, so there's no phase to report. */}
+            {hiddenIds.has(r.id) ? (
+              <Lock className="h-2.5 w-2.5" />
+            ) : (
+              <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
+            )}
+            R{i + 1}
           </Link>
         );
       })}
@@ -337,7 +347,7 @@ export default function PairingsTV() {
 
   const rounds = useRounds(tournament?.id);
   const roundIds = useMemo(() => rounds.map((r) => r.id), [rounds]);
-  const { drafts, denied } = useRoundDrafts(roundIds);
+  const { drafts, hiddenIds } = useRoundDrafts(roundIds);
 
   // Pick which round to broadcast: an explicit URL round wins; otherwise
   // auto-detect — prefer an in-progress draft (drafting > review > finalized),
@@ -362,10 +372,17 @@ export default function PairingsTV() {
         bestIdx = idx;
       }
     });
-    return bestIdx >= 0 ? rounds[bestIdx] : null;
-  }, [explicitIdx, rounds, drafts]);
+    if (bestIdx >= 0) return rounds[bestIdx];
+    // Nothing readable. A round drafted privately is still the one to land on —
+    // we just can't show its board — so say so instead of "no draft yet".
+    for (let i = rounds.length - 1; i >= 0; i--) {
+      if (hiddenIds.has(rounds[i].id)) return rounds[i];
+    }
+    return null;
+  }, [explicitIdx, rounds, drafts, hiddenIds]);
 
   const draft = round ? drafts[round.id] ?? null : null;
+  const roundHidden = !!round && hiddenIds.has(round.id);
 
   // Load the active round's course (for course-handicap display).
   const [course, setCourse] = useState<CourseDoc | null>(null);
@@ -444,21 +461,27 @@ export default function PairingsTV() {
       </FullScreenNote>
     );
   }
-  if (denied) {
-    return (
-      <FullScreenNote title="Couldn't load the board">
-        There was a problem loading the pairings. Reload the page to try again.
-      </FullScreenNote>
-    );
-  }
-
-  const switcher = <RoundSwitcher rounds={rounds} drafts={drafts} currentRoundId={round?.id ?? null} />;
+  const switcher = (
+    <RoundSwitcher rounds={rounds} drafts={drafts} hiddenIds={hiddenIds} currentRoundId={round?.id ?? null} />
+  );
 
   // An explicit round number that doesn't exist (e.g. /pairings-tv/9).
   if (explicitIdx != null && !round && rounds.length > 0) {
     return (
       <FullScreenNote title={`Round ${explicitIdx + 1} not found`} footer={switcher}>
         This tournament has {rounds.length} round{rounds.length === 1 ? "" : "s"}. Pick one below.
+      </FullScreenNote>
+    );
+  }
+
+  // Drafted behind closed doors: the captains are picking, but this viewer isn't
+  // one of them. The hook keeps retrying, so the board fills itself in the
+  // moment an admin shares it — no reload needed.
+  if (round && roundHidden) {
+    return (
+      <FullScreenNote title="Pairings are private" footer={switcher}>
+        Round {rounds.findIndex((r) => r.id === round.id) + 1} is being drafted by the captains in private. This
+        board fills in the moment they share it.
       </FullScreenNote>
     );
   }
@@ -528,11 +551,17 @@ export default function PairingsTV() {
     `${round.format ? ` • ${formatRoundType(round.format)}` : ""}` +
     `${course?.name ? ` • ${course.name}` : ""}`;
 
-  // Team-color flair accents + a LIVE/FINAL badge.
+  // Team-color flair accents + a LIVE/FINAL badge. A private board reads as
+  // PRIVATE instead of LIVE — only captains and admins can load this page at
+  // all, and whoever is running it should know the field isn't watching yet.
   const teamAColor = meta.teamColor("teamA");
   const teamBColor = meta.teamColor("teamB");
-  const liveBadge =
-    draft.phase !== "finalized" ? (
+  const liveBadge = isDraftPrivate(draft) ? (
+    <span className="flex items-center gap-1.5 rounded-full bg-slate-800 px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-widest text-white shadow-sm">
+      <Lock className="h-2.5 w-2.5" />
+      Private
+    </span>
+  ) : draft.phase !== "finalized" ? (
       <span className="flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-widest text-white shadow-sm">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
         Live

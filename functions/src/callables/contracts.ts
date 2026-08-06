@@ -323,6 +323,16 @@ export interface ComputeRoundRecapRequest {
 
 export type DraftTeam = "teamA" | "teamB";
 
+/**
+ * Who may watch a draft as it happens.
+ *
+ * `live` — any signed-in player can follow along (the /pairings-tv broadcast).
+ * `private` — only the captains/co-captains/admins in `authorizedUids` can read
+ * it, so the pairings can be picked out of sight and revealed afterwards by
+ * flipping to `live`. Enforced in firestore.rules, not just in the UI.
+ */
+export type DraftVisibility = "live" | "private";
+
 export interface CreatePairingDraftRequest {
   roundId: string;
   /** Player ids available this round, per team (each list belongs to that team's roster). */
@@ -334,6 +344,8 @@ export interface CreatePairingDraftRequest {
    * `startPairingDraft`, so captains can plan against the real rosters first.
    */
   firstPickTeam?: DraftTeam | null;
+  /** Who can watch. Defaults to `live` (the historical behaviour). */
+  visibility?: DraftVisibility;
   /** Overwrite an existing (non-finalized) draft for this round. */
   reset?: boolean;
 }
@@ -342,6 +354,7 @@ export interface CreatePairingDraftResult extends AdminResult {
   roundId: string;
   totalMatches: number;
   phase: "staging" | "drafting";
+  visibility: DraftVisibility;
 }
 
 export interface StartPairingDraftRequest {
@@ -366,6 +379,12 @@ export interface UndoDraftPickRequest {
 
 export interface ResetPairingDraftRequest {
   roundId: string;
+}
+
+export interface SetPairingDraftVisibilityRequest {
+  roundId: string;
+  /** `live` publishes the board to every signed-in player; `private` hides it again. */
+  visibility: DraftVisibility;
 }
 
 export interface FinalizePairingDraftRequest {

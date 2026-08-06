@@ -18,15 +18,16 @@ import {
 import { draftApi } from "../api/draft";
 import { getErrorMessage } from "../api/errors";
 import { tierPlayerIds } from "../utils/roster";
-import { lastPlacementTeam, otherTeam } from "../utils/pairingDraft";
+import { draftVisibility, lastPlacementTeam, otherTeam } from "../utils/pairingDraft";
 import DraftSetup from "../components/pairings/DraftSetup";
+import { VisibilityBar } from "../components/pairings/VisibilityControl";
 import DraftBoard from "../components/pairings/DraftBoard";
 import TeamFlipPicker from "../components/pairings/TeamFlipPicker";
 import TurnHeader from "../components/pairings/TurnHeader";
 import PickPanel from "../components/pairings/PickPanel";
 import WaitingPanel from "../components/pairings/WaitingPanel";
 import PairingsMessage from "../components/pairings/PairingsMessage";
-import type { DraftTeamKey } from "../types";
+import type { DraftTeamKey, DraftVisibility } from "../types";
 
 /** A board-shaped skeleton shown while the round/draft loads. */
 function BoardSkeleton() {
@@ -60,6 +61,9 @@ export default function Pairings() {
   const [availA, setAvailA] = useState<Set<string>>(new Set());
   const [availB, setAvailB] = useState<Set<string>>(new Set());
   const [firstPick, setFirstPick] = useState<DraftTeamKey>("teamA");
+  // Watch-live is the default because that's how this has always worked; a
+  // private round is the deliberate choice.
+  const [setupVisibility, setSetupVisibility] = useState<DraftVisibility>("live");
 
   // Seed the setup form: from the draft's own lists when there is one (so
   // "change who's playing" on a staged round reopens with that benching intact,
@@ -135,6 +139,17 @@ export default function Pairings() {
     }
   };
 
+  // Publish the board to the field, or pull it back to captains-only. Flipping a
+  // private draft to live is the reveal, so it gets a louder confirmation.
+  const changeVisibility = (v: DraftVisibility) =>
+    run(async () => {
+      await draftApi.setPairingDraftVisibility({ roundId, visibility: v });
+      showToast({
+        variant: "success",
+        message: v === "live" ? "Board shared — everyone can watch now" : "Board hidden — captains & admins only",
+      });
+    }, "Failed to change who can watch");
+
   const togglePlayer = (pid: string, perSide: number) => {
     setSelected((prev) => {
       if (prev.includes(pid)) return prev.filter((x) => x !== pid);
@@ -185,9 +200,10 @@ export default function Pairings() {
     );
   }
 
-  // Only captains/co-captains and admins get the in-app draft page. (Draft
-  // reads are now open to any signed-in user for the /pairings-tv broadcast, so
-  // this page gates on role rather than on a permission-denied read.)
+  // Only captains/co-captains and admins get the in-app draft page. A `live`
+  // draft is readable by any signed-in user (that's what feeds /pairings-tv), so
+  // this gates on role, not on a permission-denied read — `denied` only fires on
+  // a private draft the viewer has no business in.
   if (denied || (!isAdmin && !myTeam)) {
     return (
       <Layout title="Pairings" showBack>
@@ -200,6 +216,20 @@ export default function Pairings() {
   }
 
   const title = `Pairings — Day ${round?.day ?? ""}`.trim();
+
+  // Who can watch this draft, plus the strip that says so (and lets an admin
+  // flip it). Rendered in every phase that has a draft — the whole point is that
+  // it can be flipped mid-draft, or after, to reveal a privately-picked board.
+  const visibility = draftVisibility(draft);
+  const visibilityBar = draft ? (
+    <VisibilityBar
+      visibility={visibility}
+      isAdmin={isAdmin}
+      busy={busy}
+      onChange={changeVisibility}
+      revealLabel={draft.phase === "review" || draft.phase === "finalized" ? "Reveal pairings" : undefined}
+    />
+  ) : null;
 
   // Shortcut to the viewer's own planning board. Shown wherever they're waiting
   // rather than picking — that's exactly when it's useful.
@@ -262,6 +292,8 @@ export default function Pairings() {
               setAvailB={setAvailB}
               firstPick={firstPick}
               setFirstPick={setFirstPick}
+              visibility={setupVisibility}
+              setVisibility={setSetupVisibility}
               busy={busy}
               onStage={() =>
                 run(async () => {
@@ -269,6 +301,7 @@ export default function Pairings() {
                     roundId,
                     availableTeamA: [...availA],
                     availableTeamB: [...availB],
+                    visibility: setupVisibility,
                   });
                   showToast({ variant: "success", message: "Captains can start planning" });
                 }, "Failed to open the round")
@@ -281,6 +314,7 @@ export default function Pairings() {
                       availableTeamA: [...availA],
                       availableTeamB: [...availB],
                       firstPickTeam: firstPick,
+                      visibility: setupVisibility,
                     }),
                   "Failed to start draft"
                 )
@@ -307,6 +341,8 @@ export default function Pairings() {
               flip is recorded.
             </span>
           </div>
+
+          {visibilityBar}
 
           {(myTeam || isAdmin) && planLink}
 
@@ -354,6 +390,7 @@ export default function Pairings() {
           <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
             <CheckCircle2 size={18} className="shrink-0" /> Matches created for this round.
           </div>
+          {visibilityBar}
           <DraftBoard draft={draft} meta={meta} />
           <ViewTransitionLink to={`/round/${roundId}`} className="btn btn-primary w-full text-center">
             View round
@@ -374,6 +411,7 @@ export default function Pairings() {
             <Trophy size={18} className="shrink-0" />
             {isAdmin ? "Draft complete — review, then create the matches." : "Draft complete — waiting for an admin to confirm."}
           </div>
+          {visibilityBar}
           <DraftBoard draft={draft} meta={meta} />
           {isAdmin && (
             <div className="space-y-2">
@@ -417,6 +455,8 @@ export default function Pairings() {
     <Layout title={title} showBack>
       <div className="p-4 space-y-4 max-w-2xl mx-auto">
         <TurnHeader draft={draft} actingTeam={actingTeam} meta={meta} isResponse={isResponse} myMove={myMove} />
+
+        {visibilityBar}
 
         <DraftBoard draft={draft} meta={meta} />
 
@@ -473,6 +513,14 @@ export default function Pairings() {
             : isStaged
               ? "This reopens the availability step. Captains' saved plans are kept."
               : "This discards the current pairings and returns to setup. Captains' saved plans are kept."}
+          {/* Matches are public, so creating them reveals who's playing whom even
+              though the draft board itself stays hidden. Say so up front. */}
+          {isFinalize && visibility === "private" && (
+            <span className="mt-2 block">
+              The draft board stays private, but the matches themselves are public — everyone will see the
+              pairings on the round page.
+            </span>
+          )}
         </p>
         <ModalActions
           primaryLabel={isFinalize ? "Create matches" : isStaged ? "Change availability" : "Reset draft"}

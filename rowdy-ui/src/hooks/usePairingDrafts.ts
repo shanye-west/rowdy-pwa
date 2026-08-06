@@ -4,29 +4,58 @@ import { db } from "../firebase";
 import type { PairingDraftDoc, RoundDoc } from "../types";
 
 /**
+ * How long to wait before re-subscribing to a draft that read as denied. A
+ * denied listener is terminal in the SDK, so without this a viewer who had the
+ * board open while a round was private would sit on a dead page even after the
+ * admin shares it — and "share it live afterwards" is the whole point.
+ */
+const HIDDEN_RETRY_MS = 15_000;
+
+/**
  * Live map of `roundId → pairingDraft` for the given round ids (one per-doc
- * listener each). Reads of `pairingDrafts` are open to any signed-in user, so
- * `denied` only flips true when logged out. A missing draft is simply absent
- * from the map. Shared by the /pairings-tv board and the Home "live" banner.
+ * listener each). A missing draft is simply absent from the map. Shared by the
+ * /pairings-tv board and the Home "live" banner.
+ *
+ * A round whose draft is `private` reads as permission-denied for anyone outside
+ * its captains/admins — that's the feature working, not a failure — so those
+ * round ids come back in `hiddenIds` instead of the map, and callers can tell
+ * "being drafted behind closed doors" apart from "no draft yet". Hidden rounds
+ * are retried on a slow timer so the board lights up on its own the moment an
+ * admin reveals it.
  */
 export function useRoundDrafts(roundIds: string[]): {
   drafts: Record<string, PairingDraftDoc>;
-  denied: boolean;
+  hiddenIds: Set<string>;
 } {
   const [drafts, setDrafts] = useState<Record<string, PairingDraftDoc>>({});
-  const [denied, setDenied] = useState(false);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const key = roundIds.join(",");
 
   useEffect(() => {
     if (!key) {
       setDrafts({});
+      setHiddenIds(new Set());
       return;
     }
     const ids = key.split(",");
-    const unsubs = ids.map((rid) =>
-      onSnapshot(
+    let cancelled = false;
+    const unsubs = new Map<string, () => void>();
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const subscribe = (rid: string) => {
+      if (cancelled) return;
+      timers.delete(rid);
+      const unsub = onSnapshot(
         doc(db, "pairingDrafts", rid),
         (snap) => {
+          // Resolving again (revealed, or the viewer is a captain after all)
+          // means this round is no longer hidden.
+          setHiddenIds((prev) => {
+            if (!prev.has(rid)) return prev;
+            const next = new Set(prev);
+            next.delete(rid);
+            return next;
+          });
           setDrafts((prev) => {
             const next = { ...prev };
             if (snap.exists()) next[rid] = { ...snap.data() } as PairingDraftDoc;
@@ -35,15 +64,34 @@ export function useRoundDrafts(roundIds: string[]): {
           });
         },
         (err: FirestoreError) => {
-          if (err.code === "permission-denied") setDenied(true);
-          else console.error("Pairing draft subscription error:", err);
+          unsubs.delete(rid); // the SDK has already torn this listener down
+          if (err.code !== "permission-denied") {
+            console.error("Pairing draft subscription error:", err);
+            return;
+          }
+          setHiddenIds((prev) => (prev.has(rid) ? prev : new Set(prev).add(rid)));
+          setDrafts((prev) => {
+            if (!(rid in prev)) return prev;
+            const next = { ...prev };
+            delete next[rid];
+            return next;
+          });
+          if (!cancelled) timers.set(rid, setTimeout(() => subscribe(rid), HIDDEN_RETRY_MS));
         }
-      )
-    );
-    return () => unsubs.forEach((u) => u());
+      );
+      unsubs.set(rid, unsub);
+    };
+
+    ids.forEach(subscribe);
+
+    return () => {
+      cancelled = true;
+      timers.forEach((t) => clearTimeout(t));
+      unsubs.forEach((u) => u());
+    };
   }, [key]);
 
-  return { drafts, denied };
+  return { drafts, hiddenIds };
 }
 
 export interface LivePairing {
