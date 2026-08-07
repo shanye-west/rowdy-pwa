@@ -112,7 +112,6 @@ function SideEventComponent() {
                   {course?.name ? ` · ${course.name}` : ""}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Just for fun — no Cup points
                 </div>
                 {event.locked && (
                   <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
