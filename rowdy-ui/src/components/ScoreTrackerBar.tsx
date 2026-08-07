@@ -8,11 +8,24 @@ type ScoreTrackerBarProps = {
   teamBColor?: string;
 };
 
+type BoxFill = {
+  aConfirmed: number; // 0..1 - Team A confirmed share of this box
+  aPending: number;   // 0..1 - Team A pending share, sits just right of the confirmed share
+  bConfirmed: number; // 0..1 - Team B confirmed share (anchored to the box's right edge)
+  bPending: number;   // 0..1 - Team B pending share, sits just left of its confirmed share
+};
+
+const clampPoints = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0);
+
 /**
  * Ryder Cup-style score tracker bar.
  * Boxes fill left→right for Team A, right→left for Team B.
  * Confirmed points = solid color, pending points = transparent/lighter color.
  * Half-points (halves) fill half a box.
+ *
+ * Every box is an equal flex share of the container with no minimum width, so the
+ * strip always fits the card: the segment separators and the midpoint marker are
+ * positioned as percentages of that same container and stay aligned with the fills.
  */
 export default function ScoreTrackerBar({
   totalPoints,
@@ -23,67 +36,46 @@ export default function ScoreTrackerBar({
   teamAColor = "var(--team-a-default)",
   teamBColor = "var(--team-b-default)",
 }: ScoreTrackerBarProps) {
-  if (totalPoints <= 0) return null;
+  const boxCount = Math.floor(clampPoints(totalPoints));
+  if (boxCount <= 0) return null;
 
-  // Build array of box states
-  // Each box represents 1 point. We track fills from each side.
-  // Team A fills from left (index 0), Team B fills from right (index totalPoints-1)
-  
-  // Total fill amounts (in points)
-  const teamATotal = teamAConfirmed + teamAPending;
-  const teamBTotal = teamBConfirmed + teamBPending;
-  
-  // Build box data
-  const boxes: {
-    teamAFill: number;      // 0, 0.5, or 1 - how much Team A fills this box
-    teamBFill: number;      // 0, 0.5, or 1 - how much Team B fills this box
-    teamAConfirmed: boolean; // Is Team A's fill confirmed (solid) vs pending (transparent)?
-    teamBConfirmed: boolean; // Is Team B's fill confirmed?
-  }[] = [];
+  const boxes: BoxFill[] = Array.from({ length: boxCount }, () => ({
+    aConfirmed: 0,
+    aPending: 0,
+    bConfirmed: 0,
+    bPending: 0,
+  }));
 
-  for (let i = 0; i < totalPoints; i++) {
-    boxes.push({ teamAFill: 0, teamBFill: 0, teamAConfirmed: false, teamBConfirmed: false });
+  // Fill Team A from the left: confirmed points first, then pending behind them.
+  let aConfirmedLeft = clampPoints(teamAConfirmed);
+  let aPendingLeft = clampPoints(teamAPending);
+  for (let i = 0; i < boxCount && aConfirmedLeft + aPendingLeft > 0; i++) {
+    const confirmed = Math.min(aConfirmedLeft, 1);
+    boxes[i].aConfirmed = confirmed;
+    aConfirmedLeft -= confirmed;
+
+    const pending = Math.min(aPendingLeft, 1 - confirmed);
+    boxes[i].aPending = pending;
+    aPendingLeft -= pending;
   }
 
-  // Fill Team A boxes from left (index 0 onwards)
-  let teamARemaining = teamATotal;
-  let teamAConfirmedRemaining = teamAConfirmed;
-  for (let i = 0; i < totalPoints && teamARemaining > 0; i++) {
-    const fill = Math.min(1, teamARemaining);
-    boxes[i].teamAFill = fill;
-    // Determine if this fill is confirmed or pending
-    if (teamAConfirmedRemaining >= fill) {
-      boxes[i].teamAConfirmed = true;
-      teamAConfirmedRemaining -= fill;
-    } else if (teamAConfirmedRemaining > 0) {
-      // Partial confirmed - for simplicity, if any confirmed remains, mark as confirmed
-      // (edge case: 0.5 confirmed + 0.5 pending in same box - treat confirmed portion as confirmed)
-      boxes[i].teamAConfirmed = teamAConfirmedRemaining >= fill;
-      teamAConfirmedRemaining = 0;
-    }
-    teamARemaining -= fill;
+  // Fill Team B from the right, into whatever space Team A left in each box.
+  let bConfirmedLeft = clampPoints(teamBConfirmed);
+  let bPendingLeft = clampPoints(teamBPending);
+  for (let i = boxCount - 1; i >= 0 && bConfirmedLeft + bPendingLeft > 0; i--) {
+    const room = Math.max(0, 1 - boxes[i].aConfirmed - boxes[i].aPending);
+    if (room <= 0) continue;
+
+    const confirmed = Math.min(bConfirmedLeft, room);
+    boxes[i].bConfirmed = confirmed;
+    bConfirmedLeft -= confirmed;
+
+    const pending = Math.min(bPendingLeft, room - confirmed);
+    boxes[i].bPending = pending;
+    bPendingLeft -= pending;
   }
 
-  // Fill Team B boxes from right (index totalPoints-1 backwards)
-  let teamBRemaining = teamBTotal;
-  let teamBConfirmedRemaining = teamBConfirmed;
-  for (let i = totalPoints - 1; i >= 0 && teamBRemaining > 0; i--) {
-    // Check how much space is available (not taken by Team A)
-    const availableSpace = 1 - boxes[i].teamAFill;
-    if (availableSpace <= 0) continue; // Box fully filled by Team A
-    
-    const fill = Math.min(availableSpace, teamBRemaining);
-    boxes[i].teamBFill = fill;
-    // Determine if this fill is confirmed or pending
-    if (teamBConfirmedRemaining >= fill) {
-      boxes[i].teamBConfirmed = true;
-      teamBConfirmedRemaining -= fill;
-    } else if (teamBConfirmedRemaining > 0) {
-      boxes[i].teamBConfirmed = teamBConfirmedRemaining >= fill;
-      teamBConfirmedRemaining = 0;
-    }
-    teamBRemaining -= fill;
-  }
+  const pct = (n: number) => `${n * 100}%`;
 
   return (
     <div
@@ -104,36 +96,60 @@ export default function ScoreTrackerBar({
             style={{
               flex: 1,
               position: "relative",
-              minWidth: 12,
+              minWidth: 0,
               height: "100%",
             }}
           >
-            {/* Team A fill (left within this segment) */}
-            {box.teamAFill > 0 && (
+            {/* Team A fills, anchored to the segment's left edge */}
+            {box.aConfirmed > 0 && (
               <div
                 style={{
                   position: "absolute",
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: `${box.teamAFill * 100}%`,
+                  width: pct(box.aConfirmed),
                   background: teamAColor,
-                  opacity: box.teamAConfirmed ? 1 : 0.55,
+                }}
+              />
+            )}
+            {box.aPending > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: pct(box.aConfirmed),
+                  top: 0,
+                  bottom: 0,
+                  width: pct(box.aPending),
+                  background: teamAColor,
+                  opacity: 0.55,
                 }}
               />
             )}
 
-            {/* Team B fill (right within this segment) */}
-            {box.teamBFill > 0 && (
+            {/* Team B fills, anchored to the segment's right edge */}
+            {box.bConfirmed > 0 && (
               <div
                 style={{
                   position: "absolute",
                   right: 0,
                   top: 0,
                   bottom: 0,
-                  width: `${box.teamBFill * 100}%`,
+                  width: pct(box.bConfirmed),
                   background: teamBColor,
-                  opacity: box.teamBConfirmed ? 1 : 0.55,
+                }}
+              />
+            )}
+            {box.bPending > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  right: pct(box.bConfirmed),
+                  top: 0,
+                  bottom: 0,
+                  width: pct(box.bPending),
+                  background: teamBColor,
+                  opacity: 0.55,
                 }}
               />
             )}
@@ -142,14 +158,14 @@ export default function ScoreTrackerBar({
       </div>
 
       {/* Vertical white separators between segments */}
-      {Array.from({ length: totalPoints - 1 }).map((_, i) => (
+      {Array.from({ length: boxCount - 1 }).map((_, i) => (
         <div
           key={i}
           style={{
             position: "absolute",
             top: 0,
             bottom: 0,
-            left: `${((i + 1) / totalPoints) * 100}%`,
+            left: `${((i + 1) / boxCount) * 100}%`,
             width: 1,
             background: "var(--card-bg)",
             transform: "translateX(-0.5px)",
