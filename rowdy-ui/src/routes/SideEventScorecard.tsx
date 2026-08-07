@@ -10,15 +10,17 @@ import { useSideEvent } from "../hooks/useSideEvent";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import { formatToPar, isValidSideEventGross, nineLabel } from "../utils/sideEventScoring";
-import { getPlayerName as getPlayerNameFromLookup } from "../utils/playerHelpers";
+import {
+  getPlayerName as getPlayerNameFromLookup,
+  getPlayerShortName,
+} from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import PlayerAvatar from "../components/PlayerAvatar";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
-import { ScoreInputCell } from "../components/match/ScoreInputCell";
+import SideEventScorecardTable from "../components/SideEventScorecardTable";
 import { RoundPageSkeleton } from "../components/Skeleton";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { cn } from "../lib/utils";
 
 /**
  * One team's scorecard for a side event — nine team gross scores, nothing else.
@@ -34,7 +36,7 @@ function SideEventScorecardComponent() {
   const { sideEventId, teamId } = useParams();
   const { user, player } = useAuth();
   const { showToast } = useToast();
-  const { loading, error, event, tournament, teams, players, holeNumbers, parByHole } =
+  const { loading, error, event, tournament, course, teams, players, holeNumbers, parByHole } =
     useSideEvent(sideEventId);
 
   const team = useMemo(() => teams.find((t) => t.id === teamId) ?? null, [teams, teamId]);
@@ -128,6 +130,63 @@ function SideEventScorecardComponent() {
   }, 0);
   const toPar = entered.length > 0 && parPlayed > 0 ? total - parPlayed : null;
 
+  // Hole metadata for the card header, straight off the course doc.
+  const holeByNumber = new Map(course?.holes?.map((h) => [h.number, h]) ?? []);
+  const scorecardHoles = holeNumbers.map((num) => {
+    const info = holeByNumber.get(num);
+    return {
+      k: String(num),
+      num,
+      par: info?.par ?? 0,
+      hcpIndex: info?.hcpIndex,
+      yards: info?.yards,
+    };
+  });
+
+  const teamTotal = (t: typeof team) => {
+    const vals = holeNumbers
+      .map((h) => t.holes?.[String(h)]?.gross)
+      .filter((g) => isValidSideEventGross(g)) as number[];
+    return vals.length > 0 ? vals.reduce((sum, g) => sum + g, 0) : null;
+  };
+  const rowLabel = (t: typeof team) =>
+    (t.playerIds ?? []).map((pid) => getPlayerShortName(pid, players)).join(", ") ||
+    `Team ${t.teamNumber}`;
+
+  // This team first (editable), then every other team read-only for context —
+  // the same multi-row shape the round's scramble card has for A vs B.
+  const scorecardRows = [
+    {
+      teamId: team.id,
+      label: `Team ${team.teamNumber}`,
+      subLabel: rowLabel(team),
+      color: "var(--brand-primary)",
+      editable: canEdit,
+      getValue: (holeKey: string) => {
+        const gross = team.holes?.[holeKey]?.gross;
+        return isValidSideEventGross(gross) ? gross : ("" as const);
+      },
+      onChange: handleChange,
+      erroredKeys,
+      total: entered.length > 0 ? total : null,
+    },
+    ...teams
+      .filter((t) => t.id !== team.id)
+      .map((t) => ({
+        teamId: t.id,
+        label: `Team ${t.teamNumber}`,
+        subLabel: rowLabel(t),
+        // --muted-foreground holds raw HSL components, so it must be wrapped.
+        color: "hsl(var(--muted-foreground))",
+        editable: false,
+        getValue: (holeKey: string) => {
+          const gross = t.holes?.[holeKey]?.gross;
+          return isValidSideEventGross(gross) ? gross : ("" as const);
+        },
+        total: teamTotal(t),
+      })),
+  ];
+
   return (
     <Layout
       title={event.name}
@@ -180,8 +239,11 @@ function SideEventScorecardComponent() {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <span>{nineLabel(event.nine)}</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {nineLabel(event.nine)}
+                {course?.name ? ` · ${course.name}` : ""}
+              </span>
               <SaveStatusIndicator status={saveStatus} />
             </div>
 
@@ -199,62 +261,37 @@ function SideEventScorecardComponent() {
           </CardContent>
         </Card>
 
-        <div className="space-y-2" role="list" aria-label="Holes">
-          {holeNumbers.map((holeNum, idx) => {
-            const holeKey = String(holeNum);
-            const value = isValidSideEventGross(scores[idx]) ? (scores[idx] as number) : "";
-            const par = parByHole[holeNum];
-            const hasError = erroredKeys.has(holeKey);
+        {/* The real scorecard: horizontal, hole numbers / handicap / yards / par,
+            then one row per team — same layout as the round's scramble card,
+            narrowed to a single nine. This team's row is editable; the rest are
+            read-only so a group can see where they stand hole by hole. */}
+        <Card className="overflow-hidden border-border/70">
+          <SideEventScorecardTable
+            holes={scorecardHoles}
+            totalLabel={event.nine === "back" ? "IN" : "OUT"}
+            rows={scorecardRows}
+            tSeries={tournament?.series}
+            courseTees={course?.tees}
+          />
+        </Card>
 
-            return (
-              <Card
-                key={holeNum}
-                role="listitem"
-                className={cn("border-border/70", hasError && "border-red-300 bg-red-50/60")}
-              >
-                <CardContent className="flex items-center gap-4 py-3">
-                  <div className="w-16 shrink-0">
-                    <div className="text-sm font-semibold text-foreground">Hole {holeNum}</div>
-                    {typeof par === "number" && (
-                      <div className="text-[0.65rem] text-muted-foreground">Par {par}</div>
-                    )}
-                  </div>
-
-                  <div className="flex-1" />
-
-                  {hasError && (
-                    <button
-                      type="button"
-                      onClick={() => handleRetry(holeKey)}
-                      className="min-h-11 rounded-lg px-2 text-xs font-semibold text-red-700 underline"
-                    >
-                      Retry
-                    </button>
-                  )}
-
-                  {/* Same cell the match scorecard uses, so the picker, popover
-                      positioning and birdie/bogey markings all behave identically.
-                      A scramble has no handicap strokes and no drive tracking here,
-                      hence the false/null props. */}
-                  <ScoreInputCell
-                    holeKey={holeKey}
-                    holeNum={holeNum}
-                    value={value}
-                    par={par ?? 0}
-                    locked={!canEdit}
-                    hasStroke={false}
-                    hasDrive={false}
-                    lowScoreStatus={null}
-                    teamColor="var(--brand-primary)"
-                    onChange={handleChange}
-                    hasError={hasError}
-                    cellId={`side-event-${team.id}-h${holeKey}`}
-                  />
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        {erroredKeys.size > 0 && (
+          <Card className="border-red-300 bg-red-50/60">
+            <CardContent className="flex flex-wrap items-center gap-2 py-3 text-sm text-red-700">
+              <span className="font-semibold">Some holes didn&apos;t save:</span>
+              {[...erroredKeys].map((holeKey) => (
+                <button
+                  key={holeKey}
+                  type="button"
+                  onClick={() => handleRetry(holeKey)}
+                  className="min-h-11 rounded-lg px-2 font-semibold underline"
+                >
+                  Retry {holeKey}
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         <Button asChild variant="outline" className="h-11 w-full rounded-xl">
           <ViewTransitionLink to={`/side-event/${event.id}`}>Back to leaderboard</ViewTransitionLink>
