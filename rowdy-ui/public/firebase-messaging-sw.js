@@ -12,7 +12,7 @@
  *
  * The compat SDK is used (not the modular SDK) because importScripts pulls in
  * plain, pre-bundled scripts — keep the version in sync with `firebase` in
- * package.json (12.6.0).
+ * package.json (12.19.0).
  */
 // Import the Firebase compat SDK. These are cross-origin fetches; if they fail
 // (e.g. gstatic unreachable at SW install/update time), we must NOT let the
@@ -22,8 +22,8 @@
 // undefined and the guarded block below is skipped; push is simply disabled for
 // this session while offline caching keeps working.
 try {
-  importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js");
-  importScripts("https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js");
+  importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js");
+  importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js");
 } catch (err) {
   console.warn("[fcm-sw] failed to load Firebase SDK — push disabled this session:", err);
 }

@@ -60,6 +60,18 @@ Remediation: make account replacement a complete revocation operation: refresh a
 
 **6. Dependency remediation required — known advisories remain in the lockfiles**
 
+**Remediation update — November 11, 2026 (local; deployment pending):** updated all three manifests and lockfiles. Production-only audits now report **zero known vulnerabilities** in the frontend, Functions, and admin scripts. Full audits report zero in Functions and scripts; the frontend retains four low-severity package alerts from one unpatched build-only advisory, with no moderate, high, or critical findings.
+
+Updated Firebase Web SDK to 12.19.0 (including the messaging service worker's CDN imports), React Router to 7.18.5, Vite to 7.3.8, Vitest to 4.1.12, Firebase Admin to 13.10.0, and Firebase Functions to 7.4.0. Removed the unused Functions Zod dependency. Scoped npm overrides move pinned transitive grpc, brace-expansion, glob, minimatch, and uuid dependencies onto patched versions; preserve these overrides until their parent packages resolve patched versions without them. Builds, service-worker generation, and tests passed with the overrides. Keep Firebase Admin on major 13 until scripts using its legacy namespace API are migrated.
+
+Functions and CI now use Node 22, with a root `.nvmrc` for local development. Node 20 was decommissioned for Cloud Functions on October 30, 2026, so the runtime update is required for redeployment ([runtime schedule](https://docs.cloud.google.com/functions/docs/runtime-support)). CI now audits every package tree, rejects any production dependency advisory, and rejects frontend development advisories at moderate severity or above.
+
+**Remaining upstream issue:** `vite-plugin-pwa → workbox-build → @rollup/plugin-node-resolve → deepmerge@4.3.1` produces four overlapping low-severity alerts for [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). No patched deepmerge release is available. This dependency executes during the service-worker build and is not included in the browser runtime. The advisory involves merging specially crafted objects; no visitor-controlled input into this build path was identified. It remains an open dependency risk, not a claim that the entire tree is vulnerability-free. Do not accept npm's suggested downgrade to an obsolete PWA plugin to hide this warning; revisit when upstream provides a supported fix.
+
+Validation: frontend and Functions production builds passed on Node 22; frontend tests passed (251), Functions tests passed (844 including compiled copies), and the six isolated Firestore-emulator PII regression tests passed with the updated Admin SDK. Targeted TypeScript checks for the two linking scripts passed. All 70 compiled function exports loaded; selected sensitive callables still rejected unauthenticated requests. Both messaging CDN imports returned HTTP 200. Browser smoke testing was unavailable because the browser access host was down. No hosting or Functions deployment has been performed for this dependency update.
+
+The following counts are the **original audit baseline**, before these updates.
+
 `npm audit --json` and `npm audit --omit=dev --json` returned the following package-level totals. Counts include transitive packages and overlapping advisory chains; they are not counts of demonstrated application exploits.
 
 | Package tree | All dependencies | All: high / critical | Excluding dev dependencies | Excluding dev: high / critical |

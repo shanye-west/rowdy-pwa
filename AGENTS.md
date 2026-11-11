@@ -22,7 +22,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 ## Monorepo layout
 
 - **`rowdy-ui/`** — React 19 + Vite 7 + TypeScript 5.9 + Tailwind 4 frontend (the PWA).
-- **`functions/`** — Firebase Cloud Functions Gen-2 (TypeScript, Node 20). Firestore triggers + HTTPS callables for scoring, stats, betting, chat, notifications, drafts, and admin ops.
+- **`functions/`** — Firebase Cloud Functions Gen-2 (TypeScript, Node 22). Firestore triggers + HTTPS callables for scoring, stats, betting, chat, notifications, drafts, and admin ops.
 - **`scripts/`** — Break-glass admin Node/TS scripts (seeding, exports, auth linking). Bypass callable auth/rate-limits and write straight to Firestore with a service account. See `scripts/README.md`.
 - **Root** — Firebase config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `.firebaserc`.
 
@@ -146,7 +146,7 @@ Where it lives: `functions/src/callables/captainsMatchOps.ts` + `functions/src/h
   - `sideEventOps.ts` — `createSideEvent`, `updateSideEvent`, `deleteSideEvent`, `saveSideEventTeam`, `deleteSideEventTeam` (see "Side events"). `updateSideEvent` fans `locked` out to the team docs (the rule checks the team's own copy, so no cross-doc `get()` per score save) and keeps `tournament.sideEvents[]` in sync. `saveSideEventTeam` also takes an optional `holes` map — the admin score-override path.
   - `captainsMatchOps.ts` — `saveCaptainsMatch` (create/update; creating sets `tournament.hasCaptainsMatch`, and the players lock once any card exists), `saveCaptainsMatchRound` (validated whole-card upsert into `rounds.{n}`), `deleteCaptainsMatchRound`, `deleteCaptainsMatch` (see "Captains' match").
   - `courseOps.ts` — course CRUD.
-  - `contracts.ts` — shared zod request/response contracts.
+  - `contracts.ts` — shared TypeScript request/response contracts.
 
 ## Frontend conventions (`rowdy-ui/src/`)
 

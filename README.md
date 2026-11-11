@@ -27,7 +27,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 ## Tech stack
 
 - **Frontend:** React 19, Vite 7, TypeScript 5.9 (strict), Tailwind CSS 4, `vite-plugin-pwa`. PWA served via Firebase Hosting.
-- **Backend:** Firebase Cloud Functions Gen-2 (TypeScript, Node 20) — Firestore triggers + HTTPS callables.
+- **Backend:** Firebase Cloud Functions Gen-2 (TypeScript, Node 22) — Firestore triggers + HTTPS callables.
 - **Data / auth:** Cloud Firestore (real-time `onSnapshot`), Firebase Anonymous Auth (score entry), FCM (web push).
 
 ## Repository layout
@@ -42,7 +42,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 
 ## Getting started (local dev)
 
-**Prerequisites:** Node 20+, `npm`, and the Firebase CLI (`npm i -g firebase-tools`).
+**Prerequisites:** Node 22, `npm`, and the Firebase CLI (`npm i -g firebase-tools`).
 
 ```bash
 # 1. Frontend
