@@ -152,6 +152,14 @@ If you'd like, I can add a short script to flip the flag from the command line (
 
 ## Auth Scripts
 
+Production account creation is administrator-only. Firebase Authentication has
+`client.permissions.disabledUserSignup: true` (verified November 11, 2026), so
+public email/password and anonymous `accounts:signUp` requests are rejected.
+Existing players can still sign in. Create new accounts through Firebase Console
+or the Admin SDK; do not re-enable public registration to run legacy test-seeding
+scripts that call the public sign-up API. This setting lives in Firebase project
+configuration, not in the hosting bundle or Firestore rules.
+
 ### Link Single Auth User to Player
 
 Links a Firebase Auth user (by email) to a player doc (by player ID). Run this after creating an auth account for a player.
