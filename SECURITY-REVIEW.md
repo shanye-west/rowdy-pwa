@@ -20,6 +20,10 @@ Remediation: enforce approved membership in the read rules using a server-manage
 
 **2. High — six production test matches permit signed-out score edits**
 
+**Remediated active exposure — November 11, 2026:** set `_TestRowdyCup2026.openPublicEdits` to false in production with a field-only update and a document-version precondition. Read-back confirmed the flag is false and all other tournament fields were unchanged. All nine production tournaments were checked; none still enables public editing. Updated `scripts/setup-test-auth-2026.js` to keep the flag false and removed the README's public-edit enablement instructions. The admin toggle and rule exception still exist, so deliberately re-enabling this flag would restore public access; removing that legacy feature entirely remains optional further hardening. No score documents were changed and no deployment was required.
+
+Remediation validation: four isolated emulator assertions confirmed signed-out and unlinked-user score updates are denied, an authorized rostered scorer can still update an unlocked match, and a locked match rejects that scorer. The setup script passed `node --check`; the frontend production build passed. The setup script itself was not executed against production.
+
 Evidence: `firestore.rules:89` and `:119` let `isTournamentOpen()` independently authorize a write. That branch does not require authentication. Production tournament `_TestRowdyCup2026` has `openPublicEdits: true`; all six queried matches in it are unlocked. The other eight tournament documents inspected do not have the flag enabled.
 
 The emulator accepted a signed-out score update for an unlocked match in an open tournament and rejected the equivalent update for a normal tournament. No production write was attempted.

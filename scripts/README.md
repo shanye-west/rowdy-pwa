@@ -108,47 +108,20 @@ Notes:
    `teamA.handicapByPlayer.<playerId>` or `teamB.handicapByPlayer.<playerId>`.
 - The script validates numeric handicaps and will skip unknown player IDs (it reports skipped entries).
 
-## Temporary Public Match Editing (developer testing)
+## Match Editing During Testing
 
-You can temporarily allow any client (anonymous or signed-in) to update `matches/{matchId}` for a specific
-tournament by toggling a flag on the tournament document. This is useful for UI testing when you want to
-open match editing to testers without requiring their auth to be linked to a player.
+Keep `openPublicEdits` false on every production tournament, including test tournaments.
+On November 11, 2026, it was disabled for `_TestRowdyCup2026` and verified disabled
+across all nine production tournaments. The test-auth setup script preserves this setting.
 
-How it works
-- An addition was made to `firestore.rules` to allow `update` on `matches/{matchId}` when:
-   - the requesting user is an authenticated, rostered player (unchanged behavior), OR
-   - the tournament document at `tournaments/{tournamentId}` has `openPublicEdits == true`.
+For production scoring checks, use a signed-in player listed in the match's
+`authorizedUids`, with the match unlocked. Use the Firestore emulator for tests
+that need synthetic identities or unauthenticated write attempts.
 
-Steps to enable temporary public editing
-1. Deploy the updated security rules (rules are included in the repo):
-
-```bash
-firebase deploy --only firestore:rules
-```
-
-2. Turn on public edits for a tournament (example using `firebase-tools`):
-
-Run these commands from the repository root (project root) — that is, one level up from this `scripts/` folder.
-
-```bash
-# set the flag to true
-firebase firestore:update tournaments/2025ChristmasClassic --data '{"openPublicEdits": true}'
-
-# when you're finished, turn it off
-firebase firestore:update tournaments/2025ChristmasClassic --data '{"openPublicEdits": false}'
-```
-
-Notes & safety
-- This toggle is intentionally simple so you can flip it on/off directly on the tournament document.
-- While `openPublicEdits` is `true`, any client can update matches for that tournament — use only for
-   short-term testing in development or controlled QA sessions.
-- After testing, set `openPublicEdits` back to `false` immediately.
-- Changes made while the flag is enabled are normal Firestore writes and will trigger any Cloud Functions
-   that respond to match updates (e.g., computing match status/results). Audit changes if needed.
-
-If you'd like, I can add a short script to flip the flag from the command line (one-liner using
-`firebase firestore:update`) or add a note in your deployment checklist.
-
+The legacy public-edit toggle still exists in the admin UI and rules. Setting it
+true bypasses authentication entirely for unlocked matches in that tournament;
+it does not limit access to signed-in testers. Such writes also run production
+scoring and other triggers. Do not re-enable it for routine QA.
 
 ## Auth Scripts
 

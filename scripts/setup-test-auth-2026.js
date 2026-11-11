@@ -7,7 +7,7 @@
  * - Creates Firebase Auth account for EACH test player: testname@rowdycup.com / Rowdy2026!
  * - Links authUid + email onto each player doc
  * - Updates the tournament teamA/teamB to the full 12-player roster (3 per tier)
- * - Sets openPublicEdits:true on the test tournament (lets any logged-in test user enter scores)
+ * - Keeps openPublicEdits:false so only authorized, signed-in match players can enter scores
  *
  * Usage:
  *   node setup-test-auth-2026.js            # dry run
@@ -248,7 +248,7 @@ function hbp(rosterByTier) {
   console.log("\n[3/4] Updating tournament roster to 12v12...");
   const tournamentPatch = {
     totalPointsAvailable: 10,
-    openPublicEdits: true, // any logged-in test user can enter scores
+    openPublicEdits: false, // never grant signed-out clients score-writing access in production
     teamA: {
       id: "teamA", name: "Test Aces", logo: "", color: "#1e3a5f",
       captainId: "_TestShanePeterson", coCaptainId: "_TestJPSaar",
@@ -265,7 +265,7 @@ function hbp(rosterByTier) {
   await patchDoc(token, `tournaments/${TID}`, tournamentPatch, [
     "totalPointsAvailable", "openPublicEdits", "teamA", "teamB",
   ]);
-  console.log("  ✅ tournament updated (openPublicEdits:true, 12v12 roster)");
+  console.log("  ✅ tournament updated (openPublicEdits:false, 12v12 roster)");
 
   // ---- 5. Summary
   console.log("\n[4/4] Done!\n");
