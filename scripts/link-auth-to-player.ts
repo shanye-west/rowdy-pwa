@@ -41,11 +41,17 @@ async function linkAuthToPlayer() {
       return;
     }
     
-    // Update player doc with authUid and email
-    await playerRef.update({
+    // Keep email out of the public player doc. Commit the private profile and
+    // removal of any legacy public email together, without replacing notes.
+    const batch = db.batch();
+    batch.update(playerRef, {
       authUid: authUser.uid,
-      email: authUser.email
+      email: admin.firestore.FieldValue.delete(),
     });
+    batch.set(playerRef.collection("private").doc("profile"), {
+      email: authUser.email ?? email,
+    }, { merge: true });
+    await batch.commit();
     
     console.log(`✓ Linked ${playerId} to auth user ${authUser.uid}`);
     console.log(`  Email: ${authUser.email}`);

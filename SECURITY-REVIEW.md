@@ -42,6 +42,8 @@ Remediation: disable unused production test accounts and revoke sessions; rotate
 
 **4. Medium — older linking scripts can reintroduce public emails**
 
+**Remediated — November 11, 2026:** updated all three identified scripts to write email only to `players/{id}/private/profile` and delete any legacy public `email` field in the same atomic batch/REST commit. Private profile writes merge the email field so existing scouting notes survive. Added six emulator-only regression tests covering the actual script workflows, including all 24 synthetic players in the REST setup, repeated linking, new private profiles, and a failed commit leaving private data unchanged. All six tests passed, as did strict targeted TypeScript checks for both changed TypeScript scripts and JavaScript syntax checks. The full scripts typecheck remains blocked by four unchanged utilities importing the absent `service-account.json`; no credential file was created. A fresh signed-out production read checked all 66 public players and found no email/scouting-note fields, so no production cleanup or deployment was necessary. The provisioning scripts were not run against production.
+
 Evidence: `scripts/link-auth-to-player.ts:45`, `scripts/bulk-link-auth.ts:76`, and `scripts/setup-test-auth-2026.js:243` still write `email` onto `players/{id}`. These use privileged writes that bypass Firestore rules. `scripts/README.md` still recommends the older linking scripts.
 
 Current production check: all 66 public player documents were inspected; none contains `email`, `scoutingNotes`, `phone`, `address`, or `password`. This is a regression path, not a currently observed email leak.

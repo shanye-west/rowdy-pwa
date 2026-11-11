@@ -72,11 +72,17 @@ async function bulkLinkAuth() {
         continue;
       }
       
-      // Update player doc with authUid and email
-      await playerRef.update({
+      // Keep email private and remove any legacy public copy atomically.
+      // Merge the profile so existing scouting notes are preserved.
+      const batch = db.batch();
+      batch.update(playerRef, {
         authUid: authUser.uid,
-        email: authUser.email
+        email: admin.firestore.FieldValue.delete(),
       });
+      batch.set(playerRef.collection("private").doc("profile"), {
+        email: authUser.email ?? email,
+      }, { merge: true });
+      await batch.commit();
       
       console.log(`✓ ${playerId} → ${authUser.uid}`);
       success++;

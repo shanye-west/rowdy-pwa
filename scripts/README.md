@@ -133,6 +133,13 @@ or the Admin SDK; do not re-enable public registration to run legacy test-seedin
 scripts that call the public sign-up API. This setting lives in Firebase project
 configuration, not in the hosting bundle or Firestore rules.
 
+Account-linking scripts keep only `authUid` on the public player document.
+Email is merged into `players/{playerId}/private/profile`, alongside any existing
+scouting notes. The private email write and removal of a legacy public `email`
+field commit atomically. The single-player, bulk-link, and legacy test-auth setup
+scripts all use this separation; do not put email or scouting notes in public
+player documents or import them from an old snapshot.
+
 ### Link Single Auth User to Player
 
 Links a Firebase Auth user (by email) to a player doc (by player ID). Run this after creating an auth account for a player.
@@ -170,6 +177,21 @@ The script will:
 - Skip any placeholder emails (containing `@email.com`)
 - Report which players were linked successfully
 - Report which failed (auth account doesn't exist yet)
+
+### Player Privacy Regression Tests
+
+From the repository root, with Java 21 and the Firebase CLI available:
+
+```bash
+npm --prefix scripts ci
+firebase emulators:exec --only firestore --project demo-rowdy-pii "npm --prefix scripts run test:pii"
+```
+
+These tests execute all three linking workflows against a local Firestore
+emulator with synthetic data. Authentication and credential loading are stubbed;
+the tests require a loopback emulator address and use only `demo-rowdy-pii`.
+They verify private email storage, removal of legacy public emails, preservation
+of scouting notes, repeat linking, and failure without a partial profile update.
 
 ## Player Auth Workflow
 

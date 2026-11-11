@@ -5,7 +5,8 @@
   "scripts": {
     "seed-players": "ts-node seed-players.ts",
     "export": "node exportFirestore.js",
-    "seed": "node seedFirestore.js"
+    "seed": "node seedFirestore.js",
+    "test:pii": "node --test tests/player-pii.test.cjs"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0"

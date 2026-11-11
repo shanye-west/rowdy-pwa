@@ -5,7 +5,7 @@
  *
  * - Creates 16 new _Test* player docs (total 24 players, 12 per team)
  * - Creates Firebase Auth account for EACH test player: testname@rowdycup.com / Rowdy2026!
- * - Links authUid + email onto each player doc
+ * - Links authUid on each public player doc; stores email in its private profile
  * - Updates the tournament teamA/teamB to the full 12-player roster (3 per tier)
  * - Keeps openPublicEdits:false so only authorized, signed-in match players can enter scores
  *
@@ -88,6 +88,30 @@ async function patchDoc(token, path, obj, maskFields) {
   });
   if (res.error) throw new Error(`patchDoc ${path}: ${JSON.stringify(res.error)}`);
   return res;
+}
+
+async function linkPlayerAuth(token, playerId, uid, email) {
+  const name = `projects/${PROJECT}/databases/(default)/documents/players/${playerId}`;
+  // A commit is atomic: linking, removing an old public email, and saving the
+  // private email either all succeed or all fail. A masked-but-omitted field is
+  // deleted by Firestore; the profile's email-only mask preserves other PII.
+  const res = await httpJson(`${BASE}:commit`, "POST", {
+    writes: [
+      {
+        update: { name, fields: { authUid: toValue(uid) } },
+        updateMask: { fieldPaths: ["authUid", "email"] },
+        currentDocument: { exists: true },
+      },
+      {
+        update: { name: `${name}/private/profile`, fields: { email: toValue(email) } },
+        updateMask: { fieldPaths: ["email"] },
+      },
+    ],
+  }, {
+    "Content-Type": "application/json",
+    Authorization: "Bearer " + token,
+  });
+  if (res.error) throw new Error(`linkPlayerAuth ${playerId}: ${JSON.stringify(res.error)}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +264,7 @@ function hbp(rosterByTier) {
       uid = created.uid;
       console.log(`  ✅ created ${email} (uid ${uid})`);
     }
-    await patchDoc(token, `players/${p.id}`, { authUid: uid, email }, ["authUid", "email"]);
+    await linkPlayerAuth(token, p.id, uid, email);
     await sleep(100);
   }
 
