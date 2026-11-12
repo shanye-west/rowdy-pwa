@@ -38,13 +38,8 @@ export default defineConfig({
         "images/rowdycup-logo.svg",
         "images/stocking-stuffers.svg",
       ],
-      // autoUpdate: the generated SW uses skipWaiting + clientsClaim, so a new
-      // version installs, activates, and reloads the page automatically. This
-      // closes the window where a stale old SW kept serving old chunks after a
-      // deploy — a lazy-route chunk would 404 and a plain reload couldn't
-      // promote the waiting SW, leaving the page stuck on a spinner until the
-      // app was force-closed. Score input is persisted to Firestore as it's
-      // entered, so an automatic reload is safe.
+      // Activate updated workers automatically. main.tsx overrides the client's
+      // reload callback with a user-controlled banner to avoid reload loops.
       registerType: 'autoUpdate',
       devOptions: {
         enabled: true // Enables PWA in local dev (npm run dev)

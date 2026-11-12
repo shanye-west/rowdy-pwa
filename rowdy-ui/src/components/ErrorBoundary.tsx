@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
-import { recoverFromStaleChunk } from "../utils/swRecovery";
+import { hardResetApp, recoverFromStaleChunk } from "../utils/swRecovery";
 
 /**
  * Error boundary for route errors.
@@ -83,13 +83,16 @@ export default function ErrorBoundary() {
   // Handle stale cache / module loading errors
   if (isStaleCache) {
     return (
-      <Layout title="Updating...">
+      <Layout title="Unable to load page">
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="spinner-lg mb-4"></div>
-          <h1 className="text-xl font-bold mb-2">Updating App</h1>
+          <h1 className="text-xl font-bold mb-2">Page could not load</h1>
           <p className="text-muted-foreground">
-            A new version is available. Reloading...
+            The update or connection did not finish. Check your connection, then try again.
           </p>
+          <div className="mt-4 flex gap-3">
+            <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>Retry</button>
+            <button type="button" className="btn btn-secondary" onClick={() => { void hardResetApp(); }}>Reset app cache</button>
+          </div>
         </div>
       </Layout>
     );

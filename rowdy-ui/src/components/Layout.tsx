@@ -28,6 +28,7 @@ import { ViewTransitionLink } from "./ViewTransitionLink";
 import { NotificationBell } from "./NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { useAppUpdate } from "../hooks/useAppUpdate";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { InstallGuideModal } from "./InstallGuideModal";
 import { isIOS, isStandalone } from "../messaging";
@@ -60,6 +61,7 @@ type LayoutShellProps = {
 
 export function LayoutShell({ children }: LayoutShellProps) {
   const navigate = useNavigate();
+  const updateAvailable = useAppUpdate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -430,6 +432,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
       >
         {/* Offline Status Banner — app-wide so every route signals offline state */}
         <ConnectionBanner isOnline={isOnline} />
+        {updateAvailable && (
+          <div role="status" className="flex items-center justify-center gap-3 border-b border-border bg-blue-50 px-4 py-3 text-sm">
+            <span>An update is available. Reload when you’re ready.</span>
+            <Button type="button" size="sm" onClick={() => window.location.reload()}>Reload</Button>
+          </div>
+        )}
 
         {showIphoneInstallPrompt && (
           <aside aria-label="Install Rowdy" className="border-b border-border bg-blue-50 px-4 py-3">

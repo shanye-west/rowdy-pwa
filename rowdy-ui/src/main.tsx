@@ -1,9 +1,11 @@
 import React from "react";
+import { markAppUpdateAvailable } from "./hooks/useAppUpdate";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 import "./firebase";
+import { recoverFromStaleChunk } from "./utils/swRecovery";
 import { lazyWithRecovery } from "./utils/lazyWithRecovery";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
@@ -149,18 +151,14 @@ const router = createBrowserRouter(
   }
 );
 
-// Register the service worker once, app-wide (previously this only ran on the
-// Home route, so a user sitting on a sub-page never checked for new versions).
-// In autoUpdate mode the SW reloads the page itself once a new version
-// activates; the 60s poll forces a timely update check regardless of route.
+// Updates activate automatically, but never force-refresh the user's page.
+// Workbox can report external activations too; these must not cause reload loops.
 registerSW({
   immediate: true,
+  onNeedReload: markAppUpdateAvailable,
   onRegisteredSW(_swUrl, registration) {
     if (registration) {
-      // Don't pull a new version (which, in autoUpdate mode, reloads the page)
-      // while the user is actively on a match scorecard — a reload mid-entry
-      // risks losing an in-flight keystroke. The update is picked up as soon as
-      // they leave the scorecard; stale-chunk recovery covers that navigation.
+      // Defer explicit update checks while a scorecard is open.
       const onScorecard = () => location.pathname.startsWith("/match/");
       const maybeUpdate = () => {
         if (onScorecard()) return;
@@ -180,17 +178,10 @@ registerSW({
   },
 });
 
-// Recover from a stale-chunk load failure. After a deploy, a client still
-// running the old bundle can request a lazy-route chunk that no longer exists
-// (404) before the new SW has taken over — Vite fires `vite:preloadError`.
-// Reload once to pick up the fresh bundle; the timestamp guard prevents an
-// infinite reload loop if the reload also fails (the ErrorBoundary then escalates).
+// Share the route recovery guard so concurrent chunk failures cannot reload
+// indefinitely. Let the failed import reach the error boundary after the retry.
 window.addEventListener("vite:preloadError", () => {
-  const KEY = "preload-error-reloaded-at";
-  const last = Number(sessionStorage.getItem(KEY) || 0);
-  if (Date.now() - last < 10_000) return; // already tried very recently — don't loop
-  sessionStorage.setItem(KEY, String(Date.now()));
-  window.location.reload();
+  recoverFromStaleChunk();
 });
 
 // Ask the browser to exempt this origin's storage from eviction under storage
