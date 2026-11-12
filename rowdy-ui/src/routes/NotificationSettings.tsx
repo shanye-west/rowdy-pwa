@@ -11,6 +11,7 @@ import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { getPushDiagnostics, refreshPushRegistration } from "../messaging";
 import { useToast } from "../contexts/ToastContext";
 import type { NotificationCategory, NotificationPrefs } from "../types";
 
@@ -48,7 +49,7 @@ const setNotificationPrefs = httpsCallable<{ prefs: NotificationPrefs }, { succe
   "setNotificationPrefs"
 );
 
-const sendTestPush = httpsCallable<void, { accepted: number; failed: number; errors: string[] }>(
+const sendTestPush = httpsCallable<void, { accepted: number; failed: number; errors: string[]; pruned?: number }>(
   functions, "sendTestPush"
 );
 
@@ -65,10 +66,20 @@ export default function NotificationSettings() {
   const testPush = async () => {
     if (testing) return;
     setTesting(true);
-    setTestStatus("Sending in 10 seconds. Go to your iPhone Home Screen now to check for the alert, then return here for results.");
+    setTestStatus("Checking this device's registration…");
     try {
+      // Run the same self-heal the app does on launch, then show what it found,
+      // so a failing test can be diagnosed from the phone.
+      const check = await refreshPushRegistration({ force: true });
+      const diag = (await getPushDiagnostics()).join("\n");
+      setTestStatus(`Self-check: ${check}\nSending in 10 seconds — the alert should appear whether you stay here or go to your Home Screen.\n\n${diag}`);
       const { data } = await sendTestPush();
-      setTestStatus(`Push service accepted ${data.accepted} device(s); ${data.failed} failed. Acceptance does not confirm the alert appeared on your phone.${data.errors.length ? ` Errors: ${data.errors.join(", ")}` : ""}`);
+      setTestStatus(
+        `Push service accepted ${data.accepted} device(s); ${data.failed} failed. Acceptance does not confirm the alert appeared on your phone.` +
+          (data.errors.length ? ` Errors: ${data.errors.join(", ")}.` : "") +
+          (data.pruned ? ` Removed ${data.pruned} dead registration(s).` : "") +
+          `\n\nSelf-check: ${check}\n${diag}`
+      );
     } catch (error) {
       setTestStatus(error instanceof Error ? error.message : "Test failed. Please try again.");
     } finally {
@@ -181,7 +192,7 @@ export default function NotificationSettings() {
               <Button onClick={() => void testPush()} disabled={testing || pushBusy}>
                 {testing ? "Sending test…" : "Send test to me"}
               </Button>
-              {testStatus && <p role="status" className="text-sm text-muted-foreground">{testStatus}</p>}
+              {testStatus && <p role="status" className="text-sm text-muted-foreground whitespace-pre-line break-words">{testStatus}</p>}
             </Card>
           )}
 

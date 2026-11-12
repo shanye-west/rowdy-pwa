@@ -1,72 +1,58 @@
-/* Firebase Cloud Messaging — background push handler.
+/* Web push — service-worker side.
  *
  * This file is importScripts'd INTO the Workbox-generated service worker (see
  * `workbox.importScripts` in vite.config.ts), so the PWA keeps a single service
- * worker at scope "/" that handles BOTH offline caching and background push.
- * (Registering a second SW for FCM at the same scope would conflict.)
+ * worker at scope "/" that handles BOTH offline caching and push.
  *
- * The Firebase web config below is PUBLIC — it mirrors rowdy-ui/.env.local. The
- * web SDK config is not a secret (Firestore security rules protect data; see
- * .env.example), and a service worker can't read import.meta.env, so it is
- * inlined here per Firebase's documented FCM-SW convention.
+ * We deliberately do NOT load the Firebase Messaging SDK here and handle the raw
+ * `push` event ourselves. The SDK's handler skips showing a notification whenever
+ * an app window is visible (it forwards the payload to the page instead). Safari /
+ * iOS treats a push that shows nothing as a "silent push" and, after a few of
+ * them, REVOKES the push subscription — after which nothing is delivered until
+ * the user turns notifications off and on again. So the one hard rule in this
+ * file: EVERY push event shows a notification, no matter what.
  *
- * The compat SDK is used (not the modular SDK) because importScripts pulls in
- * plain, pre-bundled scripts — keep the version in sync with `firebase` in
- * package.json (12.19.0).
+ * The page still mints the FCM token with the modular SDK (src/messaging.ts);
+ * that only needs a service-worker registration, not the SDK in the worker.
+ *
+ * The server sends DATA-ONLY FCM messages (functions/src/messaging/notify.ts),
+ * which arrive as JSON shaped like { data: { title, body, link, category }, ... }.
  */
-// Import the Firebase compat SDK. These are cross-origin fetches; if they fail
-// (e.g. gstatic unreachable at SW install/update time), we must NOT let the
-// throw escape — this script is importScripts'd into the Workbox offline-caching
-// SW, so an uncaught error here would abort the whole SW and take offline
-// caching (the precached app shell) down with it. On failure, `firebase` stays
-// undefined and the guarded block below is skipped; push is simply disabled for
-// this session while offline caching keeps working.
-try {
-  importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js");
-  importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js");
-} catch (err) {
-  console.warn("[fcm-sw] failed to load Firebase SDK — push disabled this session:", err);
-}
 
-// Guard the whole FCM setup: firebase.messaging() throws
-// "messaging/unsupported-browser" where push isn't available, `firebase` may be
-// undefined if the imports above failed, and this script also runs as the
-// offline-caching SW — a throw here would break caching too.
-try {
-  if (typeof firebase === "undefined") throw new Error("Firebase SDK unavailable");
-  firebase.initializeApp({
-    apiKey: "AIzaSyAt561vHNjQZKEAbQbLYTbg15EfODb3o4k",
-    authDomain: "rowdy-pwa.firebaseapp.com",
-    projectId: "rowdy-pwa",
-    storageBucket: "rowdy-pwa.firebasestorage.app",
-    messagingSenderId: "463685576544",
-    appId: "1:463685576544:web:a01c6d1c204b1d150de005",
-  });
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    const payload = event.data ? event.data.json() : {};
+    // Data-only messages carry our fields under `data`; tolerate a `notification`
+    // block too in case one is ever sent (e.g. from the Firebase console).
+    data = Object.assign({}, payload.notification || {}, payload.data || {});
+  } catch {
+    /* unparseable payload — still show a generic alert below */
+  }
 
-  const messaging = firebase.messaging();
-
-  // Background delivery (app not focused). We send DATA-ONLY messages from the
-  // server, so nothing is auto-displayed — we render here to control the icon and
-  // the deep link, and to avoid the duplicate-notification problem that a
-  // `notification` payload causes.
-  messaging.onBackgroundMessage((payload) => {
-    const data = payload.data || {};
-    const title = data.title || "Rowdy Cup";
-    // FCM awaits this promise to keep the push event alive until the alert is
-    // displayed. Without it, iOS can suspend the worker before display finishes.
-    return self.registration.showNotification(title, {
+  // waitUntil keeps the worker alive until the alert is actually displayed;
+  // without it iOS can suspend the worker first (which also counts as silent).
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Rowdy Cup", {
       body: data.body || "",
       icon: "/pwa-192x192.png",
       badge: "/pwa-192x192.png",
       tag: data.category || "rowdy",
+      // Same-tag notifications replace each other; re-alert when they do so a
+      // second chat message isn't swapped in silently.
+      renotify: true,
       data: { link: data.link || "/" },
-    });
-  });
-} catch (err) {
-  // Push unsupported in this browser — offline caching (the rest of the SW) is
-  // unaffected.
-  console.warn("[fcm-sw] messaging unavailable:", err);
-}
+    })
+  );
+});
+
+// Diagnostics: lets the app confirm THIS handler (not an older cached worker) is
+// the one in control. Bump the version when this file's behavior changes.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "rowdy-push-ping" && event.ports && event.ports[0]) {
+    event.ports[0].postMessage({ version: 2 });
+  }
+});
 
 // Tap → focus an existing app window (navigating it to the deep link) or open one.
 self.addEventListener("notificationclick", (event) => {

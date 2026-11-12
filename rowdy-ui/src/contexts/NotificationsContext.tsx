@@ -1,8 +1,8 @@
 /**
  * NotificationsContext — one shared subscription to the logged-in player's
  * notification history (players/{id}/notifications), powering the header bell and
- * the unread nav badges. Also forwards foreground push to a toast (background
- * push is rendered by the service worker).
+ * the unread nav badges. Also keeps this device's push registration healthy
+ * (the service worker renders every push as a system notification itself).
  *
  * Marking read is a direct Firestore update (the security rules allow the owner
  * to flip only read/readAt), so no callable is needed.
@@ -23,9 +23,8 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "./AuthContext";
-import { useToast } from "./ToastContext";
 import { useDeviceReporting } from "../hooks/useDeviceReporting";
-import { onForegroundMessage } from "../messaging";
+import { refreshPushRegistration } from "../messaging";
 import type { NotificationDoc } from "../types";
 
 const HISTORY_LIMIT = 30;
@@ -48,7 +47,6 @@ const NotificationsContext = createContext<NotificationsValue | null>(null);
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { player } = useAuth();
   useDeviceReporting(player?.id);
-  const { showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
 
   // Live history for the current player (most recent first).
@@ -72,25 +70,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     return () => unsub();
   }, [player]);
 
-  // Foreground push → toast. Background delivery is the service worker's job.
+  // Self-heal the device's push registration on start and whenever the app
+  // comes back to the foreground (an iOS PWA resumes far more often than it
+  // cold-boots). Throttled inside refreshPushRegistration; never prompts.
+  const playerId = player?.id;
   useEffect(() => {
-    let active = true;
-    let cleanup = () => {};
-    onForegroundMessage((payload) => {
-      const data = payload.data ?? {};
-      const title = data.title;
-      const body = data.body;
-      if (!title && !body) return;
-      showToast({ message: body ? `${title}: ${body}` : (title as string), variant: "info" });
-    }).then((unsub) => {
-      if (active) cleanup = unsub;
-      else unsub();
-    });
-    return () => {
-      active = false;
-      cleanup();
+    if (!playerId) return;
+    void refreshPushRegistration();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshPushRegistration();
     };
-  }, [showToast]);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [playerId]);
 
   const value = useMemo<NotificationsValue>(() => {
     const unread = notifications.filter((n) => !n.read);

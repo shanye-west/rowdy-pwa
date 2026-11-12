@@ -13,6 +13,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { info } from "firebase-functions/logger";
 import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
+import { tokensToPrune } from "../messaging/notify.js";
 import type { NotificationCategory } from "../types.js";
 
 function db() {
@@ -33,9 +34,11 @@ export const sendTestPush = onCall({ timeoutSeconds: 60 }, async (request: Calla
   }
   let accepted = 0;
   const errors = new Set<string>();
+  const dead: string[] = [];
   for (let i = 0; i < tokens.length; i += 500) {
+    const chunk = tokens.slice(i, i + 500);
     const result = await getMessaging().sendEachForMulticast({
-      tokens: tokens.slice(i, i + 500),
+      tokens: chunk,
       data: {
         title: "Rowdy Cup test notification",
         body: "Push notifications are working on this device. Only you received this test.",
@@ -47,9 +50,17 @@ export const sendTestPush = onCall({ timeoutSeconds: 60 }, async (request: Calla
     result.responses.forEach((response) => {
       if (!response.success) errors.add(response.error?.code ?? "messaging/unknown-error");
     });
+    dead.push(...tokensToPrune(result.responses, chunk));
+  }
+  // Drop tokens FCM says are permanently dead (same rule notify() applies), so a
+  // leftover from an old install doesn't keep failing every future test.
+  if (dead.length > 0) {
+    const batch = db().batch();
+    dead.forEach((token) => batch.delete(db().collection("pushTokens").doc(token)));
+    await batch.commit();
   }
   // FCM acceptance is not proof that the phone displayed a notification.
-  const result = { accepted, failed: tokens.length - accepted, errors: [...errors] };
+  const result = { accepted, failed: tokens.length - accepted, errors: [...errors], pruned: dead.length };
   info("Admin test push result", { playerId, ...result });
   return result;
 });
@@ -74,27 +85,59 @@ function requireToken(data: unknown): string {
   return token;
 }
 
-/** Register (or refresh) the calling player's device token for web push. */
+/** FCM error codes meaning the token is permanently dead (see tokensToPrune). */
+const DEAD_TOKEN_CODES = new Set([
+  "messaging/registration-token-not-registered",
+  "messaging/invalid-registration-token",
+  "messaging/invalid-argument",
+]);
+
+/**
+ * Ask FCM whether a token is still deliverable, without delivering anything (a
+ * dry-run send). Only a definitive "dead" answer returns false — a transient or
+ * unknown error counts as alive so we never churn a working device.
+ */
+async function isTokenAlive(token: string): Promise<boolean> {
+  try {
+    await getMessaging().send({ token, data: { category: "validate" } }, true);
+    return true;
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    return !(code && DEAD_TOKEN_CODES.has(code));
+  }
+}
+
+/**
+ * Register (or refresh) the calling player's device token for web push.
+ *
+ * Returns `valid: false` (and stores nothing) when FCM says the token is dead —
+ * iOS can kill a subscription on Apple's side while the device still believes
+ * in it, so the client calls this on every launch and re-subscribes on false.
+ */
 export const registerPushToken = onCall(async (request: CallableRequest) => {
   const { playerId } = await requirePlayer(request, "registerPushToken", { maxCalls: 30, windowSeconds: 60 });
   const token = requireToken(request.data);
   const userAgent = (request.data as { userAgent?: unknown } | null)?.userAgent;
+  const ref = db().collection("pushTokens").doc(token);
 
-  await db()
-    .collection("pushTokens")
-    .doc(token)
-    .set(
-      {
-        token,
-        playerId,
-        userAgent: typeof userAgent === "string" ? userAgent.slice(0, 512) : null,
-        createdAt: FieldValue.serverTimestamp(),
-        lastSeenAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  if (!(await isTokenAlive(token))) {
+    await ref.delete();
+    info("Dead push token rejected at registration", { playerId });
+    return { success: true, valid: false };
+  }
 
-  return { success: true };
+  await ref.set(
+    {
+      token,
+      playerId,
+      userAgent: typeof userAgent === "string" ? userAgent.slice(0, 512) : null,
+      createdAt: FieldValue.serverTimestamp(),
+      lastSeenAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { success: true, valid: true };
 });
 
 /** Remove a device token (the menu "turn off" action, or a sign-out cleanup). */

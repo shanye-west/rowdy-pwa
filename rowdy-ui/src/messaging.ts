@@ -1,10 +1,11 @@
 /**
  * Web-push (FCM) client helpers.
  *
- * The background handler lives in public/firebase-messaging-sw.js (importScripts'd
- * into the Workbox service worker). Here we cover the app side: feature-detection
+ * The push handler lives in public/firebase-messaging-sw.js (importScripts'd
+ * into the Workbox service worker) and shows a system notification for EVERY
+ * push, foreground or background. Here we cover the app side: feature-detection
  * (incl. the iOS "must install to Home Screen" case), turning push on/off, and
- * forwarding foreground messages.
+ * keeping the device's registration healthy (refreshPushRegistration).
  *
  * Tokens are persisted server-side via the registerPushToken / unregisterPushToken
  * callables (the pushTokens collection is locked to clients). We keep the local
@@ -15,10 +16,8 @@ import {
   getMessaging,
   getToken,
   deleteToken,
-  onMessage,
   isSupported,
   type Messaging,
-  type MessagePayload,
 } from "firebase/messaging";
 import { httpsCallable } from "firebase/functions";
 import { app, functions } from "./firebase";
@@ -26,7 +25,7 @@ import { app, functions } from "./firebase";
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 const LOCAL_TOKEN_KEY = "rowdy:push-token";
 
-const registerPushToken = httpsCallable<{ token: string; userAgent?: string }, { success: boolean }>(
+const registerPushToken = httpsCallable<{ token: string; userAgent?: string }, { success: boolean; valid?: boolean }>(
   functions,
   "registerPushToken"
 );
@@ -133,6 +132,155 @@ export async function enablePush(): Promise<EnableResult> {
   return { ok: true };
 }
 
+const REFRESH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+/** Waits before each self-heal attempt (first is immediate); ~45s in total. */
+const RETRY_DELAYS_MS = [0, 3_000, 7_000, 15_000, 20_000];
+let lastRefreshCheck = 0;
+let refreshInFlight: Promise<string> | null = null;
+/** Outcome of the most recent refreshPushRegistration run (for diagnostics). */
+let lastRefreshOutcome = "not run yet";
+
+function describeError(err: unknown): string {
+  if (err instanceof Error) return `${err.name}: ${err.message}`;
+  return String(err);
+}
+
+/**
+ * Self-heal this device's push registration. Call on app start / resume for a
+ * signed-in player who already turned push on.
+ *
+ * iOS kills a home-screen app's push subscription underneath us — after "silent"
+ * pushes, and (observed) across a hard quit — and it does so on Apple's side
+ * only: pushManager.getSubscription() and the Firebase SDK's cached token both
+ * still look fine locally, while FCM answers "registration-token-not-registered".
+ * So a local check can't see it. Instead we hand the token to registerPushToken,
+ * which asks FCM whether it is still alive (a dry-run send — nothing is
+ * delivered). If it's dead we do exactly what "toggle off, then on" does:
+ * delete the token + browser subscription, mint a fresh pair, register that.
+ *
+ * Never prompts: it only runs when permission is already granted. Returns a
+ * short human-readable outcome; `force` bypasses the 10-minute throttle.
+ */
+export function refreshPushRegistration(opts: { force?: boolean } = {}): Promise<string> {
+  if (refreshInFlight) return refreshInFlight;
+  if (!VAPID_KEY || pushSupport() !== "ok" || !isPushEnabledLocally()) {
+    return Promise.resolve("skipped (push not enabled on this device)");
+  }
+  const now = Date.now();
+  if (!opts.force && now - lastRefreshCheck < REFRESH_CHECK_INTERVAL_MS) {
+    return Promise.resolve(lastRefreshOutcome);
+  }
+  const vapidKey = VAPID_KEY;
+  const run = async (): Promise<string> => {
+    const messaging = await messagingIfSupported();
+    if (!messaging) return "skipped (messaging unsupported)";
+    const registration = await navigator.serviceWorker.ready;
+    const previous = localStorage.getItem(LOCAL_TOKEN_KEY);
+
+    let token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+    if (!token) return "failed (no token)";
+    let { data } = await registerPushToken({ token, userAgent: navigator.userAgent });
+    let outcome = token === previous ? "ok (token still valid)" : "ok (token had changed; re-registered)";
+
+    if (data.valid === false) {
+      // Dead on the push service. Tear down and re-subscribe from scratch.
+      try {
+        await deleteToken(messaging);
+      } catch {
+        /* already gone server-side — carry on */
+      }
+      // deleteToken should unsubscribe, but make sure the dead browser
+      // subscription really is gone so getToken creates a brand-new one.
+      try {
+        const stale = await registration.pushManager.getSubscription();
+        if (stale) await stale.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+      if (!token) return "failed (token was dead; could not mint a new one)";
+      ({ data } = await registerPushToken({ token, userAgent: navigator.userAgent }));
+      outcome =
+        data.valid === false
+          ? "failed (token was dead; the replacement was rejected too)"
+          : "repaired (token was dead; re-subscribed)";
+    }
+
+    localStorage.setItem(LOCAL_TOKEN_KEY, token);
+    if (previous && previous !== token) {
+      // The old token is dead weight server-side — drop it (best-effort).
+      unregisterPushToken({ token: previous }).catch(() => {});
+    }
+    lastRefreshCheck = Date.now();
+    return outcome;
+  };
+  // Right after an iOS relaunch the first attempt to mint a replacement token
+  // routinely fails with a transient FCM "Internal error" (observed on device:
+  // failed at launch, succeeded 17s later). The old token is already gone by
+  // then, so giving up would leave the device unreachable until the next launch
+  // — retry with backoff instead. run() is safe to repeat from scratch.
+  const runWithRetry = async (): Promise<string> => {
+    let lastError: unknown;
+    for (const delay of RETRY_DELAYS_MS) {
+      if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+      try {
+        const outcome = await run();
+        if (!outcome.startsWith("failed")) return delay ? `${outcome} after retry` : outcome;
+        lastError = outcome;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    return typeof lastError === "string" ? lastError : `failed (${describeError(lastError)})`;
+  };
+  refreshInFlight = runWithRetry()
+    .catch((err) => `failed (${describeError(err)})`)
+    .then((outcome) => {
+      lastRefreshOutcome = `${outcome} @ ${new Date().toLocaleTimeString()}`;
+      refreshInFlight = null;
+      return lastRefreshOutcome;
+    });
+  return refreshInFlight;
+}
+
+/** Ask the active service worker which push-handler version it is running. */
+function pingServiceWorker(): Promise<string> {
+  return new Promise((resolve) => {
+    const controller = navigator.serviceWorker?.controller;
+    if (!controller) return resolve("no controller");
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve("OLD (no reply — reopen the app to update)"), 1500);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      resolve(`v${String((event.data as { version?: unknown } | null)?.version ?? "?")}`);
+    };
+    controller.postMessage({ type: "rowdy-push-ping" }, [channel.port2]);
+  });
+}
+
+/**
+ * Admin diagnostic: a snapshot of this device's push state, so a failing test
+ * can be read off the phone instead of guessed at. Tokens are shown as their
+ * last 6 characters only.
+ */
+export async function getPushDiagnostics(): Promise<string[]> {
+  const tail = (v: string | null | undefined) => (v ? `…${v.slice(-6)}` : "none");
+  const lines: string[] = [`build ${__BUILD_TIME__}`];
+  try {
+    lines.push(`standalone ${isStandalone() ? "yes" : "no"}, support ${pushSupport()}`);
+    lines.push(`permission ${"Notification" in window ? Notification.permission : "n/a"}`);
+    lines.push(`service worker ${await pingServiceWorker()}`);
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    lines.push(`subscription ${sub ? tail(sub.endpoint) : "NONE"}`);
+    lines.push(`saved token ${tail(localStorage.getItem(LOCAL_TOKEN_KEY))}`);
+  } catch (err) {
+    lines.push(`diagnostics error: ${describeError(err)}`);
+  }
+  lines.push(`last self-check: ${lastRefreshOutcome}`);
+  return lines;
+}
+
 /** Delete the device token locally and server-side. */
 export async function disablePush(): Promise<void> {
   const token = localStorage.getItem(LOCAL_TOKEN_KEY);
@@ -150,14 +298,4 @@ export async function disablePush(): Promise<void> {
     }
   }
   localStorage.removeItem(LOCAL_TOKEN_KEY);
-}
-
-/**
- * Subscribe to foreground push (delivered to onMessage when the app is focused;
- * background is handled by the service worker). Returns an unsubscribe function.
- */
-export async function onForegroundMessage(cb: (payload: MessagePayload) => void): Promise<() => void> {
-  const messaging = await messagingIfSupported();
-  if (!messaging) return () => {};
-  return onMessage(messaging, cb);
 }

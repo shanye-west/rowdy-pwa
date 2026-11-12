@@ -51,12 +51,11 @@ export default defineConfig({
         enabled: true // Enables PWA in local dev (npm run dev)
       },
       workbox: {
-        // Pull the Firebase Cloud Messaging background handler into the generated
-        // Workbox SW, so a single service worker at scope "/" serves both offline
-        // caching and background push (a second FCM SW would conflict at "/").
+        // Pull the web-push handler into the generated Workbox SW, so a single
+        // service worker at scope "/" serves both offline caching and push.
         importScripts: ['firebase-messaging-sw.js'],
-        // ...but don't precache that handler — it pulls the FCM compat SDK from
-        // gstatic at runtime and isn't an app asset to cache-bust. Also skip the
+        // ...but don't precache that handler — it's part of the SW itself, not an
+        // app asset. Also skip the
         // install-guide videos (~2MB each): they're only needed pre-install, when
         // the user is online in the browser, so precaching them just bloats the SW.
         globIgnores: ['**/firebase-messaging-sw.js', '**/videos/**'],
