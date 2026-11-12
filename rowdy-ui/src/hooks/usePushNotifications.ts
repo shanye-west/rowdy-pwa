@@ -81,9 +81,8 @@ export function usePushNotifications() {
       if (result.ok) {
         setPushOnState(true);
         setPromptOptOut(false);
-        // The confirmation is a real push sent by the server to this device, so
-        // success is proven end to end. Only fall back to a toast if that push
-        // couldn't be sent.
+        // enablePush confirms with a system notification; only fall back to a
+        // toast if that couldn't be shown.
         if (!result.confirmed) showToast({ message: "Notifications enabled 🎉", variant: "success" });
         return;
       }

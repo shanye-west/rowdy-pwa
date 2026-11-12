@@ -142,17 +142,19 @@ export const registerPushToken = onCall(async (request: CallableRequest) => {
 
   if (!confirm) return { success: true, valid: true };
 
-  // Best-effort: a failed confirmation must not fail the registration. The
-  // client falls back to an in-app message when `confirmed` is false.
+  // The device already showed its own instant "Notifications are on" alert;
+  // this one follows a few seconds later and proves a push can travel all the
+  // way from the server. Distinct wording + tag so it reads as a second step,
+  // not a duplicate. Best-effort: a failure must not fail the registration.
   let confirmed = false;
   try {
     await getMessaging().send({
       token,
       data: {
-        title: "Notifications are on 🎉",
-        body: "You'll get Rowdy Cup alerts on this device.",
+        title: "Push confirmed ✅",
+        body: "This alert came from the Rowdy Cup server — you're all set.",
         link: "/settings/notifications",
-        category: "welcome",
+        category: "welcome-server",
       },
     });
     confirmed = true;

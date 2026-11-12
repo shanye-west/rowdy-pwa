@@ -130,11 +130,28 @@ export async function enablePush(): Promise<EnableResult> {
   const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
   if (!token) return { ok: false, reason: "no-token" };
 
-  // `confirm` asks the server to send a "you're all set" push to this token —
-  // the success message is a real notification, not an in-app toast.
-  const { data } = await registerPushToken({ token, userAgent: navigator.userAgent, confirm: true });
+  // `confirm` asks the server to follow up with a real push to this device
+  // ("Push confirmed") — it lands a few seconds later and proves delivery end
+  // to end.
+  await registerPushToken({ token, userAgent: navigator.userAgent, confirm: true });
   localStorage.setItem(LOCAL_TOKEN_KEY, token);
-  return { ok: true, confirmed: data.confirmed === true };
+
+  // Meanwhile, confirm instantly with a system notification shown straight
+  // from this device, so success isn't left hanging for the round trip.
+  let confirmed = false;
+  try {
+    await registration.showNotification("Notifications are on 🎉", {
+      body: "You'll get Rowdy Cup alerts on this device.",
+      icon: "/pwa-192x192.png",
+      badge: "/pwa-192x192.png",
+      tag: "welcome",
+      data: { link: "/settings/notifications" },
+    });
+    confirmed = true;
+  } catch {
+    /* caller falls back to an in-app message */
+  }
+  return { ok: true, confirmed };
 }
 
 const REFRESH_CHECK_INTERVAL_MS = 10 * 60 * 1000;

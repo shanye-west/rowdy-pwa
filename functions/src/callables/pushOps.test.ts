@@ -96,7 +96,7 @@ it("sends a confirmation push to just that device when the player turns notifica
   await expect(registerPushToken.run(req)).resolves.toEqual({ success: true, valid: true, confirmed: true });
   expect(mocks.dryRun).toHaveBeenCalledTimes(2);
   expect(mocks.dryRun).toHaveBeenLastCalledWith(
-    expect.objectContaining({ token: "tok-1", data: expect.objectContaining({ category: "welcome" }) })
+    expect.objectContaining({ token: "tok-1", data: expect.objectContaining({ category: "welcome-server" }) })
   );
 });
 
