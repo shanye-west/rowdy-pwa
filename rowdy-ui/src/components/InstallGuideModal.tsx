@@ -1,13 +1,21 @@
 /** Browser-specific Home Screen steps, with an optional video walkthrough. */
 
 import { useState, type ReactNode } from "react";
-import { Download, Share, SquarePlus, Check, ChevronDown } from "lucide-react";
+import { Download, Share, SquarePlus, Check, ChevronDown, type LucideProps } from "lucide-react";
 import { Modal } from "./Modal";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { isIOS, isStandalone, iosBrowser } from "../messaging";
 
 const SAFARI_VIDEO = "/videos/rowdy_cup_pwa_home_screen_safari_annotated_corrected_noaudio.mp4";
 const CHROME_VIDEO = "/videos/rowdy_cup_pwa_home_screen_app_annotated_cropped_noaudio.mp4";
+
+function SafariMenuIcon(props: LucideProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" {...props}>
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
 
 export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { canInstall, promptInstall } = useInstallPrompt();
@@ -51,7 +59,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
     body = (
       <>
         <p className="mb-3 text-center text-sm text-muted-foreground">
-          Add Rowdy Cup in four steps, then open it from your Home Screen.
+          Add Rowdy Cup in {iosVideo === "safari" ? "five" : "four"} steps, then open it from your Home Screen.
         </p>
         <div className="mb-4 flex justify-center gap-2" aria-label="Browser instructions">
           {(["safari", "chrome"] as const).map(browser => (
@@ -65,10 +73,11 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
         {iosBrowser() === "other" && <p className="mb-3 text-sm text-muted-foreground">Open app.rowdycup.com in Safari or Chrome first, then follow the matching steps below.</p>}
         <ol className="space-y-3">
           {[
+            ...(iosVideo === "safari" ? [{ Icon: SafariMenuIcon, title: "Open Safari’s menu", text: "Tap the three horizontal lines (the bottom line is shorter) to the left of the address bar at the bottom of the screen. If your Safari layout already shows Share, skip to the next step." }] : []),
             {
               Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
                 ? "Find the Share icon on the right of Chrome’s address bar."
-                : "Look for the square with an upward arrow in Safari’s toolbar. Depending on your layout, open the More (…) menu first."
+                : "Tap Share in the menu — the square with an upward arrow."
             },
             { Icon: ChevronDown, title: "Tap View More", text: "Tap View More to reveal the rest of the Share menu. If the full list is already visible, continue to the next step." },
             { Icon: SquarePlus, title: "Choose Add to Home Screen", text: "Find Add to Home Screen in the expanded list. If it’s missing, check Edit Actions." },
@@ -88,6 +97,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
           onClick={() => setShowVideo(v => !v)} className="mt-4 w-full text-center text-sm font-semibold text-primary">
           {showVideo ? "Hide walkthrough" : "Watch walkthrough"}
         </button>
+        {showVideo && iosVideo === "safari" && <p className="mt-2 text-xs text-muted-foreground">This video shows an earlier Safari layout. Follow the steps above for the current menu.</p>}
         {showVideo && <video id="install-video" key={iosVideo}
           src={iosVideo === "chrome" ? CHROME_VIDEO : SAFARI_VIDEO}
           muted playsInline controls preload="metadata"

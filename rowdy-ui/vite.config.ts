@@ -29,6 +29,12 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   plugins: [
+    {
+      name: 'rowdy-build-version',
+      generateBundle() {
+        this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ buildTime }) });
+      },
+    },
     react(),
     tailwindcss(),
     VitePWA({
