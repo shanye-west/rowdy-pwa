@@ -1,7 +1,7 @@
 /** Browser-specific Home Screen steps, with an optional video walkthrough. */
 
 import { useState, type ReactNode } from "react";
-import { Download, Share, SquarePlus, Check } from "lucide-react";
+import { Download, Share, SquarePlus, Check, ChevronDown } from "lucide-react";
 import { Modal } from "./Modal";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { isIOS, isStandalone, iosBrowser } from "../messaging";
@@ -51,7 +51,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
     body = (
       <>
         <p className="mb-3 text-center text-sm text-muted-foreground">
-          Add Rowdy Cup in three steps, then open it from your Home Screen.
+          Add Rowdy Cup in four steps, then open it from your Home Screen.
         </p>
         <div className="mb-4 flex justify-center gap-2" aria-label="Browser instructions">
           {(["safari", "chrome"] as const).map(browser => (
@@ -65,10 +65,13 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
         {iosBrowser() === "other" && <p className="mb-3 text-sm text-muted-foreground">Open app.rowdycup.com in Safari or Chrome first, then follow the matching steps below.</p>}
         <ol className="space-y-3">
           {[
-            { Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
-              ? "Find the Share icon on the right of Chrome’s address bar."
-              : "Look for the square with an upward arrow in Safari’s toolbar. Depending on your layout, open the More (…) menu first." },
-            { Icon: SquarePlus, title: "Choose Add to Home Screen", text: "Scroll down the Share menu to find it. If it’s missing, check Edit Actions." },
+            {
+              Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
+                ? "Find the Share icon on the right of Chrome’s address bar."
+                : "Look for the square with an upward arrow in Safari’s toolbar. Depending on your layout, open the More (…) menu first."
+            },
+            { Icon: ChevronDown, title: "Tap View More", text: "Tap View More to reveal the rest of the Share menu. If the full list is already visible, continue to the next step." },
+            { Icon: SquarePlus, title: "Choose Add to Home Screen", text: "Find Add to Home Screen in the expanded list. If it’s missing, check Edit Actions." },
             { Icon: Check, title: "Tap Add", text: "Keep the name Rowdy Cup. If you see Open as Web App, leave it switched on." },
           ].map(({ Icon, title, text }, index) => (
             <li key={title} className="flex gap-3 rounded-xl border border-border p-3">
