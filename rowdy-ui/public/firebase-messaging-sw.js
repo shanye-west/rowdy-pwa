@@ -52,7 +52,9 @@ try {
   messaging.onBackgroundMessage((payload) => {
     const data = payload.data || {};
     const title = data.title || "Rowdy Cup";
-    self.registration.showNotification(title, {
+    // FCM awaits this promise to keep the push event alive until the alert is
+    // displayed. Without it, iOS can suspend the worker before display finishes.
+    return self.registration.showNotification(title, {
       body: data.body || "",
       icon: "/pwa-192x192.png",
       badge: "/pwa-192x192.png",

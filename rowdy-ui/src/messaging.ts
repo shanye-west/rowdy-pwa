@@ -114,11 +114,13 @@ export async function enablePush(): Promise<EnableResult> {
   if (support !== "ok") return { ok: false, reason: support };
   if (!VAPID_KEY) return { ok: false, reason: "missing-vapid" };
 
-  const messaging = await messagingIfSupported();
-  if (!messaging) return { ok: false, reason: "unsupported" };
-
+  // Request directly from the tap, before asynchronous SDK/IndexedDB checks
+  // can consume the user activation required by iOS.
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return { ok: false, reason: "denied" };
+
+  const messaging = await messagingIfSupported();
+  if (!messaging) return { ok: false, reason: "unsupported" };
 
   // Reuse the single app service worker (Workbox SW with the FCM handler imported)
   // rather than letting the SDK register its own /firebase-messaging-sw.js.

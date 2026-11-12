@@ -2281,7 +2281,7 @@ export { postComment, deleteComment, toggleReaction } from "./callables/commentO
 // See callables/pushOps.ts.
 // ============================================================================
 
-export { registerPushToken, unregisterPushToken, setNotificationPrefs } from "./callables/pushOps.js";
+export { registerPushToken, unregisterPushToken, setNotificationPrefs, sendTestPush } from "./callables/pushOps.js";
 
 // ============================================================================
 // RULES OFFICIAL (AI, streaming)

@@ -10,12 +10,49 @@
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { requirePlayer } from "../helpers/adminAuth.js";
+import { getMessaging } from "firebase-admin/messaging";
+import { info } from "firebase-functions/logger";
+import { requireAdmin, requirePlayer } from "../helpers/adminAuth.js";
 import type { NotificationCategory } from "../types.js";
 
 function db() {
   return getFirestore();
 }
+
+/** Admin diagnostic: recipients always come from the caller, never request data. */
+export const sendTestPush = onCall({ timeoutSeconds: 60 }, async (request: CallableRequest) => {
+  const { playerId } = await requireAdmin(request, "sendTestPush", { maxCalls: 3, windowSeconds: 60 });
+  // Give the caller time to put the PWA in the background. Foreground pushes
+  // appear as in-app toasts, rather than system notifications.
+  await new Promise<void>((resolve) => setTimeout(resolve, 10_000));
+  const snap = await db().collection("pushTokens").where("playerId", "==", playerId).get();
+  const tokens = [...new Set(snap.docs.map((doc) => doc.data().token)
+    .filter((token): token is string => typeof token === "string" && token.length > 0))];
+  if (!tokens.length) {
+    throw new HttpsError("failed-precondition", "No registered devices found. Turn notifications off and back on, then retry.");
+  }
+  let accepted = 0;
+  const errors = new Set<string>();
+  for (let i = 0; i < tokens.length; i += 500) {
+    const result = await getMessaging().sendEachForMulticast({
+      tokens: tokens.slice(i, i + 500),
+      data: {
+        title: "Rowdy Cup test notification",
+        body: "Push notifications are working on this device. Only you received this test.",
+        link: "/settings/notifications",
+        category: "test",
+      },
+    });
+    accepted += result.successCount;
+    result.responses.forEach((response) => {
+      if (!response.success) errors.add(response.error?.code ?? "messaging/unknown-error");
+    });
+  }
+  // FCM acceptance is not proof that the phone displayed a notification.
+  const result = { accepted, failed: tokens.length - accepted, errors: [...errors] };
+  info("Admin test push result", { playerId, ...result });
+  return result;
+});
 
 /** Categories a player may toggle; anything else in the payload is ignored. */
 const NOTIFICATION_CATEGORIES: NotificationCategory[] = [

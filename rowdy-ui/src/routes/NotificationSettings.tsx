@@ -5,6 +5,7 @@ import { Bell, BellOff } from "lucide-react";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
 import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -47,6 +48,10 @@ const setNotificationPrefs = httpsCallable<{ prefs: NotificationPrefs }, { succe
   "setNotificationPrefs"
 );
 
+const sendTestPush = httpsCallable<void, { accepted: number; failed: number; errors: string[] }>(
+  functions, "sendTestPush"
+);
+
 export default function NotificationSettings() {
   const { player } = useAuth();
   const { tournament } = useTournamentContext();
@@ -54,6 +59,22 @@ export default function NotificationSettings() {
   const { showToast } = useToast();
 
   const [prefs, setPrefs] = useState<Record<NotificationCategory, boolean> | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState("");
+
+  const testPush = async () => {
+    if (testing) return;
+    setTesting(true);
+    setTestStatus("Sending in 10 seconds. Go to your iPhone Home Screen now to check for the alert, then return here for results.");
+    try {
+      const { data } = await sendTestPush();
+      setTestStatus(`Push service accepted ${data.accepted} device(s); ${data.failed} failed. Acceptance does not confirm the alert appeared on your phone.${data.errors.length ? ` Errors: ${data.errors.join(", ")}` : ""}`);
+    } catch (error) {
+      setTestStatus(error instanceof Error ? error.message : "Test failed. Please try again.");
+    } finally {
+      setTesting(false);
+    }
+  };
 
   // Seed from the player doc itself (authoritative) rather than the auth context,
   // which loads prefs once at login and would go stale after a save.
@@ -149,6 +170,20 @@ export default function NotificationSettings() {
               aria-label="Enable all notifications"
             />
           </Card>
+
+          {player.isAdmin && (
+            <Card className="space-y-3 p-4">
+              <div className="text-sm font-semibold">Test push notifications · Admin only</div>
+              <p className="text-sm text-muted-foreground">
+                Sends only to devices registered to your account, regardless of category preferences.
+                The test waits 10 seconds so you can leave the app and see the system notification.
+              </p>
+              <Button onClick={() => void testPush()} disabled={testing || pushBusy}>
+                {testing ? "Sending test…" : "Send test to me"}
+              </Button>
+              {testStatus && <p role="status" className="text-sm text-muted-foreground">{testStatus}</p>}
+            </Card>
+          )}
 
           <Card className="divide-y divide-border/70">
             {CATEGORIES.map(({ key, label, description }) => (

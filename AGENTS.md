@@ -14,7 +14,7 @@ A mobile-first Progressive Web App for a **12v12, Ryder-Cup–style golf tournam
 
 ## Golden rules (read before doing anything)
 
-1. **Production is the only environment.** There is effectively one Firebase project — prod (`rowdy-pwa`). The `dev` alias in `.firebaserc` is unused; there is no staging. Every deploy and every emulator-free run touches **prod data**. **Before anything that writes to Firestore or deploys** (`firebase deploy`, any script in `scripts/`), confirm intent with the user. Reads, builds, lints, and tests are safe.
+1. **Production is the only environment.** There is effectively one Firebase project — prod (`rowdy-pwa`). The `dev` alias in `.firebaserc` is unused; there is no staging. Every deploy and every emulator-free run touches **prod data**. **Firebase writes and deployments are allowed without a separate confirmation when needed to complete the user's requested work**, including Firestore writes, `firebase deploy`, and scripts in `scripts/`. Keep changes within the requested scope, build and validate before deploying, and confirm the target project is `rowdy-pwa`. Ask before destructive or irreversible actions that the user has not already authorized. Reads, builds, lints, and tests are safe.
 2. **`tsc` is the feedback loop.** The frontend `build` runs `tsc -b` first, so type errors block the build. Run builds/typecheck after edits; treat that as primary validation.
 3. **Keep scoring & rules green.** Scoring logic and `firestore.rules` are covered by extensive tests; never change them without `cd functions && npm run test:run` passing.
 4. **Strict TypeScript, no `as any`.** Narrow with the type guards in `rowdy-ui/src/types.ts` instead of casting.
@@ -40,7 +40,7 @@ cd functions && npm run build     # tsc
 cd functions && npm run test:run  # vitest single run (scoring/stats suites)
 cd functions && npm run serve     # build + Firebase emulators (local only)
 
-# Deploy (manual, no predeploy build hooks — BUILD FIRST, then confirm with user)
+# Deploy (manual, no predeploy build hooks — BUILD FIRST; verify target is rowdy-pwa)
 cd rowdy-ui && npm run build && firebase deploy --only hosting
 cd functions && npm run build && firebase deploy --only functions
 firebase deploy --only firestore:rules
