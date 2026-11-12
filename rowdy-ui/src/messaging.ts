@@ -25,10 +25,7 @@ import { app, functions } from "./firebase";
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 const LOCAL_TOKEN_KEY = "rowdy:push-token";
 
-const registerPushToken = httpsCallable<
-  { token: string; userAgent?: string; confirm?: boolean },
-  { success: boolean; valid?: boolean; confirmed?: boolean }
->(
+const registerPushToken = httpsCallable<{ token: string; userAgent?: string }, { success: boolean; valid?: boolean }>(
   functions,
   "registerPushToken"
 );
@@ -130,14 +127,20 @@ export async function enablePush(): Promise<EnableResult> {
   const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
   if (!token) return { ok: false, reason: "no-token" };
 
-  // `confirm` asks the server to follow up with a real push to this device
-  // ("Push confirmed") — it lands a few seconds later and proves delivery end
-  // to end.
-  await registerPushToken({ token, userAgent: navigator.userAgent, confirm: true });
   localStorage.setItem(LOCAL_TOKEN_KEY, token);
 
-  // Meanwhile, confirm instantly with a system notification shown straight
-  // from this device, so success isn't left hanging for the round trip.
+  // The device now holds a working token, so confirm RIGHT NOW with a system
+  // notification shown straight from this device, and finish the server-side
+  // registration in the background instead of making the player wait on it
+  // (a cold callable can take a couple of seconds). If that registration fails
+  // or the server says the token is dead, hand off to the self-heal, which
+  // retries with backoff — and runs again on every launch/resume regardless.
+  registerPushToken({ token, userAgent: navigator.userAgent })
+    .then(({ data }) => {
+      if (data.valid === false) void refreshPushRegistration({ force: true });
+    })
+    .catch(() => void refreshPushRegistration({ force: true }));
+
   let confirmed = false;
   try {
     await registration.showNotification("Notifications are on 🎉", {

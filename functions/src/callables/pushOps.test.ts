@@ -89,26 +89,3 @@ it("treats a transient FCM error as alive rather than churning a working device"
   await expect(registerPushToken.run(registerRequest)).resolves.toEqual({ success: true, valid: true });
   expect(mocks.docSet).toHaveBeenCalledTimes(1);
 });
-
-it("sends a confirmation push to just that device when the player turns notifications on", async () => {
-  mocks.dryRun.mockResolvedValue("ok");
-  const req = { data: { token: "tok-1", confirm: true } } as CallableRequest;
-  await expect(registerPushToken.run(req)).resolves.toEqual({ success: true, valid: true, confirmed: true });
-  expect(mocks.dryRun).toHaveBeenCalledTimes(2);
-  expect(mocks.dryRun).toHaveBeenLastCalledWith(
-    expect.objectContaining({ token: "tok-1", data: expect.objectContaining({ category: "welcome-server" }) })
-  );
-});
-
-it("still registers when the confirmation push fails, and says so", async () => {
-  mocks.dryRun.mockResolvedValueOnce("ok").mockRejectedValueOnce({ code: "messaging/internal-error" });
-  const req = { data: { token: "tok-1", confirm: true } } as CallableRequest;
-  await expect(registerPushToken.run(req)).resolves.toEqual({ success: true, valid: true, confirmed: false });
-  expect(mocks.docSet).toHaveBeenCalledTimes(1);
-});
-
-it("does not send a confirmation on the silent launch-time refresh", async () => {
-  mocks.dryRun.mockResolvedValue("ok");
-  await registerPushToken.run(registerRequest);
-  expect(mocks.dryRun).toHaveBeenCalledTimes(1);
-});

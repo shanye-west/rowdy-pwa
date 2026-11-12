@@ -118,9 +118,6 @@ export const registerPushToken = onCall(async (request: CallableRequest) => {
   const { playerId } = await requirePlayer(request, "registerPushToken", { maxCalls: 30, windowSeconds: 60 });
   const token = requireToken(request.data);
   const userAgent = (request.data as { userAgent?: unknown } | null)?.userAgent;
-  // Set only when the player just turned notifications on (not on the silent
-  // launch-time refresh): confirm with a real push to this one device.
-  const confirm = (request.data as { confirm?: unknown } | null)?.confirm === true;
   const ref = db().collection("pushTokens").doc(token);
 
   if (!(await isTokenAlive(token))) {
@@ -140,28 +137,7 @@ export const registerPushToken = onCall(async (request: CallableRequest) => {
     { merge: true }
   );
 
-  if (!confirm) return { success: true, valid: true };
-
-  // The device already showed its own instant "Notifications are on" alert;
-  // this one follows a few seconds later and proves a push can travel all the
-  // way from the server. Distinct wording + tag so it reads as a second step,
-  // not a duplicate. Best-effort: a failure must not fail the registration.
-  let confirmed = false;
-  try {
-    await getMessaging().send({
-      token,
-      data: {
-        title: "Push confirmed ✅",
-        body: "This alert came from the Rowdy Cup server — you're all set.",
-        link: "/settings/notifications",
-        category: "welcome-server",
-      },
-    });
-    confirmed = true;
-  } catch (err) {
-    info("Enable-confirmation push failed", { playerId, code: (err as { code?: string } | null)?.code ?? "unknown" });
-  }
-  return { success: true, valid: true, confirmed };
+  return { success: true, valid: true };
 });
 
 /** Remove a device token (the menu "turn off" action, or a sign-out cleanup). */
