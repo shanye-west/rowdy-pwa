@@ -437,7 +437,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
               <Download aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-blue-700" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">Add Rowdy app to your Home Screen</p>
-                <p className="mt-1 text-xs text-muted-foreground">Open Rowdy from your Home Screen for quick access and push notifications.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Keep scores, matches, and standings one tap away.</p>
                 <Button type="button" size="sm" className="mt-2" onClick={openGuide}>Show me how</Button>
               </div>
               <Button type="button" variant="ghost" size="icon" aria-label="Dismiss installation prompt" onClick={dismissInstallPrompt}>

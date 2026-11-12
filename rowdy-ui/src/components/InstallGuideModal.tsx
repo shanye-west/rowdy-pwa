@@ -1,24 +1,7 @@
-/**
- * Add-to-Home-Screen guide.
- *
- * Picks the right path for the device:
- *   - Native prompt available (Android / desktop Chromium) → one "Install app"
- *     button that fires the real OS prompt.
- *   - iPhone → a short, silent, annotated video of the Add-to-Home-Screen flow
- *     for the current browser. Safari and Chrome differ in install UI, so we
- *     autoplay the matching clip (auto-detected, with a manual switch in case we
- *     guessed wrong). Once installed it's all WebKit, so push works either way.
- *   - Anything else → a short "open it on your phone" fallback.
- *
- * Opened from the notifications flow when push needs an installed PWA, or from the
- * "Install app" menu item. See useInstallPrompt for the trigger plumbing.
- *
- * The video only mounts while the modal is open (it's a couple MB and isn't
- * precached), so closed it costs nothing.
- */
+/** Browser-specific Home Screen steps, with an optional video walkthrough. */
 
 import { useState, type ReactNode } from "react";
-import { Download } from "lucide-react";
+import { Download, Share, SquarePlus, Check } from "lucide-react";
 import { Modal } from "./Modal";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { isIOS, isStandalone, iosBrowser } from "../messaging";
@@ -33,6 +16,8 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
   const [iosVideo, setIosVideo] = useState<"safari" | "chrome">(
     iosBrowser() === "chrome" ? "chrome" : "safari"
   );
+
+  const [showVideo, setShowVideo] = useState(false);
 
   const handleNativeInstall = async () => {
     await promptInstall();
@@ -50,7 +35,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
     body = (
       <>
         <p className="mb-4 text-center text-sm text-muted-foreground">
-          Install Rowdy Cup for notifications and a full-screen, app-like experience.
+          Keep Rowdy Cup one tap away with its own Home Screen icon.
         </p>
         <button
           type="button"
@@ -66,31 +51,45 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
     body = (
       <>
         <p className="mb-3 text-center text-sm text-muted-foreground">
-          To get notifications on iPhone, add Rowdy Cup to your Home Screen — follow along:
+          Add Rowdy Cup in three steps, then open it from your Home Screen.
         </p>
-        <video
-          key={iosVideo}
-          src={iosVideo === "chrome" ? CHROME_VIDEO : SAFARI_VIDEO}
-          autoPlay
-          muted
-          loop
-          playsInline
-          controls
-          preload="auto"
-          className="mx-auto max-h-[50vh] w-auto rounded-lg border border-border/60"
-        />
-        <button
-          type="button"
-          onClick={() => setIosVideo((v) => (v === "safari" ? "chrome" : "safari"))}
-          className="mt-3 w-full text-center text-xs font-medium text-primary hover:underline"
-        >
-          {iosVideo === "safari"
-            ? "Using Chrome instead? Show the Chrome steps"
-            : "Using Safari instead? Show the Safari steps"}
+        <div className="mb-4 flex justify-center gap-2" aria-label="Browser instructions">
+          {(["safari", "chrome"] as const).map(browser => (
+            <button key={browser} type="button" aria-pressed={iosVideo === browser}
+              onClick={() => { setIosVideo(browser); setShowVideo(false); }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${iosVideo === browser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+              {browser === "safari" ? "Safari" : "Chrome"}
+            </button>
+          ))}
+        </div>
+        {iosBrowser() === "other" && <p className="mb-3 text-sm text-muted-foreground">Open app.rowdycup.com in Safari or Chrome first, then follow the matching steps below.</p>}
+        <ol className="space-y-3">
+          {[
+            { Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
+              ? "Find the Share icon on the right of Chrome’s address bar."
+              : "Look for the square with an upward arrow in Safari’s toolbar. Depending on your layout, open the More (…) menu first." },
+            { Icon: SquarePlus, title: "Choose Add to Home Screen", text: "Scroll down the Share menu to find it. If it’s missing, check Edit Actions." },
+            { Icon: Check, title: "Tap Add", text: "Keep the name Rowdy Cup. If you see Open as Web App, leave it switched on." },
+          ].map(({ Icon, title, text }, index) => (
+            <li key={title} className="flex gap-3 rounded-xl border border-border p-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted"><Icon aria-hidden="true" className="h-5 w-5 text-primary" /></div>
+              <div><p className="text-sm font-semibold">{index + 1}. {title}</p><p className="mt-1 text-xs text-muted-foreground">{text}</p></div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 flex items-center gap-3 rounded-xl bg-blue-50 p-3">
+          <img src="/pwa-192x192.png" alt="Rowdy Cup app icon" className="h-11 w-11 rounded-xl" />
+          <p className="text-sm font-medium text-foreground">Now go to your Home Screen and tap the Rowdy Cup icon to open the app.</p>
+        </div>
+        <button type="button" aria-expanded={showVideo} aria-controls="install-video"
+          onClick={() => setShowVideo(v => !v)} className="mt-4 w-full text-center text-sm font-semibold text-primary">
+          {showVideo ? "Hide walkthrough" : "Watch walkthrough"}
         </button>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Then open Rowdy Cup from your Home Screen and turn on notifications.
-        </p>
+        {showVideo && <video id="install-video" key={iosVideo}
+          src={iosVideo === "chrome" ? CHROME_VIDEO : SAFARI_VIDEO}
+          muted playsInline controls preload="metadata"
+          className="mx-auto mt-3 max-h-[45vh] w-auto rounded-lg border border-border/60" />}
+
       </>
     );
   } else {
@@ -103,16 +102,16 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Install Rowdy Cup" ariaLabel="Install Rowdy Cup">
+    <Modal isOpen={isOpen} onClose={() => { setShowVideo(false); onClose(); }} title="Add Rowdy to Home Screen" ariaLabel="Install Rowdy Cup">
       {isOpen && (
         <>
           {body}
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { setShowVideo(false); onClose(); }}
             className="mt-5 w-full rounded-lg bg-muted py-2.5 px-4 text-sm font-semibold text-foreground transition-transform active:scale-95"
           >
-            Done
+            Close guide
           </button>
         </>
       )}
