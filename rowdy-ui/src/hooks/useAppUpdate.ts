@@ -1,8 +1,10 @@
+import { isNative } from "../native/platform";
 import { useSyncExternalStore } from "react";
 
 let updateAvailable = false;
 const listeners = new Set<() => void>();
 export async function markAppUpdateAvailable(): Promise<void> {
+  if (isNative()) return;
   // Workbox may report an external activation even when this page is already
   // current. Compare the deployed build instead of treating the event as proof.
   try {

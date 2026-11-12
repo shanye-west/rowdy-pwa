@@ -1,3 +1,4 @@
+import { isNative } from "./native/platform";
 /**
  * Web-push (FCM) client helpers.
  *
@@ -90,6 +91,7 @@ export function iosBrowser(): IosBrowser {
  * "ios-needs-install" so the UI can guide the user instead of failing silently.
  */
 export function pushSupport(): PushSupport {
+  if (isNative()) return "unsupported";
   if (typeof window === "undefined") return "unsupported";
   const ios = isIOS();
   if (ios && !isStandalone()) return "ios-needs-install";
@@ -187,6 +189,7 @@ function describeError(err: unknown): string {
  * short human-readable outcome; `force` bypasses the 10-minute throttle.
  */
 export function refreshPushRegistration(opts: { force?: boolean } = {}): Promise<string> {
+  if (isNative()) return Promise.resolve("Native push unavailable in this prototype");
   if (refreshInFlight) return refreshInFlight;
   if (!VAPID_KEY || pushSupport() !== "ok" || !isPushEnabledLocally()) {
     return Promise.resolve("skipped (push not enabled on this device)");
@@ -270,6 +273,7 @@ export function refreshPushRegistration(opts: { force?: boolean } = {}): Promise
 
 /** Ask the active service worker which push-handler version it is running. */
 function pingServiceWorker(): Promise<string> {
+  if (isNative()) return Promise.resolve("Native push unavailable in this prototype");
   return new Promise((resolve) => {
     const controller = navigator.serviceWorker?.controller;
     if (!controller) return resolve("no controller");

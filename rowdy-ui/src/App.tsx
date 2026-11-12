@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { ArrowRight, ClipboardList, Flag } from "lucide-react";
+import { useNativeData } from "./native/nativeData";
+import { isNative } from "./native/platform";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import { useAuth } from "./contexts/AuthContext";
@@ -31,6 +33,8 @@ export default function App() {
 
   // Reuse the context's tournament subscription (no duplicate) and read aggregate
   // scores from denormalized round totals — this view never needs raw matches.
+  const nativeData = useNativeData();
+  const webData = useTournamentData({ prefetchedTournament: isNative() ? null : tournament, preferDenormalizedTotals: true });
   const {
     loading: dataLoading,
     rounds,
@@ -38,7 +42,7 @@ export default function App() {
     stats,
     roundStats,
     totalPointsAvailable,
-  } = useTournamentData({ prefetchedTournament: tournament, preferDenormalizedTotals: true });
+  } = nativeData ?? webData;
 
   const loading = tournamentLoading || dataLoading;
 
