@@ -56,8 +56,18 @@ public class RowdyNativePlugin: CAPPlugin, CAPBridgedPlugin {
     }
     @objc func read(_ call: CAPPluginCall) {
         var result: JSObject = ["active": !Activity<RowdyAttributes>.activities.isEmpty, "snapshot": NSNull()]
-        if let snapshot = RowdyStore.snapshot, let bytes = try? JSONEncoder().encode(snapshot),
-           let object = try? JSONSerialization.jsonObject(with: bytes) as? JSObject { result["snapshot"] = object }
+        if let snapshot = RowdyStore.snapshot {
+            // Build JS values explicitly: Foundation's JSON object can contain
+            // NSString values that fail a cast to Capacitor's JSValue protocol.
+            let value: JSObject = [
+                "tournamentId": snapshot.tournamentId,
+                "tournamentName": snapshot.tournamentName,
+                "teamA": snapshot.teamA, "teamB": snapshot.teamB,
+                "pointsA": snapshot.pointsA, "pointsB": snapshot.pointsB,
+                "updatedAt": snapshot.updatedAt
+            ]
+            result["snapshot"] = value
+        }
         call.resolve(result)
     }
     @objc func start(_ call: CAPPluginCall) {
