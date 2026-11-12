@@ -70,6 +70,17 @@ export function LayoutShell({ children }: LayoutShellProps) {
   // Offer "Install app" whenever the app isn't already installed and we can either
   // fire the native prompt (Android/Chromium) or walk an iPhone user through it.
   const showInstall = !isStandalone() && (canInstall || isIOS());
+  const [installPromptDismissed, setInstallPromptDismissed] = useState(() => {
+    try { return sessionStorage.getItem("rowdy:install-prompt-dismissed") === "1"; }
+    catch { return false; }
+  });
+  const showIphoneInstallPrompt = /iphone/i.test(navigator.userAgent)
+    && !isStandalone() && !installPromptDismissed;
+  const dismissInstallPrompt = () => {
+    setInstallPromptDismissed(true);
+    try { sessionStorage.setItem("rowdy:install-prompt-dismissed", "1"); }
+    catch { /* Dismissal still works for this page when storage is unavailable. */ }
+  };
   const tournamentCtx = useTournamentContextOptional();
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
@@ -419,6 +430,22 @@ export function LayoutShell({ children }: LayoutShellProps) {
       >
         {/* Offline Status Banner — app-wide so every route signals offline state */}
         <ConnectionBanner isOnline={isOnline} />
+
+        {showIphoneInstallPrompt && (
+          <aside aria-label="Install Rowdy" className="border-b border-border bg-blue-50 px-4 py-3">
+            <div className="mx-auto flex max-w-xl items-start gap-3">
+              <Download aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-blue-700" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">Add Rowdy app to your Home Screen</p>
+                <p className="mt-1 text-xs text-muted-foreground">Open Rowdy from your Home Screen for quick access and push notifications.</p>
+                <Button type="button" size="sm" className="mt-2" onClick={openGuide}>Show me how</Button>
+              </div>
+              <Button type="button" variant="ghost" size="icon" aria-label="Dismiss installation prompt" onClick={dismissInstallPrompt}>
+                <X aria-hidden="true" className="h-4 w-4" />
+              </Button>
+            </div>
+          </aside>
+        )}
 
         {/* Reconnect banner — reflects the real Firestore write-queue drain:
             "syncing" until every queued offline write is acknowledged by the
