@@ -73,7 +73,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
         {iosBrowser() === "other" && <p className="mb-3 text-sm text-muted-foreground">Open app.rowdycup.com in Safari or Chrome first, then follow the matching steps below.</p>}
         <ol className="space-y-3">
           {[
-            ...(iosVideo === "safari" ? [{ Icon: SafariMenuIcon, title: "Open Safari’s menu", text: "Tap the three horizontal lines (the bottom line is shorter) to the left of the address bar at the bottom of the screen. If your Safari layout already shows Share, skip to the next step." }] : []),
+            ...(iosVideo === "safari" ? [{ Icon: SafariMenuIcon, title: "Open Safari’s menu", text: "Tap the three horizontal lines to the left of the address bar at the bottom of the screen." }] : []),
             {
               Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
                 ? "Find the Share icon on the right of Chrome’s address bar."
