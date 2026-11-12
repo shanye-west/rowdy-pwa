@@ -13,6 +13,26 @@ import { useToast } from "../contexts/ToastContext";
 import { enablePush, disablePush, isPushEnabledLocally, pushSupport } from "../messaging";
 import { openInstallGuide } from "./useInstallPrompt";
 
+/** Set when a player explicitly turns push OFF; silences the enable popup. */
+const PROMPT_OPT_OUT_KEY = "rowdy:push-prompt-opt-out";
+
+export function hasOptedOutOfPushPrompt(): boolean {
+  try {
+    return localStorage.getItem(PROMPT_OPT_OUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setPromptOptOut(value: boolean) {
+  try {
+    if (value) localStorage.setItem(PROMPT_OPT_OUT_KEY, "1");
+    else localStorage.removeItem(PROMPT_OPT_OUT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 const listeners = new Set<() => void>();
 let pushOnState = isPushEnabledLocally();
 // True while an enable/disable is in flight — lets every surface show a spinner
@@ -60,7 +80,11 @@ export function usePushNotifications() {
       dismissToast(progressId);
       if (result.ok) {
         setPushOnState(true);
-        showToast({ message: "Notifications enabled 🎉", variant: "success" });
+        setPromptOptOut(false);
+        // The confirmation is a real push sent by the server to this device, so
+        // success is proven end to end. Only fall back to a toast if that push
+        // couldn't be sent.
+        if (!result.confirmed) showToast({ message: "Notifications enabled 🎉", variant: "success" });
         return;
       }
       if (result.reason === "ios-needs-install") {
@@ -91,6 +115,7 @@ export function usePushNotifications() {
     // stays set during the background teardown to keep a quick re-enable from
     // racing the token delete.
     setPushOnState(false);
+    setPromptOptOut(true);
     showToast({ message: "Notifications turned off", variant: "info" });
     setBusyState(true);
     try {

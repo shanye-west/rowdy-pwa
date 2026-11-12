@@ -25,7 +25,10 @@ import { app, functions } from "./firebase";
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
 const LOCAL_TOKEN_KEY = "rowdy:push-token";
 
-const registerPushToken = httpsCallable<{ token: string; userAgent?: string }, { success: boolean; valid?: boolean }>(
+const registerPushToken = httpsCallable<
+  { token: string; userAgent?: string; confirm?: boolean },
+  { success: boolean; valid?: boolean; confirmed?: boolean }
+>(
   functions,
   "registerPushToken"
 );
@@ -105,7 +108,7 @@ export function isPushEnabledLocally(): boolean {
   return Notification.permission === "granted" && !!localStorage.getItem(LOCAL_TOKEN_KEY);
 }
 
-export type EnableResult = { ok: true } | { ok: false; reason: PushSupport | "denied" | "missing-vapid" | "no-token" };
+export type EnableResult = { ok: true; confirmed: boolean } | { ok: false; reason: PushSupport | "denied" | "missing-vapid" | "no-token" };
 
 /** Request permission, mint an FCM token, and register it server-side. */
 export async function enablePush(): Promise<EnableResult> {
@@ -127,9 +130,11 @@ export async function enablePush(): Promise<EnableResult> {
   const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
   if (!token) return { ok: false, reason: "no-token" };
 
-  await registerPushToken({ token, userAgent: navigator.userAgent });
+  // `confirm` asks the server to send a "you're all set" push to this token —
+  // the success message is a real notification, not an in-app toast.
+  const { data } = await registerPushToken({ token, userAgent: navigator.userAgent, confirm: true });
   localStorage.setItem(LOCAL_TOKEN_KEY, token);
-  return { ok: true };
+  return { ok: true, confirmed: data.confirmed === true };
 }
 
 const REFRESH_CHECK_INTERVAL_MS = 10 * 60 * 1000;

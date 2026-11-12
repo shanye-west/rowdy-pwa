@@ -31,6 +31,7 @@ import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useAppUpdate } from "../hooks/useAppUpdate";
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 import { InstallGuideModal } from "./InstallGuideModal";
+import { EnableNotificationsPrompt } from "./EnableNotificationsPrompt";
 import { isIOS, isStandalone } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
@@ -494,6 +495,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
       {!hideBottomNav && <BottomNav />}
 
       <InstallGuideModal isOpen={guideOpen} onClose={closeGuide} />
+
+      <EnableNotificationsPrompt />
 
       <Modal
         isOpen={confirmLogout}
