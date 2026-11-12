@@ -32,7 +32,14 @@ self.addEventListener("push", (event) => {
 
   // waitUntil keeps the worker alive until the alert is actually displayed;
   // without it iOS can suspend the worker first (which also counts as silent).
-  event.waitUntil(
+  event.waitUntil(Promise.all([
+    // Test pushes aren't part of the unread feed. Badge failures must never
+    // prevent the visible notification required by iOS.
+    Promise.resolve().then(() => {
+      if (data.category !== "test" && self.navigator?.setAppBadge) {
+        return self.navigator.setAppBadge();
+      }
+    }).catch(() => {}),
     self.registration.showNotification(data.title || "Rowdy Cup", {
       body: data.body || "",
       icon: "/pwa-192x192.png",
@@ -43,14 +50,14 @@ self.addEventListener("push", (event) => {
       renotify: true,
       data: { link: data.link || "/" },
     })
-  );
+  ]));
 });
 
 // Diagnostics: lets the app confirm THIS handler (not an older cached worker) is
 // the one in control. Bump the version when this file's behavior changes.
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "rowdy-push-ping" && event.ports && event.ports[0]) {
-    event.ports[0].postMessage({ version: 2 });
+    event.ports[0].postMessage({ version: 3 });
   }
 });
 

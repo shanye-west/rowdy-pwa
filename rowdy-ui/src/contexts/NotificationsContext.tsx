@@ -21,6 +21,7 @@ import {
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
+import { syncAppBadge } from "../utils/appBadge";
 import { db } from "../firebase";
 import { useAuth } from "./AuthContext";
 import { useDeviceReporting } from "../hooks/useDeviceReporting";
@@ -45,7 +46,7 @@ interface NotificationsValue {
 const NotificationsContext = createContext<NotificationsValue | null>(null);
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { player } = useAuth();
+  const { player, loading: authLoading } = useAuth();
   useDeviceReporting(player?.id);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
 
@@ -53,6 +54,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!player) {
       setNotifications([]);
+      if (!authLoading) void syncAppBadge(false);
       return;
     }
     const q = query(
@@ -62,13 +64,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     );
     const unsub = onSnapshot(
       q,
-      (snap) => setNotifications(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as NotificationDoc)),
+      (snap) => {
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as NotificationDoc);
+        setNotifications(items);
+        // Wait for the feed snapshot; don't clear a background badge at boot.
+        void syncAppBadge(items.some(item => !item.read));
+      },
       () => {
         /* permission/transient errors — keep last known state */
       }
     );
     return () => unsub();
-  }, [player]);
+  }, [player, authLoading]);
 
   // Self-heal the device's push registration on start and whenever the app
   // comes back to the foreground (an iOS PWA resumes far more often than it
