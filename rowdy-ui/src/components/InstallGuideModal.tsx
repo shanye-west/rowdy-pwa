@@ -77,7 +77,7 @@ export function InstallGuideModal({ isOpen, onClose }: { isOpen: boolean; onClos
             {
               Icon: Share, title: "Tap Share", text: iosVideo === "chrome"
                 ? "Find the Share icon on the right of Chrome’s address bar."
-                : "Tap Share in the menu — the square with an upward arrow."
+                : "Tap Share in the menu."
             },
             { Icon: ChevronDown, title: "Tap View More", text: "Tap View More to reveal the rest of the Share menu. If the full list is already visible, continue to the next step." },
             { Icon: SquarePlus, title: "Choose Add to Home Screen", text: "Find Add to Home Screen in the expanded list. If it’s missing, check Edit Actions." },
