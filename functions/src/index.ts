@@ -2291,3 +2291,5 @@ export { registerPushToken, unregisterPushToken, setNotificationPrefs, sendTestP
 // ============================================================================
 
 export { askRulesOfficial } from "./rulesOfficial/askRulesOfficial.js";
+
+export { reportDevice, getDeviceDashboard } from "./callables/deviceOps.js";

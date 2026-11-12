@@ -48,6 +48,7 @@ const CaptainsMatchAdmin = lazyWithRecovery(() => import("./routes/admin/Captain
 const CaptainsMatchRoundAdmin = lazyWithRecovery(() => import("./routes/admin/CaptainsMatchRoundAdmin"));
 const MatchCreate = lazyWithRecovery(() => import("./routes/admin/MatchCreate"));
 const MatchAdmin = lazyWithRecovery(() => import("./routes/admin/MatchAdmin"));
+const DevicesAdmin = lazyWithRecovery(() => import("./routes/admin/DevicesAdmin"));
 const PlayersAdmin = lazyWithRecovery(() => import("./routes/admin/PlayersAdmin"));
 const CoursesAdmin = lazyWithRecovery(() => import("./routes/admin/CoursesAdmin"));
 const CourseEdit = lazyWithRecovery(() => import("./routes/admin/CourseEdit"));
@@ -122,6 +123,7 @@ const router = createBrowserRouter(
               ],
             },
             { path: "players", element: <PlayersAdmin /> },
+            { path: "devices", element: <DevicesAdmin /> },
             { path: "courses", element: <CoursesAdmin /> },
             { path: "courses/:courseId", element: <CourseEdit /> },
             { path: "recalculate", element: <RecalculateTournamentStats /> },

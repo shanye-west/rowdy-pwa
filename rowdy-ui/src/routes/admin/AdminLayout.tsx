@@ -21,6 +21,7 @@ interface AdminNavItem {
 }
 
 const NAV: AdminNavItem[] = [
+  { to: "/admin/devices", label: "Devices", icon: Users, matches: (p) => p.startsWith("/admin/devices") },
   {
     to: "/admin",
     label: "Overview",

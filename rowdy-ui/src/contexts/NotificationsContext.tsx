@@ -24,6 +24,7 @@ import {
 import { db } from "../firebase";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
+import { useDeviceReporting } from "../hooks/useDeviceReporting";
 import { onForegroundMessage } from "../messaging";
 import type { NotificationDoc } from "../types";
 
@@ -46,6 +47,7 @@ const NotificationsContext = createContext<NotificationsValue | null>(null);
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { player } = useAuth();
+  useDeviceReporting(player?.id);
   const { showToast } = useToast();
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
 
