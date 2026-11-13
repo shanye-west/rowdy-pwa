@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, type QuerySnapshot } from "firebase/firestore";
+import { getDocsPrimed } from "../utils/firestoreReads";
 import { db } from "../firebase";
 import { ViewTransitionLink } from "../components/ViewTransitionLink";
 import LoadingScreen from "../components/LoadingScreen";
@@ -35,24 +36,34 @@ export default function History() {
   useEffect(() => {
     let cancelled = false;
 
+    const apply = (snap: QuerySnapshot) => {
+      if (cancelled) return;
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
+      // Filter out test tournaments (they should not appear in History)
+      const publicTournaments = docs.filter(t => t.test !== true);
+      // Already sorted by query orderBy. Keep the same array when the list is
+      // unchanged, so a background revalidation that merely confirms the cache
+      // doesn't re-run the champion lookup below.
+      setTournaments(prev =>
+        JSON.stringify(prev) === JSON.stringify(publicTournaments) ? prev : publicTournaments
+      );
+      setLoadError(false);
+    };
+
     async function fetchHistory() {
       try {
-        const snap = await getDocs(
+        // Stale-while-revalidate: once this device has loaded the list from the
+        // server, the cached list paints immediately and the server copy follows.
+        apply(await getDocsPrimed(
+          "history-tournaments",
           query(
             collection(db, "tournaments"),
             where("active", "==", false),
             orderBy("year", "desc"),
             limit(20)
-          )
-        );
-        if (cancelled) return;
-        
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
-        // Filter out test tournaments (they should not appear in History)
-        const publicTournaments = docs.filter(t => t.test !== true);
-        // Already sorted by query orderBy
-        setTournaments(publicTournaments);
-        setLoadError(false);
+          ),
+          apply,
+        ));
       } catch (err) {
         console.error("History fetch error:", err);
         if (!cancelled) setLoadError(true);

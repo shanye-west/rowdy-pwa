@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, memo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { query, where, getDocs, collectionGroup } from "firebase/firestore";
+import { query, where, collectionGroup, type QuerySnapshot } from "firebase/firestore";
+import { getDocsPrimed } from "../utils/firestoreReads";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
@@ -95,39 +96,47 @@ function TeamsComponent() {
       return;
     }
 
-    // Use getDocs instead of onSnapshot to fetch stats once per tournament update
-    getDocs(
+    // One read per tournament update rather than a listener. Stale-while-
+    // revalidate: once this device has loaded these records from the server,
+    // the cached W-L-H paints immediately and the server copy follows.
+    let cancelled = false;
+    const apply = (snap: QuerySnapshot) => {
+      if (cancelled) return;
+      const newStats: Record<string, TournamentStat> = {};
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        const playerId = data.playerId;
+        if (playerId && playerIds.includes(playerId)) {
+          newStats[playerId] = {
+            wins: data.wins || 0,
+            losses: data.losses || 0,
+            halves: data.halves || 0,
+          };
+        }
+      });
+      // Fill in zeros for players without stats
+      playerIds.forEach(pid => {
+        if (!newStats[pid]) {
+          newStats[pid] = { wins: 0, losses: 0, halves: 0 };
+        }
+      });
+      setStats(newStats);
+      setFactsLoaded(true);
+    };
+    getDocsPrimed(
+      `team-records:${tournament.id}`,
       query(
         collectionGroup(db, "byTournament"),
         where("tournamentId", "==", tournament.id)
-      )
+      ),
+      apply,
     )
-      .then(snap => {
-        const newStats: Record<string, TournamentStat> = {};
-        snap.docs.forEach(doc => {
-          const data = doc.data();
-          const playerId = data.playerId;
-          if (playerId && playerIds.includes(playerId)) {
-            newStats[playerId] = {
-              wins: data.wins || 0,
-              losses: data.losses || 0,
-              halves: data.halves || 0,
-            };
-          }
-        });
-        // Fill in zeros for players without stats
-        playerIds.forEach(pid => {
-          if (!newStats[pid]) {
-            newStats[pid] = { wins: 0, losses: 0, halves: 0 };
-          }
-        });
-        setStats(newStats);
-        setFactsLoaded(true);
-      })
+      .then(apply)
       .catch(err => {
         console.error("Stats collection group query error:", err);
-        setFactsLoaded(true);
+        if (!cancelled) setFactsLoaded(true);
       });
+    return () => { cancelled = true; };
   }, [tournament?.id, playerIdsKey, playersLoaded, tournamentLoading, roundsLockState]); // Refetch when any round locks/unlocks
 
   // Coordinated loading state (derived during render — no effect needed)

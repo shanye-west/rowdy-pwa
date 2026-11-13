@@ -9,9 +9,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, collection, collectionGroup, onSnapshot, query, where, getDocs, type QuerySnapshot } from "firebase/firestore";
+import { doc, collection, collectionGroup, onSnapshot, query, where, type QuerySnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import { getDocsCacheFirst } from "../utils/firestoreReads";
+import { getDocsCacheFirst, getDocsPrimed } from "../utils/firestoreReads";
 import type { PlayerStatsBySeries, TournamentSeries } from "../types";
 
 /**
@@ -140,38 +140,44 @@ export function useAllTimeLeaderboard(series: TournamentSeries | undefined, enab
     setLoading(true);
     let cancelled = false;
 
-    (async () => {
-      try {
-        const snap = await getDocs(
-          query(collectionGroup(db, "bySeries"), where("series", "==", series))
-        );
-        if (cancelled) return;
+    // Stale-while-revalidate: once this device has loaded the board from the
+    // server, later visits paint the cached board at once and the server copy
+    // replaces it when it lands — instead of a spinner for the whole round trip.
+    const apply = (snap: QuerySnapshot) => {
+      if (cancelled) return;
 
-        const nameMap: Record<string, string> = {};
-        const stats: PlayerStatsBySeries[] = [];
-        snap.docs.forEach((d) => {
-          // playerId is the grandparent doc id: playerStats/{playerId}/bySeries/{series}
-          const playerId = d.ref.parent.parent?.id;
-          if (!playerId || playerId.startsWith("_")) return; // skip test accounts
-          const data = d.data();
-          nameMap[playerId] = (data.displayName as string) || playerId;
-          stats.push({ ...data, playerId, series } as PlayerStatsBySeries);
-        });
+      const nameMap: Record<string, string> = {};
+      const stats: PlayerStatsBySeries[] = [];
+      snap.docs.forEach((d) => {
+        // playerId is the grandparent doc id: playerStats/{playerId}/bySeries/{series}
+        const playerId = d.ref.parent.parent?.id;
+        if (!playerId || playerId.startsWith("_")) return; // skip test accounts
+        const data = d.data();
+        nameMap[playerId] = (data.displayName as string) || playerId;
+        stats.push({ ...data, playerId, series } as PlayerStatsBySeries);
+      });
 
-        // Sort by points descending (small list; client-side keeps it index-free)
-        stats.sort((a, b) => b.points - a.points);
-        setLeaderboard(stats);
-        setNames(nameMap);
-        setLoading(false);
-      } catch (err) {
+      // Sort by points descending (small list; client-side keeps it index-free)
+      stats.sort((a, b) => b.points - a.points);
+      setLeaderboard(stats);
+      setNames(nameMap);
+      setLoading(false);
+    };
+
+    getDocsPrimed(
+      `leaderboard:${series}`,
+      query(collectionGroup(db, "bySeries"), where("series", "==", series)),
+      apply,
+    )
+      .then(apply)
+      .catch((err) => {
         console.error("Error fetching all-time leaderboard:", err);
         if (!cancelled) {
           setLeaderboard([]);
           setNames({});
           setLoading(false);
         }
-      }
-    })();
+      });
 
     return () => { cancelled = true; };
   }, [series, enabled]);

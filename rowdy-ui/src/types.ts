@@ -407,6 +407,18 @@ export type MatchDoc = {
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
   courseHandicaps?: number[]; // Course handicaps for all players in match order [teamA..., teamB...]
+  /**
+   * Round context cached on the match by computeMatchOnWrite (server-written).
+   * A HINT only: it can lag the round doc (e.g. a round repointed at another
+   * tee set before its matches are recomputed), so the round stays authoritative.
+   */
+  _lastComputed?: {
+    format?: string;
+    roundId?: string;
+    courseId?: string;
+    pointsValue?: number;
+    day?: number;
+  };
 };
 
 // ============================================================================

@@ -30,6 +30,12 @@ export interface UseMatchDataResult {
  * 4. Course document (one-time fetch, cached by ID)
  * 5. Player documents (batch fetch when match loads)
  * 6. PlayerMatchFacts (fetch when match closes)
+ *
+ * Load order: match first, then round / course / tournament / players ALL IN
+ * PARALLEL — the match doc already names its tournament and (via the
+ * server-written `_lastComputed`) its course, so those don't wait for the round
+ * to arrive. `loading` clears once those are in; match facts only feed the
+ * post-match stats further down the page and never hold the scorecard back.
  */
 export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [match, setMatch] = useState<MatchDoc | null>(null);
@@ -37,22 +43,23 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
-  const [rawLoading, setRawLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [matchLoaded, setMatchLoaded] = useState(false);
   const [roundLoaded, setRoundLoaded] = useState(false);
-  const [courseLoaded, setCourseLoaded] = useState(false);
-  const [tournamentLoaded, setTournamentLoaded] = useState(false);
-  const [factsLoaded, setFactsLoaded] = useState(false);
+  // The course / tournament id whose lookup has settled (found or not). Stored
+  // as the id rather than a boolean so "loaded" can be judged against the id
+  // the ROUND names: a fetch started early from the match's hint only counts if
+  // the round turns out to agree with it.
+  const [courseSettledId, setCourseSettledId] = useState<string | null>(null);
+  const [tournamentSettledId, setTournamentSettledId] = useState<string | null>(null);
 
   // Try to get tournament from shared context
   const tournamentContext = useTournamentContextOptional();
   const { getTournamentById, addTournament } = tournamentContext || {};
   
-  // Cache refs to avoid re-fetching the same tournament/course
+  // Cache ref to avoid re-fetching the same tournament
   const fetchedTournamentIdRef = useRef<string | undefined>(undefined);
-  const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
   // Holds the last match document data we pushed to state (serialized). Lets us
   // skip metadata-only snapshots (pending-write flips) where the document
@@ -70,18 +77,18 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     // Reset ALL loaded states when matchId changes to prevent stale "loaded" flags
     setMatchLoaded(false);
     setRoundLoaded(false);
-    setCourseLoaded(false);
-    setTournamentLoaded(false);
-    setFactsLoaded(false);
-    
+    // (course / tournament "settled" ids are NOT reset: they're keyed by doc id,
+    // so they stay true across matches that share a course and tournament.)
+
     setError(null);
     // Clear stale data from previous match
     // NOTE: We intentionally keep localTournament to prevent header color flash
     // during navigation within the same tournament. It will be overwritten when
-    // the new tournament data loads.
+    // the new tournament data loads. The course is kept too — it's static and
+    // keyed by id, and the hook only ever returns it when the id still matches,
+    // so the next match in the same round reuses it without a refetch.
     setMatch(null);
     setRound(null);
-    setCourse(null);
     setMatchFacts([]);
     lastMatchJsonRef.current = null;
 
@@ -197,23 +204,20 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => unsub?.();
   }, [roundId, matchLoaded]);
 
-  // 4. Fetch tournament (from context or one-time fetch, cached by ID)
-  const tournamentId = round?.tournamentId;
-  
+  // 4. Fetch tournament (from context or one-time fetch, cached by ID).
+  // The round is authoritative for which tournament this is, but the match
+  // carries the same id — so until the round arrives we start from the match's
+  // copy instead of waiting a round trip to learn it.
+  const roundTournamentId = round?.tournamentId;
+  const tournamentId = roundLoaded ? roundTournamentId : (roundTournamentId ?? match?.tournamentId);
+
   useEffect(() => {
-    // Don't mark as loaded until we know the tournamentId (after round loads)
-    if (!roundLoaded) return;
-    
-    if (!tournamentId) {
-      // Round loaded but has no tournament - this is the "loaded with no tournament" case
-      setTournamentLoaded(true);
-      return;
-    }
-    
+    if (!tournamentId) return;
+
     // Check if context has this tournament
     if (tournamentContext?.tournament?.id === tournamentId) {
       setLocalTournament(tournamentContext.tournament);
-      setTournamentLoaded(true);
+      setTournamentSettledId(tournamentId);
       return;
     }
     
@@ -222,17 +226,16 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (cachedTournament) {
       setLocalTournament(cachedTournament);
       fetchedTournamentIdRef.current = tournamentId;
-      setTournamentLoaded(true);
+      setTournamentSettledId(tournamentId);
       return;
     }
     
     // Skip if we already fetched this tournament
     if (fetchedTournamentIdRef.current === tournamentId && localTournament?.id === tournamentId) {
-      setTournamentLoaded(true);
+      setTournamentSettledId(tournamentId);
       return;
     }
     
-    setTournamentLoaded(false);
     let cancelled = false;
     const tournamentIdToFetch = tournamentId; // Capture for closure
     async function fetchTournament() {
@@ -251,46 +254,38 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
             addTournament?.(tournament);
           }
         }
-        setTournamentLoaded(true);
+        setTournamentSettledId(tournamentIdToFetch);
       } catch (err: any) {
         console.error("Failed to fetch tournament:", err);
-        setTournamentLoaded(true);
+        if (!cancelled) setTournamentSettledId(tournamentIdToFetch);
       }
     }
     fetchTournament();
     
     return () => { cancelled = true; };
-  }, [tournamentId, tournamentContext?.tournament?.id, roundLoaded]);
+    // matchId is a dep so each match navigation re-checks (and retries a lookup
+    // that failed on the previous match) even when the tournament is the same.
+  }, [tournamentId, tournamentContext?.tournament?.id, matchId]);
 
-  // 5. Fetch course (one-time fetch, cached by ID)
-  const courseId = round?.courseId;
-  
+  // 5. Fetch course (one-time fetch, cached by ID).
+  // The round names the course, but computeMatchOnWrite caches the same id on
+  // the match (`_lastComputed.courseId`), so the course read starts alongside
+  // the round listener instead of after it. That cached id is only a hint —
+  // once the round has loaded, ITS courseId wins, and if the two disagree this
+  // effect simply re-runs for the round's course.
+  const roundCourseId = round?.courseId;
+  const courseId = roundLoaded ? roundCourseId : (roundCourseId ?? match?._lastComputed?.courseId);
+
   useEffect(() => {
-    // Don't mark as loaded until we know the courseId (after round loads)
-    if (!roundLoaded) return;
-    
-    if (!courseId) {
-      // Round loaded but has no course - this is the "loaded with no course" case
-      setCourseLoaded(true);
-      return;
-    }
-    
-    // Skip if we already fetched this course
-    if (fetchedCourseIdRef.current === courseId && course?.id === courseId) {
-      setCourseLoaded(true);
-      return;
-    }
-    
+    if (!courseId) return;
+
     // Check if context has this course cached (prioritize context cache)
     if (tournamentContext?.courses[courseId]) {
-      const cachedCourse = tournamentContext.courses[courseId];
-      setCourse(cachedCourse);
-      fetchedCourseIdRef.current = courseId;
-      setCourseLoaded(true);
+      setCourse(tournamentContext.courses[courseId]);
+      setCourseSettledId(courseId);
       return;
     }
-    
-    setCourseLoaded(false);
+
     let cancelled = false;
     const courseIdToFetch = courseId; // Capture for closure
     async function fetchCourse() {
@@ -302,20 +297,24 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         if (cSnap.exists()) {
           const courseData = { id: cSnap.id, ...cSnap.data() } as CourseDoc;
           setCourse(courseData);
-          fetchedCourseIdRef.current = courseIdToFetch;
           // Add to context cache if available
           tournamentContext?.addCourse(courseData);
         }
-        setCourseLoaded(true);
+        setCourseSettledId(courseIdToFetch);
       } catch (err: any) {
         console.error("Failed to fetch course:", err);
-        setCourseLoaded(true);
+        if (!cancelled) setCourseSettledId(courseIdToFetch);
       }
     }
     fetchCourse();
     
     return () => { cancelled = true; };
-  }, [courseId, roundLoaded]);
+    // Keyed on the ids alone: the context's course cache is only consulted when
+    // the course or match changes (re-running on every cache update would
+    // refetch for nothing). matchId is a dep so a lookup that failed on the
+    // previous match is retried on the next one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, matchId]);
 
   // 6. Fetch match facts when match closes
   const matchClosed = match?.status?.closed ?? false;
@@ -328,11 +327,9 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (!factMatchId || !matchClosed) {
       // Match loaded but not closed - no facts needed
       setMatchFacts([]);
-      setFactsLoaded(true);
       return;
     }
     
-    setFactsLoaded(false);
     let cancelled = false;
     async function fetchFacts() {
       try {
@@ -340,10 +337,8 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
         if (cancelled) return;
         const facts = snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as PlayerMatchFact));
         setMatchFacts(facts);
-        setFactsLoaded(true);
       } catch (err: any) {
         console.error("Failed to fetch match facts:", err);
-        setFactsLoaded(true);
       }
     }
     fetchFacts();
@@ -351,11 +346,14 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     return () => { cancelled = true; };
   }, [factMatchId, matchClosed, matchLoaded]);
 
-  // Coordinate all loading states
-  useEffect(() => {
-    const allLoaded = matchLoaded && roundLoaded && courseLoaded && tournamentLoaded && playersLoaded && factsLoaded;
-    setRawLoading(!allLoaded);
-  }, [matchLoaded, roundLoaded, courseLoaded, tournamentLoaded, playersLoaded, factsLoaded]);
+  // Coordinate loading — derived during render, so there's no extra pass (and
+  // no frame where freshly-reset data renders as "loaded"). Course/tournament
+  // count as loaded once the lookup for the id the ROUND names has settled, or
+  // the round names none. Match facts are deliberately not part of this: they
+  // only feed the post-match stats below the scorecard.
+  const courseLoaded = roundLoaded && (!roundCourseId || courseSettledId === roundCourseId);
+  const tournamentLoaded = roundLoaded && (!roundTournamentId || tournamentSettledId === roundTournamentId);
+  const rawLoading = !(matchLoaded && roundLoaded && courseLoaded && tournamentLoaded && playersLoaded);
 
   // Never spin forever: once we have the match loaded, a wedged secondary read
   // (course/facts on a stalled connection) stops blocking after the timeout so
@@ -396,7 +394,9 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   return {
     match,
     round,
-    course,
+    // Only ever hand back the course the current id names — never one fetched
+    // from a hint the round then disagreed with.
+    course: courseId && course?.id === courseId ? course : null,
     tournament,
     players,
     matchFacts,

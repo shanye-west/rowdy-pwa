@@ -10,12 +10,12 @@
  */
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, doc, query, where, onSnapshot, limit, documentId, getDocs, type QuerySnapshot, type DocumentData } from "firebase/firestore";
+import { collection, doc, query, where, onSnapshot, limit, documentId, type QuerySnapshot, type DocumentData } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { useResolvedLoading } from "./useResolvedLoading";
-import { getDocsCacheFirst } from "../utils/firestoreReads";
+import { getDocsCacheFirst, getDocsByIdCacheFirst } from "../utils/firestoreReads";
 import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
 
 // ============================================================================
@@ -409,17 +409,40 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
         }
         
         const fetchedCourses: Record<string, CourseDoc> = {};
-        
+        const toCourses = (snap: QuerySnapshot<DocumentData>) => {
+          const out: Record<string, CourseDoc> = {};
+          snap.docs.forEach(d => { out[d.id] = { id: d.id, ...d.data() } as CourseDoc; });
+          return out;
+        };
+
+        // Cache-first (trusted only when every course in the batch is cached):
+        // courses are effectively static, and a server-first read left the
+        // schedule's course names waiting on the network at every cold start.
+        // The background revalidation still picks up an edited course.
         await Promise.all(batches.map(async (batch) => {
-          const snap = await getDocs(query(collection(db, "courses"), where(documentId(), "in", batch)));
-          snap.docs.forEach(d => {
-            fetchedCourses[d.id] = { id: d.id, ...d.data() } as CourseDoc;
-            fetchedCourseIdsRef.current.add(d.id);
-          });
+          const snap = await getDocsByIdCacheFirst(
+            query(collection(db, "courses"), where(documentId(), "in", batch)),
+            batch,
+            (fresh) => {
+              if (cancelled) return;
+              const freshCourses = toCourses(fresh);
+              setCourses(prev => {
+                const changed = Object.entries(freshCourses).some(
+                  ([id, c]) => JSON.stringify(prev[id]) !== JSON.stringify(c)
+                );
+                return changed ? { ...prev, ...freshCourses } : prev;
+              });
+            },
+          );
+          Object.assign(fetchedCourses, toCourses(snap));
         }));
         
         if (cancelled) return;
-        
+
+        // Mark fetched only once the result is actually applied: marking before
+        // the cancel check meant a rounds update landing mid-fetch dropped the
+        // courses AND stopped them ever being requested again.
+        Object.keys(fetchedCourses).forEach(id => fetchedCourseIdsRef.current.add(id));
         setCourses(prev => ({ ...prev, ...fetchedCourses }));
       } catch (err) {
         console.error("Courses fetch error:", err);

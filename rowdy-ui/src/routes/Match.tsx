@@ -10,6 +10,11 @@ import {
   cellScoreEdit,
   driveEdit,
   buildHoleUpdate,
+  applyHoleEdits,
+  NO_OPTIMISTIC_EDITS,
+  addOptimisticEdit,
+  dropOptimisticEdit,
+  pruneOptimisticEdits,
 } from "../utils/holeEdits";
 import { warmMatchForOffline } from "../utils/offlineWarm";
 import { 
@@ -43,6 +48,7 @@ import {
 import { useMatchData } from "../hooks/useMatchData";
 import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
+import { useStableCallback } from "../hooks/useStableCallback";
 import { useToast } from "../contexts/ToastContext";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
@@ -329,29 +335,65 @@ export default function Match() {
     }
   };
 
-  // Build holes data - use course from separate fetch or embedded in round
+  // OPTIMISTIC SCORE ENTRY. A tapped score is held here and painted at once;
+  // the Firestore write behind it is debounced (400ms) and only then echoes
+  // back through the match snapshot, so without this every tap sat blank for
+  // ~half a second. Keyed by hole, tagged with the match it belongs to so a
+  // navigation to another match can never show the previous card's edits.
+  const [optimistic, setOptimistic] = useState(NO_OPTIMISTIC_EDITS);
+  const currentMatchId = match?.id ?? null;
+  const matchHoles = match?.holes;
+  const addOptimistic = useCallback((holeKey: string, edits: HoleEdits) => {
+    if (!currentMatchId) return;
+    setOptimistic((prev) => addOptimisticEdit(prev, currentMatchId, holeKey, edits));
+  }, [currentMatchId]);
+  const dropOptimistic = useCallback((holeKey: string) => {
+    setOptimistic((prev) => dropOptimisticEdit(prev, holeKey));
+  }, []);
+  // Drop each optimistic edit as soon as the snapshot carries it (see
+  // pruneOptimisticEdits for why it must be removed rather than ignored).
+  useEffect(() => {
+    setOptimistic((prev) => pruneOptimisticEdits(prev, currentMatchId, matchHoles));
+  }, [currentMatchId, matchHoles, optimistic]);
+  // Only show optimistic edits while this scorer can actually write. If the
+  // round/match locks (or edit rights go away) under a pending tap, the write
+  // is refused and the snapshot is the truth again.
+  const pendingEdits =
+    optimistic.matchId === currentMatchId && canEdit && !roundLocked && !matchLocked
+      ? optimistic.edits
+      : NO_OPTIMISTIC_EDITS.edits;
+
+  // Build holes data - use course from separate fetch or embedded in round.
+  // Keyed on the hole maps themselves, not the whole match/round docs: the
+  // round doc is rewritten whenever ANY match in the round changes state
+  // (pointTotals), which used to rebuild this — and re-render the card — for
+  // scores entered in other groups.
+  const courseHoles = course?.holes || round?.course?.holes;
   const holes = useMemo((): HoleData[] => {
-    const hMatch = match?.holes || {};
+    const hMatch = matchHoles || {};
     // Try course from separate fetch first, then fall back to embedded round.course
-    const hCourse = course?.holes || round?.course?.holes || [];
+    const hCourse = courseHoles || [];
     return Array.from({ length: 18 }, (_, i) => {
       const num = i + 1;
       const k = String(num);
       const info = hCourse.find(h => h.number === num);
-      return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex, yards: info?.yards };
+      const saved = hMatch[k]?.input || {};
+      const pending = pendingEdits[k];
+      return { k, num, input: pending ? applyHoleEdits(saved, pending) : saved, par: info?.par ?? 4, hcpIndex: info?.hcpIndex, yards: info?.yards };
     });
-  }, [match, round, course]);
+  }, [matchHoles, courseHoles, pendingEdits]);
 
-  // Latest hole inputs, kept in a ref so saveHole can compose per-team score
-  // arrays against the freshest snapshot at flush time (not at tap time). This
-  // is what lets a debounced write preserve a teammate's score instead of
-  // overwriting it from a stale local copy.
+  // Latest SAVED hole inputs (the snapshot, without the optimistic overlay),
+  // kept in a ref so saveHole can compose per-team score arrays against the
+  // freshest snapshot at flush time (not at tap time). This is what lets a
+  // debounced write preserve a teammate's score instead of overwriting it from
+  // a stale local copy.
   const latestInputRef = useRef<Record<string, HoleInputLoose>>({});
   useEffect(() => {
     const map: Record<string, HoleInputLoose> = {};
-    for (const h of holes) map[h.k] = h.input;
+    for (const [k, h] of Object.entries(matchHoles || {})) map[k] = h?.input || {};
     latestInputRef.current = map;
-  }, [holes]);
+  }, [matchHoles]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -476,11 +518,16 @@ export default function Match() {
   // scorers on the same hole don't clobber each other. Rejects on real failures
   // so the debounce hook (and saveHoleNow) can surface them.
   const saveHole = useCallback(async (k: string, edits: HoleEdits) => {
-    if (!match?.id || roundLocked || !canEdit) return;
+    if (!match?.id || roundLocked || !canEdit) {
+      // Nothing will be written, so nothing will echo back to clear the
+      // optimistic copy — drop it rather than leave an unsaved number showing.
+      dropOptimistic(k);
+      return;
+    }
     const update = buildHoleUpdate(k, edits, latestInputRef.current[k]);
     if (Object.keys(update).length === 0) return;
     await updateDoc(doc(db, "matches", match.id), update);
-  }, [match?.id, roundLocked, canEdit]);
+  }, [match?.id, roundLocked, canEdit, dropOptimistic]);
 
   // Immediate save with a user-facing error toast + retry (drive picks, match close).
   const saveHoleNow = useCallback(async (k: string, edits: HoleEdits) => {
@@ -764,45 +811,49 @@ export default function Match() {
     return { teamAPlayersGross: aArr, teamBPlayersGross: bArr };
   }, [format]);
 
-  // Memoized cell change handlers for each player row (prevents re-creating on every render)
-  const createCellChangeHandler = useCallback((team: "A" | "B", pIdx: number) => {
-    return (holeKey: string, value: number | null) => {
-      const hole = holes.find(h => h.k === holeKey);
-      if (!hole) return;
-      
-      const edits = cellScoreEdit(format, team, pIdx, value);
+  // Score-cell change. Wrapped in useStableCallback so the handlers handed to
+  // the cells never change identity while still seeing this render's
+  // holes/format/match. Every score used to hand all 72 cells a fresh onChange
+  // (the handler closed over `holes`), which defeated their memo and
+  // re-rendered the whole card plus its 72 number pickers on each entry.
+  const handleCellChange = useStableCallback((team: "A" | "B", pIdx: number, holeKey: string, value: number | null) => {
+    const hole = holes.find(h => h.k === holeKey);
+    if (!hole) return;
 
-      // Check if this score change would close the match (and match isn't already closed)
-      if (!isMatchClosed) {
-        // buildNewInput produces the full prospective input for the close
-        // prediction / confirm tile; the actual write uses the sparse `edits`.
-        const newInput = buildNewInput(hole, team, pIdx, value);
-        const closeCheck = wouldCloseMatch(
-          holes,
+    const edits = cellScoreEdit(format, team, pIdx, value);
+
+    // Check if this score change would close the match (and match isn't already closed)
+    if (!isMatchClosed) {
+      // buildNewInput produces the full prospective input for the close
+      // prediction / confirm tile; the actual write uses the sparse `edits`.
+      const newInput = buildNewInput(hole, team, pIdx, value);
+      const closeCheck = wouldCloseMatch(
+        holes,
+        holeKey,
+        newInput,
+        format,
+        match?.teamAPlayers,
+        match?.teamBPlayers
+      );
+
+      if (closeCheck.wouldClose) {
+        // Show confirmation modal instead of saving. Deliberately NOT painted
+        // optimistically: nothing is entered until the scorer confirms.
+        setConfirmCloseModal({
           holeKey,
-          newInput,
-          format,
-          match?.teamAPlayers,
-          match?.teamBPlayers
-        );
-
-        if (closeCheck.wouldClose) {
-          // Show confirmation modal instead of saving
-          setConfirmCloseModal({
-            holeKey,
-            pendingEdits: edits,
-            winner: closeCheck.winner,
-            margin: closeCheck.margin,
-            thru: closeCheck.thru,
-          });
-          return;
-        }
+          pendingEdits: edits,
+          winner: closeCheck.winner,
+          margin: closeCheck.margin,
+          thru: closeCheck.thru,
+        });
+        return;
       }
+    }
 
-      // Not closing match, save normally with debounce
-      debouncedSaveHole(holeKey, edits);
-    };
-  }, [holes, format, debouncedSaveHole, isMatchClosed, match?.teamAPlayers, match?.teamBPlayers, buildNewInput]);
+    // Not closing match: paint the score now, save with debounce.
+    addOptimistic(holeKey, edits);
+    debouncedSaveHole(holeKey, edits);
+  });
 
   // Handle confirm close - save the pending score
   const handleConfirmClose = useCallback(async () => {
@@ -818,11 +869,11 @@ export default function Match() {
     setConfirmCloseModal(null);
   }, []);
 
-  // Create stable handlers for each player row
-  const cellChangeHandlerA0 = useMemo(() => createCellChangeHandler("A", 0), [createCellChangeHandler]);
-  const cellChangeHandlerA1 = useMemo(() => createCellChangeHandler("A", 1), [createCellChangeHandler]);
-  const cellChangeHandlerB0 = useMemo(() => createCellChangeHandler("B", 0), [createCellChangeHandler]);
-  const cellChangeHandlerB1 = useMemo(() => createCellChangeHandler("B", 1), [createCellChangeHandler]);
+  // Stable handlers for each player row — identity never changes.
+  const cellChangeHandlerA0 = useCallback((k: string, v: number | null) => handleCellChange("A", 0, k, v), [handleCellChange]);
+  const cellChangeHandlerA1 = useCallback((k: string, v: number | null) => handleCellChange("A", 1, k, v), [handleCellChange]);
+  const cellChangeHandlerB0 = useCallback((k: string, v: number | null) => handleCellChange("B", 0, k, v), [handleCellChange]);
+  const cellChangeHandlerB1 = useCallback((k: string, v: number | null) => handleCellChange("B", 1, k, v), [handleCellChange]);
 
   // Calculate running match status after each hole using shared scoring module
   const runningMatchStatus = useMemo(() => {

@@ -75,3 +75,88 @@ export async function getDocsCacheFirst<T = DocumentData>(
   }
   return getDocs(q);
 }
+
+/**
+ * Run a by-id query (`documentId() in [...]`) cache-first, but only trust the
+ * cache when it holds EVERY requested id. A cache query returns whatever
+ * matching docs happen to be on the device, so a roster where only some
+ * players were ever cached would otherwise come back looking complete. On a
+ * partial hit (or a miss) this falls back to a normal read.
+ *
+ * Pass `onFresh` to revalidate in the background after a cache hit
+ * (stale-while-revalidate) — the cached docs paint immediately and a changed
+ * name / handicap still arrives a moment later.
+ */
+export async function getDocsByIdCacheFirst<T = DocumentData>(
+  q: Query<T>,
+  ids: readonly string[],
+  onFresh?: (snap: QuerySnapshot<T>) => void,
+): Promise<QuerySnapshot<T>> {
+  try {
+    const cached = await getDocsFromCache(q);
+    const have = new Set(cached.docs.map((d) => d.id));
+    if (ids.every((id) => have.has(id))) {
+      if (onFresh) {
+        getDocsFromServer(q).then(onFresh).catch(() => {});
+      }
+      return cached;
+    }
+  } catch {
+    /* persistence unavailable — fall through to a normal read */
+  }
+  return getDocs(q);
+}
+
+const PRIMED_PREFIX = "rowdycup:primed:";
+
+function isPrimed(key: string): boolean {
+  try {
+    return localStorage.getItem(PRIMED_PREFIX + key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markPrimed(key: string): void {
+  try {
+    localStorage.setItem(PRIMED_PREFIX + key, "1");
+  } catch {
+    /* storage unavailable (private mode) — the query just stays server-first */
+  }
+}
+
+/**
+ * Stale-while-revalidate for an open-ended query (one whose result set can't be
+ * checked for completeness by id — a leaderboard, a list of past tournaments).
+ *
+ * The problem with reading such a query straight from the cache is that the
+ * cache may hold only PART of the result (docs that arrived via some other,
+ * narrower query), which would flash a misleadingly short list. So the cache is
+ * trusted only once this device has completed a server read of this exact query
+ * — recorded under `key` in localStorage. From then on the cached result
+ * returns immediately and `onFresh` delivers the server's copy when it lands.
+ *
+ * Until then (first visit, or storage cleared — which clears the cache too) it
+ * behaves exactly like `getDocs`. `key` must identify the query, parameters
+ * included.
+ */
+export async function getDocsPrimed<T = DocumentData>(
+  key: string,
+  q: Query<T>,
+  onFresh: (snap: QuerySnapshot<T>) => void,
+): Promise<QuerySnapshot<T>> {
+  if (isPrimed(key)) {
+    try {
+      const cached = await getDocsFromCache(q);
+      getDocsFromServer(q).then(onFresh).catch(() => {});
+      return cached;
+    } catch {
+      /* persistence unavailable — fall through to a normal read */
+    }
+  }
+  const snap = await getDocs(q);
+  // An offline getDocs resolves from the cache; that proves nothing about
+  // completeness, so only a real server answer primes the key.
+  if (!snap.metadata.fromCache) markPrimed(key);
+  return snap;
+}

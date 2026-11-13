@@ -9,9 +9,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, type QuerySnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { toDateOrNull } from "../utils";
+import { getDocsPrimed } from "../utils/firestoreReads";
 import { rosterPlayerIds } from "../utils/roster";
 import { usePlayers } from "../contexts/TournamentContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -78,10 +79,16 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
       setSettledBets([]);
       return;
     }
-    getDocs(
-      query(collection(db, "bets"), where("tournamentId", "==", tournamentId), where("status", "==", "settled"))
+    // Stale-while-revalidate: Standings / head-to-head paint from the cached
+    // history at once, then the server copy (with anything just settled) lands.
+    const apply = (snap: QuerySnapshot) =>
+      setSettledBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc)));
+    getDocsPrimed(
+      `settled-bets:${tournamentId}`,
+      query(collection(db, "bets"), where("tournamentId", "==", tournamentId), where("status", "==", "settled")),
+      apply,
     )
-      .then((snap) => setSettledBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc))))
+      .then(apply)
       .catch((err) => console.error("Settled bets fetch error:", err));
   }, [tournamentId, user]);
 

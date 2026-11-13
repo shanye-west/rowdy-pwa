@@ -5,6 +5,12 @@ import {
   cellScoreEdit,
   driveEdit,
   buildHoleUpdate,
+  applyHoleEdits,
+  holeEditsApplied,
+  NO_OPTIMISTIC_EDITS,
+  addOptimisticEdit,
+  dropOptimisticEdit,
+  pruneOptimisticEdits,
 } from "./holeEdits";
 
 describe("cellScoreEdit", () => {
@@ -105,5 +111,139 @@ describe("buildHoleUpdate", () => {
 
   it("returns an empty map for empty edits", () => {
     expect(buildHoleUpdate("1", {}, {})).toEqual({});
+  });
+});
+
+describe("applyHoleEdits", () => {
+  it("overlays scalar edits and leaves other fields alone", () => {
+    const input = { teamAPlayerGross: 4, teamBPlayerGross: 5 };
+    expect(applyHoleEdits(input, { teamAPlayerGross: 3 })).toEqual({
+      teamAPlayerGross: 3,
+      teamBPlayerGross: 5,
+    });
+    // the source input is never mutated
+    expect(input.teamAPlayerGross).toBe(4);
+  });
+
+  it("overlays one player index and preserves the teammate's score", () => {
+    const input = { teamAPlayersGross: [4, 6], teamBPlayersGross: [5, null] };
+    expect(applyHoleEdits(input, { teamAPlayersGross: { 1: 5 } })).toEqual({
+      teamAPlayersGross: [4, 5],
+      teamBPlayersGross: [5, null],
+    });
+    expect(input.teamAPlayersGross).toEqual([4, 6]);
+  });
+
+  it("builds the score array when the hole has no input yet", () => {
+    expect(applyHoleEdits(undefined, { teamBPlayersGross: { 0: 4 } })).toEqual({
+      teamBPlayersGross: [4, null],
+    });
+  });
+
+  it("applies a clear as null", () => {
+    expect(applyHoleEdits({ teamAGross: 5, teamADrive: 1 }, { teamAGross: null })).toEqual({
+      teamAGross: null,
+      teamADrive: 1,
+    });
+  });
+});
+
+describe("holeEditsApplied", () => {
+  it("is false until the snapshot carries the edited value", () => {
+    const edits: HoleEdits = { teamAPlayerGross: 4 };
+    expect(holeEditsApplied({}, edits)).toBe(false);
+    expect(holeEditsApplied({ teamAPlayerGross: 5 }, edits)).toBe(false);
+    expect(holeEditsApplied({ teamAPlayerGross: 4 }, edits)).toBe(true);
+  });
+
+  it("requires every edited index to match", () => {
+    const edits: HoleEdits = { teamAPlayersGross: { 0: 4, 1: 5 } };
+    expect(holeEditsApplied({ teamAPlayersGross: [4, null] }, edits)).toBe(false);
+    expect(holeEditsApplied({ teamAPlayersGross: [4, 5] }, edits)).toBe(true);
+  });
+
+  it("ignores fields the edit does not touch", () => {
+    expect(
+      holeEditsApplied({ teamAPlayersGross: [4, 9], teamBPlayersGross: [3, 3] }, { teamAPlayersGross: { 0: 4 } })
+    ).toBe(true);
+  });
+
+  it("treats a cleared score and a never-set field as the same", () => {
+    expect(holeEditsApplied(undefined, { teamAGross: null })).toBe(true);
+    expect(holeEditsApplied({}, { teamBPlayersGross: { 1: null } })).toBe(true);
+    expect(holeEditsApplied({ teamAGross: 4 }, { teamAGross: null })).toBe(false);
+  });
+
+  it("an empty edit set is always applied", () => {
+    expect(holeEditsApplied({ teamAGross: 4 }, {})).toBe(true);
+  });
+
+  it("round-trips with applyHoleEdits", () => {
+    const edits: HoleEdits = { teamBPlayersGross: { 1: 6 }, teamADrive: 0 };
+    const input = { teamBPlayersGross: [4, null] };
+    expect(holeEditsApplied(input, edits)).toBe(false);
+    expect(holeEditsApplied(applyHoleEdits(input, edits), edits)).toBe(true);
+  });
+});
+
+describe("optimistic edits (scorecard taps awaiting their snapshot)", () => {
+  const holes = (input: Record<string, unknown>) => ({ "5": { input } });
+
+  it("holds a tap until the snapshot carries it, then drops it", () => {
+    const tapped = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAPlayerGross: 4 });
+    expect(tapped.edits["5"]).toEqual({ teamAPlayerGross: 4 });
+
+    // Snapshot still shows the old value (write is inside its debounce window).
+    expect(pruneOptimisticEdits(tapped, "m1", holes({}))).toBe(tapped);
+    // The write echoes back.
+    expect(pruneOptimisticEdits(tapped, "m1", holes({ teamAPlayerGross: 4 }))).toBe(NO_OPTIMISTIC_EDITS);
+  });
+
+  it("a correction made while the first write is in flight survives that write's echo", () => {
+    let state = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAPlayerGross: 4 });
+    state = addOptimisticEdit(state, "m1", "5", { teamAPlayerGross: 5 });
+    // Echo of the FIRST write (4) must not clear the newer tap (5).
+    const afterFirstEcho = pruneOptimisticEdits(state, "m1", holes({ teamAPlayerGross: 4 }));
+    expect(afterFirstEcho.edits["5"]).toEqual({ teamAPlayerGross: 5 });
+    expect(pruneOptimisticEdits(afterFirstEcho, "m1", holes({ teamAPlayerGross: 5 }))).toBe(NO_OPTIMISTIC_EDITS);
+  });
+
+  it("merges taps on both players of a team for the same hole", () => {
+    let state = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAPlayersGross: { 0: 4 } });
+    state = addOptimisticEdit(state, "m1", "5", { teamAPlayersGross: { 1: 5 } });
+    expect(state.edits["5"]).toEqual({ teamAPlayersGross: { 0: 4, 1: 5 } });
+    // Held until BOTH are in the snapshot.
+    expect(pruneOptimisticEdits(state, "m1", holes({ teamAPlayersGross: [4, null] }))).toBe(state);
+    expect(pruneOptimisticEdits(state, "m1", holes({ teamAPlayersGross: [4, 5] }))).toBe(NO_OPTIMISTIC_EDITS);
+  });
+
+  it("once dropped, a later change by another scorer is not masked", () => {
+    const tapped = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAGross: 4 });
+    const saved = pruneOptimisticEdits(tapped, "m1", holes({ teamAGross: 4 }));
+    // Teammate changes the cell to 5: nothing optimistic is left to override it.
+    expect(pruneOptimisticEdits(saved, "m1", holes({ teamAGross: 5 }))).toBe(NO_OPTIMISTIC_EDITS);
+    expect(applyHoleEdits({ teamAGross: 5 }, saved.edits["5"] ?? {})).toEqual({ teamAGross: 5 });
+  });
+
+  it("only drops the holes that have landed", () => {
+    let state = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAGross: 4 });
+    state = addOptimisticEdit(state, "m1", "6", { teamAGross: 3 });
+    const next = pruneOptimisticEdits(state, "m1", { "5": { input: { teamAGross: 4 } }, "6": { input: {} } });
+    expect(Object.keys(next.edits)).toEqual(["6"]);
+  });
+
+  it("never carries edits across matches", () => {
+    const m1 = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAGross: 4 });
+    expect(pruneOptimisticEdits(m1, "m2", holes({}))).toBe(NO_OPTIMISTIC_EDITS);
+    const m2 = addOptimisticEdit(m1, "m2", "7", { teamAGross: 3 });
+    expect(m2).toEqual({ matchId: "m2", edits: { "7": { teamAGross: 3 } } });
+  });
+
+  it("dropOptimisticEdit forgets one hole and is a no-op for an unknown hole", () => {
+    let state = addOptimisticEdit(NO_OPTIMISTIC_EDITS, "m1", "5", { teamAGross: 4 });
+    expect(dropOptimisticEdit(state, "9")).toBe(state);
+    state = addOptimisticEdit(state, "m1", "6", { teamAGross: 3 });
+    expect(Object.keys(dropOptimisticEdit(state, "5").edits)).toEqual(["6"]);
+    expect(dropOptimisticEdit(dropOptimisticEdit(state, "5"), "6")).toBe(NO_OPTIMISTIC_EDITS);
   });
 });

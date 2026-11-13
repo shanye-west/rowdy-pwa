@@ -7,18 +7,37 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useMemo, type ReactNode } from "react";
-import { doc, onSnapshot, collection, query, where, limit, documentId, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where, limit, documentId, type QuerySnapshot, type DocumentData } from "firebase/firestore";
 import { db } from "../firebase";
 import type { TournamentDoc, CourseDoc, PlayerDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { rosterPlayerIds } from "../utils/roster";
 import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
 import { useResolvedLoading } from "../hooks/useResolvedLoading";
+import { getDocsByIdCacheFirst } from "../utils/firestoreReads";
 
 export type PlayerLookup = Record<string, PlayerDoc>;
 
-/** Batch-fetch player docs by id, chunked to Firestore's `in` limit (one-time read). */
-async function fetchPlayersByIds(ids: string[]): Promise<PlayerLookup> {
+function playersFromSnap(snap: QuerySnapshot<DocumentData>): PlayerLookup {
+  const out: PlayerLookup = {};
+  snap.forEach((d) => { out[d.id] = { id: d.id, ...d.data() } as PlayerDoc; });
+  return out;
+}
+
+/**
+ * Batch-fetch player docs by id, chunked to Firestore's `in` limit.
+ *
+ * Cache-first: player names gate the Match and Round pages, and a plain
+ * `getDocs` waits on the server whenever the device thinks it's online — so on
+ * weak course signal the scorecard sat on its skeleton for data already in
+ * IndexedDB. A batch is served from the cache only when every id in it is
+ * cached; `onFresh` then delivers the server copy in the background so an
+ * edited name still arrives.
+ */
+async function fetchPlayersByIds(
+  ids: string[],
+  onFresh?: (players: PlayerLookup) => void,
+): Promise<PlayerLookup> {
   const out: PlayerLookup = {};
   if (ids.length === 0) return out;
   const batches: string[][] = [];
@@ -26,10 +45,32 @@ async function fetchPlayersByIds(ids: string[]): Promise<PlayerLookup> {
     batches.push(ids.slice(i, i + FIRESTORE_IN_QUERY_LIMIT));
   }
   const snaps = await Promise.all(
-    batches.map((batch) => getDocs(query(collection(db, "players"), where(documentId(), "in", batch))))
+    batches.map((batch) =>
+      getDocsByIdCacheFirst(
+        query(collection(db, "players"), where(documentId(), "in", batch)),
+        batch,
+        onFresh ? (fresh) => onFresh(playersFromSnap(fresh)) : undefined,
+      )
+    )
   );
-  snaps.forEach((snap) => snap.forEach((d) => { out[d.id] = { id: d.id, ...d.data() } as PlayerDoc; }));
+  snaps.forEach((snap) => Object.assign(out, playersFromSnap(snap)));
   return out;
+}
+
+/**
+ * Merge freshly-read docs into a lookup, returning the SAME object when nothing
+ * actually changed — so a background revalidation that confirms the cache
+ * doesn't re-render every consumer of the context.
+ */
+function mergeIfChanged<T>(prev: Record<string, T>, fresh: Record<string, T>): Record<string, T> {
+  let next: Record<string, T> | null = null;
+  for (const [id, doc] of Object.entries(fresh)) {
+    if (JSON.stringify(prev[id]) !== JSON.stringify(doc)) {
+      next ??= { ...prev };
+      next[id] = doc;
+    }
+  }
+  return next ?? prev;
 }
 
 // ============================================================================
@@ -91,7 +132,7 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
     const missing = ids.filter((id) => id && !requestedPlayerIdsRef.current.has(id));
     if (missing.length === 0) return;
     missing.forEach((id) => requestedPlayerIdsRef.current.add(id));
-    fetchPlayersByIds(missing)
+    fetchPlayersByIds(missing, (fresh) => setPlayers((prev) => mergeIfChanged(prev, fresh)))
       .then((fetched) => {
         if (Object.keys(fetched).length > 0) setPlayers((prev) => ({ ...prev, ...fetched }));
         // Mark every requested id resolved (even ones with no doc) so loaded flags settle.
@@ -271,7 +312,7 @@ export function usePlayers(ids: readonly string[]): { players: PlayerLookup; loa
     }
     let cancelled = false;
     setLocalLoaded(false);
-    fetchPlayersByIds(idList)
+    fetchPlayersByIds(idList, (fresh) => { if (!cancelled) setLocalPlayers((prev) => mergeIfChanged(prev, fresh)); })
       .then((fetched) => { if (!cancelled) { setLocalPlayers(fetched); setLocalLoaded(true); } })
       .catch(() => { if (!cancelled) setLocalLoaded(true); });
     return () => { cancelled = true; };

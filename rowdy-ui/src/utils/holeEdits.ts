@@ -81,6 +81,127 @@ function composeArray(
   return arr;
 }
 
+const SCALAR_EDIT_KEYS = [
+  "teamAPlayerGross",
+  "teamBPlayerGross",
+  "teamAGross",
+  "teamBGross",
+  "teamADrive",
+  "teamBDrive",
+] as const;
+
+/**
+ * Overlay a sparse edit set on a hole's input and return the resulting input.
+ * Used for optimistic display: a tapped score paints from this immediately,
+ * before the (debounced) write has reached Firestore and echoed back. Never
+ * mutates `input`.
+ */
+export function applyHoleEdits(
+  input: HoleInputLoose | undefined,
+  edits: HoleEdits
+): HoleInputLoose {
+  const out: HoleInputLoose = { ...input };
+  for (const key of SCALAR_EDIT_KEYS) {
+    const value = edits[key];
+    if (value !== undefined) out[key] = value;
+  }
+  if (edits.teamAPlayersGross) {
+    out.teamAPlayersGross = composeArray(input?.teamAPlayersGross, edits.teamAPlayersGross);
+  }
+  if (edits.teamBPlayersGross) {
+    out.teamBPlayersGross = composeArray(input?.teamBPlayersGross, edits.teamBPlayersGross);
+  }
+  return out;
+}
+
+/**
+ * True once `input` already reflects every edit — i.e. the snapshot has caught
+ * up and the optimistic copy can be dropped. A cleared score compares equal to
+ * a field that was never set (both mean "no score").
+ */
+export function holeEditsApplied(
+  input: HoleInputLoose | undefined,
+  edits: HoleEdits
+): boolean {
+  for (const key of SCALAR_EDIT_KEYS) {
+    const value = edits[key];
+    if (value !== undefined && (input?.[key] ?? null) !== (value ?? null)) return false;
+  }
+  const arraysMatch = (
+    current: (number | null)[] | undefined,
+    idxEdits: Record<number, number | null> | undefined
+  ) =>
+    !idxEdits ||
+    Object.entries(idxEdits).every(([k, v]) => (current?.[Number(k)] ?? null) === (v ?? null));
+  return (
+    arraysMatch(input?.teamAPlayersGross, edits.teamAPlayersGross) &&
+    arraysMatch(input?.teamBPlayersGross, edits.teamBPlayersGross)
+  );
+}
+
+/**
+ * Optimistic score-entry state for one scorecard: the taps that have been
+ * painted but not yet seen in a snapshot, keyed by hole, tagged with the match
+ * they belong to (so navigating to another match can never show the previous
+ * card's edits).
+ */
+export interface OptimisticEdits {
+  matchId: string | null;
+  edits: Record<string, HoleEdits>;
+}
+
+/** Shared empty state — a stable identity for "nothing pending". */
+export const NO_OPTIMISTIC_EDITS: OptimisticEdits = Object.freeze({
+  matchId: null,
+  edits: Object.freeze({}) as Record<string, HoleEdits>,
+});
+
+/** Record a tap. Edits to the same hole merge; another match's edits are discarded. */
+export function addOptimisticEdit(
+  state: OptimisticEdits,
+  matchId: string,
+  holeKey: string,
+  edits: HoleEdits
+): OptimisticEdits {
+  const base = state.matchId === matchId ? state.edits : {};
+  const existing = base[holeKey];
+  return {
+    matchId,
+    edits: { ...base, [holeKey]: existing ? mergeHoleEdits(existing, edits) : edits },
+  };
+}
+
+/** Forget one hole's pending edits (the write behind them was abandoned). */
+export function dropOptimisticEdit(state: OptimisticEdits, holeKey: string): OptimisticEdits {
+  if (!(holeKey in state.edits)) return state;
+  const edits = { ...state.edits };
+  delete edits[holeKey];
+  return Object.keys(edits).length > 0 ? { matchId: state.matchId, edits } : NO_OPTIMISTIC_EDITS;
+}
+
+/**
+ * Drop every hole whose edits the snapshot now carries. They must be REMOVED at
+ * that point, not merely ignored: a copy left behind would later mask another
+ * scorer's change to the same cell. Returns the same object when nothing was
+ * dropped, so callers can use it directly in a state setter.
+ */
+export function pruneOptimisticEdits(
+  state: OptimisticEdits,
+  matchId: string | null,
+  savedHoles: Record<string, { input?: HoleInputLoose } | undefined> | undefined
+): OptimisticEdits {
+  if (state === NO_OPTIMISTIC_EDITS) return state;
+  if (state.matchId !== matchId) return NO_OPTIMISTIC_EDITS;
+  const remaining: Record<string, HoleEdits> = {};
+  let dropped = false;
+  for (const [k, edits] of Object.entries(state.edits)) {
+    if (holeEditsApplied(savedHoles?.[k]?.input, edits)) dropped = true;
+    else remaining[k] = edits;
+  }
+  if (!dropped) return state;
+  return Object.keys(remaining).length > 0 ? { matchId: state.matchId, edits: remaining } : NO_OPTIMISTIC_EDITS;
+}
+
 /**
  * Compose accumulated edits + the CURRENT hole input (latest snapshot) into a
  * Firestore field-path update map rooted at the match document. Leaf writes
