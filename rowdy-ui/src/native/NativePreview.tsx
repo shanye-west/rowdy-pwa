@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTournamentContext } from '../contexts/TournamentContext';
 import { useNativeData } from './nativeData';
+import { haptic, type HapticKind } from './haptics';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { nativeTask, RowdyNative, type NativeState } from './standings';
@@ -31,6 +32,17 @@ export default function NativePreview() {
     <p>Live Activity: {state.active ? 'running' : 'off'}</p>
     <div className="flex gap-3"><Button disabled={busy || !s || state.active} onClick={() => void act(true)}>Start Live Activity</Button><Button disabled={busy || !state.active} onClick={() => void act(false)}>End Live Activity</Button></div>
     <p>The display can stay visible while locked. Fresh standings update only while Rowdy Test is running; server-driven background updates are not included. System push notifications are unavailable in this prototype.</p>
+    <section className="space-y-3 rounded-xl border p-4">
+      <h2 className="font-bold">Haptic feedback</h2>
+      <p>Try the patterns without entering any scores. Queued feedback means a write is waiting for the server.</p>
+      <div className="flex flex-wrap gap-2">{(['selection', 'success', 'queued', 'error'] satisfies HapticKind[]).map(kind => <Button key={kind} variant="outline" onClick={() => haptic(kind)}>Test {kind}</Button>)}</div>
+    </section>
+    <section className="space-y-3 rounded-xl border p-4">
+      <h2 className="font-bold">Apple Watch</h2>
+      <p>{state.watch?.paired ? state.watch.installed ? 'Companion installed' : 'Paired · companion not installed yet' : 'No paired Watch detected'} · {state.watch?.reachable ? 'reachable now' : 'background delivery when available'}</p>
+      <p>Open Rowdy Test on your Watch for saved Cup standings and match status. If needed, install it from the iPhone Watch app’s Available Apps list.</p>
+      <p>The Watch is read-only. Refresh retrieves the phone’s saved snapshot; keep Rowdy Test open on iPhone for fresh scores. Logout and tournament changes clear the Watch when connected. An offline Watch can retain its last snapshot until it reconnects.</p>
+    </section>
     {error && <p role="alert">{error}</p>}
     <Link to="/">Open standings</Link>
   </main>;

@@ -1,3 +1,4 @@
+import { haptic } from '../native/haptics';
 import { useCallback, useRef, useEffect, useState } from "react";
 
 // Browser-compatible timeout type
@@ -13,13 +14,6 @@ export type SaveStatus = "idle" | "pending" | "saving" | "saved" | "queued" | "e
  * indicator stuck on "Saving…" while the score is in fact safe on-device.
  */
 const QUEUED_AFTER_MS = 4000;
-
-/** Light haptic feedback, matching the score picker's idiom. */
-function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== "undefined" && navigator.vibrate) {
-    navigator.vibrate(pattern);
-  }
-}
 
 /**
  * A hook that provides debounced save functionality per unique key.
@@ -141,7 +135,7 @@ export function useDebouncedSave<T>(
         // Known offline: report the write as safely queued instead of hanging on
         // "Saving…". Firestore syncs it automatically when connectivity returns.
         updateStatus("queued");
-        vibrate(10);
+        haptic('queued');
         // A queued write can still reject once connectivity returns (e.g. an admin
         // locked the match, or authorization changed) — the SDK then rolls the
         // local write back. Surface it as an error so the user isn't left believing
@@ -153,7 +147,7 @@ export function useDebouncedSave<T>(
           rearm(key, data);
           markErrored(key, true);
           updateStatus("error");
-          vibrate([40, 30, 40]);
+          haptic('error');
         });
         return;
       }
@@ -166,6 +160,7 @@ export function useDebouncedSave<T>(
       const queuedTimer = setTimeout(() => {
         if (settled || !mountedRef.current) return;
         updateStatus("queued");
+        haptic('queued');
       }, QUEUED_AFTER_MS);
 
       try {
@@ -174,7 +169,7 @@ export function useDebouncedSave<T>(
         settled = true;
         clearTimeout(queuedTimer);
         updateStatus("saved");
-        vibrate(10);
+        haptic('success');
       } catch {
         settled = true;
         clearTimeout(queuedTimer);
@@ -183,7 +178,7 @@ export function useDebouncedSave<T>(
         rearm(key, data);
         markErrored(key, true);
         updateStatus("error");
-        vibrate([40, 30, 40]);
+        haptic('error');
       }
     },
     [saveFn, updateStatus, markErrored, rearm]

@@ -21,11 +21,18 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		5DD6FA45858396DF4D9F0651 /* RowdyAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07F2BE1DF445B23A05922AA /* RowdyAttributes.swift */; };
+		71C1D363AC08088391B6E091 /* RowdyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 998C3E155750A4B0F2ABF062 /* RowdyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		748A68B093204C6CC32D4171 /* RowdyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCA907869EBBADC3C01E61 /* RowdyStore.swift */; };
+		77B70445D08C6057CEA46BAF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CDC0E7F2CA155B6B97E23DF6 /* Foundation.framework */; };
+		865D7EA18B1A5DAED16D89DA /* RowdyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D051FA8FD28651415E4CDE09 /* RowdyWatchApp.swift */; };
+		8FB0BC8F3B89BA15BB1E4FCA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E75CFFD17D19807533D248FF /* Assets.xcassets */; };
+		953325BC7A255B40C8050C00 /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302883ED33541CC58DA5F5C9 /* WatchSnapshot.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		9A712A9261B234CD49F1B63C /* RowdyAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07F2BE1DF445B23A05922AA /* RowdyAttributes.swift */; };
 		A59A8D0A36D1C8C9FE1B13FD /* RowdyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26869CAE6C2F5B6E4CD92645 /* RowdyStoreTests.swift */; };
 		A6B260A723E6B780FF1C3C96 /* RowdyAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07F2BE1DF445B23A05922AA /* RowdyAttributes.swift */; };
+		CA9986E7EAFE19BC5EDA2776 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239232B97C6F75B49B4BFB70 /* WatchBridge.swift */; };
+		CED1333E3EB5816FF3D3FCAB /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302883ED33541CC58DA5F5C9 /* WatchSnapshot.swift */; };
 		DEE98A64DA267414A1AE995C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71E90F7419D006BEFCE2ADD2 /* Foundation.framework */; };
 		FD5C5CB6108383256682AB99 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71E90F7419D006BEFCE2ADD2 /* Foundation.framework */; };
 /* End PBXBuildFile section */
@@ -37,6 +44,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 47BFCB251F44CD7819489686;
 			remoteInfo = RowdyLiveActivity;
+		};
+		FE3CE45CFAB281E8C411BE12 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7703F63B5794C290C1D6C4D5;
+			remoteInfo = RowdyWatch;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -52,13 +66,26 @@
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D13B0A020891CE373905C79C /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				71C1D363AC08088391B6E091 /* RowdyWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1188E2B2D5FEC8C06E251A85 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		239232B97C6F75B49B4BFB70 /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		24A0B0C4DEB9468ACD7DA86F /* RowdyLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RowdyLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		26869CAE6C2F5B6E4CD92645 /* RowdyStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyStoreTests.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		302883ED33541CC58DA5F5C9 /* WatchSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSnapshot.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -71,15 +98,27 @@
 		79236A7936B7C263293B07B0 /* RowdyNativeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RowdyNativeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		998C3E155750A4B0F2ABF062 /* RowdyWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RowdyWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4EC7D418A0BD5F4039B1972 /* RowdyNative.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyNative.swift; sourceTree = "<group>"; };
 		BD6F2ADCF16842B5C2D1534F /* Signing.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Signing.xcconfig; path = ../Signing.xcconfig; sourceTree = "<group>"; };
 		C33FABA98881DA4E98DDFAF2 /* RowdyIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyIntents.swift; sourceTree = "<group>"; };
+		CDC0E7F2CA155B6B97E23DF6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		D051FA8FD28651415E4CDE09 /* RowdyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyWatchApp.swift; sourceTree = "<group>"; };
 		D07F2BE1DF445B23A05922AA /* RowdyAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyAttributes.swift; sourceTree = "<group>"; };
 		D2DCA907869EBBADC3C01E61 /* RowdyStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyStore.swift; sourceTree = "<group>"; };
+		E75CFFD17D19807533D248FF /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FC770B6605FA9A5D82798EF7 /* RowdyLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RowdyLiveActivity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0989089D56FABB4F398F2CB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				77B70445D08C6057CEA46BAF /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,8 +150,19 @@
 			isa = PBXGroup;
 			children = (
 				B2DEF7509D055315C12BB772 /* iOS */,
+				FFF932D472A2D109823C4BBD /* watchOS */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3D76DBB4370D4C76A0E6D088 /* RowdyWatch */ = {
+			isa = PBXGroup;
+			children = (
+				D051FA8FD28651415E4CDE09 /* RowdyWatchApp.swift */,
+				E75CFFD17D19807533D248FF /* Assets.xcassets */,
+			);
+			name = RowdyWatch;
+			path = RowdyWatch;
 			sourceTree = "<group>";
 		};
 		504EC2FB1FED79650016851F = {
@@ -126,6 +176,7 @@
 				C1ACB6CEF191EC2A1E2EE16C /* RowdyLiveActivity */,
 				82888ED07A45588AB408D3FF /* RowdyNativeTests */,
 				BD6F2ADCF16842B5C2D1534F /* Signing.xcconfig */,
+				3D76DBB4370D4C76A0E6D088 /* RowdyWatch */,
 			);
 			sourceTree = "<group>";
 		};
@@ -135,6 +186,7 @@
 				504EC3041FED79650016851F /* App.app */,
 				24A0B0C4DEB9468ACD7DA86F /* RowdyLiveActivity.appex */,
 				79236A7936B7C263293B07B0 /* RowdyNativeTests.xctest */,
+				998C3E155750A4B0F2ABF062 /* RowdyWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -154,6 +206,7 @@
 				A4EC7D418A0BD5F4039B1972 /* RowdyNative.swift */,
 				C33FABA98881DA4E98DDFAF2 /* RowdyIntents.swift */,
 				D2DCA907869EBBADC3C01E61 /* RowdyStore.swift */,
+				239232B97C6F75B49B4BFB70 /* WatchBridge.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -187,8 +240,17 @@
 			isa = PBXGroup;
 			children = (
 				D07F2BE1DF445B23A05922AA /* RowdyAttributes.swift */,
+				302883ED33541CC58DA5F5C9 /* WatchSnapshot.swift */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		FFF932D472A2D109823C4BBD /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				CDC0E7F2CA155B6B97E23DF6 /* Foundation.framework */,
+			);
+			name = watchOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -219,11 +281,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				6949359E81BAC995C374CF1E /* Embed App Extensions */,
+				D13B0A020891CE373905C79C /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				87F4D7A531AA0247A040F776 /* PBXTargetDependency */,
+				BE3C458EEEAA2A1029E625D9 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -249,6 +313,23 @@
 			productName = RowdyNativeTests;
 			productReference = 79236A7936B7C263293B07B0 /* RowdyNativeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7703F63B5794C290C1D6C4D5 /* RowdyWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 962B95B1DF8F8BA298B7C2A5 /* Build configuration list for PBXNativeTarget "RowdyWatch" */;
+			buildPhases = (
+				29C5E5975A99199E32B56801 /* Sources */,
+				0989089D56FABB4F398F2CB9 /* Frameworks */,
+				C73240299BDFBCCF6CF4C729 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RowdyWatch;
+			productName = RowdyWatch;
+			productReference = 998C3E155750A4B0F2ABF062 /* RowdyWatch.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -285,6 +366,7 @@
 				504EC3031FED79650016851F /* App */,
 				47BFCB251F44CD7819489686 /* RowdyLiveActivity */,
 				705BDAFF26BDDFB6DC655737 /* RowdyNativeTests */,
+				7703F63B5794C290C1D6C4D5 /* RowdyWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -317,9 +399,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C73240299BDFBCCF6CF4C729 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FB0BC8F3B89BA15BB1E4FCA /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		29C5E5975A99199E32B56801 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				865D7EA18B1A5DAED16D89DA /* RowdyWatchApp.swift in Sources */,
+				953325BC7A255B40C8050C00 /* WatchSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -330,6 +429,8 @@
 				08F6A65D955720B3A5BE20F0 /* RowdyIntents.swift in Sources */,
 				5DD6FA45858396DF4D9F0651 /* RowdyAttributes.swift in Sources */,
 				748A68B093204C6CC32D4171 /* RowdyStore.swift in Sources */,
+				CA9986E7EAFE19BC5EDA2776 /* WatchBridge.swift in Sources */,
+				CED1333E3EB5816FF3D3FCAB /* WatchSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,6 +461,12 @@
 			name = RowdyLiveActivity;
 			target = 47BFCB251F44CD7819489686 /* RowdyLiveActivity */;
 			targetProxy = 8ECA9EA1CF1598AB7EC3366D /* PBXContainerItemProxy */;
+		};
+		BE3C458EEEAA2A1029E625D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = RowdyWatch;
+			target = 7703F63B5794C290C1D6C4D5 /* RowdyWatch */;
+			targetProxy = FE3CE45CFAB281E8C411BE12 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -573,6 +680,32 @@
 			};
 			name = Release;
 		};
+		5DE273D76312013CAEB4B7C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rowdy Test";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.rowdycup.app.prototype;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rowdycup.app.prototype.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
 		947057296601154DEDCD84F3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -604,6 +737,31 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E50FFFFADCF7CD4AECD389E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rowdy Test";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.rowdycup.app.prototype;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rowdycup.app.prototype.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
 			};
 			name = Debug;
 		};
@@ -642,6 +800,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		962B95B1DF8F8BA298B7C2A5 /* Build configuration list for PBXNativeTarget "RowdyWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DE273D76312013CAEB4B7C8 /* Release */,
+				E50FFFFADCF7CD4AECD389E6 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

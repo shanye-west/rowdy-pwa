@@ -6,6 +6,7 @@ import { useTournamentData } from '../hooks/useTournamentData';
 import { snapshotForSave } from './snapshotPolicy';
 import { isNative } from './platform';
 import { nativeTask, RowdyNative } from './standings';
+import { watchSnapshot } from './watchSnapshot';
 import { NativeData } from './nativeData';
 export function NativeProvider({ children }: { children: ReactNode }) {
   return isNative() ? <NativeSession>{children}</NativeSession> : children;
@@ -13,7 +14,7 @@ export function NativeProvider({ children }: { children: ReactNode }) {
 function NativeSession({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { tournament, loading } = useTournamentContext();
-  const data = useTournamentData({ prefetchedTournament: tournament, preferDenormalizedTotals: true });
+  const data = useTournamentData({ prefetchedTournament: tournament, preferDenormalizedTotals: false });
   const context = user && tournament ? `${user.uid}:${tournament.id}` : '';
   useEffect(() => {
     if (authLoading || (user && loading)) return;
@@ -23,7 +24,10 @@ function NativeSession({ children }: { children: ReactNode }) {
     if (authLoading || loading || !context || !tournament || data.loading || !data.standingsUpdatedAt || data.tournament?.id !== tournament.id) return;
     const snapshot = snapshotForSave(data, tournament.id);
     if (!snapshot) return;
-    void nativeTask(() => RowdyNative.save({ context, snapshot })).catch(console.error);
+    void nativeTask(async () => {
+      await RowdyNative.save({ context, snapshot });
+      await RowdyNative.saveWatch({ context, snapshot: watchSnapshot(data, snapshot) });
+    }).catch(console.error);
   }, [context, authLoading, loading, tournament, data]);
   useEffect(() => {
     const openStandings = ({ url }: { url: string }) => {

@@ -59,8 +59,6 @@ export const ScoreInputCell = memo(function ScoreInputCell({
 
   // Handle number selection from picker
   const handleSelect = useCallback((num: number) => {
-    // Light haptic tick on score entry (Android; iOS Safari ignores it).
-    navigator.vibrate?.(10);
     onChange(holeKey, num);
     // Popover will auto-dismiss after selection with togglepopover
     const popover = document.getElementById(popoverId) as HTMLElement & { hidePopover?: () => void };

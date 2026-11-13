@@ -1,6 +1,7 @@
 import Capacitor
 import ActivityKit
 import UIKit
+import WatchConnectivity
 
 @objc(RowdyNativePlugin)
 public class RowdyNativePlugin: CAPPlugin, CAPBridgedPlugin {
@@ -10,6 +11,8 @@ public class RowdyNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "takeOpenStandings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setContext", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "save", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveWatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
@@ -31,6 +34,7 @@ public class RowdyNativePlugin: CAPPlugin, CAPBridgedPlugin {
         guard let context = call.getString("context") else { call.reject("Missing context"); return }
         Task { @MainActor in
             if RowdyStore.setContext(context) {
+                WatchBridge.shared.clear()
                 await RowdyStore.end()
             }
             call.resolve()
@@ -54,8 +58,38 @@ public class RowdyNativePlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve()
         }
     }
+    @objc func haptic(_ call: CAPPluginCall) {
+        let kind = call.getString("kind") ?? "selection"
+        Task { @MainActor in
+            switch kind {
+            case "selection": UISelectionFeedbackGenerator().selectionChanged()
+            case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+            case "queued": UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            case "error": UINotificationFeedbackGenerator().notificationOccurred(.error)
+            default: call.reject("Unknown haptic"); return
+            }
+            call.resolve()
+        }
+    }
+    @objc func saveWatch(_ call: CAPPluginCall) {
+        guard let context = call.getString("context"), !context.isEmpty,
+              let object = call.getObject("snapshot"),
+              let bytes = try? JSONSerialization.data(withJSONObject: object),
+              (try? JSONDecoder().decode(WatchSnapshot.self, from: bytes)) != nil else {
+            call.reject("Invalid Watch snapshot"); return
+        }
+        Task { @MainActor in
+            guard UserDefaults.standard.string(forKey: "rowdy.context") == context else {
+                call.reject("Tournament or account changed"); return
+            }
+            WatchBridge.shared.save(bytes)
+            call.resolve()
+        }
+    }
     @objc func read(_ call: CAPPluginCall) {
         var result: JSObject = ["active": !Activity<RowdyAttributes>.activities.isEmpty, "snapshot": NSNull()]
+        let watch = WCSession.default
+        result["watch"] = ["paired": watch.isPaired, "installed": watch.isWatchAppInstalled, "reachable": watch.isReachable] as JSObject
         if let snapshot = RowdyStore.snapshot {
             // Build JS values explicitly: Foundation's JSON object can contain
             // NSString values that fail a cast to Capacitor's JSValue protocol.

@@ -88,3 +88,46 @@ Do score writes and offline replay against Firebase emulators first, with an exp
 - Three Swift storage tests passed in an isolated simulator test bundle: persistence/missing data, logout clearing, account/tournament switching. Test fixtures never touch Firebase.
 - Simulator inspection in Xcode Device Hub verified the header/bottom safe areas, native preview navigation, signed-out state, and live production tournament reads. Native Firebase uses email/password-only auth initialization and forced long-polling after the initial WebView connection stalled. Physical layout, login persistence, Siri voice recognition, Live Activity visibility, and runtime behavior remain to be verified with the user. Personal Team provisioning, signed build, code-signature verification, and device installation passed.
 - No production score writes or deployment were performed. Score mutation/offline replay acceptance remains pending emulator testing.
+
+## Haptics and Apple Watch companion
+
+The iPhone uses UIKit feedback for score-picker selections and the existing
+`useDebouncedSave` outcomes: success only after server acknowledgment, a soft
+impact for queued writes, and notification error feedback for rejection. Native
+Preview has four safe test buttons; these do not write tournament data. Web
+builds retain browser vibration where supported. Haptic failure never blocks a
+save, and feedback is not triggered by background score listeners.
+
+`RowdyWatch` is a read-only SwiftUI watchOS 11+ companion, bundle identifier
+`com.rowdycup.app.prototype.watchkitapp`. It is embedded in the iPhone app and
+uses the same local Personal Team signing configuration. The `RowdyWatch`
+Xcode scheme can run directly on a paired Watch or watchOS simulator. For a
+physical Watch, keep it unlocked near the iPhone, enable Developer Mode if
+requested, and use the iPhone Watch app's Available Apps list to install
+Rowdy Test. Provisioning/device registration may require running the Watch
+scheme in Xcode. Renew the free provisioning by rebuilding and reinstalling,
+just as for the iPhone app.
+
+The Watch shows confirmed Cup totals and all scheduled Cup match statuses
+(including final results), using existing server-computed fields. Captains'
+season and side events are separate from Cup matches and are not included.
+The native provider requests the shared hook's full match data instead of its
+denormalized-totals optimization; the web remains unchanged. Only
+server-confirmed snapshots with no pending writes are forwarded. No scoring
+math or Firebase authentication is implemented on the Watch.
+
+WatchConnectivity sends the latest snapshot via application context and sends
+an immediate message when reachable. A revision number prevents an older
+queued context from overwriting a newer message. The Watch persists the last
+received snapshot and displays its original saved timestamp. Refresh from
+Watch requests the phone's saved snapshot, not a fresh Firebase fetch. Keep the
+iPhone app running for fresh data; this is not standalone/background live
+scoring. Logout/account/tournament changes enqueue a clear; an unreachable
+Watch retains its previously saved display until delivery is possible.
+
+Validation: web/native frontend builds and frontend tests, signed iPhone/Watch
+builds, and watchOS simulator layouts. The iPhone build with embedded Watch
+companion was installed. Physical Watch installation, connectivity and haptic
+feel require device confirmation; no production score entries were made.
+
+Apple reference: [Transferring data with Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity/transferring-data-with-watch-connectivity).
