@@ -1,4 +1,3 @@
-import { haptic as nativeHaptic } from '../../native/haptics';
 import { memo, useState, useCallback, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 export interface ScoreNumberPickerProps {
@@ -20,7 +19,9 @@ export const ScoreNumberPicker = memo(function ScoreNumberPicker({
 
   // Trigger haptic feedback
   const haptic = useCallback(() => {
-    nativeHaptic('selection');
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
   }, []);
 
   const handleNumberClick = useCallback((num: number) => {

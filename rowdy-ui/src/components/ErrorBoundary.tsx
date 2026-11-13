@@ -1,4 +1,3 @@
-import { isNative } from "../native/platform";
 import { useEffect } from "react";
 import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
 import Layout from "./Layout";
@@ -43,7 +42,7 @@ export default function ErrorBoundary() {
 
   // Trigger service worker update check on error
   useEffect(() => {
-    if (!isNative() && "serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistration().then((reg) => {
         if (reg) {
           reg.update().catch(console.error);

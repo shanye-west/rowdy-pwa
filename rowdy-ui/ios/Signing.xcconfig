@@ -1,2 +1,0 @@
-// Personal signing stays local and is never committed.
-#include? "Signing.local.xcconfig"

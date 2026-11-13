@@ -1,4 +1,3 @@
-import { isNative } from "../native/platform";
 import { useEffect } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
@@ -7,7 +6,7 @@ const report = httpsCallable(functions, "reportDevice");
 
 export function useDeviceReporting(playerId: string | undefined) {
   useEffect(() => {
-    if (!playerId || isNative()) return;
+    if (!playerId) return;
     let last = 0;
     let previous = "";
     let busy = false;

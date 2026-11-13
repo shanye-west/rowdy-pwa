@@ -1,4 +1,3 @@
-import { isNative } from "../native/platform";
 /**
  * App recovery helpers for the "stuck after a deploy" failure mode.
  *
@@ -10,7 +9,6 @@ import { isNative } from "../native/platform";
  * PWA, but as a single tap.
  */
 export async function hardResetApp(): Promise<void> {
-  if (isNative()) return;
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -38,7 +36,6 @@ export async function hardResetApp(): Promise<void> {
  */
 let recoveryStarted = false;
 export function recoverFromStaleChunk(): void {
-  if (isNative()) return;
   if (navigator.onLine === false || recoveryStarted) return;
   const key = "rowdy:auto-recovery-build";
   const build = __BUILD_TIME__;

@@ -1,7 +1,4 @@
-import { isNative } from "./native/platform";
 import React from "react";
-import { NativeProvider, NativeRulesOfficial } from "./native/NativeProvider";
-import NativePreview from "./native/NativePreview";
 import { markAppUpdateAvailable } from "./hooks/useAppUpdate";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
@@ -78,7 +75,6 @@ const router = createBrowserRouter(
       ),
       children: [
         { index: true, element: <App /> },
-        ...(isNative() ? [{ path: "native-preview", element: <NativePreview /> }] : []),
         { path: "round/:roundId", element: <Round /> },
         { path: "round/:roundId/pairings", element: <Pairings /> },
         // Captains' private planning board — usable before a draft exists, so
@@ -103,7 +99,7 @@ const router = createBrowserRouter(
         { path: "chat", element: <RequireAuth><Chat /></RequireAuth> },
         { path: "player/:playerId", element: <Player /> },
         { path: "history", element: <History /> },
-        { path: "rules-official", element: isNative() ? <NativeRulesOfficial /> : <RulesOfficial /> },
+        { path: "rules-official", element: <RulesOfficial /> },
         { path: "settings/notifications", element: <NotificationSettings /> },
         { path: "tournament/:tournamentId", element: <Tournament /> },
         { path: "login", element: <Login /> },
@@ -157,7 +153,7 @@ const router = createBrowserRouter(
 
 // Updates activate automatically, but never force-refresh the user's page.
 // Workbox can report external activations too; these must not cause reload loops.
-if (!isNative()) registerSW({
+registerSW({
   immediate: true,
   onNeedReload: markAppUpdateAvailable,
   onRegisteredSW(_swUrl, registration) {
@@ -185,7 +181,7 @@ if (!isNative()) registerSW({
 // Share the route recovery guard so concurrent chunk failures cannot reload
 // indefinitely. Let the failed import reach the error boundary after the retry.
 window.addEventListener("vite:preloadError", () => {
-  if (!isNative()) recoverFromStaleChunk();
+  recoverFromStaleChunk();
 });
 
 // Ask the browser to exempt this origin's storage from eviction under storage
@@ -205,7 +201,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <LayoutProvider>
           <ToastProvider>
             <NotificationsProvider>
-              <NativeProvider><RouterProvider router={router} /></NativeProvider>
+              <RouterProvider router={router} />
             </NotificationsProvider>
           </ToastProvider>
         </LayoutProvider>

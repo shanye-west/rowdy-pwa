@@ -1,4 +1,3 @@
-import { isNative } from "../native/platform";
 import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation, useMatches, Outlet } from "react-router-dom";
 import {
@@ -73,12 +72,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { canInstall, guideOpen, openGuide, closeGuide } = useInstallPrompt();
   // Offer "Install app" whenever the app isn't already installed and we can either
   // fire the native prompt (Android/Chromium) or walk an iPhone user through it.
-  const showInstall = !isNative() && !isStandalone() && (canInstall || isIOS());
+  const showInstall = !isStandalone() && (canInstall || isIOS());
   const [installPromptDismissed, setInstallPromptDismissed] = useState(() => {
     try { return sessionStorage.getItem("rowdy:install-prompt-dismissed") === "1"; }
     catch { return false; }
   });
-  const showIphoneInstallPrompt = !isNative() && /iphone/i.test(navigator.userAgent)
+  const showIphoneInstallPrompt = /iphone/i.test(navigator.userAgent)
     && !isStandalone() && !installPromptDismissed;
   const dismissInstallPrompt = () => {
     setInstallPromptDismissed(true);
@@ -482,7 +481,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
         )}
 
         <main className={`app-container${hideBottomNav ? "" : " has-bottom-nav"}`}>
-          {isNative() && <ViewTransitionLink to="/native-preview" className="block text-center text-sm py-2">Native Preview</ViewTransitionLink>}
           {/* Routes are React.lazy. On a hard reload onto a lazy route there's no
               prior UI, so without a boundary the user sees a blank screen while
               the chunk downloads — this shows the spinner instead. On client

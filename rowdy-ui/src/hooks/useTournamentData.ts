@@ -61,7 +61,6 @@ export interface UseTournamentDataResult {
   roundStats: Record<string, RoundStats>;
   /** Total points available in tournament */
   totalPointsAvailable: number;
-  standingsUpdatedAt: number | null;
 }
 
 export interface UseTournamentDataOptions {
@@ -100,8 +99,6 @@ export interface UseTournamentDataOptions {
 export function useTournamentData(options: UseTournamentDataOptions = {}): UseTournamentDataResult {
   const { fetchActive = false, tournamentId, prefetchedTournament, preferDenormalizedTotals = false, splitLockedRounds = false } = options;
 
-  const [matchFreshness, setMatchFreshness] = useState<{ id: string; at: number } | null>(null);
-  const [roundFreshness, setRoundFreshness] = useState<{ id: string; at: number } | null>(null);
   // State
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
@@ -202,12 +199,10 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
 
     const unsub = onSnapshot(
       query(collection(db, "rounds"), where("tournamentId", "==", tournament.id)),
-      { includeMetadataChanges: true },
       (snap) => {
         let rds = snap.docs.map(d => ({ id: d.id, ...d.data() } as RoundDoc));
         // Sort by day, then by id for consistency
         rds = rds.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
-        setRoundFreshness(!snap.metadata.fromCache && !snap.metadata.hasPendingWrites ? { id: tournament.id, at: Date.now() } : null);
         setRounds(rds);
         setRoundsLoaded(true);
       },
@@ -370,9 +365,7 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
 
     const unsub = onSnapshot(
       query(collection(db, "matches"), where("tournamentId", "==", tournament.id)),
-      { includeMetadataChanges: true },
       (snap) => {
-        setMatchFreshness(!snap.metadata.fromCache && !snap.metadata.hasPendingWrites ? { id: tournament.id, at: Date.now() } : null);
         setMatchesByRound(bucketSnap(snap));
         setMatchesLoaded(true);
       },
@@ -549,9 +542,5 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
     stats,
     roundStats,
     totalPointsAvailable,
-    standingsUpdatedAt: roundFreshness?.id === tournament?.id
-      ? (useDenormalized || !hasRounds ? roundFreshness?.at ?? null
-        : !splitLockedRounds && matchFreshness?.id === tournament?.id ? Math.min(roundFreshness?.at ?? 0, matchFreshness?.at ?? 0) : null)
-      : null,
   };
 }

@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { execSync } from 'node:child_process';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
 // Opt-in bundle analysis: `ANALYZE=true npm run build` emits dist/stats.html
 // (treemap of the production bundle). Off by default so normal builds are
@@ -22,18 +22,13 @@ const gitSha = (() => {
 const buildTime = new Date().toISOString();
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
-  resolve: { alias: mode === "native" ? [{ find: "virtual:pwa-register", replacement: new URL("./src/native/noServiceWorker.ts", import.meta.url).pathname }] : [] },
+export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GIT_SHA__: JSON.stringify(gitSha),
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   plugins: [
-    ...(mode === 'native' ? [{ name: 'native-no-web-worker', closeBundle() {
-      rmSync(new URL('./dist-native/firebase-messaging-sw.js', import.meta.url), { force: true });
-      rmSync(new URL('./dist-native/videos', import.meta.url), { force: true, recursive: true });
-    } }] : []),
     {
       name: 'rowdy-build-version',
       generateBundle() {
@@ -42,7 +37,7 @@ export default defineConfig(({ mode }) => ({
     },
     react(),
     tailwindcss(),
-    ...(mode === "native" ? [] : [VitePWA({
+    VitePWA({
       includeAssets: [
         "images/rowdy-reindeer.svg",
         "images/rowdycup-logo-christmas.svg",
@@ -151,13 +146,12 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-    })]),
+    }),
     ...(analyze
       ? [visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true, open: true })]
       : []),
   ],
   build: {
-    outDir: mode === "native" ? "dist-native" : "dist",
     rollupOptions: {
       output: {
         // Split *stable* vendor code into its own long-lived chunks so that
@@ -186,4 +180,4 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+});

@@ -1,11 +1,9 @@
-import { isNative } from "./native/platform";
 import { initializeApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { 
   getAuth,
-  initializeAuth,
   setPersistence,
   browserLocalPersistence,
   signInWithEmailAndPassword,
@@ -36,7 +34,7 @@ export const app = initializeApp(firebaseConfig);
 // enforcement (ENFORCE_APP_CHECK on the callables). Initialise it right after
 // initializeApp, before any service makes a request.
 const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY as string | undefined;
-if (appCheckSiteKey && !isNative()) {
+if (appCheckSiteKey) {
   // Local dev / preview: set VITE_APPCHECK_DEBUG_TOKEN to a debug token registered
   // in the console so localhost passes attestation without a real reCAPTCHA.
   const debugToken = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN as string | undefined;
@@ -50,10 +48,7 @@ if (appCheckSiteKey && !isNative()) {
   });
 }
 
-// Email/password in WKWebView needs persistence, but no browser redirect iframe.
-export const auth = isNative()
-  ? initializeAuth(app, { persistence: browserLocalPersistence })
-  : getAuth(app);
+export const auth = getAuth(app);
 export const functions = getFunctions(app);
 
 // Initialize Firestore with modern persistence API
@@ -69,9 +64,7 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   }),
-  ...(isNative()
-    ? { experimentalForceLongPolling: true }
-    : { experimentalAutoDetectLongPolling: true }),
+  experimentalAutoDetectLongPolling: true,
 });
 
 // Export auth utilities for use in AuthContext

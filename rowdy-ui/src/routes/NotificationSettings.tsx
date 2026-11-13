@@ -1,4 +1,3 @@
-import { isNative } from "../native/platform";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -168,7 +167,7 @@ export default function NotificationSettings() {
                 </div>
                 <p className="mt-0.5 text-muted-foreground">
                   {pushUnsupported
-                    ? (isNative() ? "System push notifications are unavailable in this free native prototype. Your category choices still apply to the in-app feed and other devices." : "This device can't receive push notifications, but your choices below apply on devices that can.")
+                    ? "This device can't receive push notifications, but your choices below apply on devices that can."
                     : pushOn
                       ? "This device will receive the alerts you choose below."
                       : "Turn on to receive pushes on this device — your choices below still apply."}
@@ -183,7 +182,7 @@ export default function NotificationSettings() {
             />
           </Card>
 
-          {!isNative() && player.isAdmin && (
+          {player.isAdmin && (
             <Card className="space-y-3 p-4">
               <div className="text-sm font-semibold">Test push notifications · Admin only</div>
               <p className="text-sm text-muted-foreground">
