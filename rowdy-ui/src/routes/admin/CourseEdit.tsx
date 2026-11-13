@@ -5,6 +5,7 @@ import { db } from "../../firebase";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
 import { Field, InfoNote } from "../../components/admin/fields";
 import { inputClass, monoInputClass } from "../../components/admin/inputStyles";
 import { Button } from "../../components/ui/button";
@@ -236,9 +237,9 @@ export default function CourseEdit() {
           description="Handicap index ranks hole difficulty: 1 = hardest, 18 = easiest. Each value 1-18 must be used exactly once."
         >
           {hcpProblem && (
-            <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700">
+            <InfoNote tone="warning" className="mb-3">
               {hcpProblem}
-            </div>
+            </InfoNote>
           )}
           <div className="grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2">
             <div className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">#</div>
@@ -257,21 +258,13 @@ export default function CourseEdit() {
       </form>
 
       {!isNew && (
-        <AdminSection
+        <DangerZone
           title="Delete course"
           description="Blocked while any round still references this course."
-          danger
-        >
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setConfirmDelete(true)}
-            disabled={busy}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
-            Delete course
-          </Button>
-        </AdminSection>
+          actionLabel="Delete course"
+          onAction={() => setConfirmDelete(true)}
+          disabled={busy}
+        />
       )}
 
       <ConfirmDialog

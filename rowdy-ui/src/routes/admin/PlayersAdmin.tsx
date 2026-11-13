@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
 import { Field, InfoNote } from "../../components/admin/fields";
-import { inputClass, monoInputClass } from "../../components/admin/inputStyles";
+import SearchInput from "../../components/admin/SearchInput";
+import { dangerButtonClass, inputClass, monoInputClass } from "../../components/admin/inputStyles";
 import { Modal } from "../../components/Modal";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -44,6 +45,12 @@ export default function PlayersAdmin() {
   // Guards against a slow private-fields fetch for a previously-selected player
   // clobbering the fields after the admin has clicked a different player.
   const selectRef = useRef("");
+  // The editor opens below a long list — bring it into view so picking a
+  // player on a phone doesn't look like nothing happened.
+  const editorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (selectedId) editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedId]);
   const [confirmAdminChange, setConfirmAdminChange] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -191,17 +198,13 @@ export default function PlayersAdmin() {
         title={`Players (${players.length})`}
         description="Pick someone to rename them, link their login, or change access."
       >
-        <div className="relative mb-3">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or id"
-            className={cn(inputClass, "pl-9")}
-            aria-label="Search players"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search name or id"
+          label="Search players"
+          className="mb-3"
+        />
 
         <div className="max-h-80 space-y-1 overflow-y-auto">
           {visiblePlayers.map((p) => (
@@ -237,6 +240,7 @@ export default function PlayersAdmin() {
       </AdminSection>
 
       {selected && (
+        <div ref={editorRef} className="scroll-mt-32">
         <AdminSection
           title={selected.displayName ?? selected.id}
           description={selected.id}
@@ -340,13 +344,14 @@ export default function PlayersAdmin() {
                 variant="outline"
                 onClick={() => setConfirmDelete(true)}
                 disabled={busy}
-                className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className={cn("shrink-0", dangerButtonClass)}
               >
                 Delete
               </Button>
             </div>
           </div>
         </AdminSection>
+        </div>
       )}
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Add player" maxWidth="max-w-md">

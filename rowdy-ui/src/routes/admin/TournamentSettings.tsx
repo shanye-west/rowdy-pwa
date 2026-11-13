@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
 import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
+import NavRow from "../../components/admin/NavRow";
+import SegmentedTabs, { type SegmentedTab } from "../../components/admin/SegmentedTabs";
 import TournamentBadges from "../../components/admin/TournamentBadges";
 import TournamentSettingsForm, { type SettingsTab } from "../../components/admin/TournamentSettingsForm";
 import { Field } from "../../components/admin/fields";
@@ -20,19 +23,26 @@ import type { TournamentUpdates } from "../../api/adminContracts";
 
 type Tab = SettingsTab | "betting" | "danger";
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: SegmentedTab<Tab>[] = [
   { id: "setup", label: "Setup" },
   { id: "rosters", label: "Rosters" },
   { id: "betting", label: "Betting" },
-  { id: "danger", label: "Danger" },
+  { id: "danger", label: "Danger", danger: true },
 ];
+
+const isTab = (value: string | null): value is Tab => TABS.some((t) => t.id === value);
 
 /** Tournament settings, rosters, betting settlement, and the archive control. */
 export default function TournamentSettings() {
   const navigate = useNavigate();
   const { tournamentId, tournament, loading } = useAdminTournament();
 
-  const [tab, setTab] = useState<Tab>("setup");
+  // The tab lives in the URL (?tab=rosters) so other admin pages can link
+  // straight to one, and a refresh or Back lands where you were.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: Tab = isTab(tabParam) ? tabParam : "setup";
+  const setTab = (next: Tab) => setSearchParams(next === "setup" ? {} : { tab: next }, { replace: true });
   const [allPlayers, setAllPlayers] = useState<PlayerDoc[]>([]);
   const [playersLoading, setPlayersLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -166,32 +176,12 @@ export default function TournamentSettings() {
     <AdminPage
       headerTitle={`${tournament.year} ${tournament.name}`}
       breadcrumbs={breadcrumbs}
-      eyebrow={`${tournament.year} ${tournament.name}`}
       title="Settings"
       badges={<TournamentBadges tournament={tournament} />}
       error={error}
       success={success}
     >
-      <div role="tablist" aria-label="Settings sections" className="flex gap-1 rounded-xl bg-muted/60 p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
-              tab === t.id
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-              t.id === "danger" && tab === t.id && "text-destructive"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs tabs={TABS} value={tab} onChange={setTab} ariaLabel="Settings sections" />
 
       {/* The form stays mounted across tab switches so in-progress edits survive. */}
       <div className={cn(tab !== "setup" && tab !== "rosters" && "hidden")}>
@@ -250,34 +240,36 @@ export default function TournamentSettings() {
               {settling ? "Settling…" : "Settle player futures"}
             </Button>
           </AdminSection>
+
+          {tournament.hasCaptainsMatch && (
+            <NavRow
+              to={`/admin/t/${tournamentId}/captains-match`}
+              title="Captains' match betting"
+              subtitle="Opened and settled from the captains' match page"
+            />
+          )}
         </>
       )}
 
-      {tab === "danger" && (
-        <AdminSection
-          title={tournament.archived ? "Unarchive tournament" : "Archive tournament"}
-          description={
-            tournament.archived
-              ? "Bring this tournament back into the default admin list."
-              : "Archiving hides this tournament from the default admin list. Nothing is deleted — history and stats stay intact, and you can unarchive any time."
-          }
-          danger={!tournament.archived}
-        >
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => (tournament.archived ? handleArchiveToggle() : setConfirmArchive(true))}
-            disabled={archiving}
-            className={
-              tournament.archived
-                ? undefined
-                : "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            }
+      {tab === "danger" &&
+        (tournament.archived ? (
+          <AdminSection
+            title="Unarchive tournament"
+            description="Bring this tournament back into the default admin list."
           >
-            {archiving ? "Working…" : tournament.archived ? "Unarchive" : "Archive tournament"}
-          </Button>
-        </AdminSection>
-      )}
+            <Button type="button" variant="outline" onClick={handleArchiveToggle} disabled={archiving}>
+              {archiving ? "Working…" : "Unarchive"}
+            </Button>
+          </AdminSection>
+        ) : (
+          <DangerZone
+            title="Archive tournament"
+            description="Archiving hides this tournament from the default admin list. Nothing is deleted — history and stats stay intact, and you can unarchive any time."
+            actionLabel={archiving ? "Working…" : "Archive tournament"}
+            onAction={() => setConfirmArchive(true)}
+            disabled={archiving}
+          />
+        ))}
 
       <ConfirmDialog
         isOpen={confirmArchive}

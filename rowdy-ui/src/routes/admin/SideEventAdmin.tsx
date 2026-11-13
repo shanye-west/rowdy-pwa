@@ -6,8 +6,10 @@ import { db } from "../../firebase";
 import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
+import { EmptyRow } from "../../components/admin/NavRow";
 import SideEventForm from "../../components/admin/SideEventForm";
-import { inputClass } from "../../components/admin/inputStyles";
+import { dangerButtonClass, inputClass } from "../../components/admin/inputStyles";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
@@ -49,6 +51,7 @@ export default function SideEventAdmin() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removeTeamId, setRemoveTeamId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Draft rows for teams being built/edited. teamId "new" is the add-a-team row.
@@ -290,7 +293,7 @@ export default function SideEventAdmin() {
               ))}
             </select>
             {clash !== null && (
-              <div className="mt-1 text-xs text-amber-600">
+              <div className="mt-1 text-xs text-amber-700" role="alert">
                 Already on team {clash} — saving will be rejected.
               </div>
             )}
@@ -353,6 +356,23 @@ export default function SideEventAdmin() {
   };
 
   const title = isNew ? "New side event" : event!.name;
+  const removingTeam = teams.find((t) => t.id === removeTeamId);
+
+  const settingsSection = (
+      <AdminSection
+        title={isNew ? "New side event" : "Settings & payouts"}
+        description="Name, course and nine, the lock, menu visibility, and the payout schedule."
+      >
+        <SideEventForm
+          key={isNew ? "new" : event!.id}
+          initial={isNew ? undefined : event!}
+          courses={courses}
+          submitting={submitting}
+          submitLabel={isNew ? "Create side event" : "Save side event"}
+          onSubmit={handleSubmit}
+        />
+      </AdminSection>
+  );
 
   return (
     <AdminPage
@@ -383,19 +403,7 @@ export default function SideEventAdmin() {
         ) : null
       }
     >
-      <AdminSection
-        title={isNew ? "New side event" : "Settings & payouts"}
-        description="Name, course and nine, the lock, menu visibility, and the payout schedule."
-      >
-        <SideEventForm
-          key={isNew ? "new" : event!.id}
-          initial={isNew ? undefined : event!}
-          courses={courses}
-          submitting={submitting}
-          submitLabel={isNew ? "Create side event" : "Save side event"}
-          onSubmit={handleSubmit}
-        />
-      </AdminSection>
+      {isNew && settingsSection}
 
       {!isNew && (
         <>
@@ -439,11 +447,11 @@ export default function SideEventAdmin() {
                       </Button>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => removeTeam(team.id)}
+                        onClick={() => setRemoveTeamId(team.id)}
                         disabled={teamBusyId === team.id}
-                        className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className={cn("ml-auto", dangerButtonClass)}
                       >
                         Remove
                       </Button>
@@ -452,9 +460,7 @@ export default function SideEventAdmin() {
                 );
               })}
 
-              {teams.length === 0 && (
-                <p className="text-sm text-muted-foreground">No teams yet.</p>
-              )}
+              {teams.length === 0 && <EmptyRow>No teams yet — build the first one below.</EmptyRow>}
 
               <div className="space-y-2 rounded-xl border border-dashed border-border p-3">
                 <div className="text-sm font-semibold">Add a team</div>
@@ -487,21 +493,31 @@ export default function SideEventAdmin() {
             </div>
           </AdminSection>
 
-          <AdminSection
+          {settingsSection}
+
+          <DangerZone
             title="Delete side event"
             description="Removes the event and all of its teams and scores. Nothing else is affected — side events never touch Cup points or stats."
+            actionLabel="Delete side event"
+            onAction={() => setConfirmDelete(true)}
+            disabled={deleting}
+          />
+
+          <ConfirmDialog
+            isOpen={removeTeamId !== null}
+            title={`Remove team ${removingTeam?.teamNumber ?? ""}?`}
+            confirmLabel="Remove team"
             danger
+            busy={teamBusyId !== null && teamBusyId === removeTeamId}
+            onConfirm={() => {
+              const id = removeTeamId;
+              setRemoveTeamId(null);
+              if (id) void removeTeam(id);
+            }}
+            onCancel={() => setRemoveTeamId(null)}
           >
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConfirmDelete(true)}
-              disabled={deleting}
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              Delete side event
-            </Button>
-          </AdminSection>
+            Removes the team and any scores it has entered. The players go back into the pool.
+          </ConfirmDialog>
 
           <ConfirmDialog
             isOpen={confirmDelete}

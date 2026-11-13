@@ -6,6 +6,8 @@ import { db } from "../../firebase";
 import AdminPage, { AdminNotFound, type Crumb } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
+import SaveBar from "../../components/admin/SaveBar";
 import { Field, InfoNote } from "../../components/admin/fields";
 import { inputClass } from "../../components/admin/inputStyles";
 import { Badge } from "../../components/ui/badge";
@@ -429,11 +431,11 @@ function RoundCardEditor({
       }
     >
       {earlierMissing.length > 0 && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800">
+        <InfoNote tone="warning">
           Round{earlierMissing.length === 1 ? "" : "s"} {formatRoundRanges(earlierMissing)}{" "}
           {earlierMissing.length === 1 ? "hasn't" : "haven't"} been entered. Rounds count in order, so this card's
           running score will shift once {earlierMissing.length === 1 ? "it is" : "they are"}.
-        </div>
+        </InfoNote>
       )}
 
       <AdminSection title="Round details">
@@ -553,29 +555,20 @@ function RoundCardEditor({
       </AdminSection>
 
       {existing && (
-        <AdminSection
+        <DangerZone
           title="Delete round"
           description="Removes this round's card. Later rounds' running scores are recalculated without it."
-          danger
-        >
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setConfirmDelete(true)}
-            disabled={deleting}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
-            Delete round {roundNumber}
-          </Button>
-        </AdminSection>
+          actionLabel={`Delete round ${roundNumber}`}
+          onAction={() => setConfirmDelete(true)}
+          disabled={deleting}
+        />
       )}
 
-      <div className="sticky bottom-3 z-10 flex items-center gap-3 rounded-xl border border-border/70 bg-card/95 p-2 shadow-lg backdrop-blur">
-        <span className="min-w-0 truncate pl-1 text-xs text-muted-foreground">{matchLine || roundLine}</span>
-        <Button type="button" onClick={handleSave} disabled={saving} className="ml-auto shrink-0">
+      <SaveBar status={matchLine || roundLine}>
+        <Button type="button" onClick={handleSave} disabled={saving}>
           {saving ? "Saving…" : existing ? "Save round" : "Add round"}
         </Button>
-      </div>
+      </SaveBar>
 
       <ConfirmDialog
         isOpen={confirmDelete}

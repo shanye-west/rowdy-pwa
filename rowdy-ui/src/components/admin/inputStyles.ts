@@ -11,3 +11,7 @@ export const inputClass =
 
 /** Same control, for ids and other machine-ish values. */
 export const monoInputClass = `${inputClass} font-mono text-[0.8rem]`;
+
+/** Outline-button treatment for destructive actions (pair with `variant="outline"`). */
+export const dangerButtonClass =
+  "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive";

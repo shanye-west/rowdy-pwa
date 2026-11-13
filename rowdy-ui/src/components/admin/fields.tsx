@@ -71,11 +71,40 @@ export function ToggleList({ children }: { children: ReactNode }) {
   return <div className="divide-y divide-border/60">{children}</div>;
 }
 
-/** Grey box for read-only supporting detail (ids, computed totals, notes). */
-export function InfoNote({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * Boxed supporting detail (ids, computed totals, notes). `tone="warning"` is the
+ * amber variant for something the admin should act on before saving.
+ */
+export function InfoNote({
+  children,
+  className,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  className?: string;
+  tone?: "neutral" | "warning";
+}) {
   return (
-    <div className={cn("rounded-lg bg-muted/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground", className)}>
+    <div
+      role={tone === "warning" ? "alert" : undefined}
+      className={cn(
+        "rounded-lg px-3 py-2 text-xs leading-relaxed",
+        tone === "warning"
+          ? "border border-amber-500/40 bg-amber-500/10 text-amber-800"
+          : "bg-muted/60 text-muted-foreground",
+        className
+      )}
+    >
       {children}
+    </div>
+  );
+}
+
+/** A single switch in its own card — for the one control a page leads with (a lock). */
+export function ToggleCard(props: ToggleRowProps) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card px-4 py-1.5 shadow-sm">
+      <ToggleRow {...props} />
     </div>
   );
 }

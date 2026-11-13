@@ -6,8 +6,9 @@ import { db } from "../../firebase";
 import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
 import MatchForm, { type MatchFormPlayer, type MatchFormValues } from "../../components/admin/MatchForm";
-import { Field, InfoNote, ToggleRow } from "../../components/admin/fields";
+import { Field, InfoNote, ToggleCard } from "../../components/admin/fields";
 import { inputClass, monoInputClass } from "../../components/admin/inputStyles";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -257,6 +258,20 @@ export default function MatchAdmin() {
         </Button>
       }
     >
+      <ToggleCard
+        label="Lock this match"
+        description={
+          match.locked
+            ? "Locked — players cannot enter scores for this match."
+            : round?.locked
+              ? "This match is unlocked, but its round is locked — nobody can score."
+              : "Open — rostered players can enter scores. The round lock covers every match at once."
+        }
+        checked={!!match.locked}
+        onChange={handleToggleLock}
+        disabled={busy}
+      />
+
       <AdminSection
         title="Scores"
         description="Tap a hole to correct it. Blank a field to clear that score — match status, stats, and skins recompute automatically."
@@ -337,22 +352,6 @@ export default function MatchAdmin() {
         )}
       </AdminSection>
 
-      <AdminSection title="Match lock" description="A locked match refuses score entry from players. The round lock covers every match at once.">
-        <ToggleRow
-          label="Locked"
-          description={
-            match.locked
-              ? "Players cannot enter scores for this match."
-              : round?.locked
-                ? "This match is unlocked, but its round is locked — nobody can score."
-                : "Rostered players can enter scores."
-          }
-          checked={!!match.locked}
-          onChange={handleToggleLock}
-          disabled={busy}
-        />
-      </AdminSection>
-
       <AdminSection
         title="Players & tee time"
         description="Strokes are recalculated on save. The handicap index fields override the tournament values for this match only."
@@ -378,34 +377,25 @@ export default function MatchAdmin() {
         </Button>
       </AdminSection>
 
-      <AdminSection
+      <DangerZone
         title="Delete match"
         description="Permanently deletes this match. Its playerMatchFacts are removed; player stats and skins recompute automatically."
-        danger
+        actionLabel="Delete match"
+        onAction={() => setConfirmDelete(true)}
+        disabled={busy || deleteConfirm !== match.id}
       >
-        <div className="space-y-3">
-          <InfoNote>
-            Type the match id <span className="font-mono text-foreground">{match.id}</span> to confirm.
-          </InfoNote>
-          <input
-            type="text"
-            value={deleteConfirm}
-            onChange={(e) => setDeleteConfirm(e.target.value)}
-            placeholder="Match id"
-            className={monoInputClass}
-            aria-label="Type the match id to confirm deletion"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setConfirmDelete(true)}
-            disabled={busy || deleteConfirm !== match.id}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
-            Delete match
-          </Button>
-        </div>
-      </AdminSection>
+        <InfoNote>
+          Type the match id <span className="font-mono text-foreground">{match.id}</span> to confirm.
+        </InfoNote>
+        <input
+          type="text"
+          value={deleteConfirm}
+          onChange={(e) => setDeleteConfirm(e.target.value)}
+          placeholder="Match id"
+          className={monoInputClass}
+          aria-label="Type the match id to confirm deletion"
+        />
+      </DangerZone>
 
       <ConfirmDialog
         isOpen={confirmDelete}

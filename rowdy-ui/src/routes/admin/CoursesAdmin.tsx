@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { Flag, Plus } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import NavRow, { EmptyRow } from "../../components/admin/NavRow";
-import { inputClass } from "../../components/admin/inputStyles";
+import SearchInput from "../../components/admin/SearchInput";
 import { Button } from "../../components/ui/button";
 import { getErrorMessage } from "../../api/errors";
-import { cn } from "../../lib/utils";
 import type { CourseDoc } from "../../types";
 
 /** Course list — open one to edit, or create a new one. */
@@ -58,17 +57,13 @@ export default function CoursesAdmin() {
     >
       <AdminSection title={`Courses (${courses.length})`}>
         {courses.length > 6 && (
-          <div className="relative mb-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search courses"
-              className={cn(inputClass, "pl-9")}
-              aria-label="Search courses"
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search courses"
+            label="Search courses"
+            className="mb-3"
+          />
         )}
 
         <div className="space-y-2">
@@ -76,6 +71,7 @@ export default function CoursesAdmin() {
             <NavRow
               key={c.id}
               to={`/admin/courses/${c.id}`}
+              leading={<Flag className="h-5 w-5 text-muted-foreground" />}
               title={c.name || c.id}
               subtitle={`${c.tees ? `${c.tees} tees · ` : ""}par ${c.par ?? "?"} · rating ${c.rating ?? "?"} · slope ${c.slope ?? "?"}`}
             />

@@ -7,6 +7,9 @@ import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import NavRow, { EmptyRow } from "../../components/admin/NavRow";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
+import IndexTile from "../../components/admin/IndexTile";
+import { ToggleCard } from "../../components/admin/fields";
 import RoundForm from "../../components/admin/RoundForm";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -15,8 +18,17 @@ import { useMatches } from "../../hooks/admin/useMatches";
 import { adminApi } from "../../api/admin";
 import { getErrorMessage } from "../../api/errors";
 import { formatRoundType } from "../../utils";
+import { storedToLocalInput } from "../../utils/teeTime";
 import type { ComputeRoundRecapResult, RoundUpdates } from "../../api/adminContracts";
 import type { CourseDoc, MatchDoc } from "../../types";
+
+/** "2026-08-07T08:40" → "Tee time 8:40 AM". Tee times are wall-clock strings, so no Date maths. */
+function teeTimeLabel(teeTime: MatchDoc["teeTime"]): string | null {
+  const m = /T(\d{2}):(\d{2})/.exec(storedToLocalInput(teeTime));
+  if (!m) return null;
+  const hour = Number(m[1]);
+  return `Tee time ${hour % 12 || 12}:${m[2]} ${hour < 12 ? "AM" : "PM"}`;
+}
 
 /**
  * One round in context. Ordered by what an admin actually does during an
@@ -37,6 +49,7 @@ export default function RoundAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [lockBusy, setLockBusy] = useState(false);
   const [recapBusy, setRecapBusy] = useState(false);
   const [recapResult, setRecapResult] = useState<ComputeRoundRecapResult | null>(null);
 
@@ -83,6 +96,21 @@ export default function RoundAdmin() {
       setError(getErrorMessage(err, "Failed to save round"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleLock = async (locked: boolean) => {
+    setError(null);
+    setSuccess(null);
+    setLockBusy(true);
+    try {
+      await adminApi.updateRound({ roundId, updates: { locked } });
+      await refreshRounds();
+      setSuccess(locked ? "Round locked — score entry is frozen." : "Round unlocked — players can enter scores.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to update round lock"));
+    } finally {
+      setLockBusy(false);
     }
   };
 
@@ -150,7 +178,6 @@ export default function RoundAdmin() {
       <AdminPage
         headerTitle={tournamentLabel}
         breadcrumbs={breadcrumbs}
-        eyebrow={tournamentLabel}
         title="New round"
         description="One round per day of play. You can add its matches — or run the captains' draft — once it exists."
         error={error}
@@ -194,8 +221,8 @@ export default function RoundAdmin() {
     <AdminPage
       headerTitle={tournamentLabel}
       breadcrumbs={breadcrumbs}
-      eyebrow={tournamentLabel}
-      title={`Day ${round!.day} — ${formatRoundType(round!.format)}`}
+      eyebrow={`Day ${round!.day}`}
+      title={formatRoundType(round!.format)}
       description={course ? `${course.name}${course.tees ? ` · ${course.tees} tees` : ""} · par ${course.par ?? "?"}` : "No course assigned yet."}
       badges={
         <>
@@ -219,8 +246,20 @@ export default function RoundAdmin() {
         </Button>
       }
     >
+      <ToggleCard
+        label="Lock score entry"
+        description={
+          round!.locked
+            ? "Locked — nobody can enter or change scores in this round."
+            : "Open — rostered players can enter scores for their matches."
+        }
+        checked={!!round!.locked}
+        onChange={handleToggleLock}
+        disabled={lockBusy}
+      />
+
       <AdminSection
-        title="Matches"
+        title={`Matches (${matches.length})`}
         description="Open a match to edit players, lock it, or fix a score."
         actions={
           <Button asChild variant="ghost" size="sm">
@@ -236,13 +275,9 @@ export default function RoundAdmin() {
             <NavRow
               key={m.id}
               to={`/admin/t/${tournamentId}/match/${m.id}`}
-              leading={
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-foreground">
-                  {m.matchNumber ?? "–"}
-                </div>
-              }
+              leading={<IndexTile value={m.matchNumber ?? "–"} />}
               title={matchLabel(m)}
-              subtitle={m.id}
+              subtitle={teeTimeLabel(m.teeTime) ?? "No tee time set"}
               badges={
                 <>
                   {m.locked && <Badge variant="muted"><Lock className="h-3 w-3" /></Badge>}
@@ -280,7 +315,7 @@ export default function RoundAdmin() {
         {recapResult ? (
           <div className="space-y-3">
             <p className="text-sm text-emerald-700">
-              ✓ {recapResult.message} — {recapResult.stats.playersAnalyzed} players analyzed, birdie leader{" "}
+              {recapResult.message} — {recapResult.stats.playersAnalyzed} players analyzed, birdie leader{" "}
               {recapResult.stats.birdiesGrossLeader} ({recapResult.stats.birdiesGrossCount}).
             </p>
             <Button asChild>
@@ -296,7 +331,7 @@ export default function RoundAdmin() {
 
       <AdminSection
         title="Round settings"
-        description="Format, course, points, drive tracking, skins, and the round lock."
+        description="Format, course, points, drive tracking, and skins."
         actions={
           <Button
             type="button"
@@ -316,6 +351,7 @@ export default function RoundAdmin() {
             initial={round}
             defaultDay={rounds.length + 1}
             courses={courses}
+            hideLock
             submitting={submitting}
             submitLabel="Save round"
             onSubmit={handleSubmit}
@@ -330,21 +366,13 @@ export default function RoundAdmin() {
         )}
       </AdminSection>
 
-      <AdminSection
+      <DangerZone
         title="Delete round"
         description="Removes the round, all its matches, their stats, skins results, and any recap. Stats recompute automatically."
-        danger
-      >
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setConfirmDelete(true)}
-          disabled={deleting}
-          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-        >
-          Delete round
-        </Button>
-      </AdminSection>
+        actionLabel="Delete round"
+        onAction={() => setConfirmDelete(true)}
+        disabled={deleting}
+      />
 
       <ConfirmDialog
         isOpen={confirmDelete}

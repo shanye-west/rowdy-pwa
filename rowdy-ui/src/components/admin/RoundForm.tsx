@@ -75,6 +75,12 @@ interface RoundFormProps {
   courses: CourseDoc[];
   /** Shown only in create mode. */
   showRoundIdInput?: boolean;
+  /**
+   * Drops the Locked switch and leaves `locked` out of the saved updates — for
+   * a page that has its own live lock control, so saving these settings can't
+   * silently undo a lock flipped since the form opened.
+   */
+  hideLock?: boolean;
   submitting: boolean;
   submitLabel: string;
   onSubmit: (updates: RoundUpdates, newRoundId: string) => void;
@@ -86,6 +92,7 @@ export default function RoundForm({
   defaultDay,
   courses,
   showRoundIdInput = false,
+  hideLock = false,
   submitting,
   submitLabel,
   onSubmit,
@@ -97,7 +104,9 @@ export default function RoundForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formToUpdates(form), newRoundId.trim());
+    const updates = formToUpdates(form);
+    if (hideLock) delete updates.locked;
+    onSubmit(updates, newRoundId.trim());
   };
 
   const skinsEligible = form.format === "singles" || form.format === "twoManBestBall";
@@ -172,12 +181,14 @@ export default function RoundForm({
       </div>
 
       <ToggleList>
-        <ToggleRow
-          label="Locked"
-          description="Freezes score entry for every match in the round."
-          checked={form.locked}
-          onChange={(locked) => setForm({ ...form, locked })}
-        />
+        {!hideLock && (
+          <ToggleRow
+            label="Locked"
+            description="Freezes score entry for every match in the round."
+            checked={form.locked}
+            onChange={(locked) => setForm({ ...form, locked })}
+          />
+        )}
         <ToggleRow
           label="Track drives"
           description="Scramble and shamble only — records whose drive was used."

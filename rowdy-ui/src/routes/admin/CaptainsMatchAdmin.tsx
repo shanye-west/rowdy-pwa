@@ -7,8 +7,10 @@ import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import CaptainsMatchForm from "../../components/admin/CaptainsMatchForm";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import DangerZone from "../../components/admin/DangerZone";
+import IndexTile from "../../components/admin/IndexTile";
 import NavRow from "../../components/admin/NavRow";
-import { InfoNote } from "../../components/admin/fields";
+import { InfoNote, ToggleRow } from "../../components/admin/fields";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useAdminTournament } from "../../contexts/AdminTournamentContext";
@@ -183,6 +185,26 @@ export default function CaptainsMatchAdmin() {
     return `${winnerName} won ${Math.max(r.holesWonA, r.holesWonB)}–${Math.min(r.holesWonA, r.holesWonB)}`;
   };
 
+  const settingsSection = (
+      <AdminSection
+        title={match ? "Settings" : "New captains' match"}
+        description="Who's playing, how many rounds, and what it decides."
+      >
+        <CaptainsMatchForm
+          key={match ? `edit-${highestRound > 0}` : "new"}
+          initial={match ?? undefined}
+          defaultPlayerAId={tournament.teamA?.captainId}
+          defaultPlayerBId={tournament.teamB?.captainId}
+          players={allPlayers}
+          playersLocked={highestRound > 0}
+          minRounds={highestRound}
+          submitting={submitting}
+          submitLabel={match ? "Save settings" : "Create captains' match"}
+          onSubmit={handleSubmit}
+        />
+      </AdminSection>
+  );
+
   return (
     <AdminPage
       headerTitle={`${tournament.year} ${tournament.name}`}
@@ -204,23 +226,7 @@ export default function CaptainsMatchAdmin() {
         ) : null
       }
     >
-      <AdminSection
-        title={match ? "Settings" : "New captains' match"}
-        description="Who's playing, how many rounds, and what it decides."
-      >
-        <CaptainsMatchForm
-          key={match ? `edit-${highestRound > 0}` : "new"}
-          initial={match ?? undefined}
-          defaultPlayerAId={tournament.teamA?.captainId}
-          defaultPlayerBId={tournament.teamB?.captainId}
-          players={allPlayers}
-          playersLocked={highestRound > 0}
-          minRounds={highestRound}
-          submitting={submitting}
-          submitLabel={match ? "Save settings" : "Create captains' match"}
-          onSubmit={handleSubmit}
-        />
-      </AdminSection>
+      {!match && settingsSection}
 
       {match && summary && (
         <>
@@ -237,19 +243,11 @@ export default function CaptainsMatchAdmin() {
             <div className="space-y-2">
               {Array.from({ length: summary.totalRounds }, (_, i) => i + 1).map((n) => {
                 const r = summary.rounds.find((round) => round.roundNumber === n);
-                const leading = (
-                  <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-center">
-                    <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Rd
-                    </span>
-                    <span className="text-xs font-bold leading-none text-foreground">{n}</span>
-                  </div>
-                );
                 return (
                   <NavRow
                     key={n}
                     to={`/admin/t/${tournamentId}/captains-match/round/${n}`}
-                    leading={leading}
+                    leading={<IndexTile label="Rd" value={n} />}
                     title={r ? roundTitle(match, r) : <span className="text-muted-foreground">Add scorecard</span>}
                     subtitle={
                       r
@@ -275,24 +273,14 @@ export default function CaptainsMatchAdmin() {
             description="Opens the captains'-match markets in the Sportsbook and settles them. Bets never settle on their own — enter a card, check it, then settle, so a typo can't pay out."
           >
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-foreground">
-                    Betting is {match.bettingOpen ? "open" : "closed"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Season markets (outright winner, decided-by-round, rounds won) are bettable only while this is
-                    on. Each round's own market closes by itself once that card is entered.
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant={match.bettingOpen ? "outline" : "default"}
+              <div className="rounded-xl border border-border/70 px-3">
+                <ToggleRow
+                  label="Betting open"
+                  description="Season markets (outright winner, decided-by-round, rounds won) are bettable only while this is on. Each round's own market closes by itself once that card is entered."
+                  checked={!!match.bettingOpen}
+                  onChange={(next) => void toggleBetting(next)}
                   disabled={bettingBusy}
-                  onClick={() => void toggleBetting(!match.bettingOpen)}
-                >
-                  {bettingBusy ? "Saving…" : match.bettingOpen ? "Close betting" : "Open betting"}
-                </Button>
+                />
               </div>
 
               {!tournament.sportsbookEnabled && (
@@ -347,21 +335,15 @@ export default function CaptainsMatchAdmin() {
             </div>
           </AdminSection>
 
-          <AdminSection
+          {settingsSection}
+
+          <DangerZone
             title="Delete captains' match"
             description="Removes the match and every round's card. Nothing else is affected — it never touches Cup points or stats."
-            danger
-          >
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConfirmDelete(true)}
-              disabled={deleting}
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              Delete captains' match
-            </Button>
-          </AdminSection>
+            actionLabel="Delete captains' match"
+            onAction={() => setConfirmDelete(true)}
+            disabled={deleting}
+          />
 
           <ConfirmDialog
             isOpen={settleRound !== null}

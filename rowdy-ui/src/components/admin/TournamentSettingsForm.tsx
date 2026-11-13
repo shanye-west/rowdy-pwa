@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
+import SaveBar from "./SaveBar";
 import { Field, FieldGroup, InfoNote, ToggleList, ToggleRow } from "./fields";
 import { inputClass } from "./inputStyles";
 import { cn } from "../../lib/utils";
@@ -540,14 +541,11 @@ export default function TournamentSettingsForm({
         {renderTeamSection("teamB", teamB, "Team B")}
       </div>
 
-      <div className="sticky bottom-3 z-10 flex items-center gap-3 rounded-xl border border-border/70 bg-card/95 p-2 shadow-lg backdrop-blur">
-        <span className="pl-1 text-xs text-muted-foreground">
-          {dirty ? "Unsaved changes" : "All changes saved"}
-        </span>
-        <Button type="submit" disabled={submitting} className="ml-auto">
+      <SaveBar status={dirty ? "Unsaved changes" : "All changes saved"}>
+        <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : "Save tournament"}
         </Button>
-      </div>
+      </SaveBar>
     </form>
   );
 }

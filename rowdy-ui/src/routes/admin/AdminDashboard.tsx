@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ExternalLink, Flag, Lock, Plus, Users, Wrench } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 import AdminPage from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import NavRow, { EmptyRow } from "../../components/admin/NavRow";
+import RoundRow from "../../components/admin/RoundRow";
 import TournamentBadges from "../../components/admin/TournamentBadges";
 import { Field, ToggleRow } from "../../components/admin/fields";
 import { inputClass, monoInputClass } from "../../components/admin/inputStyles";
@@ -14,7 +15,6 @@ import { useAdminTournaments } from "../../hooks/admin/useAdminTournaments";
 import { useRounds } from "../../hooks/admin/useRounds";
 import { adminApi } from "../../api/admin";
 import { getErrorMessage } from "../../api/errors";
-import { formatRoundType } from "../../utils";
 
 /**
  * Admin home. Leads with the active tournament and its rounds — the day-of
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
   return (
     <AdminPage
       title="Admin"
-      description="Manage tournaments, rounds, matches, players, and courses."
+      description="Tournaments and everything inside them. Players, courses, devices and tools are in the bar above."
       error={error ?? loadError}
       loading={loading}
       actions={
@@ -85,30 +85,15 @@ export default function AdminDashboard() {
               <div className="h-12 animate-pulse rounded-xl bg-muted/60" aria-hidden="true" />
             )}
             {rounds.map((r) => (
-              <NavRow
-                key={r.id}
-                to={`/admin/t/${activeTournament.id}/round/${r.id}`}
-                leading={
-                  <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-center">
-                    <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Day
-                    </span>
-                    <span className="text-xs font-bold leading-none text-foreground">{r.day ?? "?"}</span>
-                  </div>
-                }
-                title={formatRoundType(r.format)}
-                subtitle={`${r.matchIds?.length ?? 0} match${(r.matchIds?.length ?? 0) === 1 ? "" : "es"} · ${r.pointsValue ?? 1} pt each`}
-                badges={
-                  r.locked ? (
-                    <Badge variant="muted" className="gap-1">
-                      <Lock className="h-3 w-3" />
-                      locked
-                    </Badge>
-                  ) : null
-                }
-              />
+              <RoundRow key={r.id} tournamentId={activeTournament.id} round={r} />
             ))}
-            {!roundsLoading && rounds.length === 0 && <EmptyRow>No rounds yet.</EmptyRow>}
+            {!roundsLoading && rounds.length === 0 && (
+              <EmptyRow>
+                {activeTournament.hasCaptainsMatch
+                  ? "No Cup rounds yet — the captains' match is under Manage tournament."
+                  : "No rounds yet."}
+              </EmptyRow>
+            )}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -116,7 +101,7 @@ export default function AdminDashboard() {
               <Link to={`/admin/t/${activeTournament.id}`}>Manage tournament</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link to={`/admin/t/${activeTournament.id}/settings`}>Rosters &amp; settings</Link>
+              <Link to={`/admin/t/${activeTournament.id}/settings?tab=rosters`}>Rosters</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link to={`/tournament/${activeTournament.id}`}>
@@ -139,17 +124,17 @@ export default function AdminDashboard() {
       )}
 
       <AdminSection
-        title="All tournaments"
+        title={activeTournament ? "Other tournaments" : "Tournaments"}
         description="Past events, tests, and anything not currently active."
         actions={
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <label className="flex min-h-9 items-center gap-1.5 text-xs text-muted-foreground">
             <input
               type="checkbox"
               checked={includeArchived}
               onChange={(e) => setIncludeArchived(e.target.checked)}
               className="h-4 w-4 accent-[var(--brand-primary)]"
             />
-            Archived
+            Show archived
           </label>
         }
       >
@@ -163,31 +148,9 @@ export default function AdminDashboard() {
               badges={<TournamentBadges tournament={t} />}
             />
           ))}
-          {otherTournaments.length === 0 && <EmptyRow>No other tournaments.</EmptyRow>}
-        </div>
-      </AdminSection>
-
-      <AdminSection title="Library" description="Data shared across every tournament.">
-        <div className="space-y-2">
-          <NavRow
-            to="/admin/players"
-            leading={<Users className="h-5 w-5 text-muted-foreground" />}
-            title="Players"
-            subtitle="Add, rename, link logins, admin access, delete"
-          />
-          <NavRow
-            to="/admin/courses"
-            leading={<Flag className="h-5 w-5 text-muted-foreground" />}
-            title="Courses"
-            subtitle="Pars, handicap indexes, and yardages"
-          />
-          <NavRow
-            to="/admin/recalculate"
-            leading={<Wrench className="h-5 w-5 text-muted-foreground" />}
-            title="Recalculate all stats"
-            subtitle="Rebuild every playerMatchFact and stat, across all tournaments"
-            badges={<Badge variant="warning">heavy</Badge>}
-          />
+          {otherTournaments.length === 0 && (
+            <EmptyRow>{activeTournament ? "No other tournaments." : "No tournaments yet."}</EmptyRow>
+          )}
         </div>
       </AdminSection>
 

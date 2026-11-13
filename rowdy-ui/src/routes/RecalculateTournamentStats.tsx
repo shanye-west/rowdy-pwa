@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import AdminPage from "../components/admin/AdminPage";
 import AdminSection from "../components/admin/AdminSection";
+import { dangerButtonClass } from "../components/admin/inputStyles";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
 import { adminApi } from "../api/admin";
@@ -157,7 +158,7 @@ export default function RecalculateTournamentStats() {
               variant="outline"
               onClick={handleExecute}
               disabled={loading}
-              className="flex-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className={`flex-1 ${dangerButtonClass}`}
             >
               {loading ? "Executing…" : "Execute global recalculation"}
             </Button>

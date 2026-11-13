@@ -32,9 +32,10 @@ export default function ConfirmDialog({
     <Modal isOpen={isOpen} onClose={onCancel} title={title}>
       <div className="mb-4 text-sm text-muted-foreground">{children}</div>
       <ModalActions
-        primaryLabel={busy ? "Working..." : confirmLabel}
-        onPrimary={busy ? () => {} : onConfirm}
-        primaryClass={danger ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+        primaryLabel={busy ? "Working…" : confirmLabel}
+        onPrimary={onConfirm}
+        primaryDisabled={busy}
+        primaryClass={danger ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"}
         secondaryLabel={cancelLabel}
         onSecondary={onCancel}
       />

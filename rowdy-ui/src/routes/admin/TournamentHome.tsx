@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CircleAlert, ExternalLink, Flag, Lock, Plus, Settings2 } from "lucide-react";
+import { CircleAlert, CircleDollarSign, ExternalLink, Flag, Plus, Settings2, SlidersHorizontal, Swords, Users } from "lucide-react";
 import AdminPage, { AdminNotFound } from "../../components/admin/AdminPage";
 import AdminSection from "../../components/admin/AdminSection";
 import NavRow, { EmptyRow } from "../../components/admin/NavRow";
+import RoundRow from "../../components/admin/RoundRow";
+import StatTiles from "../../components/admin/StatTiles";
 import TournamentBadges from "../../components/admin/TournamentBadges";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -11,14 +13,14 @@ import { Switch } from "../../components/ui/switch";
 import { useAdminTournament } from "../../contexts/AdminTournamentContext";
 import { adminApi } from "../../api/admin";
 import { getErrorMessage } from "../../api/errors";
-import { formatRoundType } from "../../utils";
 import { tierPlayerIds } from "../../utils/roster";
 import type { RoundDoc, TournamentDoc } from "../../types";
 
 /**
- * Tournament admin home: rounds at a glance with day-of lock toggles, the
- * remaining setup steps, and links to rosters/settings. Match work happens
- * inside each round.
+ * Tournament admin home, top to bottom in the order it gets used: the numbers
+ * at a glance, any setup still outstanding, the Cup rounds (with day-of lock
+ * toggles), the settings areas, then the games that sit off the scoreboard.
+ * Match work happens inside each round.
  */
 export default function TournamentHome() {
   const { tournamentId, tournament, rounds, loading, error: ctxError, refreshRounds } = useAdminTournament();
@@ -67,6 +69,97 @@ export default function TournamentHome() {
   }
 
   const todo = setupTodos(tournament, rounds, tournamentId);
+  const base = `/admin/t/${tournamentId}`;
+  const teamAName = tournament.teamA?.name || "Team A";
+  const teamBName = tournament.teamB?.name || "Team B";
+  const teamACount = tierPlayerIds(tournament.teamA?.rosterByTier).length;
+  const teamBCount = tierPlayerIds(tournament.teamB?.rosterByTier).length;
+  const matchCount = rounds.reduce((sum, r) => sum + (r.matchIds?.length ?? 0), 0);
+  const lockedCount = rounds.filter((r) => r.locked).length;
+  // Offered on a tournament that already has one, or one still being set up
+  // (no rounds yet) — not on every past Cup.
+  const showCaptainsMatch = !!tournament.hasCaptainsMatch || rounds.length === 0;
+  // Before any Cup round exists the captains' match IS the tournament, so the
+  // extras lead instead of trailing.
+  const extrasFirst = !!tournament.hasCaptainsMatch && rounds.length === 0;
+
+  const roundsSection = (
+    <AdminSection
+      key="rounds"
+      title="Rounds"
+      description="The switch locks score entry for the whole round. Open a round for its matches, pairings draft, and recap."
+      actions={
+        <Button asChild variant="ghost" size="sm">
+          <Link to={`${base}/round/new`}>
+            <Plus className="h-4 w-4" />
+            Round
+          </Link>
+        </Button>
+      }
+    >
+      <div className="space-y-2">
+        {rounds.map((r) => (
+          <RoundRow
+            key={r.id}
+            tournamentId={tournamentId}
+            round={r}
+            trailing={
+              <Switch
+                checked={!!r.locked}
+                disabled={busyRoundId === r.id}
+                onCheckedChange={(next) => toggleRoundLock(r.id, next)}
+                aria-label={r.locked ? `Unlock day ${r.day}` : `Lock day ${r.day}`}
+              />
+            }
+          />
+        ))}
+        {rounds.length === 0 && <EmptyRow>No rounds yet.</EmptyRow>}
+      </div>
+    </AdminSection>
+  );
+
+  const extrasSection = (
+    <AdminSection
+      key="extras"
+      title="Extras"
+      description="Games played alongside the Cup. They award no Cup points and record no stats."
+      actions={
+        <Button asChild variant="ghost" size="sm">
+          <Link to={`${base}/side-event/new`}>
+            <Plus className="h-4 w-4" />
+            Side event
+          </Link>
+        </Button>
+      }
+    >
+      <div className="space-y-2">
+        {showCaptainsMatch && (
+          <NavRow
+            to={`${base}/captains-match`}
+            leading={<Swords className="h-5 w-5 text-muted-foreground" />}
+            title="Captains' match"
+            subtitle={
+              tournament.hasCaptainsMatch
+                ? "Players, round cards, and betting"
+                : "Pre-draft running match between the captains"
+            }
+            badges={tournament.hasCaptainsMatch ? null : <Badge variant="muted">not set up</Badge>}
+          />
+        )}
+        {sideEvents.map((e) => (
+          <NavRow
+            key={e.id}
+            to={`${base}/side-event/${e.id}`}
+            leading={<Flag className="h-5 w-5 text-muted-foreground" />}
+            title={e.name}
+            subtitle="Side event · teams, scores, and payouts"
+            badges={e.hidden ? <Badge variant="muted">hidden</Badge> : null}
+          />
+        ))}
+        {!showCaptainsMatch && sideEvents.length === 0 && <EmptyRow>No side events yet.</EmptyRow>}
+      </div>
+    </AdminSection>
+  );
 
   return (
     <AdminPage
@@ -78,26 +171,49 @@ export default function TournamentHome() {
       error={error ?? ctxError}
       success={success}
       actions={
-        <Button asChild variant="outline" size="sm">
-          <Link to={`/admin/t/${tournamentId}/settings`}>
-            <Settings2 className="h-4 w-4" />
-            Settings
-          </Link>
-        </Button>
+        <>
+          <Button asChild variant="ghost" size="sm">
+            <Link to={`/tournament/${tournamentId}`}>
+              <ExternalLink className="h-4 w-4" />
+              View
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to={`${base}/settings`}>
+              <Settings2 className="h-4 w-4" />
+              Settings
+            </Link>
+          </Button>
+        </>
       }
     >
+      <StatTiles
+        tiles={[
+          {
+            label: "Rosters",
+            value: `${teamACount} v ${teamBCount}`,
+            detail: `${teamAName} v ${teamBName}`,
+            tone: teamACount === 0 || teamBCount === 0 ? "warning" : "default",
+          },
+          {
+            label: "Rounds",
+            value: rounds.length,
+            detail: rounds.length === 0 ? "none yet" : `${lockedCount} locked`,
+          },
+          { label: "Matches", value: matchCount, detail: "across all rounds" },
+        ]}
+      />
+
       {todo.length > 0 && (
         <AdminSection
           title="Next steps"
           description="What still needs doing before this tournament can be played."
+          actions={<Badge variant="warning">{todo.length} to do</Badge>}
         >
-          <ul className="space-y-2">
+          <ul className="-mx-2 space-y-0.5">
             {todo.map((item) => (
               <li key={item.label}>
-                <Link
-                  to={item.to}
-                  className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
-                >
+                <Link to={item.to} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted">
                   <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   <span>
                     <span className="font-semibold text-foreground">{item.label}</span>
@@ -110,117 +226,33 @@ export default function TournamentHome() {
         </AdminSection>
       )}
 
-      {/* Offered on a tournament that already has one, or one still being set
-          up (no rounds yet) — not on every past Cup. */}
-      {(tournament.hasCaptainsMatch || rounds.length === 0) && (
-        <AdminSection
-          title="Captains' match"
-          description="The pre-draft running singles match between the captains, scored off the app. Enter each round's card here — it awards no Cup points and records no stats."
-        >
-          {tournament.hasCaptainsMatch ? (
-            <NavRow
-              to={`/admin/t/${tournamentId}/captains-match`}
-              leading={
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">
-                  vs
-                </div>
-              }
-              title="Captains' Match"
-              subtitle="Players, rounds and scorecards"
-            />
-          ) : (
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/admin/t/${tournamentId}/captains-match`}>
-                <Plus className="h-4 w-4" />
-                Set up
-              </Link>
-            </Button>
-          )}
-        </AdminSection>
-      )}
+      {extrasFirst ? [extrasSection, roundsSection] : roundsSection}
 
-      <AdminSection
-        title="Rounds"
-        description="The lock freezes score entry for a whole round. Open a round for its matches, pairings draft, and recap."
-        actions={
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/admin/t/${tournamentId}/round/new`}>
-              <Plus className="h-4 w-4" />
-              Round
-            </Link>
-          </Button>
-        }
-      >
+      <AdminSection title="Manage" description="Everything set at the tournament level.">
         <div className="space-y-2">
-          {rounds.map((r) => (
-            <NavRow
-              key={r.id}
-              to={`/admin/t/${tournamentId}/round/${r.id}`}
-              leading={
-                <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-center">
-                  <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Day
-                  </span>
-                  <span className="text-xs font-bold leading-none text-foreground">{r.day ?? "?"}</span>
-                </div>
-              }
-              title={formatRoundType(r.format)}
-              subtitle={`${r.matchIds?.length ?? 0} match${(r.matchIds?.length ?? 0) === 1 ? "" : "es"} · ${r.pointsValue ?? 1} pt each`}
-              badges={r.locked ? <Badge variant="muted"><Lock className="mr-1 h-3 w-3" />locked</Badge> : null}
-              trailing={
-                <Switch
-                  checked={!!r.locked}
-                  disabled={busyRoundId === r.id}
-                  onCheckedChange={(next) => toggleRoundLock(r.id, next)}
-                  aria-label={r.locked ? `Unlock day ${r.day}` : `Lock day ${r.day}`}
-                />
-              }
-            />
-          ))}
-          {rounds.length === 0 && <EmptyRow>No rounds yet.</EmptyRow>}
+          <NavRow
+            to={`${base}/settings?tab=rosters`}
+            leading={<Users className="h-5 w-5 text-muted-foreground" />}
+            title="Rosters & handicaps"
+            subtitle="Teams, tiers, captains, and handicap indexes"
+          />
+          <NavRow
+            to={`${base}/settings`}
+            leading={<SlidersHorizontal className="h-5 w-5 text-muted-foreground" />}
+            title="Setup & features"
+            subtitle="Name, active flag, sportsbook, comments, tiebreaker"
+          />
+          <NavRow
+            to={`${base}/settings?tab=betting`}
+            leading={<CircleDollarSign className="h-5 w-5 text-muted-foreground" />}
+            title="Betting"
+            subtitle="Settle Cup-winner and player futures"
+            badges={tournament.sportsbookEnabled ? null : <Badge variant="muted">off</Badge>}
+          />
         </div>
       </AdminSection>
 
-      <AdminSection
-        title="Side events"
-        description="Optional for-fun games like the 3-man scramble. They award no Cup points, record no stats, and reach players through the hamburger menu only."
-        actions={
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/admin/t/${tournamentId}/side-event/new`}>
-              <Plus className="h-4 w-4" />
-              Event
-            </Link>
-          </Button>
-        }
-      >
-        <div className="space-y-2">
-          {sideEvents.map((e) => (
-            <NavRow
-              key={e.id}
-              to={`/admin/t/${tournamentId}/side-event/${e.id}`}
-              leading={<Flag className="h-5 w-5 text-muted-foreground" />}
-              title={e.name}
-              subtitle={e.id}
-              badges={e.hidden ? <Badge variant="muted">hidden</Badge> : null}
-            />
-          ))}
-          {sideEvents.length === 0 && <EmptyRow>No side events yet.</EmptyRow>}
-        </div>
-      </AdminSection>
-
-      <AdminSection title="Tournament" description="Rosters, handicaps, captains, feature flags, and archiving.">
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to={`/admin/t/${tournamentId}/settings`}>Settings &amp; rosters</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to={`/tournament/${tournamentId}`}>
-              <ExternalLink className="h-4 w-4" />
-              Public page
-            </Link>
-          </Button>
-        </div>
-      </AdminSection>
+      {!extrasFirst && extrasSection}
     </AdminPage>
   );
 }
@@ -246,13 +278,13 @@ function setupTodos(tournament: TournamentDoc, rounds: RoundDoc[], tournamentId:
     items.push({
       label: "Set the rosters",
       detail: `${tournament.teamA?.name || "Team A"}: ${teamACount} · ${tournament.teamB?.name || "Team B"}: ${teamBCount}`,
-      to: settings,
+      to: `${settings}?tab=rosters`,
     });
   } else if (!tournament.teamA?.captainId || !tournament.teamB?.captainId) {
     items.push({
       label: "Pick captains",
       detail: "Captains run the pairings draft and get a planning board.",
-      to: settings,
+      to: `${settings}?tab=rosters`,
     });
   }
 
