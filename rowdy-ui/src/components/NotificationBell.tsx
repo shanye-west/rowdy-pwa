@@ -32,12 +32,18 @@ function relativeTime(ts: FirestoreTimestampLike | undefined): string {
 
 export function NotificationBell() {
   const { player } = useAuth();
-  const { notifications, unreadCount, markRead, markAllRead, deleteNotification, clearAll } =
+  const { notifications, unreadCount, markRead, markAllRead, deleteNotification, clearAll, setHistoryOpen } =
     useNotifications();
   const { pushOn, pushUnsupported, enable: enablePushNotifications } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
+
+  // The full history is only listened to while the panel is open.
+  useEffect(() => {
+    setHistoryOpen(open);
+    return () => setHistoryOpen(false);
+  }, [open, setHistoryOpen]);
 
   useEffect(() => {
     if (!open) return;

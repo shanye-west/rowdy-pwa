@@ -58,6 +58,27 @@ async function fetchPlayersByIds(
 }
 
 /**
+ * Player docs (names) almost never change, so revalidating the cached roster
+ * on every app start bought nothing but reads — one per player each time.
+ * Revalidate at most once per this window per device; a cache MISS still
+ * always reads from the server.
+ */
+const PLAYER_REVALIDATE_MS = 24 * 60 * 60 * 1000;
+const PLAYER_REVALIDATED_KEY = "rowdycup:playersRevalidatedAt";
+
+/** True (and records now) when the cached roster is due a background refresh. */
+function claimPlayerRevalidation(): boolean {
+  try {
+    const last = Number(localStorage.getItem(PLAYER_REVALIDATED_KEY) || 0);
+    if (Date.now() - last < PLAYER_REVALIDATE_MS) return false;
+    localStorage.setItem(PLAYER_REVALIDATED_KEY, String(Date.now()));
+    return true;
+  } catch {
+    return false; // storage unavailable: skip revalidation, cache misses still read
+  }
+}
+
+/**
  * Merge freshly-read docs into a lookup, returning the SAME object when nothing
  * actually changed — so a background revalidation that confirms the cache
  * doesn't re-render every consumer of the context.
@@ -132,7 +153,10 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
     const missing = ids.filter((id) => id && !requestedPlayerIdsRef.current.has(id));
     if (missing.length === 0) return;
     missing.forEach((id) => requestedPlayerIdsRef.current.add(id));
-    fetchPlayersByIds(missing, (fresh) => setPlayers((prev) => mergeIfChanged(prev, fresh)))
+    const onFresh = claimPlayerRevalidation()
+      ? (fresh: PlayerLookup) => setPlayers((prev) => mergeIfChanged(prev, fresh))
+      : undefined;
+    fetchPlayersByIds(missing, onFresh)
       .then((fetched) => {
         if (Object.keys(fetched).length > 0) setPlayers((prev) => ({ ...prev, ...fetched }));
         // Mark every requested id resolved (even ones with no doc) so loaded flags settle.

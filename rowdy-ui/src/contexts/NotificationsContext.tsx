@@ -1,7 +1,15 @@
 /**
- * NotificationsContext — one shared subscription to the logged-in player's
- * notification history (players/{id}/notifications), powering the header bell and
- * the unread nav badges. Also keeps this device's push registration healthy
+ * NotificationsContext — the logged-in player's notifications
+ * (players/{id}/notifications), powering the header bell and the unread nav
+ * badges.
+ *
+ * Two listeners, to keep reads down:
+ *  - UNREAD only, always on (badges + app icon). Usually a handful of docs, so
+ *    reopening the app after a while re-reads a few docs instead of the whole
+ *    recent history (a listener that resumes after ~30 min is billed for every
+ *    doc it returns).
+ *  - The full recent HISTORY, only while the bell panel is open (`setHistoryOpen`).
+ *    Until it arrives the panel shows the unread items it already has. Also keeps this device's push registration healthy
  * (the service worker renders every push as a system notification itself).
  *
  * Marking read is a direct Firestore update (the security rules allow the owner
@@ -19,7 +27,9 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
   writeBatch,
+  type QuerySnapshot,
 } from "firebase/firestore";
 import { syncAppBadge } from "../utils/appBadge";
 import { db } from "../firebase";
@@ -31,7 +41,10 @@ import type { NotificationDoc } from "../types";
 const HISTORY_LIMIT = 30;
 
 interface NotificationsValue {
+  /** Recent history while the bell is open; otherwise just the unread items. */
   notifications: NotificationDoc[];
+  /** Load (true) or release (false) the full recent history — the bell panel. */
+  setHistoryOpen: (open: boolean) => void;
   unreadCount: number;
   /** Unread count whose deep link starts with the given path (for nav badges). */
   unreadForPrefix: (prefix: string) => number;
@@ -48,39 +61,64 @@ const NotificationsContext = createContext<NotificationsValue | null>(null);
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { player, loading: authLoading } = useAuth();
   useDeviceReporting(player?.id);
-  const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+  const [unread, setUnread] = useState<NotificationDoc[]>([]);
+  const [history, setHistory] = useState<NotificationDoc[] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const playerId = player?.id;
 
-  // Live history for the current player (most recent first).
+  const toItems = (snap: QuerySnapshot) =>
+    snap.docs.map((d) => ({ id: d.id, ...d.data() }) as NotificationDoc);
+
+  // Unread notifications, newest first — always on while signed in.
   useEffect(() => {
-    if (!player) {
-      setNotifications([]);
+    if (!playerId) {
+      setUnread([]);
       if (!authLoading) void syncAppBadge(false);
       return;
     }
-    const q = query(
-      collection(db, "players", player.id, "notifications"),
-      orderBy("createdAt", "desc"),
-      limit(HISTORY_LIMIT)
-    );
     const unsub = onSnapshot(
-      q,
+      query(
+        collection(db, "players", playerId, "notifications"),
+        where("read", "==", false),
+        orderBy("createdAt", "desc"),
+        limit(HISTORY_LIMIT)
+      ),
       (snap) => {
-        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as NotificationDoc);
-        setNotifications(items);
+        const items = toItems(snap);
+        setUnread(items);
         // Wait for the feed snapshot; don't clear a background badge at boot.
-        void syncAppBadge(items.some(item => !item.read));
+        void syncAppBadge(items.length > 0);
       },
       () => {
         /* permission/transient errors — keep last known state */
       }
     );
     return () => unsub();
-  }, [player, authLoading]);
+  }, [playerId, authLoading]);
+
+  // Full recent history — only while the bell panel is open.
+  useEffect(() => {
+    if (!playerId || !historyOpen) {
+      setHistory(null);
+      return;
+    }
+    const unsub = onSnapshot(
+      query(
+        collection(db, "players", playerId, "notifications"),
+        orderBy("createdAt", "desc"),
+        limit(HISTORY_LIMIT)
+      ),
+      (snap) => setHistory(toItems(snap)),
+      () => {
+        /* permission/transient errors — the panel keeps showing unread items */
+      }
+    );
+    return () => unsub();
+  }, [playerId, historyOpen]);
 
   // Self-heal the device's push registration on start and whenever the app
   // comes back to the foreground (an iOS PWA resumes far more often than it
   // cold-boots). Throttled inside refreshPushRegistration; never prompts.
-  const playerId = player?.id;
   useEffect(() => {
     if (!playerId) return;
     void refreshPushRegistration();
@@ -92,9 +130,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [playerId]);
 
   const value = useMemo<NotificationsValue>(() => {
-    const unread = notifications.filter((n) => !n.read);
+    const notifications = history ?? unread;
     return {
       notifications,
+      setHistoryOpen,
       unreadCount: unread.length,
       unreadForPrefix: (prefix) => unread.filter((n) => n.link?.startsWith(prefix)).length,
       markRead: (id) => {
@@ -128,7 +167,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         void batch.commit().catch(() => {});
       },
     };
-  }, [notifications, player]);
+  }, [history, unread, player]);
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
 }

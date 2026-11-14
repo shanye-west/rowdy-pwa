@@ -115,7 +115,15 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   // onSnapshot, so returning users resolve from IndexedDB instantly; the
   // watchdog backstops a wedged connection so we render cached/partial data
   // rather than spinning forever once a tournament is in hand.
-  const rawLoading = !tournamentLoaded || (tournament !== null && (!roundsLoaded || !matchesLoaded));
+  // When the caller hands in its tournament, there is one render between the
+  // prop arriving and effect 1 copying it into state. During it the flags still
+  // describe the PREVIOUS (usually "no tournament", fully loaded) state, so the
+  // page rendered for a frame, mounted its children — Home's captains' match
+  // opened and immediately dropped a billed listener — then fell back to the
+  // skeleton. Treat a prop/state mismatch as still loading.
+  const prefetchPending =
+    prefetchedTournament !== undefined && (prefetchedTournament?.id ?? null) !== (tournament?.id ?? null);
+  const rawLoading = prefetchPending || !tournamentLoaded || (tournament !== null && (!roundsLoaded || !matchesLoaded));
   const loading = useResolvedLoading(rawLoading, tournament !== null);
 
   // -------------------------------------------------------------------------
@@ -197,6 +205,21 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       return;
     }
 
+    // The tournament doc carries a server-maintained list of its rounds
+    // (linkRoundToTournament / deleteRound). When that list is empty there is
+    // nothing to query — and querying anyway is slow as well as a billed read:
+    // Firestore won't serve an EMPTY result from cache while online, so the
+    // page sat on its skeleton until the server answered (measured ~1–1.5 s on
+    // Home for a tournament with only a captains' match). A round created later
+    // updates roundIds, which re-runs this effect and attaches the listener.
+    // Only an empty list is trusted; a missing or non-empty one still queries.
+    const noRounds = Array.isArray(tournament.roundIds) && tournament.roundIds.length === 0;
+    if (noRounds) {
+      setRounds([]);
+      setRoundsLoaded(true);
+      return;
+    }
+
     const unsub = onSnapshot(
       query(collection(db, "rounds"), where("tournamentId", "==", tournament.id)),
       (snap) => {
@@ -212,7 +235,10 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
       }
     );
     return () => unsub();
-  }, [tournament?.id, tournamentLoaded]);
+    // Keyed on whether the list is empty, not its contents: the listener itself
+    // tracks round changes once attached.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournament?.id, tournamentLoaded, Array.isArray(tournament?.roundIds) && tournament.roundIds.length === 0]);
 
   // Whether every loaded round carries denormalized totals. When so (and the
   // caller opted in), aggregate stats come straight from the rounds collection
