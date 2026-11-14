@@ -46,6 +46,7 @@ import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
 import { useToast } from "../contexts/ToastContext";
 import { BUILD_LABEL, hardRefreshToLatest, takeHardRefreshResult } from "../utils/appVersion";
+import { isChristmasPath, rememberPathTheme } from "../utils/themeHint";
 import { Card } from "./ui/card";
 
 // Fallback destination for the "Rules Official" menu link when a tournament has
@@ -213,15 +214,25 @@ export function LayoutShell({ children }: LayoutShellProps) {
   }, [title]);
 
   // --- THEME ENGINE ---
+  // Every loaded tournament has an explicit series, so `undefined` means the
+  // page is still loading (or isn't a tournament page). While it's unknown,
+  // fall back to what this path last rendered as, so a refresh of a Christmas
+  // page doesn't flash navy before its tournament arrives (index.html applies
+  // the same hint before first paint).
+  const pathname = location.pathname;
+  const isChristmas =
+    series !== undefined ? series === "christmasClassic" : isChristmasPath(pathname);
   useEffect(() => {
-    const isChristmas = series === "christmasClassic";
+    if (series !== undefined) rememberPathTheme(pathname, isChristmas);
+  }, [series, pathname, isChristmas]);
+  useEffect(() => {
     document.body.classList.toggle("theme-christmas", isChristmas);
     // The root background behind the status bar follows the theme (index.css).
     document.documentElement.classList.toggle("theme-christmas", isChristmas);
     // Keep theme-color on the same colour as the status-bar strip.
     const meta = document.querySelector('meta[name="theme-color"]');
     meta?.setAttribute("content", isChristmas ? "#00863c" : "#132448");
-  }, [series]);
+  }, [isChristmas]);
 
   // Close menu when tapping outside it (tapping the bell counts as outside, so
   // it closes the menu too). We listen on pointerdown rather than click because
@@ -293,7 +304,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
               alt="Tournament Logo"
               fallbackIcon="⛳"
               fallbackSrc={
-                series === "christmasClassic"
+                isChristmas
                   ? "/images/rowdycup-logo-christmas.svg"
                   : "/images/rowdycup-logo.svg"
               }
