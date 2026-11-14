@@ -233,10 +233,10 @@ export const askRulesOfficial = onCall(
     secrets: [XAI_API_KEY],
     timeoutSeconds: 120,
     memory: "256MiB",
-    // App Check is ENFORCED on this paid (xAI) endpoint — requests without a valid
-    // App Check token are rejected before the handler runs. Callers are roster
-    // players (see requirePlayer below) using the app, which ships App Check.
-    enforceAppCheck: true,
+    // No App Check: it was removed app-wide (Nov 2026) because waiting on the
+    // reCAPTCHA token delayed every app start. Spend on this paid endpoint is
+    // bounded by the roster-player gate + rate limit below and the xAI account's
+    // spend cap.
   },
   async (
     request: CallableRequest<AskRulesRequest>,
