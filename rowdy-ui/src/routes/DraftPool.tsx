@@ -13,7 +13,7 @@ type SortKey = "handicap" | "name";
 
 /**
  * Public, read-only dashboard of the available-player pool for the upcoming
- * tournament — the 24 players + their current handicaps, before the captains'
+ * tournament — the field (captains included) + their current handicaps, before the captains'
  * draft assigns them to teams. Reads `tournament.draftPool` (playerId ->
  * handicap index) off the active tournament; the page hides itself when no pool
  * is posted. Architected to later grow into an interactive captains' draft board.
@@ -52,14 +52,16 @@ export default function DraftPool() {
     });
   }, [poolIds, draftPool]);
 
-  // Map each playerId to its tier label (A/B/C/D) based on handicap rank.
+  // Map each playerId to its tier label (A/B/C/D) based on handicap rank. The
+  // field always splits into 4 equal tiers (each team drafts half of every
+  // tier), so the tier size follows the pool: 24 players → 6 per tier (3 per
+  // team), 16 players → 4 per tier (2 per team). Captains belong in the pool.
   const tierMap = useMemo(() => {
+    const TIERS = ["A", "B", "C", "D"] as const;
+    const tierSize = Math.max(1, Math.ceil(handicapSortedIds.length / TIERS.length));
     const map: Record<string, string> = {};
     handicapSortedIds.forEach((pid, i) => {
-      if (i < 6) map[pid] = "A";
-      else if (i < 12) map[pid] = "B";
-      else if (i < 18) map[pid] = "C";
-      else map[pid] = "D";
+      map[pid] = TIERS[Math.min(Math.floor(i / tierSize), TIERS.length - 1)];
     });
     return map;
   }, [handicapSortedIds]);
