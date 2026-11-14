@@ -20,14 +20,23 @@
     <!-- Standardized mobile web app meta (keep apple-prefixed for older iOS compatibility) -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- black-translucent lets the dark gradient header bleed under the status bar (white text) -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Opaque status bar on purpose. With black-translucent, iOS 26+/27 paints
+         a Liquid Glass haze (with dark clock/battery text) over the header's
+         status-bar inset that no CSS can disable. "default" starts the app below
+         an opaque status bar, which iOS colours from a fixed element at the top
+         edge (the 1px strip in Layout.tsx) — together with the header-coloured
+         html background in index.css. Same recipe as the Putt Pirates app,
+         where it's verified on iOS 27. iOS reads this tag only when the app is
+         ADDED to the Home Screen: existing installs must be deleted and re-added. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Rowdy Cup" />
 
     <!-- Cold-start splash: paints immediately (before any JS parses) and is
          replaced when React mounts into #root. Keeps startup from being a
          blank white screen on slow networks / cold caches. -->
     <style>
+      /* Header colour behind the status bar from the very first paint. */
+      html { background-color: #132448; }
       .boot-splash {
         position: fixed;
         inset: 0;

@@ -210,7 +210,7 @@ export default function PullToRefresh({ children, onRefresh }: PullToRefreshProp
   const armed = phase === "armed" || phase === "refreshing";
 
   return (
-    <div ref={rootRef} style={{ minHeight: "100vh" }}>
+    <div ref={rootRef} style={{ minHeight: "100dvh" }}>
       {/* Indicator: a small round chip that slides out from under the header.
           Sits below the header (z-50) and above the page content. */}
       <div

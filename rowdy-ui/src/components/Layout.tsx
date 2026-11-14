@@ -216,9 +216,11 @@ export function LayoutShell({ children }: LayoutShellProps) {
   useEffect(() => {
     const isChristmas = series === "christmasClassic";
     document.body.classList.toggle("theme-christmas", isChristmas);
-    // Keep the live status-bar / toolbar tint in sync with the active theme.
+    // The root background behind the status bar follows the theme (index.css).
+    document.documentElement.classList.toggle("theme-christmas", isChristmas);
+    // Keep theme-color on the same colour as the status-bar strip.
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute("content", isChristmas ? "#ef211c" : "#132448");
+    meta?.setAttribute("content", isChristmas ? "#00863c" : "#132448");
   }, [series]);
 
   // Close menu when tapping outside it (tapping the bell counts as outside, so
@@ -252,6 +254,24 @@ export function LayoutShell({ children }: LayoutShellProps) {
   return (
     <>
       {/* STICKY HEADER */}
+      {/* iOS 26+/27 colours the (opaque) status bar from the background-color
+          of a FIXED element at the very top edge — not the sticky header, not
+          theme-color. This invisible 1px strip hands it the header colour.
+          Ported from the Putt Pirates app, where it's verified on iOS 27. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: "var(--header-bg)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       <header className="app-header">
         {/* Left: Back Button (if shown) + Tournament Logo */}
         <div className="flex items-center gap-2">
