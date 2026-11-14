@@ -197,13 +197,6 @@
      class on <html>.) */
   html {
     background-color: #132448;
-    /* No iOS rubber-band bounce on the page. When a scroll overshot the top,
-       iOS dragged the whole page — header included — down and filled the gap
-       with a light colour of its own choosing; it also let the page wobble
-       sideways. Pull-to-refresh is our own gesture (PullToRefresh.tsx), so
-       nothing is lost. This must be on <html>: on <body> it has no effect on
-       the main page scroll. Inner scroll areas keep their normal behaviour. */
-    overscroll-behavior: none;
   }
   html.theme-christmas {
     background-color: #00863c;
@@ -282,9 +275,14 @@
 
   /* Sticky Header - extends into safe area (notch area) on mobile */
   .app-header {
-    @apply flex items-center justify-between px-4 sticky top-0 z-50;
+    /* FIXED, not sticky. A sticky header scrolls with the page, so iOS's
+       rubber-band bounce at the bottom dragged it up off the screen (and the
+       top bounce pulled it down). A fixed header stays put while the content
+       bounces underneath — the native nav-bar feel. .app-header-spacer
+       reserves its height in the page flow. */
+    @apply flex items-center justify-between px-4 fixed top-0 inset-x-0 z-50;
     /* One solid colour for the status bar and the header. iOS paints the
-       opaque status bar in a single colour read from this sticky header's
+       opaque status bar in a single colour read from this fixed header's
        background-COLOR (images are ignored; the 1px strip in Layout.tsx is too
        thin to count). To ever show a DIFFERENT colour below the status bar,
        keep background-color as the status-bar colour and paint the header's
@@ -297,6 +295,12 @@
        for the status-bar tint. (It was invisible anyway — ~98% opaque.) */
   }
 
+
+  /* Holds the fixed header's space so page content starts below it. */
+  .app-header-spacer {
+    flex-shrink: 0;
+    height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  }
 
   .header-title {
     @apply text-lg font-bold uppercase tracking-wide truncate;

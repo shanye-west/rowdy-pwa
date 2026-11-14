@@ -264,7 +264,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
   return (
     <>
-      {/* STICKY HEADER */}
+      {/* FIXED HEADER (+ spacer below) */}
       {/* iOS 26+/27 colours the (opaque) status bar from the background-color
           of a FIXED element at the very top edge — not the sticky header, not
           theme-color. This invisible 1px strip hands it the header colour.
@@ -516,6 +516,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         </div>
       </header>
+      <div className="app-header-spacer" aria-hidden="true" />
 
       {/* PULL-TO-REFRESH = reload the page. Players pull when something looks
           stale or stuck; most data is live, but a reload also re-runs the

@@ -94,8 +94,12 @@ export default defineConfig({
         id: '/',
         lang: 'en',
         categories: ['sports'],
-        theme_color: '#132448', // brand navy — matches the header gradient
-        background_color: '#f6f6f6', // matches --app-bg
+        theme_color: '#132448', // brand navy — matches the header
+        // Header navy, not the page grey: in the installed iPhone app this is
+        // (we believe) the colour iOS shows in the gap when the page bounces
+        // past the top — it was the light grey band above the header. iOS reads
+        // the manifest at install, so existing installs keep the old colour.
+        background_color: '#132448',
         display: 'standalone', // Hides browser UI
         orientation: 'portrait', // mobile-only scoring app; scorecard scrolls horizontally in portrait
         scope: '/',
