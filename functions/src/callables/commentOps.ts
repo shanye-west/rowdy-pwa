@@ -237,7 +237,7 @@ export const deleteComment = onCall(async (request: CallableRequest) => {
     await db().runTransaction(async (tx) => {
       const [replySnap, parentSnap] = await Promise.all([tx.get(replyRef), tx.get(parentRef)]);
       if (!replySnap.exists) throw new HttpsError("not-found", "Comment not found");
-      if (replySnap.data()!.authorId !== playerId && !isAdmin) {
+      if (replySnap.data()!.authorId !== playerId && !(await isAdmin())) {
         throw new HttpsError("permission-denied", "You can only delete your own comments");
       }
       tx.delete(replyRef);
@@ -258,7 +258,7 @@ export const deleteComment = onCall(async (request: CallableRequest) => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Comment not found");
     const comment = snap.data()!;
-    if (comment.authorId !== playerId && !isAdmin) {
+    if (comment.authorId !== playerId && !(await isAdmin())) {
       throw new HttpsError("permission-denied", "You can only delete your own comments");
     }
     tx.delete(ref);

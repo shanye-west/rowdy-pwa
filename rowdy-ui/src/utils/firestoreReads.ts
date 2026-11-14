@@ -109,7 +109,7 @@ export async function getDocsByIdCacheFirst<T = DocumentData>(
 
 const PRIMED_PREFIX = "rowdycup:primed:";
 
-function isPrimed(key: string): boolean {
+export function isPrimed(key: string): boolean {
   try {
     return localStorage.getItem(PRIMED_PREFIX + key) === "1";
   } catch {
@@ -117,7 +117,7 @@ function isPrimed(key: string): boolean {
   }
 }
 
-function markPrimed(key: string): void {
+export function markPrimed(key: string): void {
   try {
     localStorage.setItem(PRIMED_PREFIX + key, "1");
   } catch {

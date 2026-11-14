@@ -37,9 +37,11 @@
   --color-team-a: #132448;
   --color-team-b: #bf203c;
   
-  /* Font */
-  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-display: "Fraunces", "Times New Roman", serif;
+  /* Font — system fonts only. (A Google Fonts link for Space Grotesk /
+     Fraunces existed until Nov 2026 but its URL was invalid, so those never
+     loaded; this is the stack the app has actually rendered with.) */
+  --font-sans: "Segoe UI", sans-serif;
+  --font-display: "Times New Roman", serif;
 
   /* Dropdown menus (hamburger, notification bell) — subtle open scale/fade.
      Defined here so Tailwind generates the `animate-menu-open` utility. */

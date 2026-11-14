@@ -251,12 +251,20 @@ export function useTournamentData(options: UseTournamentDataOptions = {}): UseTo
   // fires on every score change (pointTotals is denormalized live), so keying
   // the matches effect on these strings — not the rounds array — keeps a round
   // doc update from tearing down and recreating the match listeners.
+  //
+  // Rounds whose (server-maintained) matchIds list is empty are left out: they
+  // have no matches to read, and an empty query is both a billed read and slow
+  // — Firestore won't serve an empty result from cache while online, so the
+  // page waited on the server (e.g. Bets before a round's pairings exist).
+  // Seeding the first match adds to matchIds, which changes these keys and
+  // attaches the query.
+  const hasMatches = (r: RoundDoc) => !Array.isArray(r.matchIds) || r.matchIds.length > 0;
   const lockedRoundIdsKey = useMemo(
-    () => rounds.filter(r => r.locked).map(r => r.id).sort().join(","),
+    () => rounds.filter(r => r.locked && hasMatches(r)).map(r => r.id).sort().join(","),
     [rounds]
   );
   const unlockedRoundIdsKey = useMemo(
-    () => rounds.filter(r => !r.locked).map(r => r.id).sort().join(","),
+    () => rounds.filter(r => !r.locked && hasMatches(r)).map(r => r.id).sort().join(","),
     [rounds]
   );
 

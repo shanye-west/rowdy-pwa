@@ -9,10 +9,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { collection, query, where, onSnapshot, type QuerySnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocsFromCache, type QuerySnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { toDateOrNull } from "../utils";
-import { getDocsPrimed } from "../utils/firestoreReads";
+import { getDocsPrimed, isPrimed, markPrimed } from "../utils/firestoreReads";
 import { rosterPlayerIds } from "../utils/roster";
 import { usePlayers } from "../contexts/TournamentContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -54,13 +54,36 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
       return;
     }
     setLoading(true);
+    const q = query(
+      collection(db, "bets"),
+      where("tournamentId", "==", tournamentId),
+      where("status", "in", [...LIVE_BET_STATUSES])
+    );
+    const primedKey = `live-bets:${tournamentId}`;
+    let gotSnapshot = false;
+    let cancelled = false;
+
+    // Most of the time there are no open/active bets, and Firestore won't
+    // deliver an EMPTY result from its cache while online — the listener stays
+    // silent until the server answers, holding the page on its spinner. Once
+    // this device has had a server answer for the query, the cached result
+    // (empty or not) is complete enough to show at once; the listener replaces
+    // it moments later. Free: a cache read is not billed.
+    if (isPrimed(primedKey)) {
+      getDocsFromCache(q)
+        .then((snap) => {
+          if (cancelled || gotSnapshot) return;
+          setLiveBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc)));
+          setLoading(false);
+        })
+        .catch(() => { /* no persistence — wait for the listener */ });
+    }
+
     const unsub = onSnapshot(
-      query(
-        collection(db, "bets"),
-        where("tournamentId", "==", tournamentId),
-        where("status", "in", [...LIVE_BET_STATUSES])
-      ),
+      q,
       (snap) => {
+        gotSnapshot = true;
+        if (!snap.metadata.fromCache) markPrimed(primedKey);
         setLiveBets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as BetDoc)));
         setLoading(false);
       },
@@ -70,7 +93,10 @@ export function useBets(tournamentId: string | undefined): UseBetsResult {
         setLoading(false);
       }
     );
-    return () => unsub();
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [tournamentId, user]);
 
   // Settled bets are terminal, so a one-time read beats a permanent listener.

@@ -9,7 +9,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { requireAdmin } from "../helpers/adminAuth.js";
+import { requireAdmin, setPlayerIdClaim } from "../helpers/adminAuth.js";
 import { isValidGross } from "../scoring/matchScoring.js";
 import {
   describeRoundDeletionBlock,
@@ -766,8 +766,16 @@ export const linkAuthToPlayer = onCall(async (request) => {
   // authUid stays on the doc — it's the query key for authUid==uid lookups. The
   // email, however, is PII and is kept OUT of the world-readable doc: it goes in
   // the server-only private subcollection (used for admin display / relinking).
+  const previousUid = snap.data()?.authUid;
   await ref.set({ authUid: authUser.uid, _adminUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
   await ref.collection("private").doc("profile").set({ email }, { merge: true });
+
+  // Keep the player-id claim (see adminAuth.ts) in step: the new account gets
+  // it, and an account this player was previously linked to loses it.
+  await setPlayerIdClaim(authUser.uid, playerId);
+  if (typeof previousUid === "string" && previousUid && previousUid !== authUser.uid) {
+    await setPlayerIdClaim(previousUid, null).catch(() => { /* account may be gone */ });
+  }
   return { success: true, playerId, authUid: authUser.uid };
 });
 
@@ -844,6 +852,12 @@ export const deletePlayer = onCall(async (request) => {
   // Defensive: clear any stats subtree, then the player doc
   await db().recursiveDelete(db().collection("playerStats").doc(playerId));
   await ref.delete();
+
+  // The linked account's player-id claim now points at nothing — remove it.
+  const linkedUid = snap.data()?.authUid;
+  if (typeof linkedUid === "string" && linkedUid) {
+    await setPlayerIdClaim(linkedUid, null).catch(() => { /* account may be gone */ });
+  }
   return { success: true, playerId };
 });
 

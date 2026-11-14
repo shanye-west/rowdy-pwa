@@ -190,6 +190,16 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     if (!roundId || !round) return;
 
     let unsub: (() => void) | undefined;
+
+    // No matches yet (pre-draft): the server-maintained matchIds list says so,
+    // and querying anyway costs a read and waits on the server — Firestore
+    // won't serve an empty result from cache while online. Seeding the first
+    // match updates the round doc, which re-runs this effect.
+    if (Array.isArray(round.matchIds) && round.matchIds.length === 0) {
+      setMatches([]);
+      setMatchesLoaded(true);
+      return;
+    }
     
     // If round is locked, use one-time batch read (static data)
     if (round.locked) {
@@ -229,7 +239,8 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
       }
     );
     return () => unsub?.();
-  }, [roundId, round?.locked]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundId, round?.locked, Array.isArray(round?.matchIds) && round.matchIds.length === 0]);
 
   // 5) Resolve player docs for the round's matches from the shared cache. These
   // overlap the tournament roster, so they're usually already warmed (no read).

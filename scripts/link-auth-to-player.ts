@@ -12,6 +12,26 @@ admin.initializeApp({
 const db = admin.firestore();
 const auth = admin.auth();
 
+/**
+ * Keep the `playerId` custom claim in step with authUid (see
+ * functions/src/helpers/adminAuth.ts): the callables trust that claim instead
+ * of querying players by authUid, so a relink must move it, or the previously
+ * linked account would keep acting as this player.
+ */
+async function movePlayerIdClaim(newUid: string, playerId: string, previousUid: unknown) {
+  const setClaim = async (uid: string, value: string | null) => {
+    const user = await auth.getUser(uid);
+    const claims: Record<string, unknown> = { ...(user.customClaims ?? {}) };
+    if (value) claims.playerId = value;
+    else delete claims.playerId;
+    await auth.setCustomUserClaims(uid, Object.keys(claims).length > 0 ? claims : null);
+  };
+  await setClaim(newUid, playerId);
+  if (typeof previousUid === "string" && previousUid && previousUid !== newUid) {
+    await setClaim(previousUid, null).catch(() => { /* account may be gone */ });
+  }
+}
+
 async function linkAuthToPlayer() {
   // Get command line args
   const args = process.argv.slice(2);
@@ -52,6 +72,7 @@ async function linkAuthToPlayer() {
       email: authUser.email ?? email,
     }, { merge: true });
     await batch.commit();
+    await movePlayerIdClaim(authUser.uid, playerId, playerDoc.data()?.authUid);
     
     console.log(`✓ Linked ${playerId} to auth user ${authUser.uid}`);
     console.log(`  Email: ${authUser.email}`);
