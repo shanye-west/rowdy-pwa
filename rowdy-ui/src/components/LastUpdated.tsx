@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
-
-// Build provenance injected at build time (see vite.config.ts). Shown so it's
-// possible to confirm at a glance which build is running. The git SHA changes
-// every commit; with autoUpdate the app reloads to the newest build on its own,
-// so a stale SHA here is the tell that a device hasn't picked up a deploy yet.
-const BUILD_DATE = new Date(__BUILD_TIME__);
-const BUILD_LABEL = Number.isNaN(BUILD_DATE.getTime())
-  ? __GIT_SHA__
-  : `${__GIT_SHA__} · ${BUILD_DATE.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+// Build provenance (see vite.config.ts), so it's possible to confirm at a
+// glance which build is running.
+import { BUILD_LABEL } from "../utils/appVersion";
 
 export default function LastUpdated() {
   const [timestamp, setTimestamp] = useState<Date>(new Date());

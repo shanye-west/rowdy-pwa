@@ -17,6 +17,7 @@ import {
   Loader2,
   BookOpen,
   Flag,
+  RefreshCw,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import LoadingScreen from "./LoadingScreen";
@@ -43,6 +44,8 @@ import { useLayout } from "../contexts/LayoutContext";
 import { useViewTransitionDirection, startViewTransitionSafe } from "../hooks/useViewTransition";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { Button } from "./ui/button";
+import { useToast } from "../contexts/ToastContext";
+import { BUILD_LABEL, hardRefreshToLatest, takeHardRefreshResult } from "../utils/appVersion";
 import { Card } from "./ui/card";
 
 // Fallback destination for the "Rules Official" menu link when a tournament has
@@ -111,6 +114,28 @@ export function LayoutShell({ children }: LayoutShellProps) {
     try { sessionStorage.setItem("rowdy:install-prompt-dismissed", "1"); }
     catch { /* Dismissal still works for this page when storage is unavailable. */ }
   };
+  const { showToast } = useToast();
+  const [hardRefreshing, setHardRefreshing] = useState(false);
+  const handleHardRefresh = async () => {
+    setHardRefreshing(true);
+    const outcome = await hardRefreshToLatest();
+    if (outcome === "offline") {
+      setHardRefreshing(false);
+      showToast({ variant: "error", message: "Can't reach the server to check the latest build." });
+    }
+    // "reloading": the page is about to reload; the result is reported after.
+  };
+  // Report how the last hard refresh went, once, after its reload.
+  useEffect(() => {
+    const result = takeHardRefreshResult();
+    if (result === true) showToast({ variant: "success", message: `On the latest build (${BUILD_LABEL})` });
+    if (result === false) {
+      showToast({
+        variant: "error",
+        message: `Still on an older build (${BUILD_LABEL}). Close the app fully and reopen it.`,
+      });
+    }
+  }, [showToast]);
   const tournamentCtx = useTournamentContextOptional();
   const draftPoolCount = tournamentCtx?.tournament?.draftPool
     ? Object.keys(tournamentCtx.tournament.draftPool).length
@@ -400,6 +425,22 @@ export function LayoutShell({ children }: LayoutShellProps) {
                           <Settings className="h-4 w-4 text-muted-foreground" />
                           Notification settings
                         </ViewTransitionLink>
+                      </Button>
+                    )}
+
+                    {player?.isAdmin && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-auto w-full justify-start gap-2 py-2 text-foreground hover:bg-muted"
+                        onClick={() => void handleHardRefresh()}
+                        disabled={hardRefreshing}
+                      >
+                        <RefreshCw className={`h-4 w-4 text-muted-foreground ${hardRefreshing ? "animate-spin" : ""}`} />
+                        <span className="flex flex-col items-start leading-tight">
+                          <span>{hardRefreshing ? "Updating…" : "Hard refresh"}</span>
+                          <span className="text-[0.65rem] font-normal text-muted-foreground">Build {BUILD_LABEL}</span>
+                        </span>
                       </Button>
                     )}
 

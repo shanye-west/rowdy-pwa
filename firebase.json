@@ -56,7 +56,7 @@
         ]
       },
       {
-        "source": "/{index.html,sw.js,registerSW.js,manifest.webmanifest}",
+        "source": "/{index.html,sw.js,registerSW.js,manifest.webmanifest,version.json}",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache" }
         ]
