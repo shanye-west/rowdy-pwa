@@ -1,6 +1,13 @@
 import { useEffect, useRef, useCallback } from "react";
 
 /**
+ * Window event asking every mounted scorecard to flush its debounced saves now
+ * (pull-to-refresh fires it before reloading, so a score tapped moments ago
+ * isn't lost inside its 400ms debounce window).
+ */
+export const FLUSH_SAVES_EVENT = "rowdy:flush-saves";
+
+/**
  * Hook that flushes pending saves when the app goes to background.
  * 
  * This is critical for mobile where iOS aggressively kills background JS.
@@ -35,11 +42,17 @@ export function useVisibilityFlush(flushFn: () => void) {
       flushRef.current();
     };
 
+    const handleFlushRequest = () => {
+      flushRef.current();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener(FLUSH_SAVES_EVENT, handleFlushRequest);
 
     return () => {
+      window.removeEventListener(FLUSH_SAVES_EVENT, handleFlushRequest);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handlePageHide);

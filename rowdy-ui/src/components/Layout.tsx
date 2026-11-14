@@ -36,6 +36,9 @@ import { isIOS, isStandalone } from "../messaging";
 import { useTournamentContextOptional } from "../contexts/TournamentContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useSyncFlush } from "../hooks/useSyncFlush";
+import { FLUSH_SAVES_EVENT } from "../hooks/useVisibilityFlush";
+import { waitForPendingWrites } from "firebase/firestore";
+import { db } from "../firebase";
 import { useLayout } from "../contexts/LayoutContext";
 import { useViewTransitionDirection, startViewTransitionSafe } from "../hooks/useViewTransition";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
@@ -59,6 +62,30 @@ type LayoutProps = {
 type LayoutShellProps = {
   children?: React.ReactNode;
 };
+
+/**
+ * Pull-to-refresh action: check for a new app version, make sure no score is
+ * still sitting in a save debounce, give queued writes a moment to reach the
+ * server, then reload.
+ */
+async function refreshApp(): Promise<void> {
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.();
+    await Promise.all((regs ?? []).map((r) => r.update().catch(() => {})));
+  } catch {
+    /* no SW (dev/unsupported browser) */
+  }
+  // Issue any debounced score saves now. Firestore persists issued writes in
+  // its offline queue, so they survive the reload even if not yet synced.
+  window.dispatchEvent(new Event(FLUSH_SAVES_EVENT));
+  // Online, this usually settles in well under a second; offline it never
+  // would, so cap the wait — queued writes replay after the reload.
+  await Promise.race([
+    waitForPendingWrites(db).catch(() => {}),
+    new Promise((r) => setTimeout(r, 1500)),
+  ]);
+  window.location.reload();
+}
 
 export function LayoutShell({ children }: LayoutShellProps) {
   const navigate = useNavigate();
@@ -418,19 +445,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
         </div>
       </header>
 
-      {/* WRAP CONTENT IN PULL-TO-REFRESH. Data is already live via Firestore
-          listeners, so the honest refresh action is an app-update check — with
-          autoUpdate, finding a new version reloads the page on its own. */}
-      <PullToRefresh
-        onRefresh={async () => {
-          try {
-            const regs = await navigator.serviceWorker?.getRegistrations?.();
-            await Promise.all((regs ?? []).map((r) => r.update().catch(() => { })));
-          } catch {
-            /* no SW (dev/unsupported browser) — the gesture still resolves */
-          }
-        }}
-      >
+      {/* PULL-TO-REFRESH = reload the page. Players pull when something looks
+          stale or stuck; most data is live, but a reload also re-runs the
+          one-shot reads, recovers a wedged connection and picks up a new
+          version. Reconnecting listeners resume from their saved position, so
+          a reload re-reads only what changed (within ~30 min). */}
+      <PullToRefresh onRefresh={refreshApp}>
         {/* Offline Status Banner — app-wide so every route signals offline state */}
         <ConnectionBanner isOnline={isOnline} />
         {updateAvailable && (
