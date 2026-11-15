@@ -10,6 +10,8 @@ import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import ChampionBanner from "./components/ChampionBanner";
+import FirstTeeCountdown from "./components/FirstTeeCountdown";
+import { FIRST_TEE_BY_TOURNAMENT } from "./data/firstTee";
 import OfflineImage from "./components/OfflineImage";
 import { ComponentErrorBoundary } from "./components/ComponentErrorBoundary";
 import CaptainsMatchSection from "./components/captains/CaptainsMatchSection";
@@ -109,6 +111,13 @@ export default function App() {
         </div>
       ) : (
         <div className="space-y-6 px-4 py-6">
+          {FIRST_TEE_BY_TOURNAMENT[tournament.id] && (
+            <FirstTeeCountdown
+              firstTee={FIRST_TEE_BY_TOURNAMENT[tournament.id]}
+              isChristmas={tSeries === "christmasClassic"}
+            />
+          )}
+
           {showCup && (
             <ChampionBanner
               tournament={tournament}

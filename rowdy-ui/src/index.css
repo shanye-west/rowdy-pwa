@@ -178,8 +178,48 @@
     mix-blend-mode: normal;
   }
 
+  /* --- CHRISTMAS SNOWFALL (components/Snowfall.tsx) ---
+     Fixed overlay under the header (z-50), never takes taps. Icy blue rather
+     than white so flakes read on the light app background. */
+  .snowfall {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+  }
+  .snowflake {
+    position: absolute;
+    top: 0;
+    color: #6b9cc6;
+    line-height: 1;
+    will-change: transform;
+    animation-name: snow-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .snowflake-sway {
+    display: inline-block;
+    animation-name: snow-sway;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+  }
+  @keyframes snow-fall {
+    from { transform: translateY(-10vh); }
+    to { transform: translateY(110vh); }
+  }
+  @keyframes snow-sway {
+    from { transform: translateX(calc(var(--sway) * -0.5)) rotate(-20deg); }
+    to { transform: translateX(calc(var(--sway) * 0.5)) rotate(20deg); }
+  }
+
   /* Vestibular safety: no page slides or menu pop when the OS asks for less motion */
   @media (prefers-reduced-motion: reduce) {
+    .snowfall {
+      display: none;
+    }
     ::view-transition-old(page-content),
     ::view-transition-new(page-content),
     html[data-nav-direction="back"]::view-transition-old(page-content),

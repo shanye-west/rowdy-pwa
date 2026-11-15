@@ -27,6 +27,7 @@ import { ConnectionBanner } from "./ConnectionBanner";
 import { Modal, ModalActions } from "./Modal";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { NotificationBell } from "./NotificationBell";
+import { Snowfall } from "./Snowfall";
 import { useAuth } from "../contexts/AuthContext";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useAppUpdate } from "../hooks/useAppUpdate";
@@ -254,6 +255,10 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const hideBottomNav =
     location.pathname.startsWith("/admin") || location.pathname === "/login";
   const closeMenu = () => setMenuOpen(false);
+
+  // Falling snow on the Christmas Home + leaderboard only — kept off scoring
+  // pages so it never competes with a scorecard.
+  const showSnow = isChristmas && (pathname === "/" || pathname === "/leaderboard");
 
   // Simple page content - CSS View Transitions handle the animation
   const pageContent = children ?? <Outlet />;
@@ -586,6 +591,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
       </PullToRefresh>
 
       {!hideBottomNav && <BottomNav />}
+      {showSnow && <Snowfall />}
 
       <InstallGuideModal isOpen={guideOpen} onClose={closeGuide} />
 
