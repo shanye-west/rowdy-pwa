@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { teeTimeToMillis } from "../utils";
+import AdventCalendar from "./AdventCalendar";
 
 type Props = {
   /** "YYYY-MM-DD" (day countdown) or "YYYY-MM-DDTHH:MM" venue wall-clock (live clock). */
@@ -109,10 +110,17 @@ export default function FirstTeeCountdown({ firstTee, isChristmas }: Props) {
         )}
         <CardContent className="space-y-1 pb-5 pt-6 text-center">
           <div className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-            {isChristmas ? "🎅 Countdown to the first tee" : "Countdown to the first tee"}
+            {isChristmas ? "🎄 Advent Calendar 🎄" : "Countdown to the first tee"}
           </div>
           {headline}
-          <div className="text-xs font-medium text-muted-foreground">{dateLine}</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {isChristmas && days > 0 ? `until the first tee · ${dateLine}` : dateLine}
+          </div>
+          {isChristmas && (
+            <div className="pt-4">
+              <AdventCalendar teeYmd={ymd} now={now} />
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>

@@ -215,10 +215,104 @@
     to { transform: translateX(calc(var(--sway) * 0.5)) rotate(20deg); }
   }
 
+  /* --- ADVENT CALENDAR (components/AdventCalendar.tsx) ---
+     6 columns: 21 small doors + the tee-day door spanning 3 = 4 full rows.
+     Doors flip open (rotateY) to reveal the surprise on the back face. */
+  .advent-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: dense;
+    gap: 6px;
+  }
+  .advent-door {
+    position: relative;
+    aspect-ratio: 1;
+    perspective: 400px;
+    border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .advent-door--tee {
+    grid-column: span 3;
+    aspect-ratio: auto;
+  }
+  .advent-door-inner {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  }
+  .advent-door[data-state="open"] .advent-door-inner {
+    transform: rotateY(180deg);
+  }
+  .advent-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .advent-face--front {
+    background: #00863c;
+    color: #f5d77a;
+    box-shadow: inset 0 0 0 2px rgba(245, 215, 122, 0.55);
+  }
+  .advent-door:nth-child(even) .advent-face--front {
+    background: #c81d18;
+  }
+  .advent-door--tee .advent-face--front {
+    background:
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 8px, transparent 8px 16px),
+      #c81d18;
+  }
+  .advent-face--back {
+    transform: rotateY(180deg);
+    background: #fff8e7;
+    box-shadow: inset 0 0 0 2px rgba(184, 134, 11, 0.45);
+  }
+  .advent-num {
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .advent-door--tee .advent-num {
+    font-size: 1.35rem;
+  }
+  .advent-tee-label {
+    margin-top: 2px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .advent-door[data-state="locked"] .advent-face--front {
+    filter: saturate(0.75) brightness(0.92);
+  }
+  .advent-door[data-state="today"] .advent-face--front {
+    animation: advent-glow 1.6s ease-in-out infinite;
+  }
+  .advent-door[data-selected] .advent-face--back {
+    box-shadow: inset 0 0 0 2px #b8860b, 0 0 0 2px #b8860b;
+  }
+  @keyframes advent-glow {
+    0%, 100% { box-shadow: inset 0 0 0 2px #f5d77a, 0 0 0 0 rgba(245, 215, 122, 0.7); }
+    50% { box-shadow: inset 0 0 0 2px #f5d77a, 0 0 0 5px rgba(245, 215, 122, 0); }
+  }
+
   /* Vestibular safety: no page slides or menu pop when the OS asks for less motion */
   @media (prefers-reduced-motion: reduce) {
     .snowfall {
       display: none;
+    }
+    .advent-door-inner {
+      transition: none;
+    }
+    .advent-door[data-state="today"] .advent-face--front {
+      animation: none;
+      box-shadow: inset 0 0 0 3px #f5d77a;
     }
     ::view-transition-old(page-content),
     ::view-transition-new(page-content),
