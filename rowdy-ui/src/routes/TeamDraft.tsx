@@ -221,8 +221,9 @@ export default function TeamDraft() {
         <div className="flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">
           <Users size={18} className="mt-0.5 shrink-0" />
           <span>
-            {poolIds.length} players, 4 tiers. Captains start on their teams; each team drafts {poolIds.length / 2 - 1}{" "}
-            more, snake order, {poolIds.length / 8} from every tier. Only captains & admins can see the board.
+            {poolIds.length} players, 4 tiers. Captains start on their teams, then it's a snake draft — each team
+            ends with {poolIds.length / 8} from every tier. Once a team fills a tier, the rest of that tier goes
+            to the other team automatically. Only captains & admins can see the board.
           </span>
         </div>
 

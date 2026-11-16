@@ -45,6 +45,11 @@ export function teamPlayerIds(draft: TeamDraftDoc, team: DraftTeamKey): string[]
   return [...draft.keepers[team], ...draft.picks.filter((p) => p.team === team).map((p) => p.playerId)];
 }
 
+/** Real (non-auto) picks only, in order. */
+export function realPicks(draft: TeamDraftDoc): TeamDraftDoc["picks"] {
+  return draft.picks.filter((p) => !p.auto);
+}
+
 export function availablePlayerIds(draft: TeamDraftDoc): string[] {
   const taken = new Set([...draft.keepers.teamA, ...draft.keepers.teamB, ...draft.picks.map((p) => p.playerId)]);
   return draft.poolIds.filter((id) => !taken.has(id));

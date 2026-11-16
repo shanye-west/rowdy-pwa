@@ -1,6 +1,6 @@
 import { Hourglass } from "lucide-react";
 import OfflineImage from "../OfflineImage";
-import { snakeTeam } from "../../utils/teamDraft";
+import { availablePlayerIds } from "../../utils/teamDraft";
 import type { TeamDraftDoc } from "../../types";
 import type { TeamDraftMeta } from "./types";
 
@@ -13,8 +13,9 @@ export interface TeamDraftTurnHeaderProps {
 
 /**
  * Team-colored "on the clock" banner (mirrors the pairings TurnHeader): pick
- * number, round, whose pick it is, and a segmented progress strip where each
- * segment is tinted by the team that owns that pick.
+ * number, players left, whose pick it is, and a progress strip with one segment
+ * per draftable player. Auto placements (the rest of a tier going to the other
+ * team) cost no pick, so the strip tracks players placed, not picks.
  */
 export default function TeamDraftTurnHeader({ draft, meta, myMove }: TeamDraftTurnHeaderProps) {
   const turn = draft.turn!;
@@ -22,9 +23,14 @@ export default function TeamDraftTurnHeader({ draft, meta, myMove }: TeamDraftTu
   const color = meta.teamColor(team);
   const logo = meta.teamLogo(team);
   const name = meta.teamName(team);
-  const round = Math.floor(turn.pickIndex / 2) + 1;
-  const rounds = Math.ceil(draft.totalPicks / 2);
-  const last = draft.picks[draft.picks.length - 1];
+  const left = availablePlayerIds(draft).length;
+  const total = draft.picks.length + left;
+
+  // The most recent real pick plus whatever it auto-placed.
+  let lastReal = draft.picks.length - 1;
+  while (lastReal >= 0 && draft.picks[lastReal].auto) lastReal--;
+  const last = lastReal >= 0 ? draft.picks[lastReal] : null;
+  const autos = lastReal >= 0 ? draft.picks.slice(lastReal + 1) : [];
 
   return (
     <div
@@ -33,11 +39,9 @@ export default function TeamDraftTurnHeader({ draft, meta, myMove }: TeamDraftTu
       style={{ background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 78%, black))` }}
     >
       <div className="flex items-center justify-between text-xs font-medium opacity-90">
-        <span>
-          Pick {turn.pickIndex + 1} of {draft.totalPicks}
-        </span>
+        <span>Pick {turn.pickIndex + 1}</span>
         <span className="uppercase tracking-wide">
-          Round {round} of {rounds}
+          {left} left on the board
         </span>
       </div>
 
@@ -57,27 +61,30 @@ export default function TeamDraftTurnHeader({ draft, meta, myMove }: TeamDraftTu
         </div>
       </div>
 
-      {/* One segment per pick: solid = made, bright = on the clock, faint = to come. */}
+      {/* One segment per draftable player: solid = placed, faint = still on the board. */}
       <div className="mt-3 flex gap-0.5">
-        {Array.from({ length: draft.totalPicks }, (_, i) => {
-          const owner = snakeTeam(draft.firstPickTeam, i);
-          const state = i < turn.pickIndex ? "done" : i === turn.pickIndex ? "now" : "next";
-          return (
-            <span
-              key={i}
-              title={`Pick ${i + 1}: ${meta.teamName(owner)}`}
-              className={
-                "h-1.5 flex-1 rounded-full " +
-                (state === "done" ? "bg-white/90" : state === "now" ? "bg-white/55 motion-safe:animate-pulse" : "bg-white/20")
-              }
-            />
-          );
-        })}
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className={
+              "h-1.5 flex-1 rounded-full " +
+              (i < draft.picks.length ? "bg-white/90" : i === draft.picks.length ? "bg-white/55 motion-safe:animate-pulse" : "bg-white/20")
+            }
+          />
+        ))}
       </div>
 
       {last && (
-        <div className="mt-2.5 truncate text-xs opacity-90">
-          Last pick: <span className="font-bold">{meta.nameOf(last.playerId)}</span> → {meta.teamName(last.team)}
+        <div className="mt-2.5 space-y-0.5 text-xs opacity-90">
+          <div className="truncate">
+            Last pick: <span className="font-bold">{meta.nameOf(last.playerId)}</span> → {meta.teamName(last.team)}
+          </div>
+          {autos.length > 0 && (
+            <div>
+              Tier filled — {autos.map((p) => meta.nameOf(p.playerId)).join(" & ")} auto to{" "}
+              {meta.teamName(autos[0].team)}
+            </div>
+          )}
         </div>
       )}
     </div>

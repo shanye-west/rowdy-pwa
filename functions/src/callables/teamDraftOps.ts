@@ -114,7 +114,6 @@ export const startTeamDraft = onCall(async (request) => {
         perTeamPerTier: state.perTeamPerTier,
         keepers: state.keepers,
         picks: [],
-        totalPicks: state.totalPicks,
         turn: state.turn,
         phase: state.phase,
         authorizedUids,

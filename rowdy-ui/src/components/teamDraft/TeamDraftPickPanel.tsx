@@ -67,8 +67,8 @@ export default function TeamDraftPickPanel({
           {meta.teamName(team)} — make your pick
         </div>
         <p className="text-xs text-muted-foreground">
-          Each team ends with {draft.perTeamPerTier} players from every tier. Once you've filled a tier, it's
-          locked for you.
+          Each team ends with {draft.perTeamPerTier} players from every tier. Fill a tier and the rest of it
+          goes to the other team automatically — no pick used.
         </p>
 
         {groups.map(({ tier, ids }) => {

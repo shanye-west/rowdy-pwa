@@ -2,7 +2,7 @@ import OfflineImage from "../OfflineImage";
 import PlayerAvatar from "../PlayerAvatar";
 import { cn } from "../../lib/utils";
 import { tierStyle } from "../../utils/tierColors";
-import { TEAM_DRAFT_TIERS, teamPlayerIds } from "../../utils/teamDraft";
+import { TEAM_DRAFT_TIERS, realPicks, teamPlayerIds } from "../../utils/teamDraft";
 import type { DraftTeamKey, TeamDraftDoc } from "../../types";
 import { formatHcp, type TeamDraftMeta } from "./types";
 
@@ -16,11 +16,13 @@ const TEAMS: DraftTeamKey[] = ["teamA", "teamB"];
 /**
  * Side-by-side rosters as they fill: one row per tier, `perTeamPerTier` slots
  * per team per tier. Captains carry a "C", drafted players their pick number,
- * open slots a dashed placeholder — so it's obvious which tiers each captain
+ * auto placements (the other team filled the tier) an "Auto" tag, open slots a
+ * dashed placeholder — so it's obvious which tiers each captain
  * still has to fill.
  */
 export default function TeamDraftBoard({ draft, meta }: TeamDraftBoardProps) {
-  const pickNo = new Map(draft.picks.map((p, i) => [p.playerId, i + 1]));
+  const pickNo = new Map(realPicks(draft).map((p, i) => [p.playerId, i + 1]));
+  const autoIds = new Set(draft.picks.filter((p) => p.auto).map((p) => p.playerId));
   const keepers = new Set([...draft.keepers.teamA, ...draft.keepers.teamB]);
 
   const byTier = (team: DraftTeamKey) => {
@@ -73,13 +75,23 @@ export default function TeamDraftBoard({ draft, meta }: TeamDraftBoardProps) {
                             {formatHcp(meta.hcpOf(pid))}
                           </div>
                         </div>
-                        <span
-                          className="shrink-0 rounded px-1 text-[0.6rem] font-bold tabular-nums text-white"
-                          style={{ background: meta.teamColor(team) }}
-                          title={keepers.has(pid) ? "Captain" : `Pick ${pickNo.get(pid)}`}
-                        >
-                          {keepers.has(pid) ? "C" : `#${pickNo.get(pid)}`}
-                        </span>
+                        {autoIds.has(pid) ? (
+                          <span
+                            className="shrink-0 rounded border px-1 text-[0.6rem] font-bold"
+                            style={{ borderColor: meta.teamColor(team), color: meta.teamColor(team) }}
+                            title="Placed automatically — the other team filled this tier"
+                          >
+                            Auto
+                          </span>
+                        ) : (
+                          <span
+                            className="shrink-0 rounded px-1 text-[0.6rem] font-bold tabular-nums text-white"
+                            style={{ background: meta.teamColor(team) }}
+                            title={keepers.has(pid) ? "Captain" : `Pick ${pickNo.get(pid)}`}
+                          >
+                            {keepers.has(pid) ? "C" : `#${pickNo.get(pid)}`}
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div

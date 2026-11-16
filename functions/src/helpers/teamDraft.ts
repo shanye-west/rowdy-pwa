@@ -11,9 +11,11 @@
  *    (pool / 8 — 2 each for a 16-player field). The captains are pre-placed
  *    ("keepers") and count toward their own tier.
  *  - Snake order: first-pick team, then two each, … (T1, T2, T2, T1, T1, …).
- *  - Tier lock: a team may only pick from a tier it hasn't filled yet. That's
- *    enough to guarantee the draft can always finish — whenever a team still
- *    needs k players from a tier, at least k of that tier are still available.
+ *  - Tier lock + auto-fill: the moment a team fills a tier, the rest of that
+ *    tier goes straight to the other team ("auto" placements — they cost no
+ *    pick). Each tier holds exactly 2 × perTeamPerTier players, so what's left
+ *    is exactly what the other team needs. Consequently both teams complete at
+ *    the same moment, and the draft ends when nobody is left on the board.
  */
 
 export type TeamKey = "teamA" | "teamB";
@@ -25,10 +27,12 @@ export const TEAM_DRAFT_TIERS: readonly TeamDraftTier[] = ["A", "B", "C", "D"];
 export interface TeamDraftPick {
   team: TeamKey;
   playerId: string;
+  /** True when placed automatically because the other team filled the tier. */
+  auto?: boolean;
 }
 
 export interface TeamDraftTurn {
-  pickIndex: number; // 0-based index into the snake order
+  pickIndex: number; // 0-based count of real (non-auto) picks made so far
   team: TeamKey;
 }
 
@@ -41,8 +45,8 @@ export interface TeamDraftState {
   perTeamPerTier: number;
   /** Pre-placed players (the captains), not part of the snake. */
   keepers: { teamA: string[]; teamB: string[] };
+  /** Real picks and auto placements, in the order they happened. */
   picks: TeamDraftPick[];
-  totalPicks: number;
   turn: TeamDraftTurn | null;
   phase: TeamDraftPhase;
 }
@@ -124,6 +128,49 @@ export function tierCounts(
   return counts;
 }
 
+/** Number of real (non-auto) picks made. */
+export function realPickCount(state: Pick<TeamDraftState, "picks">): number {
+  return state.picks.filter((p) => !p.auto).length;
+}
+
+/** Players `team` still needs in total (across all tiers). */
+export function teamNeeds(
+  state: Pick<TeamDraftState, "keepers" | "picks" | "tierByPlayer" | "perTeamPerTier">,
+  team: TeamKey
+): number {
+  const counts = tierCounts(state, team);
+  return TEAM_DRAFT_TIERS.reduce((n, t) => n + Math.max(0, state.perTeamPerTier - counts[t]), 0);
+}
+
+/**
+ * Hand every still-available player of a tier one team has filled to the other
+ * team, as auto placements. Returns the extended picks list (unchanged if
+ * there's nothing to fill).
+ */
+export function autoFill(state: Omit<TeamDraftState, "turn" | "phase" | "firstPickTeam">): TeamDraftPick[] {
+  const picks = [...state.picks];
+  for (const tier of TEAM_DRAFT_TIERS) {
+    for (const team of ["teamA", "teamB"] as const) {
+      const cur = { ...state, picks };
+      if (tierCounts(cur, team)[tier] < state.perTeamPerTier) continue;
+      const other = otherTeamKey(team);
+      for (const pid of availablePlayerIds(cur)) {
+        if (state.tierByPlayer[pid] === tier) picks.push({ team: other, playerId: pid, auto: true });
+      }
+    }
+  }
+  return picks;
+}
+
+/** Whose pick is next: the snake owner, unless that team is already full. */
+function nextTurn(state: Omit<TeamDraftState, "turn" | "phase">): { turn: TeamDraftTurn | null; phase: TeamDraftPhase } {
+  if (availablePlayerIds(state).length === 0) return { turn: null, phase: "review" };
+  const idx = realPickCount(state);
+  let team = snakeTeam(state.firstPickTeam, idx);
+  if (teamNeeds(state, team) === 0) team = otherTeamKey(team);
+  return { turn: { pickIndex: idx, team }, phase: "drafting" };
+}
+
 /** Why `team` can't take `playerId` right now (ignoring whose turn it is), or null. */
 export function pickBlockReason(state: TeamDraftState, team: TeamKey, playerId: string): string | null {
   if (!availablePlayerIds(state).includes(playerId)) return "Already drafted";
@@ -165,24 +212,14 @@ export function initTeamDraft(input: {
       }
     }
   }
-  const perTeam = rankedIds.length / 2;
   if (keepers.teamA.length !== keepers.teamB.length) {
     // Snake order hands each team the same number of picks, so the head start must match.
     throw new TeamDraftError("keeper-mismatch", "Both teams need the same number of pre-placed captains.");
   }
-  const totalPicks = 2 * (perTeam - keepers.teamA.length);
-  return {
-    rankedIds,
-    firstPickTeam: input.firstPickTeam,
-    poolIds: rankedIds,
-    tierByPlayer,
-    perTeamPerTier,
-    keepers,
-    picks: [],
-    totalPicks,
-    turn: totalPicks > 0 ? { pickIndex: 0, team: input.firstPickTeam } : null,
-    phase: totalPicks > 0 ? "drafting" : "review",
-  };
+  const core = { firstPickTeam: input.firstPickTeam, poolIds: rankedIds, tierByPlayer, perTeamPerTier, keepers, picks: [] };
+  // Keepers can fill a tier on their own (e.g. one per tier per team) — settle that up front.
+  const picks = autoFill(core);
+  return { rankedIds, ...core, picks, ...nextTurn({ ...core, picks }) };
 }
 
 /** Validate a pick against the turn and the tier lock; return the next state. */
@@ -196,24 +233,21 @@ export function applyTeamPick(state: TeamDraftState, team: TeamKey, playerId: st
   const reason = pickBlockReason(state, team, playerId);
   if (reason) throw new TeamDraftError("illegal-pick", reason);
 
-  const picks = [...state.picks, { team, playerId }];
-  const next = state.turn.pickIndex + 1;
-  const done = next >= state.totalPicks;
-  return {
-    ...state,
-    picks,
-    turn: done ? null : { pickIndex: next, team: snakeTeam(state.firstPickTeam, next) },
-    phase: done ? "review" : "drafting",
-  };
+  const picks = autoFill({ ...state, picks: [...state.picks, { team, playerId }] });
+  return { ...state, picks, ...nextTurn({ ...state, picks }) };
 }
 
-/** Undo the most recent pick (works from review too). */
+/**
+ * Undo the most recent real pick along with the auto placements it triggered
+ * (they always sit right after it). Works from review too.
+ */
 export function applyTeamUndo(state: TeamDraftState): TeamDraftState {
   if (state.phase === "finalized") throw new TeamDraftError("finalized", "This draft is already finalized.");
-  if (state.picks.length === 0) throw new TeamDraftError("nothing-to-undo", "There is no pick to undo.");
-  const picks = state.picks.slice(0, -1);
-  const idx = picks.length;
-  return { ...state, picks, turn: { pickIndex: idx, team: snakeTeam(state.firstPickTeam, idx) }, phase: "drafting" };
+  let cut = state.picks.length - 1;
+  while (cut >= 0 && state.picks[cut].auto) cut--;
+  if (cut < 0) throw new TeamDraftError("nothing-to-undo", "There is no pick to undo.");
+  const picks = state.picks.slice(0, cut);
+  return { ...state, picks, ...nextTurn({ ...state, picks }) };
 }
 
 /** The finished draft as each team's rosterByTier (keepers first, then pick order). */

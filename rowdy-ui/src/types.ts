@@ -480,8 +480,9 @@ export type TeamDraftDoc = {
   perTeamPerTier: number;
   /** Pre-placed captains. */
   keepers: { teamA: string[]; teamB: string[] };
-  picks: { team: DraftTeamKey; playerId: string }[];
-  totalPicks: number;
+  /** Real picks and auto placements (`auto: true` — the other team filled the tier), in order. */
+  picks: { team: DraftTeamKey; playerId: string; auto?: boolean }[];
+  /** pickIndex = real (non-auto) picks made so far. */
   turn: { pickIndex: number; team: DraftTeamKey } | null;
   phase: TeamDraftPhase;
   authorizedUids: string[];

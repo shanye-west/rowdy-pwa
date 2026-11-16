@@ -66,9 +66,9 @@ describe("snakeTeam", () => {
 });
 
 describe("initTeamDraft", () => {
-  it("pre-places captains and gives each team 7 picks", () => {
+  it("pre-places captains and opens with the first-pick team", () => {
     const s = fresh("teamB");
-    expect(s.totalPicks).toBe(14);
+    expect(s.picks).toEqual([]);
     expect(s.turn).toEqual({ pickIndex: 0, team: "teamB" });
     expect(availablePlayerIds(s)).toHaveLength(14);
     expect(tierCounts(s, "teamA").B).toBe(1);
@@ -98,13 +98,44 @@ describe("applyTeamPick", () => {
     expect(() => applyTeamPick(s, "teamB", "p05")).toThrow(/Already drafted/); // a keeper
   });
 
-  it("locks a tier once a team has its share", () => {
+  it("auto-places the rest of a tier on the other team once one team fills it", () => {
+    // Captain p05 (tier B) takes another B first → p07 and p08 go to team B free.
     let s = fresh("teamA");
-    s = applyTeamPick(s, "teamA", "p06"); // A now has 2 tier-B (keeper p05 + p06)
-    s = applyTeamPick(s, "teamB", "p01");
-    expect(pickBlockReason(s, "teamB", "p07")).toBeNull();
-    s = applyTeamPick(s, "teamB", "p02");
-    expect(() => applyTeamPick(s, "teamA", "p07")).toThrow(/Tier B is full/);
+    s = applyTeamPick(s, "teamA", "p06");
+    expect(s.picks).toEqual([
+      { team: "teamA", playerId: "p06" },
+      { team: "teamB", playerId: "p07", auto: true },
+      { team: "teamB", playerId: "p08", auto: true },
+    ]);
+    expect(tierCounts(s, "teamB").B).toBe(2);
+    // Auto placements cost no pick: the snake carries on at pick 2 (team B).
+    expect(s.turn).toEqual({ pickIndex: 1, team: "teamB" });
+    expect(availablePlayerIds(s)).not.toContain("p07");
+  });
+
+  it("locks a filled tier for the team that filled it", () => {
+    let s = fresh("teamA");
+    s = applyTeamPick(s, "teamA", "p01");
+    s = applyTeamPick(s, "teamB", "p09");
+    s = applyTeamPick(s, "teamB", "p10"); // B fills tier C → p11, p12 auto to A
+    expect(tierCounts(s, "teamA").C).toBe(2);
+    expect(pickBlockReason(s, "teamA", "p02")).toBeNull();
+    s = applyTeamPick(s, "teamA", "p02"); // A fills tier A → p03, p04 auto to B
+    expect(tierCounts(s, "teamB").A).toBe(2);
+    expect(pickBlockReason(s, "teamB", "p13")).toBeNull();
+  });
+
+  it("settles a tier the captains fill on their own at start", () => {
+    // An 8-player pool takes 1 per team per tier, so each captain fills their tier immediately.
+    const pool8: Record<string, number> = {};
+    for (let i = 1; i <= 8; i++) pool8[`q${i}`] = i;
+    const s = initTeamDraft({ handicapByPlayer: pool8, keepers: { teamA: ["q1"], teamB: ["q8"] }, firstPickTeam: "teamA" });
+    // q1 fills A for team A → q2 to B; q8 fills D for team B → q7 to A.
+    expect(s.picks).toEqual([
+      { team: "teamB", playerId: "q2", auto: true },
+      { team: "teamA", playerId: "q7", auto: true },
+    ]);
+    expect(s.turn).toEqual({ pickIndex: 0, team: "teamA" });
   });
 
   it("can always finish: greedy best-available fills every tier 2/2", () => {
@@ -117,6 +148,7 @@ describe("applyTeamPick", () => {
         s = applyTeamPick(s, team, pid!);
       }
       expect(s.phase).toBe("review");
+      expect(s.picks.filter((p) => !p.auto).length).toBeLessThanOrEqual(14);
       expect(s.turn).toBeNull();
       for (const team of ["teamA", "teamB"] as const) {
         expect(tierCounts(s, team)).toEqual({ A: 2, B: 2, C: 2, D: 2 });
@@ -126,7 +158,36 @@ describe("applyTeamPick", () => {
   });
 });
 
+describe("random drafts", () => {
+  it("always offer a legal pick and finish 2/2 in every tier for both teams", () => {
+    let seed = 7;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    for (let run = 0; run < 200; run++) {
+      let s = fresh(rand() < 0.5 ? "teamA" : "teamB");
+      while (s.phase === "drafting") {
+        const team = s.turn!.team;
+        const legal = availablePlayerIds(s).filter((id) => pickBlockReason(s, team, id) === null);
+        expect(legal.length).toBeGreaterThan(0);
+        s = applyTeamPick(s, team, legal[Math.floor(rand() * legal.length)]);
+      }
+      expect(availablePlayerIds(s)).toEqual([]);
+      for (const team of ["teamA", "teamB"] as const) {
+        expect(tierCounts(s, team)).toEqual({ A: 2, B: 2, C: 2, D: 2 });
+      }
+    }
+  });
+});
+
 describe("applyTeamUndo", () => {
+  it("removes the auto placements a pick caused", () => {
+    let s = fresh("teamA");
+    s = applyTeamPick(s, "teamA", "p06"); // + p07, p08 auto to B
+    const u = applyTeamUndo(s);
+    expect(u.picks).toEqual([]);
+    expect(u.turn).toEqual({ pickIndex: 0, team: "teamA" });
+    expect(availablePlayerIds(u)).toEqual(expect.arrayContaining(["p06", "p07", "p08"]));
+  });
+
   it("rewinds the last pick and its turn", () => {
     let s = fresh("teamA");
     s = applyTeamPick(s, "teamA", "p01");
