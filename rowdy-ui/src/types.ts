@@ -460,6 +460,36 @@ export type DraftPhase = "staging" | "drafting" | "review" | "finalized";
  */
 export type DraftVisibility = "live" | "private";
 
+// ============================================================================
+// CAPTAINS' TEAM DRAFT - snake-draft the pool onto the teams (teamDrafts/{tournamentId})
+// ============================================================================
+
+export type TeamDraftTier = "A" | "B" | "C" | "D";
+export type TeamDraftPhase = "drafting" | "review" | "finalized";
+
+export type TeamDraftDoc = {
+  tournamentId: string;
+  firstPickTeam: DraftTeamKey;
+  /** Every player in the draft, best handicap first (keepers included). */
+  poolIds: string[];
+  /** Frozen at start from the pool's handicap ranking. */
+  tierByPlayer: Record<string, TeamDraftTier>;
+  /** Pool handicaps frozen at start (written to the rosters on finalize). */
+  handicapByPlayer: Record<string, number | null>;
+  /** How many players each team takes from every tier (2 for 16 players). */
+  perTeamPerTier: number;
+  /** Pre-placed captains. */
+  keepers: { teamA: string[]; teamB: string[] };
+  picks: { team: DraftTeamKey; playerId: string }[];
+  totalPicks: number;
+  turn: { pickIndex: number; team: DraftTeamKey } | null;
+  phase: TeamDraftPhase;
+  authorizedUids: string[];
+  createdBy: string;
+  createdAt?: FirestoreTimestampLike;
+  updatedAt?: FirestoreTimestampLike;
+};
+
 export type PairingDraftDoc = {
   roundId: string;
   tournamentId: string;

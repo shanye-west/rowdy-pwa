@@ -10,6 +10,10 @@ import type {
   AdminResult,
   CreatePairingDraftRequest,
   CreatePairingDraftResult,
+  FinalizeTeamDraftRequest,
+  StartTeamDraftRequest,
+  SubmitTeamDraftPickRequest,
+  TeamDraftTournamentRequest,
   FinalizePairingDraftRequest,
   FinalizePairingDraftResult,
   ResetPairingDraftRequest,
@@ -36,4 +40,18 @@ export const draftApi = {
   finalizePairingDraft: call<FinalizePairingDraftRequest, FinalizePairingDraftResult>("finalizePairingDraft"),
   /** Captains only (no admin bypass) — saves that team's private pairing plan. */
   savePairingPlan: call<SavePairingPlanRequest, AdminResult>("savePairingPlan"),
+};
+
+/** Captains' team draft (teamDrafts/{tournamentId}). */
+export const teamDraftApi = {
+  /** Admin: open the draft with the chosen first-pick team. */
+  start: call<StartTeamDraftRequest, AdminResult>("startTeamDraft"),
+  /** Acting team's captain/co-captain (or admin): draft one player. */
+  pick: call<SubmitTeamDraftPickRequest, AdminResult>("submitTeamDraftPick"),
+  /** Admin: take back the last pick. */
+  undo: call<TeamDraftTournamentRequest, AdminResult>("undoTeamDraftPick"),
+  /** Admin: delete an unfinalized draft to start over. */
+  reset: call<TeamDraftTournamentRequest, AdminResult>("resetTeamDraft"),
+  /** Admin: write the rosters + handicaps and hide the Draft Pool. */
+  finalize: call<FinalizeTeamDraftRequest, AdminResult>("finalizeTeamDraft"),
 };

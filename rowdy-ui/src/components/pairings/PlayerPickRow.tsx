@@ -12,6 +12,8 @@ export interface PlayerPickRowProps {
   disabled?: boolean;
   /** Why the row is disabled (shown as a title + small caption). */
   disabledReason?: string;
+  /** Replaces the default "CH n" handicap text (e.g. "HI 7.7" in the team draft). */
+  hcpText?: string;
   onToggle: () => void;
 }
 
@@ -27,6 +29,7 @@ export default function PlayerPickRow({
   selected,
   disabled,
   disabledReason,
+  hcpText,
   onToggle,
 }: PlayerPickRowProps) {
   const tier = meta.tierOf(pid);
@@ -70,7 +73,11 @@ export default function PlayerPickRow({
           {tier}
         </span>
       )}
-      {ch != null && <span className="text-xs font-medium text-muted-foreground">CH {ch}</span>}
+      {hcpText != null ? (
+        <span className="text-xs font-medium tabular-nums text-muted-foreground">{hcpText}</span>
+      ) : (
+        ch != null && <span className="text-xs font-medium text-muted-foreground">CH {ch}</span>
+      )}
       <span
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",

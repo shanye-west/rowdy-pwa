@@ -447,6 +447,33 @@ export interface FinalizePairingDraftResult extends AdminResult {
   matchIds: string[];
 }
 
+// ---------------------------------------------------------------------------
+// Captains' team draft (teamDrafts/{tournamentId})
+// ---------------------------------------------------------------------------
+
+export interface StartTeamDraftRequest {
+  tournamentId: string;
+  /** Which team makes the first pick (the admin's call). */
+  firstPickTeam: "teamA" | "teamB";
+}
+
+export interface SubmitTeamDraftPickRequest {
+  tournamentId: string;
+  /** The team the caller is picking for; must captain/co-captain it (or be admin). */
+  team: "teamA" | "teamB";
+  playerId: string;
+}
+
+export interface TeamDraftTournamentRequest {
+  tournamentId: string;
+}
+
+export interface FinalizeTeamDraftRequest {
+  tournamentId: string;
+  /** Overwrite rosters that already hold players other than the captains. */
+  force?: boolean;
+}
+
 /** One planned matchup: your side vs. who you think you'll be facing. */
 export interface PlannedMatchup {
   teamA: string[];

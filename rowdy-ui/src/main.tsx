@@ -23,6 +23,7 @@ const Round = lazyWithRecovery(() => import("./routes/Round"));
 const Pairings = lazyWithRecovery(() => import("./routes/Pairings"));
 const PairingPlan = lazyWithRecovery(() => import("./routes/PairingPlan"));
 const PairingsTV = lazyWithRecovery(() => import("./routes/PairingsTV"));
+const TeamDraft = lazyWithRecovery(() => import("./routes/TeamDraft"));
 const SideEvent = lazyWithRecovery(() => import("./routes/SideEvent"));
 const SideEventScorecard = lazyWithRecovery(() => import("./routes/SideEventScorecard"));
 const CaptainsMatchRound = lazyWithRecovery(() => import("./routes/CaptainsMatchRound"));
@@ -94,6 +95,8 @@ const router = createBrowserRouter(
         { path: "captains-match/:tournamentId/round/:roundNumber", element: <CaptainsMatchRound /> },
         { path: "teams", element: <Teams /> },
         { path: "draft", element: <DraftPool /> },
+        // Captains' private team draft (snake-draft the pool onto the teams).
+        { path: "team-draft", element: <TeamDraft /> },
         { path: "leaderboard", element: <Leaderboard /> },
         { path: "sportsbook", element: <RequireAuth><Sportsbook /></RequireAuth> },
         { path: "chat", element: <RequireAuth><Chat /></RequireAuth> },

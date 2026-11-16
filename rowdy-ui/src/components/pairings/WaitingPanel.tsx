@@ -5,6 +5,8 @@ export interface WaitingPanelProps {
   teamColor: string;
   /** True on a response turn (choosing a matchup) vs a nomination. */
   isResponse: boolean;
+  /** Overrides the "their matchup / a nomination" wording (e.g. "their pick"). */
+  choosingText?: string;
   canUndo: boolean;
   busy: boolean;
   onUndo: () => void;
@@ -21,6 +23,7 @@ export default function WaitingPanel({
   teamName,
   teamColor,
   isResponse,
+  choosingText,
   canUndo,
   busy,
   onUndo,
@@ -34,7 +37,7 @@ export default function WaitingPanel({
         />
         <p className="text-sm text-foreground">
           <span className="font-bold">{teamName}</span> is choosing{" "}
-          {isResponse ? "their matchup" : "a nomination"}…
+          {choosingText ?? (isResponse ? "their matchup" : "a nomination")}…
         </p>
       </div>
       <p className="mt-1.5 pl-5 text-xs text-muted-foreground">

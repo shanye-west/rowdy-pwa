@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ClipboardList } from "lucide-react";
+import { ArrowRight, ClipboardList, Users } from "lucide-react";
 import Layout from "../components/Layout";
 import LoadingScreen from "../components/LoadingScreen";
 import LastUpdated from "../components/LastUpdated";
@@ -8,6 +8,7 @@ import PlayerAvatar from "../components/PlayerAvatar";
 import { useTournamentContext, usePlayers } from "../contexts/TournamentContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toFirstNameLastInitial } from "../utils/playerHelpers";
+import { captainTeamOf } from "../hooks/usePairingsData";
 
 type SortKey = "handicap" | "name";
 
@@ -20,7 +21,7 @@ type SortKey = "handicap" | "name";
  */
 export default function DraftPool() {
   const { tournament, loading: tournamentLoading } = useTournamentContext();
-  const { user } = useAuth();
+  const { user, player } = useAuth();
   const [sortBy, setSortBy] = useState<SortKey>("handicap");
 
   const draftPool = tournament?.draftPool;
@@ -124,6 +125,23 @@ export default function DraftPool() {
             ))}
           </div>
         </div>
+
+        {/* Captains & admins: way into the private draft board. */}
+        {(player?.isAdmin || captainTeamOf(player?.id, tournament ?? null)) && (
+          <Link
+            to="/team-draft"
+            className="card-link-hover flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-foreground">Captains' draft board</div>
+              <div className="text-xs text-muted-foreground">Captains & admins only</div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        )}
 
         {/* Player list */}
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>

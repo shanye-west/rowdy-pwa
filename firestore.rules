@@ -302,6 +302,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Captains' team draft (teamDrafts/{tournamentId}): the captains snake-draft
+    // the pool onto their teams. Private board — only the captain/co-captain and
+    // admin uids the server stamped into authorizedUids can read it; finalizing
+    // writes the (public) rosters, which is the reveal. `resource == null` keeps
+    // "no draft yet" an empty read rather than a denial. Writes go through the
+    // teamDraftOps callables via the Admin SDK.
+    match /teamDrafts/{tournamentId} {
+      allow read: if request.auth != null
+                  && (resource == null
+                      || request.auth.uid in resource.data.get('authorizedUids', []));
+      allow write: if false;
+    }
+
     // Captains' private pairing plans (pairingPlans/{roundId}__{team}): one
     // team's own pre-draft scratchpad. The opposite of pairingDrafts above —
     // a plan the other side can read is worthless, so reads are limited to the

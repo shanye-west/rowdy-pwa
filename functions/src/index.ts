@@ -2244,6 +2244,15 @@ export {
   setPairingDraftVisibility,
 } from "./callables/draftOps.js";
 
+// Captains' team draft (teamDrafts/{tournamentId}): snake-draft the draft pool onto the teams.
+export {
+  startTeamDraft,
+  submitTeamDraftPick,
+  undoTeamDraftPick,
+  resetTeamDraft,
+  finalizeTeamDraft,
+} from "./callables/teamDraftOps.js";
+
 // Captains' private per-team pairing plans (pairingPlans/{roundId}__{team}).
 export { savePairingPlan } from "./callables/pairingPlanOps.js";
 
