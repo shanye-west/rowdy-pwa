@@ -256,9 +256,15 @@ export function LayoutShell({ children }: LayoutShellProps) {
     location.pathname.startsWith("/admin") || location.pathname === "/login";
   const closeMenu = () => setMenuOpen(false);
 
-  // Falling snow on the Christmas Home + leaderboard only — kept off scoring
-  // pages so it never competes with a scorecard.
-  const showSnow = isChristmas && (pathname === "/" || pathname === "/leaderboard");
+  // Falling snow on every Christmas page except scorecards, so it never
+  // competes with score entry: match cards, side-event team cards, captains'
+  // match round cards, and their admin editors.
+  const isScorecardPage =
+    /^\/match\//.test(pathname) ||
+    /^\/side-event\/[^/]+\/team\//.test(pathname) ||
+    /^\/captains-match\/[^/]+\/round\//.test(pathname) ||
+    /^\/admin\/t\/[^/]+\/(match\/|captains-match\/round\/)/.test(pathname);
+  const showSnow = isChristmas && !isScorecardPage;
 
   // Simple page content - CSS View Transitions handle the animation
   const pageContent = children ?? <Outlet />;
