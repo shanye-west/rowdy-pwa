@@ -108,6 +108,13 @@ export const createPairingDraft = onCall(async (request) => {
   if (!format) throw new HttpsError("failed-precondition", "Round has no format set");
   if (!tournamentId) throw new HttpsError("failed-precondition", "Round is missing tournamentId");
   if (!round.courseId) throw new HttpsError("failed-precondition", "Round has no course set");
+  if (round.pairingDraftDisabled === true) {
+    throw new HttpsError(
+      "failed-precondition",
+      "The pairings draft is turned off for this round. Turn it on in the round settings, or add the matches by hand."
+    );
+  }
+  const tierRule = round.allowSameTierPairs !== true;
 
   const playersPerSide = draftPlayersPerSide(format);
   const teamAIds = [...new Set(availableTeamA.map(String))];
@@ -142,7 +149,7 @@ export const createPairingDraft = onCall(async (request) => {
   // Reject rosters that can't be paired legally before the draft even starts —
   // a team can hold at most one A-tier and one D-tier per match, so more than
   // `totalMatches` of either tier is impossible. Fails here, not mid-draft.
-  if (playersPerSide === 2) {
+  if (playersPerSide === 2 && tierRule) {
     const matchesPerTeam = teamAIds.length / playersPerSide;
     for (const [ids, name] of [
       [teamAIds, (t.teamA?.name as string) || "Team A"] as const,
@@ -202,6 +209,7 @@ export const createPairingDraft = onCall(async (request) => {
     matches: staged ? [] : buildInitialMatches(totalMatches, firstPickTeam as DraftTeam),
     turn: staged ? null : initialTurn(firstPickTeam as DraftTeam),
     tierByPlayer,
+    tierRule,
     authorizedUids: [...authorizedUids],
     createdBy: playerId,
     createdAt: FieldValue.serverTimestamp(),

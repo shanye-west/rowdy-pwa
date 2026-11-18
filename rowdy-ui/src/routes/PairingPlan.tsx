@@ -155,21 +155,24 @@ export default function PairingPlan() {
     }),
     [available, matchups]
   );
+  // The tier checks get an empty lookup when the round allows same-tier pairs,
+  // so every A/A + D/D test passes while "side is full" still applies.
+  const ruleTiers = useMemo(() => (round?.allowSameTierPairs ? {} : tierMap), [round?.allowSameTierPairs, tierMap]);
   const violations = useMemo(
     () =>
       matchups.map((m) => ({
-        teamA: sideViolation(m.teamA, perSide, tierMap),
-        teamB: sideViolation(m.teamB, perSide, tierMap),
+        teamA: sideViolation(m.teamA, perSide, ruleTiers),
+        teamB: sideViolation(m.teamB, perSide, ruleTiers),
       })),
-    [matchups, perSide, tierMap]
+    [matchups, perSide, ruleTiers]
   );
   const strandWarnings = useMemo(
     () =>
       PLAN_TEAMS.map((team) => ({
         team,
-        warning: planStrandWarning(matchups, available[team], team, perSide, tierMap),
+        warning: planStrandWarning(matchups, available[team], team, perSide, ruleTiers),
       })).filter((w) => w.warning),
-    [matchups, available, perSide, tierMap]
+    [matchups, available, perSide, ruleTiers]
   );
   const setCount = completeMatchupCount(matchups, perSide);
   const hasViolation = violations.some((v) => v.teamA || v.teamB);
@@ -298,6 +301,16 @@ export default function PairingPlan() {
         <PairingsMessage icon={<Lock size={24} />} title="Not available to you">
           Planning boards go to the captains, the admins, and anyone they've brought in to help. Your
           matchups show up on the round page once the draft is done.
+        </PairingsMessage>
+      </Layout>
+    );
+  }
+
+  if (round?.pairingDraftDisabled) {
+    return (
+      <Layout title={title} showBack>
+        <PairingsMessage icon={<Hourglass size={24} />} title="No draft this round">
+          Matchups for this round are being set by the admin, so there's nothing to plan.
         </PairingsMessage>
       </Layout>
     );
@@ -474,7 +487,7 @@ export default function PairingPlan() {
                   else if (targetIndex == null) disabledReason = "Every matchup is full on this side";
                   else
                     disabledReason =
-                      cannotAddToSide(matchups[targetIndex][activeSide], pid, perSide, tierMap) ?? undefined;
+                      cannotAddToSide(matchups[targetIndex][activeSide], pid, perSide, ruleTiers) ?? undefined;
                   return (
                     <PlayerPickRow
                       key={pid}

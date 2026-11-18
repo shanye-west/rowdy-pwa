@@ -246,6 +246,15 @@ export default function Pairings() {
   // No draft yet
   // ===========================================================================
   if (!draft) {
+    if (round?.pairingDraftDisabled) {
+      return (
+        <Layout title={title} showBack>
+          <PairingsMessage icon={<Hourglass size={24} />} title="No draft this round">
+            Matchups for this round are being set by the admin. They'll show up on the round page.
+          </PairingsMessage>
+        </Layout>
+      );
+    }
     if (!isAdmin) {
       return (
         <Layout title={title} showBack>
@@ -286,6 +295,7 @@ export default function Pairings() {
               tournament={tournament}
               meta={meta}
               perSide={formatPlayersPerSide(round.format)}
+              tierRule={!round.allowSameTierPairs}
               availA={availA}
               availB={availB}
               setAvailA={setAvailA}

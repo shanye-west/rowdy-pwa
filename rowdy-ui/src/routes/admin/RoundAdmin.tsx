@@ -233,6 +233,8 @@ export default function RoundAdmin() {
           )}
           <Badge variant="outline">{round!.pointsValue ?? 1} pt per match</Badge>
           {round!.trackDrives && <Badge variant="outline">drives tracked</Badge>}
+          {round!.pairingDraftDisabled && <Badge variant="outline">no draft · matches by hand</Badge>}
+          {round!.allowSameTierPairs && <Badge variant="outline">same-tier pairs OK</Badge>}
         </>
       }
       error={error ?? matchesError}
@@ -288,12 +290,15 @@ export default function RoundAdmin() {
           ))}
           {matches.length === 0 && (
             <EmptyRow>
-              No matches yet — run the pairings draft below, or add them by hand.
+              {round!.pairingDraftDisabled
+                ? "No matches yet — add them by hand."
+                : "No matches yet — run the pairings draft below, or add them by hand."}
             </EmptyRow>
           )}
         </div>
       </AdminSection>
 
+      {!round!.pairingDraftDisabled && (
       <AdminSection
         title="Pairings draft"
         description="Run the live captains' snake draft to set this round's matchups, then create the matches automatically."
@@ -307,6 +312,7 @@ export default function RoundAdmin() {
           </Button>
         </div>
       </AdminSection>
+      )}
 
       <AdminSection
         title="Round recap"

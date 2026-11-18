@@ -99,6 +99,8 @@ export interface RoundUpdates {
   pointsValue?: number;
   locked?: boolean;
   trackDrives?: boolean;
+  pairingDraftDisabled?: boolean;
+  allowSameTierPairs?: boolean;
   skinsGrossPot?: number;
   skinsNetPot?: number;
   skinsHandicapPercent?: number;

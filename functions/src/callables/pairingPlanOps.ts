@@ -72,6 +72,10 @@ export const savePairingPlan = onCall(async (request) => {
   const format = round.format as RoundFormat | null | undefined;
   if (!tournamentId) throw new HttpsError("failed-precondition", "Round is missing tournamentId");
   if (!format) throw new HttpsError("failed-precondition", "Round has no format set");
+  if (round.pairingDraftDisabled === true) {
+    throw new HttpsError("failed-precondition", "The pairings draft is turned off for this round.");
+  }
+  const tierRule = round.allowSameTierPairs !== true;
 
   const { uid, playerId } = await requirePlanner(
     request,
@@ -121,7 +125,7 @@ export const savePairingPlan = onCall(async (request) => {
       }
       // Same A/A + D/D rule the live draft enforces, applied to each side —
       // only once a side is full, so a half-filled slot still saves mid-thought.
-      if (ids.length === playersPerSide) {
+      if (tierRule && ids.length === playersPerSide) {
         try {
           assertPairTiersAllowed(ids, sides[team].tiers);
         } catch (e) {

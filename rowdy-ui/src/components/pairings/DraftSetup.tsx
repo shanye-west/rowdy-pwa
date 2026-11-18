@@ -98,6 +98,8 @@ export interface DraftSetupProps {
   tournament: TournamentDoc;
   meta: PairingsMeta;
   perSide: number;
+  /** False when the round allows same-tier pairs (A/A, D/D). */
+  tierRule: boolean;
   availA: Set<string>;
   availB: Set<string>;
   setAvailA: (s: Set<string>) => void;
@@ -130,6 +132,7 @@ export default function DraftSetup({
   tournament,
   meta,
   perSide,
+  tierRule,
   availA,
   availB,
   setAvailA,
@@ -152,7 +155,7 @@ export default function DraftSetup({
       <p className="text-sm text-muted-foreground">
         Bench anyone sitting out, then open the round for planning — captains can build their pairings
         while you wait on the coin flip.
-        {perSide === 2 && " Pairs can't be two A-tier or two D-tier players."}
+        {perSide === 2 && tierRule && " Pairs can't be two A-tier or two D-tier players."}
       </p>
 
       <TeamAvailabilityPicker team="teamA" sel={availA} setSel={setAvailA} tournament={tournament} meta={meta} />

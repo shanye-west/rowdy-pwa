@@ -45,6 +45,12 @@ export interface DraftState {
   firstPickTeam: DraftTeam;
   available: { teamA: string[]; teamB: string[] };
   tierByPlayer: Record<string, string>;
+  /**
+   * Whether the A/A + D/D pairing rule applies. Copied from the round's
+   * `allowSameTierPairs` (inverted) when the draft is created and kept in sync
+   * by updateRound. Absent on older drafts — treat that as `true`.
+   */
+  tierRule?: boolean;
   matches: DraftMatch[];
   turn: DraftTurn | null;
   phase: DraftPhase;
@@ -174,7 +180,8 @@ export function applyPick(state: DraftState, team: DraftTeam, playerIds: string[
     }
   }
 
-  if (state.playersPerSide === 2) {
+  const tierRule = state.playersPerSide === 2 && state.tierRule !== false;
+  if (tierRule) {
     assertPairTiersAllowed(playerIds, state.tierByPlayer);
   }
 
@@ -187,7 +194,7 @@ export function applyPick(state: DraftState, team: DraftTeam, playerIds: string[
   // Look-ahead: a pair that's legal on its own can still corner the team — e.g.
   // leaving two A-tier (or two D-tier) players who'd be forced together in the
   // last match. Reject any pick whose remainder can't be completed legally.
-  if (state.playersPerSide === 2) {
+  if (tierRule) {
     const remaining = remainingIds({ ...state, matches }, team);
     if (!isPairableRemainder(remaining, remaining.length / 2, state.tierByPlayer)) {
       throw new DraftError(

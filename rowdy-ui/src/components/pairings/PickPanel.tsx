@@ -43,6 +43,7 @@ export default function PickPanel({
   onUndo,
 }: PickPanelProps) {
   const perSide = draft.playersPerSide;
+  const tierRule = perSide === 2 && draft.tierRule !== false;
   const teamColor = meta.teamColor(actingTeam);
   const remaining = useMemo(() => remainingPlayerIds(draft, actingTeam), [draft, actingTeam]);
 
@@ -92,7 +93,7 @@ export default function PickPanel({
 
         <p className="text-xs text-muted-foreground">
           Pick {perSide} player{perSide > 1 ? "s" : ""}.
-          {perSide === 2 && " No two A-tier and no two D-tier together."}
+          {tierRule && " No two A-tier and no two D-tier together."}
           {meta.grossOnly && " Course handicaps are shown for reference only (gross play)."}
         </p>
 
@@ -112,7 +113,7 @@ export default function PickPanel({
                   const isSel = selected.includes(pid);
                   let disabledReason: string | undefined;
                   if (!isSel && full) disabledReason = "Pick limit reached — deselect first";
-                  else if (!isSel && perSide === 2) {
+                  else if (!isSel && tierRule) {
                     disabledReason = wouldViolateTier(selected, pid, draft.tierByPlayer) ?? undefined;
                     // When this would complete the pair, also make sure what's left
                     // can still be paired legally (mirrors the server look-ahead).

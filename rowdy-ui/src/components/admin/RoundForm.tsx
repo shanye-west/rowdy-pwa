@@ -21,6 +21,8 @@ interface RoundFormState {
   courseId: string;
   pointsValue: string;
   trackDrives: boolean;
+  pairingDraftDisabled: boolean;
+  allowSameTierPairs: boolean;
   locked: boolean;
   skinsGrossPot: string;
   skinsNetPot: string;
@@ -33,6 +35,8 @@ const emptyForm: RoundFormState = {
   courseId: "",
   pointsValue: "1",
   trackDrives: false,
+  pairingDraftDisabled: false,
+  allowSameTierPairs: false,
   locked: false,
   skinsGrossPot: "0",
   skinsNetPot: "0",
@@ -46,6 +50,8 @@ function roundToForm(r: RoundDoc): RoundFormState {
     courseId: r.courseId ?? "",
     pointsValue: String(r.pointsValue ?? 1),
     trackDrives: !!r.trackDrives,
+    pairingDraftDisabled: !!r.pairingDraftDisabled,
+    allowSameTierPairs: !!r.allowSameTierPairs,
     locked: !!r.locked,
     skinsGrossPot: String(r.skinsGrossPot ?? 0),
     skinsNetPot: String(r.skinsNetPot ?? 0),
@@ -60,6 +66,8 @@ function formToUpdates(form: RoundFormState): RoundUpdates {
     courseId: form.courseId === "" ? null : form.courseId,
     pointsValue: Number(form.pointsValue),
     trackDrives: form.trackDrives,
+    pairingDraftDisabled: form.pairingDraftDisabled,
+    allowSameTierPairs: form.allowSameTierPairs,
     locked: form.locked,
     skinsGrossPot: Number(form.skinsGrossPot),
     skinsNetPot: Number(form.skinsNetPot),
@@ -196,6 +204,26 @@ export default function RoundForm({
           onChange={(trackDrives) => setForm({ ...form, trackDrives })}
         />
       </ToggleList>
+
+      <FieldGroup
+        title="Pairing rules"
+        description="Loosen the usual Rowdy Cup rules for a relaxed event. Matches you add by hand are never checked."
+      >
+        <ToggleList>
+          <ToggleRow
+            label="Captains' pairings draft"
+            description="Off: you set the matchups yourself — the draft and planning boards are hidden."
+            checked={!form.pairingDraftDisabled}
+            onChange={(on) => setForm({ ...form, pairingDraftDisabled: !on })}
+          />
+          <ToggleRow
+            label="Allow same-tier pairs"
+            description="Lets two A-tier or two D-tier players play on the same team in the draft and plans."
+            checked={form.allowSameTierPairs}
+            onChange={(allowSameTierPairs) => setForm({ ...form, allowSameTierPairs })}
+          />
+        </ToggleList>
+      </FieldGroup>
 
       <FieldGroup
         title="Skins"

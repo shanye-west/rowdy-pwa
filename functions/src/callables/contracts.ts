@@ -101,6 +101,10 @@ export interface RoundUpdates {
   pointsValue?: number;
   locked?: boolean;
   trackDrives?: boolean;
+  /** Matches are set by hand — no captains' draft or planning boards. */
+  pairingDraftDisabled?: boolean;
+  /** Lift the A/A + D/D pairing rule in the draft and planning boards. */
+  allowSameTierPairs?: boolean;
   skinsGrossPot?: number;
   skinsNetPot?: number;
   skinsHandicapPercent?: number;

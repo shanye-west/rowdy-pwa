@@ -324,6 +324,8 @@ function sanitizeRoundUpdates(updates: Record<string, unknown>): Record<string, 
         break;
       case "locked":
       case "trackDrives":
+      case "pairingDraftDisabled":
+      case "allowSameTierPairs":
         if (typeof value !== "boolean") {
           throw new HttpsError("invalid-argument", `${key} must be a boolean`);
         }
@@ -381,6 +383,7 @@ export const createRound = onCall(async (request) => {
  * Data payload:
  * - roundId: string
  * - updates: { format?, courseId?, day?, pointsValue?, locked?, trackDrives?,
+ *              pairingDraftDisabled?, allowSameTierPairs?,
  *              skinsGrossPot?, skinsNetPot?, skinsHandicapPercent? }
  */
 export const updateRound = onCall(async (request) => {
@@ -427,6 +430,16 @@ export const updateRound = onCall(async (request) => {
     const skinsSnap = await skinsResultRef.get();
     if (skinsSnap.exists) {
       await skinsResultRef.update({ _static: FieldValue.delete() });
+    }
+  }
+
+  // A draft copies the tier rule when it's created; keep an open one in step so
+  // flipping the round setting mid-setup takes effect without a reset.
+  if ("allowSameTierPairs" in fields) {
+    const draftRef = db().collection("pairingDrafts").doc(roundId);
+    const draftSnap = await draftRef.get();
+    if (draftSnap.exists && draftSnap.data()?.phase !== "finalized") {
+      await draftRef.update({ tierRule: fields.allowSameTierPairs !== true, updatedAt: FieldValue.serverTimestamp() });
     }
   }
 

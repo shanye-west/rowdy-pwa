@@ -247,6 +247,12 @@ export type RoundDoc = {
   
   // DRIVE_TRACKING: Feature toggle for scramble/shamble drive tracking
   trackDrives?: boolean;
+
+  // RELAXED RULES (absent = the normal Rowdy Cup rules)
+  /** Matches are set by hand — hides the captains' draft and planning boards. */
+  pairingDraftDisabled?: boolean;
+  /** Lifts the "no two A-tier / no two D-tier" pairing rule in the draft and plans. */
+  allowSameTierPairs?: boolean;
   
   // Legacy: embedded course data (may not be present)
   course?: {
@@ -505,6 +511,8 @@ export type PairingDraftDoc = {
   matches: DraftMatch[];
   turn: DraftTurn | null;
   tierByPlayer: Record<string, "A" | "B" | "C" | "D">;
+  /** A/A + D/D rule in force (mirrors the round). Absent on older drafts — treat as true. */
+  tierRule?: boolean;
   authorizedUids: string[];
   createdBy: string;
   finalizedMatchIds?: string[];

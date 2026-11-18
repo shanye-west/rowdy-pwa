@@ -153,12 +153,13 @@ function RoundComponent() {
     tournament?.teamB?.captainId,
     tournament?.teamB?.coCaptainId,
   ].filter(Boolean) as string[];
+  const draftOn = !round.pairingDraftDisabled;
   const canSeePairings =
-    !!player && (!!player.isAdmin || captainIds.includes(player.id)) && matches.length === 0;
+    draftOn && !!player && (!!player.isAdmin || captainIds.includes(player.id)) && matches.length === 0;
   // Planning is a wider audience than the draft: captains and admins, plus any
   // player the admin has invited via tournament.planAccessPlayerIds. It also
   // needs no draft doc to exist — that's the point of it.
-  const canPlanPairings = canPlanPairingsFor(player, tournament ?? null) && matches.length === 0;
+  const canPlanPairings = draftOn && canPlanPairingsFor(player, tournament ?? null) && matches.length === 0;
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>

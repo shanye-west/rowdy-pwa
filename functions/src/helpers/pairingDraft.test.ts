@@ -240,6 +240,31 @@ describe("applyPick — tier feasibility look-ahead (no stranding)", () => {
   });
 });
 
+describe("applyPick — tier rule turned off for the round", () => {
+  const tiers3 = {
+    a1: "D", a2: "D", a3: "A", a4: "A",
+    b1: "B", b2: "C", b3: "B", b4: "C",
+  };
+  const make = (tierRule?: boolean) => ({
+    ...makeState({
+      playersPerSide: 2,
+      teamA: ["a1", "a2", "a3", "a4"],
+      teamB: ["b1", "b2", "b3", "b4"],
+      tierByPlayer: tiers3,
+    }),
+    tierRule,
+  });
+
+  it("still enforces A/A + D/D when tierRule is absent (older drafts)", () => {
+    expect(() => applyPick(make(undefined), "teamA", ["a1", "a2"])).toThrow(/two D-tier/);
+  });
+
+  it("allows a D/D pair (and the A/A it leaves behind) when tierRule is false", () => {
+    const next = applyPick(make(false), "teamA", ["a1", "a2"]);
+    expect(next.matches[0].teamAPlayers).toEqual(["a1", "a2"]);
+  });
+});
+
 describe("undo", () => {
   it("returns null lastPlacement at the very start (nothing to undo)", () => {
     const state = makeState({ playersPerSide: 1, teamA: ["a1"], teamB: ["b1"] });
